@@ -3,7 +3,7 @@
 # Only use spaces to indent your .yml configuration.
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
-image: openjdk:8
+image: gradle:6.4.1-jdk11
 
 pipelines:
   default:
