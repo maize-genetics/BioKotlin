@@ -1,27 +1,63 @@
 package biokotlin.seq
 
-import org.junit.Before
-import org.junit.Test
-import kotlin.test.assertEquals
+
+
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 internal class SeqTest {
-    val seq = DNASeq("ACGTGG")
-
-    @Before
-    fun setUp() {
-        println(seq)
-    }
+    val dnaSeq = DNASeq("ACGTGGTGA")
+    val rnaSeq = RNASeq("ACGUGGUGA")
+    val proteinSeq = ProteinSeq("TW*")
+    val proteinSeq3Letter = ProteinSeq("ThrTrpTer")
 
     @Test
-    fun treatSeqAsString() {
-        assertEquals(expected = seq.toString(), actual = "ACGTGG", message = "text not same")
+    fun `DNA transciption`() {
+        assertEquals(rnaSeq, dnaSeq.transcribe(), "DNA transciption error")
+        assertEquals(dnaSeq, rnaSeq.back_transcribe(), "RNA back transciption error")
     }
 
-    @Test
-    fun testOverloads(){
-        assertEquals(expected = seq[1], actual = 'C', message = "text not same")
-        //val d
+    @ParameterizedTest(name = "dnaSeq[{0}..{1}].seq = {2}")
+    @CsvSource(
+                "0, 1, 'AC'",
+                "-2, -1, 'GA'",
+                "0, 2, 'ACG'"
+    )
+    fun `range slicer`(first: Int, second: Int, expectedResult: String) {
+        assertEquals(expectedResult, dnaSeq[first..second].seq) {
+            "$first + $second should equal $expectedResult"
+        }
     }
+
+    @ParameterizedTest(name = "dnaSeq[{0}..{1}].seq = errors")
+    @CsvSource(
+            "-1, 1, 'Wrap error'",
+            "-20, 0, 'Negative out of bounds'",
+            "0, 20, 'Positive out of bounds'"
+    )
+    fun `range slicer errors`(first: Int, second: Int) {
+        val exception = Assertions.assertThrows(Exception::class.java) {
+            dnaSeq[first..second]
+        }
+        Assertions.assertTrue(exception is java.lang.StringIndexOutOfBoundsException)
+    }
+
+
+//    @Test
+//    fun treatSeqAsString() {
+//        assertEquals(expected = seq.toString(), actual = "ACGTGG", message = "text not same")
+//    }
+//
+//    @Test
+//    fun testOverloads(){
+//        assertEquals(expected = seq[1], actual = 'C', message = "text not same")
+//        //val d
+//    }
 
     @Test
     fun getAlphabet() {
