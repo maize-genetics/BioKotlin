@@ -21,6 +21,7 @@ dependencies {
     implementation(kotlin("stdlib"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 //    implementation("org.jetbrains.bio:bioinf-commons:0.0.9")
+    implementation( "org.nield:kotlin-statistics:1.2.1")
     implementation("com.github.samtools:htsjdk:2.21.3")
     implementation("de.mpicbg.scicomp:krangl:0.11")
     implementation("net.maizegenetics:tassel:5.2.60")

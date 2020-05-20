@@ -47,6 +47,14 @@ internal class SeqTest {
         Assertions.assertTrue(exception is java.lang.StringIndexOutOfBoundsException)
     }
 
+    @Test
+    fun `get positive and negative`() {
+        assertEquals('C', dnaSeq[1], "get by []")
+        assertEquals('G', dnaSeq[-2], "get by [negative]")
+        assertEquals('W', proteinSeq[1], "protein get by []")
+        assertEquals('W', proteinSeq3Letter[1], "proteinSeq3Letter get by []")
+    }
+
 
 //    @Test
 //    fun treatSeqAsString() {
