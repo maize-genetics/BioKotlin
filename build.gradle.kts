@@ -22,10 +22,6 @@ plugins {
     java
    // kotlin("jvm") version "1.3.72"
     kotlin("jvm") version "1.4-M1"
-    //implementation 'org.jetbrains.kotlin:jvm-abi-gen:1.4-M2-eap-79'
-
-    // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
-    //compile group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: '1.4-M2-eap-77'
     //Shadow allows for the creation of fat jars (all dependencies)
     id("com.github.johnrengelman.shadow") version "5.2.0"
 
