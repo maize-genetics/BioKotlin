@@ -1,7 +1,9 @@
 import org.gradle.api.JavaVersion.VERSION_11
 import org.jetbrains.dokka.gradle.DokkaTask
 
-
+/*
+This build script is need to use the early access
+ */
 buildscript {
     repositories {
         mavenCentral()
@@ -13,9 +15,6 @@ buildscript {
         classpath ("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4-M1")
     }
 }
-
-//apply plugin: "kotlin"
-
 
 
 plugins {

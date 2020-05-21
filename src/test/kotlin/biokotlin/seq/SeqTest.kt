@@ -30,7 +30,7 @@ internal class SeqTest {
                 "0, 2, 'ACG'"
     )
     fun `range slicer`(first: Int, second: Int, expectedResult: String) {
-        assertEquals(expectedResult, dnaSeq[first..second].seq) {
+        assertEquals(expectedResult, dnaSeq[first..second].seq()) {
             "$first + $second should equal $expectedResult"
         }
     }
@@ -42,6 +42,7 @@ internal class SeqTest {
             "0, 20, 'Positive out of bounds'"
     )
     fun `range slicer errors`(first: Int, second: Int) {
+        //println(dnaSeq[first..second])
         val exception = Assertions.assertThrows(Exception::class.java) {
             dnaSeq[first..second]
         }
@@ -68,7 +69,7 @@ internal class SeqTest {
     fun `dna reverse complement speed`() {
         val heapSize = Runtime.getRuntime().totalMemory()
         println("Heap size is ${heapSize/1E6} Mb")
-        val bigSeq = dnaSeq * 10_000_000 //9Mb
+        val bigSeq = dnaSeq * 1_000_000 //9Mb
         val time = measureTimeMillis { bigSeq.complement() }
         println("Complement of ${bigSeq.len()/1E6}Mb took $time ms")
 
