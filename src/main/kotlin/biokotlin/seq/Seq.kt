@@ -1,6 +1,6 @@
 package biokotlin.seq
 
-
+//import biokotlin.seq.
 /*
 # Copyright 2000 Andrew Dalke.
 # Copyright 2000-2002 Brad Chapman.
@@ -120,13 +120,61 @@ fun negativeSlice(x: IntRange, s: String): IntRange {
 }
 
 abstract class NucleotideSeq(seq: String) : Seq(seq) {
-    fun complement() = seq //TODO
-    fun reverse_complement() = seq //TODO
+    protected fun complementSeqSlow(complement_map: Map<Char,Char>) = seq.map { complement_map[it] }.joinToString(separator="")
+
+    protected fun complementSeq18(complement_map: Map<Char,Char>):String {
+        val comp = StringBuilder(seq.length)
+        for(s in seq) {
+            comp.append(complement_map[s])
+        }
+        return comp.toString()
+    }
+
+    @ExperimentalStdlibApi
+    protected fun complementSeq06(complement_map: Map<Char,Char>):String {
+        val comp = CharArray(seq.length)
+        for(i in seq.indices) {
+            comp[i]= complement_map[seq[i]]!!
+        }
+        return comp.concatToString()
+    }
+
+    @ExperimentalStdlibApi
+    protected fun complementSeq02(complement_map: Map<Char,Char>):String {
+        val lookup = CharArray(256)
+        complement_map.entries.forEach{(k,v) -> lookup[k.toInt()]=v}
+        val comp = CharArray(seq.length)
+        for(i in seq.indices) {
+            comp[i]= lookup[seq[i].toInt()]
+        }
+        return comp.concatToString()
+    }
+
+
+    @ExperimentalStdlibApi
+    protected fun complementSeq(nucComplementByByteArray: ByteArray):String {
+        val comp = ByteArray(seq.length)
+        //Code a version to do reverse complement directly
+        for(i in seq.indices) {
+            comp[i]= nucComplementByByteArray[seq[i].toInt()]
+        }
+        return comp.decodeToString()
+    }
+
+    @ExperimentalStdlibApi
+    protected fun reverse_complementSeq(nucComplementByByteArray: ByteArray):String {
+        val comp = ByteArray(seq.length)
+        for(i in seq.indices) {
+            comp[comp.size-i-1]= nucComplementByByteArray[seq[i].toInt()]
+        }
+        return comp.decodeToString()
+    }
     fun gc() = 0 //TODO
     //count both strands
 
 }
 
+@ExperimentalStdlibApi
 class DNASeq(seq: String) : NucleotideSeq(seq) {
 
     //Python slicing [:-1] is the same as [0:-1], which is s[:len(s)-1]
@@ -141,10 +189,13 @@ class DNASeq(seq: String) : NucleotideSeq(seq) {
     operator fun get(x: IntRange) = DNASeq(seq.substring(negativeSlice(x, seq)))
     operator fun plus(seq2: DNASeq) = DNASeq(seq.plus(seq2.seq))
     operator fun times(n: Int) = DNASeq(seq.repeat(n))
+    fun complement() = DNASeq(super.complementSeq(ambigDnaCompByByteArray))
+    fun reverse_complement() = DNASeq(super.reverse_complementSeq(ambigDnaCompByByteArray))
 
     fun transcribe() = RNASeq(seq.replace('t', 'u').replace('T', 'U'))
 }
 
+@ExperimentalStdlibApi
 class RNASeq(seq: String) : NucleotideSeq(seq) {
     override val alphabet = ALPHABET.RNAAlphabet
     operator fun get(i: Int, j: Int) = RNASeq(seq.substring(i, j))
@@ -154,11 +205,14 @@ class RNASeq(seq: String) : NucleotideSeq(seq) {
     operator fun get(x: IntRange) = RNASeq(seq.substring(negativeSlice(x, seq)))
     operator fun plus(seq2: RNASeq) = RNASeq(seq.plus(seq2.seq))
     operator fun times(n: Int) = RNASeq(seq.repeat(n))
+    fun complement() = RNASeq(super.complementSeq(ambigRnaCompByByteArray))
+    fun reverse_complement() = RNASeq(super.reverse_complementSeq(ambigRnaCompByByteArray))
 
     fun translate(to_stop: Boolean = true) = ProteinSeq(seq) //TODO
     fun back_transcribe() = DNASeq(seq.replace('u', 't').replace('U', 'T'))
 }
 
+@ExperimentalStdlibApi
 class ProteinSeq(seq: String) : Seq(seq) {
     override val alphabet = ALPHABET.ProteinAlphabet
     operator fun get(i: Int, j: Int) = ProteinSeq(seq.substring(i, j))

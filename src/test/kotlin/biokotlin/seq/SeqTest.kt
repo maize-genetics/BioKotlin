@@ -4,12 +4,13 @@ package biokotlin.seq
 
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
-
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import kotlin.system.measureTimeMillis
 
+
+@ExperimentalStdlibApi
 internal class SeqTest {
     val dnaSeq = DNASeq("ACGTGGTGA")
     val rnaSeq = RNASeq("ACGUGGUGA")
@@ -52,7 +53,27 @@ internal class SeqTest {
         assertEquals('C', dnaSeq[1], "get by []")
         assertEquals('G', dnaSeq[-2], "get by [negative]")
         assertEquals('W', proteinSeq[1], "protein get by []")
-        assertEquals('W', proteinSeq3Letter[1], "proteinSeq3Letter get by []")
+        //assertEquals('W', proteinSeq3Letter[1], "proteinSeq3Letter get by []")
+    }
+
+    @Test
+    fun `dna and rna complements`() {
+        assertEquals(DNASeq("TGCACCACT"),dnaSeq.complement(), "DNA complementation")
+        assertEquals(RNASeq("UGCACCACU"),rnaSeq.complement(), "RNA complementation")
+        assertEquals(DNASeq("TCACCACGT"),dnaSeq.reverse_complement(), "DNA reverse complementation")
+        assertEquals(RNASeq("UCACCACGU"),rnaSeq.reverse_complement(), "RNA reverse complementation")
+    }
+
+    @Test
+    fun `dna reverse complement speed`() {
+        val heapSize = Runtime.getRuntime().totalMemory()
+        println("Heap size is ${heapSize/1E6} Mb")
+        val bigSeq = dnaSeq * 10_000_000 //9Mb
+        val time = measureTimeMillis { bigSeq.complement() }
+        println("Complement of ${bigSeq.len()/1E6}Mb took $time ms")
+
+        val time2 = measureTimeMillis { bigSeq.reverse_complement() }
+        println("Reverse complement of ${bigSeq.len()/1E6}Mb took $time2 ms")
     }
 
 
