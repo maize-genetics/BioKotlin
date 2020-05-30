@@ -14,6 +14,10 @@ package biokotlin.seq
 # package.
 */
 
+enum class NucleicAcid {
+    DNA, RNA
+}
+
 enum class ALPHABET {
     Generic_alphabet, ProteinAlphabet, SingleLetterAlphabet, NucleotideAlphabet,
     RNAAlphabet, DNAAlphabet

@@ -13,8 +13,6 @@ import org.nield.kotlinstatistics.doubleRange
 """Information about the IUPAC alphabets."""
 */
 
-const val bob = "bob"
-
 val protein_letters = "ACDEFGHIKLMNPQRSTVWY".toSet()
 
 val extended_protein_letters = "ACDEFGHIKLMNPQRSTVWYBXZJUO".toSet()
