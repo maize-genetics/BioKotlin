@@ -8,7 +8,8 @@ import org.jetbrains.dokka.gradle.DokkaTask
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.4-M1")
+    val kotlinVersion by extra ("1.3.70")
+   // val kotlinVersion by extra ("1.4-M1")
 
     repositories {
         mavenCentral()
@@ -23,7 +24,8 @@ buildscript {
 
 
 plugins {
-    val kotlinVersion = "1.4-M1"
+    val kotlinVersion = "1.3.70"
+    //val kotlinVersion = "1.4-M1"
     java
     kotlin("jvm") version kotlinVersion
     //Shadow allows for the creation of fat jars (all dependencies)
@@ -39,6 +41,7 @@ repositories {
     maven("https://jitpack.io")
     maven ("https://dl.bintray.com/kotlin/kotlin-eap")
     maven ("https://kotlin.bintray.com/kotlinx")
+    maven("https://oss.sonatype.org/content/repositories/snapshots/")
 }
 
 dependencies {
@@ -68,9 +71,14 @@ dependencies {
 
     implementation("org.graalvm.sdk:graal-sdk:20.0.0")
     implementation("org.apache.commons:commons-csv:1.8")
-//    implementation("com.github.jkcclemens:khttp:0.1.0")
+    implementation("com.github.jkcclemens:khttp:0.1.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
+
+    val kotestVersion = "4.1.0.293-SNAPSHOT"
+    listOf("runner-junit5", "assertions-core", "runner-console", "property").forEach {
+        testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
+    }
     //consider adding Kotlintest
     //mockk
 }
@@ -80,11 +88,13 @@ java {
     targetCompatibility = VERSION_11
 }
 
-kotlin {
-    sourceSets{
-
-    }
-}
+//kotlin {
+//    sourceSets{
+//        main. += "src/main/kotlin/"
+//        testsrcDirs += src/test/kotlin/'
+//
+//    }
+//}
 
 tasks {
     println("Ed say ${sourceSets["main"].allSource.srcDirs}")
