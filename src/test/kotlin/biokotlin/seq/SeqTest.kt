@@ -42,7 +42,6 @@ internal class SeqTest {
             "0, 20, 'Positive out of bounds'"
     )
     fun `range slicer errors`(first: Int, second: Int) {
-        //println(dnaSeq[first..second])
         val exception = Assertions.assertThrows(Exception::class.java) {
             dnaSeq[first..second]
         }

@@ -2,6 +2,8 @@ package biokotlin.data
 
 import biokotlin.seq.NucleicAcid
 import biokotlin.seq.NucleicAcid.*
+import java.util.*
+import kotlin.NoSuchElementException
 
 
 /**
@@ -12,25 +14,73 @@ import biokotlin.seq.NucleicAcid.*
  * Will implement as needed
  */
 
-//TODO toString needs to be implemented
+/**TODO there is a namespace issue to really imitate Biopython -
+ * CodonTable is appropriately the data class
+ * but BioPython uses CodonTable.standard_dna_table to get the standard table
+ * so it would be nice to call a static method without parentheses
+ * It is mimic by making a function with CapitalLetter, and adding an 's'
+ * `CodonTables(id = 1)`
+ * in Python it would be:
+ * `CodonTable[1]`
+*/
 //TODO fast translate methods that rely on encoding into a short
 //TODO see if guava immutable hashMap even faster
+//Consider making a Codon class (c1: Char, c2: Char, c3: Char)
+//Consider using EnumSet and EnumMap - that are java bit let maps
+//
+//enum class DNA_CODONS {
+//    AAA, ACA, AGA, ATA
+//}
+//
+//val allCodons = EnumSet.allOf(DNA_CODONS::class.java)
 
+/**Return codon table based on id, ambiguous not implemented*/
+fun CodonTables(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = DNA) : CodonTable =
+        CodonTableData()[id, ambiguous, nucleicAcid]
 
+/**Return codon table based on name, ambiguous not implemented*/
+fun CodonTables(name: String, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = DNA) : CodonTable =
+        CodonTableData()[name, ambiguous, nucleicAcid]
 
-val standard_dna_table = CodonTableData().standard_dna_table
-val standard_rna_table = CodonTableData().standard_rna_table
+/**Return the complete list of DNA and RNA tables*/
+fun CodonTablesAll() : List<CodonTable> = CodonTableData().allCodonTables.values
+        .sortedBy { it.id }
+        .toList()
 
+/**Return the complete list of either DNA and RNA tables*/
+fun CodonTablesAll(nucleicAcid: NucleicAcid) : List<CodonTable> =
+        CodonTableData().allCodonTables.values
+                .filter { it.nucleicAcid == nucleicAcid }
+                .sortedBy { it.id }
+                .toList()
+
+val standard_dna_table = CodonTables(1, nucleicAcid = DNA)
+val standard_rna_table = CodonTables(1, nucleicAcid = RNA)
+
+/**
+ * The genetic code or codon table for a clade.  [id] and [name] are the NCBI table id and names.  Codon are
+ * represented at 3 letter [String].  [ambiguous] is not implemented.  [stop_codons] are not included in the
+ * [codonToAA] map unless used for both stop and encoding (a few clades), and will return a null.
+ * @property[id] [NCBI](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi) id number
+ * @property[name] a list of all names with preferred first
+ * @property[codonToAA] map of codons to single letter amino acid code
+ * @property[start_codons] a list of start codons, which are also in the [codonToAA] map
+ * @property[stop_codons] a list of stop codons (generally not in [codonToAA] map)
+ * @property[nucleicAcid] whether the codons are presented in [DNA] or [RNA]
+ * @property[ambiguous] whether ambiguous codons are used (currently not implemented)
+ * @property[aaToCodon] multimap to amino acid code to list of codons
+ */
 data class CodonTable(val id: Int, val name: List<String>, val start_codons: List<String>, val stop_codons: List<String>,
                       val codonToAA: Map<String, Char>, val nucleicAcid: NucleicAcid = DNA, val ambiguous:Boolean = false) {
+
     fun key():CodonTableKey = CodonTableKey(id,ambiguous,nucleicAcid)
 
-    /**Return a simple text representation of the codon table.
+    /**Return a text representation of the codon table.
 
     e.g.::
-
+    ```
     >>> import biokotlin.data.*
-    >>> print(Bio.Data.CodonTable.standard_dna_table)
+    >>> print(Bio.Data.standard_dna_table)
     Table 1 Standard, SGC0
     <BLANKLINE>
     |  T      |  C      |  A      |  G      |
@@ -41,7 +91,10 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
     G | GTA V   | GCA A   | GAA E   | GGA G   | A
     G | GTG V   | GCG A   | GAG E   | GGG G   | G
     --+---------+---------+---------+---------+--
-    >>> print(Bio.Data.CodonTable.generic_by_id[1])
+    ```
+
+    ```
+    >>> print(Bio.Data.CodonTables(1, nucleicAcid = RNA))
     Table 1 Standard, SGC0
     <BLANKLINE>
     |  U      |  C      |  A      |  G      |
@@ -52,6 +105,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
     G | GUA V   | GCA A   | GAA E   | GGA G   | A
     G | GUG V   | GCG A   | GAG E   | GGG G   | G
     --+---------+---------+---------+---------+--
+     ```
      */
     override fun toString(): String {
         val sb = StringBuilder()
@@ -59,7 +113,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
         sb.append("""
             Table $id ${name.joinToString()}
             
-            1 |    ${baseOrder[0]}    |    ${baseOrder[1]}    |    ${baseOrder[2]}    |    ${baseOrder[3]}    | 3
+            1 |  ${baseOrder[0]}      |  ${baseOrder[1]}      |  ${baseOrder[2]}      |  ${baseOrder[3]}      | 3
             --+---------+---------+---------+---------+--
         """.trimIndent()).append("\n")
         for (first in baseOrder) {
@@ -79,8 +133,6 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
         return sb.toString()
     }
 
-  //  val standard_dna_table:CodonTable = CodonTableData().standard_dna_table
-
    val aaToCodon:Map<Char,List<String>> = codonToAA.entries
            .sortedBy { it.key } //keep the codon in standard order
            .groupBy({it.value},{it.key})
@@ -88,12 +140,10 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
 
 data class CodonTableKey(val id: Int, val ambiguous: Boolean = false, val nucleicAcid: NucleicAcid = DNA)
 
-class CodonTableData() {
+private class CodonTableData {
     //Various precomputed Maps
     val allCodonTables: Map<CodonTableKey, CodonTable>
     val nameToId: Map<String, Int>
-    val standard_dna_table: CodonTable //python style from the original
-    val standard_rna_table: CodonTable //python style from the original
     val standardCodonTable: CodonTable = CodonTable(
             name = listOf("Standard", "SGC0"),
             id = 1,
@@ -154,8 +204,6 @@ class CodonTableData() {
         nameToId = allCodonTables.values
                 .flatMap { codonTable -> codonTable.name.map { it to codonTable.id } }  //the list of names need to be associated with single id
                 .associate { (name, id) -> name to id }
-        standard_dna_table = get(nucleicAcid = DNA)
-        standard_rna_table = get(nucleicAcid = RNA)
     }
 
     operator fun get(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = DNA): CodonTable {
@@ -169,10 +217,6 @@ class CodonTableData() {
         }
     }
 
-//    operator fun get(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = DNA) {
-//
-//    }
-
     operator fun get(name: String, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = DNA): CodonTable {
         val id = nameToId.getOrElse(name) {
             throw NoSuchElementException("""
@@ -184,14 +228,14 @@ class CodonTableData() {
     }
 
 
-    fun createDNARNATables(diffsWithStandard: List<CodonTable>): Map<CodonTableKey, CodonTable> {
+    private fun createDNARNATables(diffsWithStandard: List<CodonTable>): Map<CodonTableKey, CodonTable> {
         val dnaCodonTables = createDNATables(diffsWithStandard)
         return dnaCodonTables.values
                 .flatMap {dnaCT -> listOf(dnaCT,createRNATable(dnaCT))  }
                 .associate { codonTable -> codonTable.key() to codonTable }
     }
 
-    fun createDNATables(diffsWithStandard: List<CodonTable>): Map<CodonTableKey, CodonTable> {
+    private fun createDNATables(diffsWithStandard: List<CodonTable>): Map<CodonTableKey, CodonTable> {
         return diffsWithStandard
                 .map { diffs ->
                     val newCodonToAA = standardCodonTable.codonToAA.toMutableMap()
@@ -200,7 +244,7 @@ class CodonTableData() {
                 }.associateBy { ct -> ct.key() }
     }
 
-    fun createRNATable(dnaTable: CodonTable): CodonTable {
+    private fun createRNATable(dnaTable: CodonTable): CodonTable {
         val rnaStop = dnaTable.stop_codons
                 .map { codon -> codon.replace('T', 'U') }
                 .toList()
