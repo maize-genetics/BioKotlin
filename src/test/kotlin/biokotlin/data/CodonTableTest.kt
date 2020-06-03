@@ -1,5 +1,6 @@
 package biokotlin.data
 
+import biokotlin.seq.AminoAcid
 import biokotlin.seq.NucleicAcid
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.data.blocking.forAll
@@ -15,7 +16,6 @@ import io.kotest.property.exhaustive.exhaustive
 
 
 class CodonTableTest :StringSpec ({
-    //"should use config".config
 
     val normalCodonTables =  CodonTablesAll()
             .filterNot { ct -> ct.stop_codons.any() { stopCodon ->  ct.codonToAA.containsKey(stopCodon) } }
@@ -24,8 +24,8 @@ class CodonTableTest :StringSpec ({
         CodonTables().id shouldBe 1
     }
 
-    "Standard table should be id 2" {
-        standard_dna_table.id shouldBe 1
+    "Standard table should be id 1" {
+       CodonTables.standardCodonTable.id shouldBe 1
     }
 
     val normalCodonTableArb = normalCodonTables.exhaustive()
@@ -46,13 +46,13 @@ class CodonTableTest :StringSpec ({
 
     "Test for degeneracy" {
         forAll(
-                row(standard_dna_table.aaToCodon),
-                row(standard_rna_table.aaToCodon)
+                row(CodonTables.standard_dna_table.aaToCodon),
+                row(CodonTables.standard_rna_table.aaToCodon)
         ) { aaToCodon ->
-            aaToCodon['L']?.size shouldBe 6
-            aaToCodon['W']?.size shouldBe 1
-            aaToCodon['P']?.size shouldBe 4
-            aaToCodon['*']?.size shouldBe null  //don't store stop here
+            aaToCodon[AminoAcid.L]?.size shouldBe 6
+            aaToCodon[AminoAcid.W]?.size shouldBe 1
+            aaToCodon[AminoAcid.P]?.size shouldBe 4
+            //aaToCodon['*']?.size shouldBe null  //don't store stop here
         }
     }
 
@@ -78,7 +78,7 @@ class CodonTableTest :StringSpec ({
 
 
     "Test printing" {
-        standard_rna_table.toString() shouldBe
+        CodonTables.standard_rna_table.toString() shouldBe
 """Table 1 Standard, SGC0
 
 1 |  U      |  C      |  A      |  G      | 3
@@ -175,9 +175,10 @@ G | GUG V   | GCG A   | GAG E   | GGG G   | G
             row(33,"AGG",'K',null),
             row(33,"TAA",'Y',null),
             row(33,"TGA",'W',null)
-    ) {id, codon, primaryAA, secondaryAA ->
+    ) {id, codonString, primaryAA, secondaryAA ->
         val ct = CodonTables(id)
-        val aa : Char? = ct.codonToAA[codon]
+        val codon = Codons.valueOf(codonString)
+        val aa : AminoAcid? = ct.codonToAA[codon]
         if(primaryAA == '*') {
             ct.stop_codons shouldContain codon
             aa shouldBe secondaryAA

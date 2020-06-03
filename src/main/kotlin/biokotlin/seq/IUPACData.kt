@@ -1,7 +1,11 @@
 @file:JvmName("IUPACData")
 package biokotlin.seq
 
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Sets
+import org.jetbrains.annotations.NotNull
 import org.nield.kotlinstatistics.doubleRange
+import java.util.*
 
 /*
  Copyright 2000 Andrew Dalke.  All rights reserved.
@@ -13,323 +17,182 @@ import org.nield.kotlinstatistics.doubleRange
 """Information about the IUPAC alphabets."""
 */
 
-val protein_letters = "ACDEFGHIKLMNPQRSTVWY".toSet()
 
-val extended_protein_letters = "ACDEFGHIKLMNPQRSTVWYBXZJUO".toSet()
-/*
-   B = "Asx";  aspartic acid or asparagine (D or N)
-   X = "Xxx";  unknown or 'other' amino acid
-   Z = "Glx";  glutamic acid or glutamine (E or Q)
-   http://www.chem.qmul.ac.uk/iupac/AminoAcid/A2021.html#AA212
 
-   J = "Xle";  leucine or isoleucine (L or I, used in NMR)
-   Mentioned in http://www.chem.qmul.ac.uk/iubmb/newsletter/1999/item3.html
-   Also the International Nucleotide Sequence Database Collaboration (INSDC)
-   (i.e. GenBank, EMBL, DDBJ) adopted this in 2006
-   http://www.ddbj.nig.ac.jp/insdc/icm2006-e.html
+enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double) {
+    A("Ala",'A', 89.0932),
+    C("Cys",'C', 121.1582),
+    D("Asp",'D', 133.1027),
+    E("Glu",'E', 147.1293),
+    F("Phe",'F', 165.1891),
+    G("Gly",'G', 75.0666),
+    H("His",'H', 155.1546),
+    I("Ile",'I', 131.1729),
+    K("Lys",'K', 146.1876),
+    L("Leu",'L', 131.1729),
+    M("Met",'M', 149.2113),
+    N("Asn",'N', 132.1179),
+    P("Pro",'P', 115.1305),
+    Q("Gln",'Q', 146.1445),
+    R("Arg",'R', 174.201),
+    S("Ser",'S', 105.0926),
+    T("Thr",'T', 119.1192),
+    V("Val",'V', 117.1463),
+    W("Trp",'W', 204.2252),
+    Y("Tyr",'Y', 181.1885);
 
-   Xle (J); Leucine or Isoleucine
-   The residue abbreviations, Xle (the three-letter abbreviation) and J
-   (the one-letter abbreviation) are reserved for the case that cannot
-   experimentally distinguish leucine from isoleucine.
+    companion object {
+        private val a3LetterToAA = values().associateBy(AminoAcid::name3letter)
+        private val charToAA = values().associateBy{it.name[0]}
 
-   U = "Sec";  selenocysteine
-   http://www.chem.qmul.ac.uk/iubmb/newsletter/1999/item3.html
-
-   O = "Pyl";  pyrrolysine
-   http://www.chem.qmul.ac.uk/iubmb/newsletter/2009.html#item35
-*/
-
-val protein_letters_1to3 = mapOf(
-        'A' to "Ala",
-        'C' to "Cys",
-        'D' to "Asp",
-        'E' to "Glu",
-        'F' to "Phe",
-        'G' to "Gly",
-        'H' to "His",
-        'I' to "Ile",
-        'K' to "Lys",
-        'L' to "Leu",
-        'M' to "Met",
-        'N' to "Asn",
-        'P' to "Pro",
-        'Q' to "Gln",
-        'R' to "Arg",
-        'S' to "Ser",
-        'T' to "Thr",
-        'V' to "Val",
-        'W' to "Trp",
-        'Y' to "Tyr"
-)
-val protein_letters_1to3_extended = protein_letters_1to3 + mapOf(
-        'B' to "Asx",
-        'X' to "Xaa",
-        'Z' to "Glx",
-        'J' to "Xle",
-        'U' to "Sec",
-        'O' to "Pyl"
-)
-
-val protein_letters_3to1 = protein_letters_1to3.entries
-        .associate { (k, v) -> v to k }
-
-val protein_letters_3to1_extended = protein_letters_1to3_extended.entries
-        .associate { (k, v) -> v to k }
-
-val ambiguous_dna_letters = "GATCRYWSMKHBVDN".toSet()
-val unambiguous_dna_letters = "GATC".toSet()
-val ambiguous_rna_letters = "GAUCRYWSMKHBVDN".toSet()
-val unambiguous_rna_letters = "GAUC".toSet()
-
-/*
-#   B == 5-bromouridine
-#   D == 5,6-dihydrouridine
-#   S == thiouridine
-#   W == wyosine
-*/
-val extended_dna_letters = "GATCBDSW".toSet()
-
-/*
-are there extended forms?
-extended_rna_letters = "GAUCBDSW"
-"X" is included in the following _values and _complement dictionaries,
-for historical reasons although it is not an IUPAC nucleotide,
-and so is not in the corresponding _letters strings above
-*/
-val ambiguous_dna_values = mapOf(
-        'A' to "A",
-        'C' to "C",
-        'G' to "G",
-        'T' to "T",
-        'M' to "AC",
-        'R' to "AG",
-        'W' to "AT",
-        'S' to "CG",
-        'Y' to "CT",
-        'K' to "GT",
-        'V' to "ACG",
-        'H' to "ACT",
-        'D' to "AGT",
-        'B' to "CGT",
-        'X' to "GATC",
-        'N' to "GATC"
-)
-
-val ambiguous_rna_values = mapOf(
-        'A' to "A",
-        'C' to "C",
-        'G' to "G",
-        'U' to "U",
-        'M' to "AC",
-        'R' to "AG",
-        'W' to "AU",
-        'S' to "CG",
-        'Y' to "CU",
-        'K' to "GU",
-        'V' to "ACG",
-        'H' to "ACU",
-        'D' to "AGU",
-        'B' to "CGU",
-        'X' to "GAUC",
-        'N' to "GAUC"
-)
-
-val ambiguous_dna_complement = mapOf(
-        'A' to 'T',
-        'C' to 'G',
-        'G' to 'C',
-        'T' to 'A',
-        'M' to 'K',
-        'R' to 'Y',
-        'W' to 'W',
-        'S' to 'S',
-        'Y' to 'R',
-        'K' to 'M',
-        'V' to 'B',
-        'H' to 'D',
-        'D' to 'H',
-        'B' to 'V',
-        'X' to 'X',
-        'N' to 'N'
-)
-
-fun makeByteArrayLookups(charMap : Map<Char,Char>): ByteArray {
-    val lookup = ByteArray(Byte.MAX_VALUE.toInt())
-    charMap.entries
-            .forEach{(k,v) -> lookup[k.toInt()]=v.toByte()}
-    return lookup
+        fun from3Letter(name3letter: String) = a3LetterToAA[name3letter]
+        fun fromChar(char:Char) = charToAA[char]
+    }
 }
 
-val ambigDnaCompByByteArray = makeByteArrayLookups(ambiguous_dna_complement)
 
-val ambiguous_rna_complement = mapOf(
-        'A' to 'U',
-        'C' to 'G',
-        'G' to 'C',
-        'U' to 'A',
-        'M' to 'K',
-        'R' to 'Y',
-        'W' to 'W',
-        'S' to 'S',
-        'Y' to 'R',
-        'K' to 'M',
-        'V' to 'B',
-        'H' to 'D',
-        'D' to 'H',
-        'B' to 'V',
-        'X' to 'X',
-        'N' to 'N'
-)
+fun main() {
+    println(AminoAcid.A.name3letter)
+    println(AminoAcid.values().joinToString { it.name })
+    println(AminoAcid.values().joinToString { it.name3letter })
+    val map = AminoAcid.values().associate { it.name3letter to it.name }
+    val em = AminoAcid.valueOf("Y")
+    println(em.toString() + em.ordinal.toString())
+    println(AminoAcid.from3Letter("Ala"))
+    println(AminoAcid.fromChar('T')?.weight)
+    println(DNA.T.complement)
+    println(RNA.U.complement)
+    println(RNA.A.complement)
+    println(DNA.T.twoBit)
+    println(DNA.T.weight)
+    println(RNA.U.weight)
+    println(DNA.T.weight - RNA.U.weight)
+    println(DNA.A.weight - RNA.A.weight)
+    println(DNA.C.weight - RNA.C.weight)
+}
 
-val ambigRnaCompByByteArray = makeByteArrayLookups(ambiguous_rna_complement)
+//replaces BioPython - protein_letters with AminoAcid
+fun protein_letters_3to1(name3letter: String) = AminoAcid.from3Letter(name3letter)
+val protein_letters = AminoAcid
 
-fun make_ranges(nucToMass: Map<Char, Double>): Map<Char, ClosedFloatingPointRange<Double>> =
-        nucToMass.entries.associate { (k, v) -> k to (v.rangeTo(v)) }
+interface IUPACEncoding<T : Enum<T>> {
+    val char:Char
+    val twoBit:Byte
+    val fourBit:Byte
+    val ambiguous: Boolean
+    val ambigString: String
+    val complement:Enum<T>
+    val weight:Double
+}
 
+enum class DNA(override val char: Char, override val twoBit: Byte, override val fourBit: Byte,
+               override val ambiguous: Boolean, override val ambigString: String) : IUPACEncoding<DNA> {
+    A('A', 0, 0, false, "A"),
+    C('C', 1, 1, false, "C"),
+    G('G', 2, 2, false, "G"),
+    T('T', 3, 3, false, "T"),
+    M('M', -1, 4, true, "AC"),
+    R('R', -1, 5, true, "AG"),
+    W('W', -1, 6, true, "AT"),
+    S('S', -1, 7, true, "CG"),
+    Y('Y', -1, 8, true, "CT"),
+    K('K', -1, 9, true, "GT"),
+    V('V', -1, 10, true, "ACG"),
+    H('H', -1, 11, true, "ACT"),
+    D('D', -1, 12, true, "AGT"),
+    B('B', -1, 13, true, "CGT"),
+    X('X', -1, 14, true, "GATC"),
+    N('N', -1, 15, true, "GATC");
 
-// Mass data taken from PubChem
+    override val complement
+        get() = compMap[this]!!
+    override val weight : Double
+        get() = weights[this]!!
+    val rnaAnalog: RNA
+        get() = if(this == T) RNA.U else RNA.valueOf(this.name)
 
-
-/** Average masses of monophosphate deoxy nucleotides */
-val unambiguous_dna_weights = mapOf(
-        'A' to 331.2218,
-        'C' to 307.1971,
-        'G' to 347.2212,
-        'T' to 322.2085)
-
-/** Monoisotopic masses of monophospate deoxy nucleotide s*/
-val monoisotopic_unambiguous_dna_weights = mapOf(
-        'A' to 331.06817,
-        'C' to 307.056936,
-        'G' to 347.063084,
-        'T' to 322.056602
-)
-
-val unambiguous_dna_weight_ranges = make_ranges(unambiguous_dna_weights)
-
-val unambiguous_rna_weights = mapOf(
-        'A' to 347.2212,
-        'C' to 323.1965,
-        'G' to 363.2206,
-        'U' to 324.1813)
-
-val monoisotopic_unambiguous_rna_weights = mapOf(
-        'A' to 347.063084,
-        'C' to 323.051851,
-        'G' to 363.057999,
-        'U' to 324.035867
-)
-
-fun make_ambiguous_ranges(iupacToAmbig: Map<Char, String>, iupacToMass: Map<Char, Double>):
-        Map<Char, ClosedFloatingPointRange<Double>> =
-        iupacToAmbig.entries.associate { (iupac, nucleotides) ->
-            iupac to nucleotides
-                    .map { iupacToMass[it] ?: -1.0 }
-                    .doubleRange()
+    companion object {
+        private val charToDNA = DNA.values().associateBy{it.name[0]}
+        private val compMap:EnumMap<DNA,DNA> = EnumMap(mapOf(
+                A to T,
+                C to G,
+                G to C,
+                T to A,
+                M to K,
+                R to Y,
+                W to W,
+                S to S,
+                Y to R,
+                K to M,
+                V to B,
+                H to D,
+                D to H,
+                B to V,
+                X to X,
+                N to N
+        ))
+        val ambigDnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
+        private val weights : EnumMap<DNA,Double>
+        init {
+            values().forEach { ambigDnaCompByByteArray[it.char.toInt()] = it.complement.char.toByte() }
+            val dnaWeights = mutableMapOf<DNA,Double>(
+                    A to 331.2218,
+                    C to 307.1971,
+                    G to 347.2212,
+                    T to 322.2085)
+            //Calculating average weights for the ambiquous nucleotides
+            weights = EnumMap(values().associate {nuc ->
+                nuc to nuc.ambigString
+                        .map { dnaWeights[nuc] ?: -1.0 }
+                        .average()
+            })
         }
+        fun fromChar(char:Char) = charToDNA[char]
+        /*Immutable Guava set back by EnumSet*/
+        val unambiguousDNA : ImmutableSet<DNA> = Sets.immutableEnumSet(EnumSet.of(A,C,G,T))
+    }
+}
 
-fun make_ambiguous_averages(iupacToAmbig: Map<Char, String>, iupacToMass: Map<Char, Double>):
-        Map<Char, Double> =
-        iupacToAmbig.entries.associate { (iupac, nucleotides) ->
-            iupac to nucleotides
-                    .map { iupacToMass[it] ?: -1.0 }
-                    .average()
+enum class RNA : IUPACEncoding<RNA> {
+    A, C, G, U, M, R, W, S, Y, K, V, H, D, B, X, N;
+
+    val dnaAnalog = if(this.name.equals("U")) DNA.T else DNA.valueOf(this.name)
+    override val char = if(dnaAnalog == DNA.T) 'U' else dnaAnalog.char
+    override val twoBit:Byte = dnaAnalog.twoBit
+    override val fourBit:Byte = dnaAnalog.fourBit
+    override val ambiguous: Boolean = dnaAnalog.ambiguous
+    override val ambigString: String = dnaAnalog.ambigString.replace('T','U')
+
+    override val complement
+        get() = compMap[this]!!
+    override val weight : Double
+        get() = weights[this]!!
+
+    companion object {
+        private val charToRNA = values().associateBy{it.name[0]}
+        private val compMap:EnumMap<RNA,RNA> = EnumMap(values()
+                .associate { it to (if(it == A) U else it.dnaAnalog.complement.rnaAnalog)})
+        val ambigRnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
+        private val weights : EnumMap<RNA,Double>
+        init {
+            values().forEach { ambigRnaCompByByteArray[it.char.toInt()] = it.complement.char.toByte() }
+            val rnaWeights = mutableMapOf<RNA,Double>(
+                    A to 347.2212,
+                    C to 323.1965,
+                    G to 363.2206,
+                    U to 324.1813)
+            //Calculating average weights for the ambiquous nucleotides
+            weights = EnumMap(values().associate { nuc ->
+                nuc to nuc.ambigString
+                        .map { rnaWeights[nuc] ?: -1.0 }
+                        .average()
+            })
         }
+        fun fromChar(char:Char) = charToRNA[char]
+        val unambiguousRNA: ImmutableSet<RNA> = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
+    }
+}
 
-
-val unambiguous_rna_weight_ranges = make_ambiguous_ranges(ambiguous_dna_values, unambiguous_dna_weights)
-val avg_ambiguous_dna_weights = make_ambiguous_averages(ambiguous_dna_values, unambiguous_dna_weights)
-
-val ambiguous_rna_weight_ranges = make_ambiguous_ranges(ambiguous_rna_values, unambiguous_rna_weights)
-val avg_ambiguous_rna_weights = make_ambiguous_averages(ambiguous_rna_values, unambiguous_rna_weights)
-
-val protein_weights = mapOf(
-        'A' to 89.0932,
-        'C' to 121.1582,
-        'D' to 133.1027,
-        'E' to 147.1293,
-        'F' to 165.1891,
-        'G' to 75.0666,
-        'H' to 155.1546,
-        'I' to 131.1729,
-        'K' to 146.1876,
-        'L' to 131.1729,
-        'M' to 149.2113,
-        'N' to 132.1179,
-        'O' to 255.3134,
-        'P' to 115.1305,
-        'Q' to 146.1445,
-        'R' to 174.201,
-        'S' to 105.0926,
-        'T' to 119.1192,
-        'U' to 168.0532,
-        'V' to 117.1463,
-        'W' to 204.2252,
-        'Y' to 181.1885
-)
-
-val monoisotopic_protein_weights = mapOf(
-        'A' to 89.047678,
-        'C' to 121.019749,
-        'D' to 133.037508,
-        'E' to 147.053158,
-        'F' to 165.078979,
-        'G' to 75.032028,
-        'H' to 155.069477,
-        'I' to 131.094629,
-        'K' to 146.105528,
-        'L' to 131.094629,
-        'M' to 149.051049,
-        'N' to 132.053492,
-        'O' to 255.158292,
-        'P' to 115.063329,
-        'Q' to 146.069142,
-        'R' to 174.111676,
-        'S' to 105.042593,
-        'T' to 119.058243,
-        'U' to 168.964203,
-        'V' to 117.078979,
-        'W' to 204.089878,
-        'Y' to 181.073893
-)
-
-val extended_protein_values = mapOf(
-        'A' to "A",
-        'B' to "ND",
-        'C' to "C",
-        'D' to "D",
-        'E' to "E",
-        'F' to "F",
-        'G' to "G",
-        'H' to "H",
-        'I' to "I",
-        'J' to "IL",
-        'K' to "K",
-        'L' to "L",
-        'M' to "M",
-        'N' to "N",
-        'O' to "O",
-        'P' to "P",
-        'Q' to "Q",
-        'R' to "R",
-        'S' to "S",
-        'T' to "T",
-        'U' to "U",
-        'V' to "V",
-        'W' to "W",
-        'X' to "ACDEFGHIKLMNPQRSTVWY",
-//  ' ' TODO - Include U and O in the possible values of X?
-//  ' ' This could alter the extended_protein_weight_ranges ...
-//  ' ' by MP to Won't do this, because they are so rare.
-        'Y' to "Y",
-        'Z' to "QE"
-)
-
-val protein_weight_ranges = make_ranges(protein_weights)
-
-val extended_protein_weight_ranges = make_ambiguous_ranges(extended_protein_values, protein_weights)
-val avg_extended_protein_weights = make_ambiguous_averages(extended_protein_values, protein_weights)
 
 /**
 For Center of Mass Calculation.
