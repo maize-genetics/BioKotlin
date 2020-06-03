@@ -73,6 +73,9 @@ dependencies {
     implementation("org.apache.commons:commons-csv:1.8")
     implementation("com.github.jkcclemens:khttp:0.1.0")
 
+
+    implementation("com.google.guava:guava:29.0-jre")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
     val kotestVersion = "4.1.0.293-SNAPSHOT"
