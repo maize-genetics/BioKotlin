@@ -307,12 +307,6 @@ enum class Codons {
     //Provide two immutable sets - DNA and RNA ones
 }
 
-enum class RNACodons {
-    AAA, ACA, AGA, AUA, AAC, ACC, AGC, AUC, AAG, ACG, AGG, AUG, AAU, ACU, AGU, AUU, CAA, CCA, CGA, CUA, CAC, CCC, CGC,
-    CUC, CAG, CCG, CGG, CUG, CAU, CCU, CGU, CUU, GAA, GCA, GGA, GUA, GAC, GCC, GGC, GUC, GAG, GCG, GGG, GUG, GAU, GCU,
-    GGU, GUU, UAA, UCA, UGA, UUA, UAC, UCC, UGC, UUC, UAG, UCG, UGG, UUG, UAU, UCU, UGU, UUU;
-}
-
 fun main() {
     val bb = Sets.immutableEnumSet(biokotlin.seq.DNA.unambiguousDNA)
     val baseOrder= setOf(biokotlin.seq.DNA.values())
