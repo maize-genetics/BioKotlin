@@ -75,18 +75,18 @@ fun main() {
 fun protein_letters_3to1(name3letter: String) = AminoAcid.from3Letter(name3letter)
 val protein_letters = AminoAcid
 
-interface IUPACEncoding<T : Enum<T>> {
+interface IUPACEncoding {
     val char:Char
     val twoBit:Byte
     val fourBit:Byte
     val ambiguous: Boolean
     val ambigString: String
-    val complement:Enum<T>
+    val complement:IUPACEncoding
     val weight:Double
 }
 
 enum class DNA(override val char: Char, override val twoBit: Byte, override val fourBit: Byte,
-               override val ambiguous: Boolean, override val ambigString: String) : IUPACEncoding<DNA> {
+               override val ambiguous: Boolean, override val ambigString: String) : IUPACEncoding {
     A('A', 0, 0, false, "A"),
     C('C', 1, 1, false, "C"),
     G('G', 2, 2, false, "G"),
@@ -153,7 +153,7 @@ enum class DNA(override val char: Char, override val twoBit: Byte, override val 
     }
 }
 
-enum class RNA : IUPACEncoding<RNA> {
+enum class RNA : IUPACEncoding {
     A, C, G, U, M, R, W, S, Y, K, V, H, D, B, X, N;
 
     val dnaAnalog = if(this.name.equals("U")) DNA.T else DNA.valueOf(this.name)

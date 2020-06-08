@@ -177,7 +177,7 @@ G | GUG V   | GCG A   | GAG E   | GGG G   | G
             row(33,"TGA",'W',null)
     ) {id, codonString, primaryAA, secondaryAA ->
         val ct = CodonTables(id)
-        val codon = Codons.valueOf(codonString)
+        val codon = DNACodon[codonString]
         val aa : AminoAcid? = ct.codonToAA[codon]
         if(primaryAA == '*') {
             ct.stop_codons shouldContain codon

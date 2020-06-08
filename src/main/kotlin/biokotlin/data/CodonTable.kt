@@ -1,11 +1,11 @@
 package biokotlin.data
 
-import biokotlin.seq.AminoAcid
-import biokotlin.seq.DNA
-import biokotlin.seq.NucleicAcid
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
-import biokotlin.data.Codons.*
+import biokotlin.data.DNACodon.*
+import biokotlin.seq.AminoAcid.*
+import biokotlin.seq.*
+import java.util.*
 import kotlin.NoSuchElementException
 
 
@@ -112,7 +112,8 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
      */
     override fun toString(): String {
         val sb = StringBuilder()
-        val baseOrder = if(nucleicAcid == NucleicAcid.DNA) "TCAG" else "UCAG"
+        val baseOrder: List<IUPACEncoding> = if(nucleicAcid == NucleicAcid.DNA) listOf(DNA.T, DNA.C, DNA.A, DNA.G)
+            else listOf(RNA.U, RNA.C, RNA.A, RNA.G)
         sb.append("""
             Table $id ${name.joinToString()}
             
@@ -123,7 +124,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
             for (third in baseOrder) {
                 sb.append("$first |")
                 for (second in baseOrder) {
-                    val codon = Codons.getCodon(first,second,third)
+                    val codon = Codons.get(first,second,third)
                     var aa = codonToAA.get(codon).toString().trim()
                     if(stop_codons.contains(codon)) aa+="Stop"
                     else if(start_codons.contains(codon)) aa+="(s)"
@@ -137,7 +138,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
     }
 
    val aaToCodon:Map<AminoAcid,List<Codons>> = codonToAA.entries
-           .sortedBy { it.key } //keep the codon in standard order
+           .sortedBy { it.key.toString() } //keep the codon in standard order
            .groupBy({it.value},{it.key})
 
     val standard_dna_table
@@ -171,7 +172,7 @@ class CodonTableData {
                     "GAT" to 'D', "GAC" to 'D', "GAA" to 'E', "GAG" to 'E',
                     "GGT" to 'G', "GGC" to 'G', "GGA" to 'G', "GGG" to 'G'
             ).entries.associate {(c,a) ->
-                Codons.valueOf(c) to biokotlin.seq.AminoAcid.valueOf(a.toString()) },
+                DNACodon.valueOf(c) to biokotlin.seq.AminoAcid.valueOf(a.toString()) },
             stop_codons = listOf(TAA, TAG, TGA),
             start_codons = listOf(TTG, CTG, ATG)
     )
@@ -260,7 +261,7 @@ class CodonTableData {
         val rnaStart = dnaTable.start_codons
                 .map { codon -> codon.rnaAnalog }
                 .toList()
-        val rnaCodonToAA = dnaTable.codonToAA.entries
+        val rnaCodonToAA:Map<Codons,AminoAcid> = dnaTable.codonToAA.entries
                 .associate { (codon, amino) -> codon.rnaAnalog to amino }
         return dnaTable.copy(stop_codons = rnaStop, start_codons = rnaStart, codonToAA = rnaCodonToAA, nucleicAcid = NucleicAcid.RNA)
     }
@@ -270,44 +271,86 @@ class CodonTableData {
 
 }
 
-enum class Codons {
-    AAA, ACA, AGA, ATA, AAC, ACC, AGC, ATC, AAG, ACG, AGG, ATG, AAT, ACT, AGT, ATT, CAA, CCA, CGA, CTA, CAC, CCC, CGC, 
-    CTC, CAG, CCG, CGG, CTG, CAT, CCT, CGT, CTT, GAA, GCA, GGA, GTA, GAC, GCC, GGC, GTC, GAG, GCG, GGG, GTG, GAT, GCT, 
-    GGT, GTT, TAA, TCA, TGA, TTA, TAC, TCC, TGC, TTC, TAG, TCG, TGG, TTG, TAT, TCT, TGT, TTT,
-    //RNA Specific codons
-    AUA, AUC, AUG, AAU, ACU, AGU, AUU, CUA, CUC, CUG, CAU, CCU, CGU, CUU, GUA, GUC, GUG, GAU, GCU, GGU, GUU, UAA, UCA,
-    UGA, UUA, UAC, UCC, UGC, UUC, UAG, UCG, UGG, UUG, UAU, UCU, UGU, UUU
-    ;
-
-    val dnaAnalog
-            get() = AAA
-    val rnaAnalog
-            get() = AAA
+interface Codons {
+    val dnaAnalog : DNACodon
+    val rnaAnalog : RNACodon
+    val name: String
 
     companion object {
-        //TODO all of this needs to be implemented
-        fun getCodon(s: String) = valueOf(s)
-        fun getCodon(c1: DNA, c2:DNA, c3: DNA) = AAA
-        fun getCodon(c1: Char, c2:Char, c3: Char) = AAA
-        fun getRNAAnalog(dnaCodon : Codons) = AAA
-        fun getDNAAnalog(dnaCodon : Codons) = AAA
-        //TODO could be cleanly created by testing if (it == it.dnaAnalog) or (it == it.rnaAnalog)
-        val dnaCodons: ImmutableSet<Codons> = ImmutableSet.of(AAA, ACA, AGA, ATA, AAC, ACC, AGC, ATC, AAG, ACG, AGG, ATG,
-                AAT, ACT, AGT, ATT, CAA, CCA, CGA, CTA, CAC, CCC, CGC,
-                CTC, CAG, CCG, CGG, CTG, CAT, CCT, CGT, CTT, GAA, GCA, GGA, GTA, GAC, GCC, GGC, GTC, GAG, GCG, GGG, GTG, GAT, GCT,
-                GGT, GTT, TAA, TCA, TGA, TTA, TAC, TCC, TGC, TTC, TAG, TCG, TGG, TTG, TAT, TCT, TGT, TTT)
-        val rnaCodons: ImmutableSet<Codons> = ImmutableSet.of(AAA, ACA, AGA, AUA, AAC, ACC, AGC, AUC, AAG, ACG, AGG, AUG,
-                AAU, ACU, AGU, AUU, CAA, CCA, CGA, CUA, CAC, CCC, CGC,
-                CUC, CAG, CCG, CGG, CUG, CAU, CCU, CGU, CUU, GAA, GCA, GGA, GUA, GAC, GCC, GGC, GUC, GAG, GCG, GGG, GUG, GAU, GCU,
-                GGU, GUU, UAA, UCA, UGA, UUA, UAC, UCC, UGC, UUC, UAG, UCG, UGG, UUG, UAU, UCU, UGU, UUU)
-
+        fun get(c1: DNA, c2:DNA, c3: DNA) = DNACodon.valueOf(c1.name+c2.name+c3.name)
+        fun get(c1: RNA, c2:RNA, c3: RNA) = RNACodon.valueOf(c1.name+c2.name+c3.name)
+        fun rna(c1: Char, c2:Char, c3: Char) = RNACodon.valueOf(charArrayOf(c1, c2, c3).toString())
+        fun get(c1: IUPACEncoding, c2: IUPACEncoding, c3: IUPACEncoding): Codons {
+            return if(c1 is DNA && c2 is DNA && c3 is DNA) get(c1,c2,c3) else
+                if(c1 is RNA && c2 is RNA && c3 is RNA) get(c1,c2,c3) else
+                    throw IllegalArgumentException("Mixed nucleotides for codon not allowed")
+        }
     }
-
-    //Fuse DNA and RNA codons
-    //Provide two immutable sets - DNA and RNA ones
 }
 
+enum class DNACodon : Codons {
+    AAA, ACA, AGA, ATA, AAC, ACC, AGC, ATC, AAG, ACG, AGG, ATG,
+    AAT, ACT, AGT, ATT, CAA, CCA, CGA, CTA, CAC, CCC, CGC,
+    CTC, CAG, CCG, CGG, CTG, CAT, CCT, CGT, CTT, GAA, GCA, GGA, GTA, GAC, GCC, GGC, GTC, GAG, GCG, GGG, GTG, GAT, GCT,
+    GGT, GTT, TAA, TCA, TGA, TTA, TAC, TCC, TGC, TTC, TAG, TCG, TGG, TTG, TAT, TCT, TGT, TTT
+    ;
+
+
+    override val dnaAnalog = valueOf(this.name.replace(oldChar = 'U', newChar = 'T'))
+    override val rnaAnalog= RNACodon.valueOf(this.name.replace(oldChar = 'T', newChar = 'U'))
+
+    companion object {
+        operator fun get(s: String) = valueOf(s)
+        fun get(c1: Char, c2:Char, c3: Char) = valueOf(charArrayOf(c1, c2, c3).toString())
+    }
+}
+
+enum class RNACodon : Codons {
+    AAA, ACA, AGA, AUA, AAC, ACC, AGC, AUC, AAG, ACG, AGG, AUG,
+    AAU, ACU, AGU, AUU, CAA, CCA, CGA, CUA, CAC, CCC, CGC,
+    CUC, CAG, CCG, CGG, CUG, CAU, CCU, CGU, CUU, GAA, GCA, GGA, GUA, GAC, GCC, GGC, GUC, GAG, GCG, GGG, GUG, GAU, GCU,
+    GGU, GUU, UAA, UCA, UGA, UUA, UAC, UCC, UGC, UUC, UAG, UCG, UGG, UUG, UAU, UCU, UGU, UUU
+    ;
+
+    override val dnaAnalog = DNACodon.valueOf(this.name.replace(oldChar = 'U', newChar = 'T'))
+    override val rnaAnalog= valueOf(this.name.replace(oldChar = 'T', newChar = 'U'))
+
+    companion object {
+        operator fun get(s: String) = valueOf(s)
+        fun get(c1: Char, c2:Char, c3: Char) = valueOf(charArrayOf(c1,c2,c3).toString())
+    }
+}
+
+enum class MasterEnumAnimal {
+    Dog,
+    Cat
+}
+
+//typealias DNA2 = EnumSet<DNA>
+val DNA3 =
+
 fun main() {
+
+    val codonToAA2: Map<DNACodon,AminoAcid> = mapOf(
+            TTT to F, TTC to F, TTA to L, TTG to L,
+            TCT to S, TCC to S, TCA to S, TCG to S,
+            TAT to Y, TAC to Y,  
+            TGT to C, TGC to C, TGG to W,
+            CTT to L, CTC to L, CTA to L, CTG to L,
+            CCT to P, CCC to P, CCA to P, CCG to P,
+            CAT to H, CAC to H, CAA to Q, CAG to Q,
+            CGT to R, CGC to R, CGA to R, CGG to R,
+            ATT to I, ATC to I, ATA to I, ATG to M,
+            ACT to T, ACC to T, ACA to T, ACG to T,
+            AAT to N, AAC to N, AAA to K, AAG to K,
+            AGT to S, AGC to S, AGA to R, AGG to R,
+            GTT to V, GTC to V, GTA to V, GTG to V,
+            GCT to A, GCC to A, GCA to A, GCG to A,
+            GAT to D, GAC to D, GAA to E, GAG to E,
+            GGT to G, GGC to G, GGA to G, GGG to G
+    )
+    
+    
     val bb = Sets.immutableEnumSet(biokotlin.seq.DNA.unambiguousDNA)
     val baseOrder= setOf(biokotlin.seq.DNA.values())
     val bb3: ImmutableSet<biokotlin.seq.DNA> = biokotlin.seq.DNA.unambiguousDNA
