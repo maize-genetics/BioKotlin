@@ -134,7 +134,7 @@ abstract class Seq(val seqB: ByteArray) {
 
 
 }
-
+/*Negative slices are used to pull subsequences from the end of the sequence*/
 fun negativeSlice(x: IntRange, size: Int): IntRange {
     var (first, last) = x.first to x.last
     if (x.first < 0 && x.last < 0) {

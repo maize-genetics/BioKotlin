@@ -1,11 +1,9 @@
 package biokotlin.data
 
 import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Sets
 import biokotlin.seq.AminoAcid.*
 import biokotlin.seq.*
 import biokotlin.data.Codon.*
-import java.util.*
 import kotlin.NoSuchElementException
 
 
@@ -28,14 +26,6 @@ import kotlin.NoSuchElementException
 */
 //TODO fast translate methods that rely on encoding into a short
 //TODO see if guava immutable hashMap even faster
-//Consider making a Codon class (c1: Char, c2: Char, c3: Char)
-//Consider using EnumSet and EnumMap - that are java bit let maps
-//
-//enum class DNA_CODONS {
-//    AAA, ACA, AGA, ATA
-//}
-//
-//val allCodons = EnumSet.allOf(DNA_CODONS::class.java)
 
 /**Return codon table based on id, ambiguous not implemented*/
 fun CodonTables(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA) : CodonTable =
@@ -177,8 +167,7 @@ class CodonTableData {
     )
 
     init {
-        //val diffsWithStandard = emptyList<CodonTable>()
-        val diffsWithStandard = listOf(
+        val dnaCodonTables = listOf(
                 CodonTable(1,listOf("Standard", "SGC0"),listOf(TTG, CTG, ATG), listOf(TAA, TAG, TGA),diffsToAll()),
                 CodonTable(2,listOf("Vertebrate Mitochondrial", "SGC1"),listOf(ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG, AGA, AGG),diffsToAll(AGA to null,AGG to null,ATA to M,TGA to W)),
                 CodonTable(3,listOf("Yeast Mitochondrial", "SGC2"),listOf(ATA, ATG, GTG), listOf(TAA, TAG),diffsToAll(ATA to M,CTA to T,CTC to T,CTG to T,CTT to T,TGA to W)),
@@ -208,7 +197,7 @@ class CodonTableData {
                 CodonTable(33,listOf("Cephalodiscidae Mitochondrial"),listOf(TTG, CTG, ATG, GTG), listOf(TAG),diffsToAll(AGA to S,AGG to K,TAA to Y,TGA to W))
          )
         println(standardCodonTable.id)
-        allCodonTables = createDNARNATables(diffsWithStandard)
+        allCodonTables = createDNARNATables(dnaCodonTables)
         nameToId = allCodonTables.values
                 .flatMap { codonTable -> codonTable.name.map { it to codonTable.id } }  //the list of names need to be associated with single id
                 .associate { (name, id) -> name to id }
@@ -243,6 +232,9 @@ class CodonTableData {
                 .associate { codonTable -> codonTable.key() to codonTable }
     }
 
+    /*Builds on the new codon to amino acid map based on the standardCodonTable and list of differences.
+    * If the codon is no longer used.  AminoAcid is set to null
+    * */
     private fun diffsToAll(vararg diffs: Pair<Codon, AminoAcid?>): Map<Codon, AminoAcid> {
         val newCodonToAA = standardCodonTable.codonToAA.toMutableMap()
         //TODO this previous hack worked with text - need a solution with enums
