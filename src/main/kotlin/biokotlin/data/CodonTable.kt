@@ -2,9 +2,9 @@ package biokotlin.data
 
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
-import biokotlin.data.DNACodon.*
 import biokotlin.seq.AminoAcid.*
 import biokotlin.seq.*
+import biokotlin.data.Codon.*
 import java.util.*
 import kotlin.NoSuchElementException
 
@@ -73,8 +73,8 @@ val CodonTables
  * @property[ambiguous] whether ambiguous codons are used (currently not implemented)
  * @property[aaToCodon] multimap to amino acid code to list of codons
  */
-data class CodonTable(val id: Int, val name: List<String>, val start_codons: List<Codons>, val stop_codons: List<Codons>,
-                      val codonToAA: Map<Codons, AminoAcid>, val nucleicAcid: NucleicAcid = NucleicAcid.DNA, val ambiguous:Boolean = false) {
+data class CodonTable(val id: Int, val name: List<String>, val start_codons: List<Codon>, val stop_codons: List<Codon>,
+                      val codonToAA: Map<Codon, AminoAcid>, val nucleicAcid: NucleicAcid = NucleicAcid.DNA, val ambiguous:Boolean = false) {
 
     fun key():CodonTableKey = CodonTableKey(id,ambiguous,nucleicAcid)
 
@@ -112,8 +112,8 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
      */
     override fun toString(): String {
         val sb = StringBuilder()
-        val baseOrder: List<IUPACEncoding> = if(nucleicAcid == NucleicAcid.DNA) listOf(DNA.T, DNA.C, DNA.A, DNA.G)
-            else listOf(RNA.U, RNA.C, RNA.A, RNA.G)
+        val baseOrder: List<NUC> = if(nucleicAcid == NucleicAcid.DNA) listOf(NUC.T, NUC.C, NUC.A, NUC.G)
+            else listOf(NUC.U, NUC.C, NUC.A, NUC.G)
         sb.append("""
             Table $id ${name.joinToString()}
             
@@ -124,8 +124,8 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
             for (third in baseOrder) {
                 sb.append("$first |")
                 for (second in baseOrder) {
-                    val codon = Codons.get(first,second,third)
-                    var aa = codonToAA.get(codon).toString().trim()
+                    val codon = Codon.get(first,second,third)
+                    var aa = codonToAA.get(codon)?.toString() ?: ""
                     if(stop_codons.contains(codon)) aa+="Stop"
                     else if(start_codons.contains(codon)) aa+="(s)"
                     sb.append(" $codon ${aa.padEnd(4)}|")
@@ -137,7 +137,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
         return sb.toString()
     }
 
-   val aaToCodon:Map<AminoAcid,List<Codons>> = codonToAA.entries
+   val aaToCodon:Map<AminoAcid,List<Codon>> = codonToAA.entries
            .sortedBy { it.key.toString() } //keep the codon in standard order
            .groupBy({it.value},{it.key})
 
@@ -154,60 +154,59 @@ class CodonTableData {
     val standardCodonTable: CodonTable = CodonTable(
             name = listOf("Standard", "SGC0"),
             id = 1,
-            codonToAA = mapOf<String, Char>(
-                    "TTT" to 'F', "TTC" to 'F', "TTA" to 'L', "TTG" to 'L',
-                    "TCT" to 'S', "TCC" to 'S', "TCA" to 'S', "TCG" to 'S',
-                    "TAT" to 'Y', "TAC" to 'Y',  //Missing pairs are stop codons
-                    "TGT" to 'C', "TGC" to 'C', "TGG" to 'W', //Missing pair is stop codon
-                    "CTT" to 'L', "CTC" to 'L', "CTA" to 'L', "CTG" to 'L',
-                    "CCT" to 'P', "CCC" to 'P', "CCA" to 'P', "CCG" to 'P',
-                    "CAT" to 'H', "CAC" to 'H', "CAA" to 'Q', "CAG" to 'Q',
-                    "CGT" to 'R', "CGC" to 'R', "CGA" to 'R', "CGG" to 'R',
-                    "ATT" to 'I', "ATC" to 'I', "ATA" to 'I', "ATG" to 'M',
-                    "ACT" to 'T', "ACC" to 'T', "ACA" to 'T', "ACG" to 'T',
-                    "AAT" to 'N', "AAC" to 'N', "AAA" to 'K', "AAG" to 'K',
-                    "AGT" to 'S', "AGC" to 'S', "AGA" to 'R', "AGG" to 'R',
-                    "GTT" to 'V', "GTC" to 'V', "GTA" to 'V', "GTG" to 'V',
-                    "GCT" to 'A', "GCC" to 'A', "GCA" to 'A', "GCG" to 'A',
-                    "GAT" to 'D', "GAC" to 'D', "GAA" to 'E', "GAG" to 'E',
-                    "GGT" to 'G', "GGC" to 'G', "GGA" to 'G', "GGG" to 'G'
-            ).entries.associate {(c,a) ->
-                DNACodon.valueOf(c) to biokotlin.seq.AminoAcid.valueOf(a.toString()) },
+            codonToAA = mapOf<Codon, AminoAcid>(
+            TTT to F, TTC to F, TTA to L, TTG to L,
+            TCT to S, TCC to S, TCA to S, TCG to S,
+            TAT to Y, TAC to Y,
+            TGT to C, TGC to C, TGG to W,
+            CTT to L, CTC to L, CTA to L, CTG to L,
+            CCT to P, CCC to P, CCA to P, CCG to P,
+            CAT to H, CAC to H, CAA to Q, CAG to Q,
+            CGT to R, CGC to R, CGA to R, CGG to R,
+            ATT to I, ATC to I, ATA to I, ATG to M,
+            ACT to T, ACC to T, ACA to T, ACG to T,
+            AAT to N, AAC to N, AAA to K, AAG to K,
+            AGT to S, AGC to S, AGA to R, AGG to R,
+            GTT to V, GTC to V, GTA to V, GTG to V,
+            GCT to A, GCC to A, GCA to A, GCG to A,
+            GAT to D, GAC to D, GAA to E, GAG to E,
+            GGT to G, GGC to G, GGA to G, GGG to G
+            ),
             stop_codons = listOf(TAA, TAG, TGA),
             start_codons = listOf(TTG, CTG, ATG)
     )
 
     init {
-        val diffsWithStandard = emptyList<CodonTable>()
-//        val diffsWithStandard = listOf(
-//                CodonTable(1, listOf("Standard", "SGC0"), listOf("TTG", "CTG", "ATG"), listOf("TAA", "TAG", "TGA"), emptyMap<String, Char>()),
-//                CodonTable(2, listOf("Vertebrate Mitochondrial", "SGC1"), listOf("ATT", "ATC", "ATA", "ATG", "GTG"), listOf("TAA", "TAG", "AGA", "AGG"), mapOf("AGA" to '-', "AGG" to '-', "ATA" to 'M', "TGA" to 'W')),
-//                CodonTable(3, listOf("Yeast Mitochondrial", "SGC2"), listOf("ATA", "ATG", "GTG"), listOf("TAA", "TAG"), mapOf("ATA" to 'M', "CTA" to 'T', "CTC" to 'T', "CTG" to 'T', "CTT" to 'T', "TGA" to 'W')),
-//                CodonTable(4, listOf("Mold Mitochondrial", "Protozoan Mitochondrial", "Coelenterate Mitochondrial", "Mycoplasma", "Spiroplasma", "SGC3"), listOf("TTA", "TTG", "CTG", "ATT", "ATC", "ATA", "ATG", "GTG"), listOf("TAA", "TAG"), mapOf("TGA" to 'W')),
-//                CodonTable(5, listOf("Invertebrate Mitochondrial", "SGC4"), listOf("TTG", "ATT", "ATC", "ATA", "ATG", "GTG"), listOf("TAA", "TAG"), mapOf("AGA" to 'S', "AGG" to 'S', "ATA" to 'M', "TGA" to 'W')),
-//                CodonTable(6, listOf("Ciliate Nuclear", "Dasycladacean Nuclear", "Hexamita Nuclear", "SGC5"), listOf("ATG"), listOf("TGA"), mapOf("TAA" to 'Q', "TAG" to 'Q')),
-//                CodonTable(9, listOf("Echinoderm Mitochondrial", "Flatworm Mitochondrial", "SGC8"), listOf("ATG", "GTG"), listOf("TAA", "TAG"), mapOf("AAA" to 'N', "AGA" to 'S', "AGG" to 'S', "TGA" to 'W')),
-//                CodonTable(10, listOf("Euplotid Nuclear", "SGC9"), listOf("ATG"), listOf("TAA", "TAG"), mapOf("TGA" to 'C')),
-//                CodonTable(11, listOf("Bacterial", "Archaeal", "Plant Plastid"), listOf("TTG", "CTG", "ATT", "ATC", "ATA", "ATG", "GTG"), listOf("TAA", "TAG", "TGA"), emptyMap<String, Char>()),
-//                CodonTable(12, listOf("Alternative Yeast Nuclear"), listOf("CTG", "ATG"), listOf("TAA", "TAG", "TGA"), mapOf("CTG" to 'S')),
-//                CodonTable(13, listOf("Ascidian Mitochondrial"), listOf("TTG", "ATA", "ATG", "GTG"), listOf("TAA", "TAG"), mapOf("AGA" to 'G', "AGG" to 'G', "ATA" to 'M', "TGA" to 'W')),
-//                CodonTable(14, listOf("Alternative Flatworm Mitochondrial"), listOf("ATG"), listOf("TAG"), mapOf("AAA" to 'N', "AGA" to 'S', "AGG" to 'S', "TAA" to 'Y', "TGA" to 'W')),
-//                CodonTable(15, listOf("Blepharisma Macronuclear"), listOf("ATG"), listOf("TAA", "TGA"), mapOf("TAG" to 'Q')),
-//                CodonTable(16, listOf("Chlorophycean Mitochondrial"), listOf("ATG"), listOf("TAA", "TGA"), mapOf("TAG" to 'L')),
-//                CodonTable(21, listOf("Trematode Mitochondrial"), listOf("ATG", "GTG"), listOf("TAA", "TAG"), mapOf("AAA" to 'N', "AGA" to 'S', "AGG" to 'S', "ATA" to 'M', "TGA" to 'W')),
-//                CodonTable(22, listOf("Scenedesmus obliquus Mitochondrial"), listOf("ATG"), listOf("TCA", "TAA", "TGA"), mapOf("TAG" to 'L', "TCA" to '-')),
-//                CodonTable(23, listOf("Thraustochytrium Mitochondrial"), listOf("ATT", "ATG", "GTG"), listOf("TTA", "TAA", "TAG", "TGA"), mapOf("TTA" to '-')),
-//                CodonTable(24, listOf("Pterobranchia Mitochondrial"), listOf("TTG", "CTG", "ATG", "GTG"), listOf("TAA", "TAG"), mapOf("AGA" to 'S', "AGG" to 'K', "TGA" to 'W')),
-//                CodonTable(25, listOf("Candidate Division SR1", "Gracilibacteria"), listOf("TTG", "ATG", "GTG"), listOf("TAA", "TAG"), mapOf("TGA" to 'G')),
-//                CodonTable(26, listOf("Pachysolen tannophilus Nuclear"), listOf("CTG", "ATG"), listOf("TAA", "TAG", "TGA"), mapOf("CTG" to 'A')),
-//                CodonTable(27, listOf("Karyorelict Nuclear"), listOf("ATG"), listOf("TGA"), mapOf("TAA" to 'Q', "TAG" to 'Q', "TGA" to 'W')),
-//                CodonTable(28, listOf("Condylostoma Nuclear"), listOf("ATG"), listOf("TAA", "TAG", "TGA"), mapOf("TAA" to 'Q', "TAG" to 'Q', "TGA" to 'W')),
-//                CodonTable(29, listOf("Mesodinium Nuclear"), listOf("ATG"), listOf("TGA"), mapOf("TAA" to 'Y', "TAG" to 'Y')),
-//                CodonTable(30, listOf("Peritrich Nuclear"), listOf("ATG"), listOf("TGA"), mapOf("TAA" to 'E', "TAG" to 'E')),
-//                CodonTable(31, listOf("Blastocrithidia Nuclear"), listOf("ATG"), listOf("TAA", "TAG"), mapOf("TAA" to 'E', "TAG" to 'E', "TGA" to 'W')),
-//                CodonTable(32, listOf("Balanophoraceae Plastid"), listOf("TTG", "CTG", "ATT", "ATC", "ATA", "ATG", "GTG"), listOf("TAA", "TGA"), mapOf("TAG" to 'W')),
-//                CodonTable(33, listOf("Cephalodiscidae Mitochondrial"), listOf("TTG", "CTG", "ATG", "GTG"), listOf("TAG"), mapOf("AGA" to 'S', "AGG" to 'K', "TAA" to 'Y', "TGA" to 'W'))
-//        )
+        //val diffsWithStandard = emptyList<CodonTable>()
+        val diffsWithStandard = listOf(
+                CodonTable(1,listOf("Standard", "SGC0"),listOf(TTG, CTG, ATG), listOf(TAA, TAG, TGA),diffsToAll()),
+                CodonTable(2,listOf("Vertebrate Mitochondrial", "SGC1"),listOf(ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG, AGA, AGG),diffsToAll(AGA to null,AGG to null,ATA to M,TGA to W)),
+                CodonTable(3,listOf("Yeast Mitochondrial", "SGC2"),listOf(ATA, ATG, GTG), listOf(TAA, TAG),diffsToAll(ATA to M,CTA to T,CTC to T,CTG to T,CTT to T,TGA to W)),
+                CodonTable(4,listOf("Mold Mitochondrial", "Protozoan Mitochondrial", "Coelenterate Mitochondrial", "Mycoplasma", "Spiroplasma", "SGC3"),listOf(TTA, TTG, CTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG),diffsToAll(TGA to W)),
+                CodonTable(5,listOf("Invertebrate Mitochondrial", "SGC4"),listOf(TTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG),diffsToAll(AGA to S,AGG to S,ATA to M,TGA to W)),
+                CodonTable(6,listOf("Ciliate Nuclear", "Dasycladacean Nuclear", "Hexamita Nuclear", "SGC5"),listOf(ATG), listOf(TGA),diffsToAll(TAA to Q,TAG to Q)),
+                CodonTable(9,listOf("Echinoderm Mitochondrial", "Flatworm Mitochondrial", "SGC8"),listOf(ATG, GTG), listOf(TAA, TAG),diffsToAll(AAA to N,AGA to S,AGG to S,TGA to W)),
+                CodonTable(10,listOf("Euplotid Nuclear", "SGC9"),listOf(ATG), listOf(TAA, TAG),diffsToAll(TGA to C)),
+                CodonTable(11,listOf("Bacterial", "Archaeal", "Plant Plastid"),listOf(TTG, CTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG, TGA),diffsToAll()),
+                CodonTable(12,listOf("Alternative Yeast Nuclear"),listOf(CTG, ATG), listOf(TAA, TAG, TGA),diffsToAll(CTG to S)),
+                CodonTable(13,listOf("Ascidian Mitochondrial"),listOf(TTG, ATA, ATG, GTG), listOf(TAA, TAG),diffsToAll(AGA to G,AGG to G,ATA to M,TGA to W)),
+                CodonTable(14,listOf("Alternative Flatworm Mitochondrial"),listOf(ATG), listOf(TAG),diffsToAll(AAA to N,AGA to S,AGG to S,TAA to Y,TGA to W)),
+                CodonTable(15,listOf("Blepharisma Macronuclear"),listOf(ATG), listOf(TAA, TGA),diffsToAll(TAG to Q)),
+                CodonTable(16,listOf("Chlorophycean Mitochondrial"),listOf(ATG), listOf(TAA, TGA),diffsToAll(TAG to L)),
+                CodonTable(21,listOf("Trematode Mitochondrial"),listOf(ATG, GTG), listOf(TAA, TAG),diffsToAll(AAA to N,AGA to S,AGG to S,ATA to M,TGA to W)),
+                CodonTable(22,listOf("Scenedesmus obliquus Mitochondrial"),listOf(ATG), listOf(TCA, TAA, TGA),diffsToAll(TAG to L,TCA to null)),
+                CodonTable(23,listOf("Thraustochytrium Mitochondrial"),listOf(ATT, ATG, GTG), listOf(TTA, TAA, TAG, TGA),diffsToAll(TTA to null)),
+                CodonTable(24,listOf("Pterobranchia Mitochondrial"),listOf(TTG, CTG, ATG, GTG), listOf(TAA, TAG),diffsToAll(AGA to S,AGG to K,TGA to W)),
+                CodonTable(25,listOf("Candidate Division SR1", "Gracilibacteria"),listOf(TTG, ATG, GTG), listOf(TAA, TAG),diffsToAll(TGA to G)),
+                CodonTable(26,listOf("Pachysolen tannophilus Nuclear"),listOf(CTG, ATG), listOf(TAA, TAG, TGA),diffsToAll(CTG to A)),
+                CodonTable(27,listOf("Karyorelict Nuclear"),listOf(ATG), listOf(TGA),diffsToAll(TAA to Q,TAG to Q,TGA to W)),
+                CodonTable(28,listOf("Condylostoma Nuclear"),listOf(ATG), listOf(TAA, TAG, TGA),diffsToAll(TAA to Q,TAG to Q,TGA to W)),
+                CodonTable(29,listOf("Mesodinium Nuclear"),listOf(ATG), listOf(TGA),diffsToAll(TAA to Y,TAG to Y)),
+                CodonTable(30,listOf("Peritrich Nuclear"),listOf(ATG), listOf(TGA),diffsToAll(TAA to E,TAG to E)),
+                CodonTable(31,listOf("Blastocrithidia Nuclear"),listOf(ATG), listOf(TAA, TAG),diffsToAll(TAA to E,TAG to E,TGA to W)),
+                CodonTable(32,listOf("Balanophoraceae Plastid"),listOf(TTG, CTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TGA),diffsToAll(TAG to W)),
+                CodonTable(33,listOf("Cephalodiscidae Mitochondrial"),listOf(TTG, CTG, ATG, GTG), listOf(TAG),diffsToAll(AGA to S,AGG to K,TAA to Y,TGA to W))
+         )
         println(standardCodonTable.id)
         allCodonTables = createDNARNATables(diffsWithStandard)
         nameToId = allCodonTables.values
@@ -237,21 +236,18 @@ class CodonTableData {
     }
 
 
-    private fun createDNARNATables(diffsWithStandard: List<CodonTable>): Map<CodonTableKey, CodonTable> {
-        val dnaCodonTables = createDNATables(diffsWithStandard)
-        return dnaCodonTables.values
+    private fun createDNARNATables(dnaCodonTables: List<CodonTable>): Map<CodonTableKey, CodonTable> {
+        //val dnaCodonTables = createDNATables(diffsWithStandard)
+        return dnaCodonTables
                 .flatMap {dnaCT -> listOf(dnaCT,createRNATable(dnaCT))  }
                 .associate { codonTable -> codonTable.key() to codonTable }
     }
 
-    private fun createDNATables(diffsWithStandard: List<CodonTable>): Map<CodonTableKey, CodonTable> {
-        return diffsWithStandard
-                .map { diffs ->
-                    val newCodonToAA = standardCodonTable.codonToAA.toMutableMap()
-                    //TODO this previous hack worked with text - need a solution with enums
-                    diffs.codonToAA.forEach { (codon, amino) -> if (false)/*(amino == '-')*/ newCodonToAA -= codon else newCodonToAA[codon] = amino }
-                    CodonTable(diffs.id, diffs.name, diffs.start_codons, diffs.stop_codons, newCodonToAA)
-                }.associateBy { ct -> ct.key() }
+    private fun diffsToAll(vararg diffs: Pair<Codon, AminoAcid?>): Map<Codon, AminoAcid> {
+        val newCodonToAA = standardCodonTable.codonToAA.toMutableMap()
+        //TODO this previous hack worked with text - need a solution with enums
+        diffs.forEach { (codon, amino) -> if (amino is AminoAcid) newCodonToAA[codon] = amino else newCodonToAA -= codon}
+        return newCodonToAA
     }
 
     private fun createRNATable(dnaTable: CodonTable): CodonTable {
@@ -261,7 +257,7 @@ class CodonTableData {
         val rnaStart = dnaTable.start_codons
                 .map { codon -> codon.rnaAnalog }
                 .toList()
-        val rnaCodonToAA:Map<Codons,AminoAcid> = dnaTable.codonToAA.entries
+        val rnaCodonToAA:Map<Codon,AminoAcid> = dnaTable.codonToAA.entries
                 .associate { (codon, amino) -> codon.rnaAnalog to amino }
         return dnaTable.copy(stop_codons = rnaStop, start_codons = rnaStart, codonToAA = rnaCodonToAA, nucleicAcid = NucleicAcid.RNA)
     }
@@ -271,101 +267,46 @@ class CodonTableData {
 
 }
 
-interface Codons {
-    val dnaAnalog : DNACodon
-    val rnaAnalog : RNACodon
-    val name: String
 
-    companion object {
-        fun get(c1: DNA, c2:DNA, c3: DNA) = DNACodon.valueOf(c1.name+c2.name+c3.name)
-        fun get(c1: RNA, c2:RNA, c3: RNA) = RNACodon.valueOf(c1.name+c2.name+c3.name)
-        fun rna(c1: Char, c2:Char, c3: Char) = RNACodon.valueOf(charArrayOf(c1, c2, c3).toString())
-        fun get(c1: IUPACEncoding, c2: IUPACEncoding, c3: IUPACEncoding): Codons {
-            return if(c1 is DNA && c2 is DNA && c3 is DNA) get(c1,c2,c3) else
-                if(c1 is RNA && c2 is RNA && c3 is RNA) get(c1,c2,c3) else
-                    throw IllegalArgumentException("Mixed nucleotides for codon not allowed")
-        }
-    }
-}
-
-enum class DNACodon : Codons {
+enum class Codon {
     AAA, ACA, AGA, ATA, AAC, ACC, AGC, ATC, AAG, ACG, AGG, ATG,
     AAT, ACT, AGT, ATT, CAA, CCA, CGA, CTA, CAC, CCC, CGC,
     CTC, CAG, CCG, CGG, CTG, CAT, CCT, CGT, CTT, GAA, GCA, GGA, GTA, GAC, GCC, GGC, GTC, GAG, GCG, GGG, GTG, GAT, GCT,
-    GGT, GTT, TAA, TCA, TGA, TTA, TAC, TCC, TGC, TTC, TAG, TCG, TGG, TTG, TAT, TCT, TGT, TTT
+    GGT, GTT, TAA, TCA, TGA, TTA, TAC, TCC, TGC, TTC, TAG, TCG, TGG, TTG, TAT, TCT, TGT, TTT,
+//RNA specific codons
+    AUA, AUC, AUG, AAU, ACU, AGU, AUU, CUA, CUC, CUG, CAU, CCU, CGU, CUU, GUA, GUC, GUG, GAU, GCU, GGU, GUU, UAA, UCA,
+    UGA, UUA, UAC, UCC, UGC, UUC, UAG, UCG, UGG, UUG, UAU, UCU, UGU, UUU
     ;
 
-
-    override val dnaAnalog = valueOf(this.name.replace(oldChar = 'U', newChar = 'T'))
-    override val rnaAnalog= RNACodon.valueOf(this.name.replace(oldChar = 'T', newChar = 'U'))
+    val dnaAnalog
+            get() = valueOf(this.name.replace(oldChar = 'U', newChar = 'T'))
+    val rnaAnalog
+            get() = valueOf(this.name.replace(oldChar = 'T', newChar = 'U'))
+    val isDNACodon
+            get() = !this.name.contains('U')
+    val isRNACodon
+            get() = !this.name.contains('T')
 
     companion object {
         operator fun get(s: String) = valueOf(s)
-        fun get(c1: Char, c2:Char, c3: Char) = valueOf(charArrayOf(c1, c2, c3).toString())
+        fun get(c1: Char, c2:Char, c3: Char) = valueOf(String(charArrayOf(c1, c2, c3)))
+        fun get(c1: NUC, c2:NUC, c3: NUC) = Companion.get(c1.char, c2.char, c3.char)
     }
 }
-
-enum class RNACodon : Codons {
-    AAA, ACA, AGA, AUA, AAC, ACC, AGC, AUC, AAG, ACG, AGG, AUG,
-    AAU, ACU, AGU, AUU, CAA, CCA, CGA, CUA, CAC, CCC, CGC,
-    CUC, CAG, CCG, CGG, CUG, CAU, CCU, CGU, CUU, GAA, GCA, GGA, GUA, GAC, GCC, GGC, GUC, GAG, GCG, GGG, GUG, GAU, GCU,
-    GGU, GUU, UAA, UCA, UGA, UUA, UAC, UCC, UGC, UUC, UAG, UCG, UGG, UUG, UAU, UCU, UGU, UUU
-    ;
-
-    override val dnaAnalog = DNACodon.valueOf(this.name.replace(oldChar = 'U', newChar = 'T'))
-    override val rnaAnalog= valueOf(this.name.replace(oldChar = 'T', newChar = 'U'))
-
-    companion object {
-        operator fun get(s: String) = valueOf(s)
-        fun get(c1: Char, c2:Char, c3: Char) = valueOf(charArrayOf(c1,c2,c3).toString())
-    }
-}
-
-enum class MasterEnumAnimal {
-    Dog,
-    Cat
-}
-
-//typealias DNA2 = EnumSet<DNA>
-val DNA3 =
 
 fun main() {
-
-    val codonToAA2: Map<DNACodon,AminoAcid> = mapOf(
-            TTT to F, TTC to F, TTA to L, TTG to L,
-            TCT to S, TCC to S, TCA to S, TCG to S,
-            TAT to Y, TAC to Y,  
-            TGT to C, TGC to C, TGG to W,
-            CTT to L, CTC to L, CTA to L, CTG to L,
-            CCT to P, CCC to P, CCA to P, CCG to P,
-            CAT to H, CAC to H, CAA to Q, CAG to Q,
-            CGT to R, CGC to R, CGA to R, CGG to R,
-            ATT to I, ATC to I, ATA to I, ATG to M,
-            ACT to T, ACC to T, ACA to T, ACG to T,
-            AAT to N, AAC to N, AAA to K, AAG to K,
-            AGT to S, AGC to S, AGA to R, AGG to R,
-            GTT to V, GTC to V, GTA to V, GTG to V,
-            GCT to A, GCC to A, GCA to A, GCG to A,
-            GAT to D, GAC to D, GAA to E, GAG to E,
-            GGT to G, GGC to G, GGA to G, GGG to G
-    )
-    
-    
-    val bb = Sets.immutableEnumSet(biokotlin.seq.DNA.unambiguousDNA)
-    val baseOrder= setOf(biokotlin.seq.DNA.values())
-    val bb3: ImmutableSet<biokotlin.seq.DNA> = biokotlin.seq.DNA.unambiguousDNA
-    val bbR: ImmutableSet<biokotlin.seq.RNA> = biokotlin.seq.RNA.unambiguousRNA
-    for (first:biokotlin.seq.DNA in bb3) {
-        for (third in bb3) {
-            for (second in bb3) {
+    val bbR: ImmutableSet<biokotlin.seq.NUC> = NUC.RNA
+    for (first in NUC.DNA) {
+        for (third in NUC.DNA) {
+            for (second in NUC.DNA) {
                 print("$first$second$third, ")
             }
         }
     }
     println()
-    for (first in bbR) {
-        for (third in bbR) {
-            for (second in bbR) {
+    for (first in NUC.RNA) {
+        for (third in NUC.RNA) {
+            for (second in NUC.RNA) {
                 val codon = "$first$second$third"
                 if(codon.contains('U')) print("$first$second$third, ")
             }

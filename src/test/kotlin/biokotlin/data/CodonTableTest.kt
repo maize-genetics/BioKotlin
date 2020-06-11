@@ -13,6 +13,8 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.property.checkAll
 import io.kotest.property.exhaustive.exhaustive
+import biokotlin.data.Codon.*
+import biokotlin.seq.AminoAcid.*
 
 
 class CodonTableTest :StringSpec ({
@@ -59,21 +61,21 @@ class CodonTableTest :StringSpec ({
     "Test Standard Codon DNA Table" {
         val ctDNA = CodonTables(name ="Standard", nucleicAcid = NucleicAcid.DNA)
         ctDNA.name shouldContainInOrder  listOf("Standard", "SGC0")
-        ctDNA.stop_codons shouldContainAll listOf("TAA", "TAG", "TGA")
-        ctDNA.start_codons shouldContainAll listOf("ATG", "TTG", "CTG")
+        ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, TGA)
+        ctDNA.start_codons shouldContainAll listOf(ATG, TTG, CTG)
     }
 
     "Test Standard Codon RNA Table" {
         val ctRNA = CodonTables(name ="Standard", nucleicAcid = NucleicAcid.RNA)
         ctRNA.name shouldContainInOrder  listOf("Standard", "SGC0")
-        ctRNA.stop_codons shouldContainAll listOf("UAA", "UAG", "UGA")
-        ctRNA.start_codons shouldContainAll listOf("AUG", "UUG", "CUG")
+        ctRNA.stop_codons shouldContainAll listOf(UAA, UAG, UGA)
+        ctRNA.start_codons shouldContainAll listOf(AUG, UUG, CUG)
     }
 
     "Test Vertebrate Mitochondrial DNA Table" {
         val ctDNA = CodonTables(name ="Vertebrate Mitochondrial", nucleicAcid = NucleicAcid.DNA)
         ctDNA.name shouldContain "Vertebrate Mitochondrial"
-        ctDNA.stop_codons shouldContainAll listOf("TAA", "TAG", "AGA", "AGG")
+        ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, AGA, AGG)
     }
 
 
@@ -109,77 +111,77 @@ G | GUG V   | GCG A   | GAG E   | GGG G   | G
 
 "Compare Biopython diffs to Wikipedia" {
     forAll(
-            row(2,"AGA",'*',null),
-            row(2,"AGG",'*',null),
-            row(2,"ATA",'M',null),
-            row(2,"TGA",'W',null),
-            row(3,"ATA",'M',null),
-            row(3,"CGA",'R',null),  //wikipedia out of date https://doi.org/10.1093/dnares/dsx026
-            row(3,"CGC",'R',null),  // https://doi.org/10.1093/dnares/dsx026
-            row(3,"CTA",'T',null),
-            row(3,"CTC",'T',null),
-            row(3,"CTG",'T',null),
-            row(3,"CTT",'T',null),
-            row(3,"TGA",'W',null),
-            row(4,"TGA",'W',null),
-            row(5,"AGA",'S',null),
-            row(5,"AGG",'S',null),
-            row(5,"ATA",'M',null),
-            row(5,"TGA",'W',null),
-            row(6,"TAA",'Q',null),
-            row(6,"TAG",'Q',null),
-            row(9,"AAA",'N',null),
-            row(9,"AGA",'S',null),
-            row(9,"AGG",'S',null),
-            row(9,"TGA",'W',null),
-            row(10,"TGA",'C',null),
-            row(12,"CTG",'S',null),
-            row(13,"AGA",'G',null),
-            row(13,"AGG",'G',null),
-            row(13,"ATA",'M',null),
-            row(13,"TGA",'W',null),
-            row(14,"AAA",'N',null),
-            row(14,"AGA",'S',null),
-            row(14,"AGG",'S',null),
-            row(14,"TAA",'Y',null),
-            row(14,"TGA",'W',null),
-            row(15,"TAG",'Q',null),
-            row(16,"TAG",'L',null),
-            row(21,"AAA",'N',null),
-            row(21,"AGA",'S',null),
-            row(21,"AGG",'S',null),
-            row(21,"ATA",'M',null),
-            row(21,"TGA",'W',null),
-            row(22,"TAG",'L',null),
-            row(22,"TCA",'*',null),
-            row(23,"TTA",'*',null),
-            row(24,"AGA",'S',null),
-            row(24,"AGG",'K',null),
-            row(24,"TGA",'W',null),
-            row(25,"TGA",'G',null),
-            row(26,"CTG",'A',null),
-            row(27,"TAA",'Q',null),
-            row(27,"TAG",'Q',null),
-            row(27,"TGA",'*','W'),
-            row(28,"TAA",'*','Q'),
-            row(28,"TAG",'*','Q'),
-            row(28,"TGA",'*','W'),
-            row(29,"TAA",'Y',null),
-            row(29,"TAG",'Y',null),
-            row(30,"TAA",'E',null),
-            row(30,"TAG",'E',null),
-            row(31,"TAA",'*','E'),
-            row(31,"TAG",'*','E'),
-            row(31,"TGA",'W',null),
-            row(33,"AGA",'S',null),
-            row(33,"AGG",'K',null),
-            row(33,"TAA",'Y',null),
-            row(33,"TGA",'W',null)
+            row(2,AGA,null,null),
+            row(2,AGG,null,null),
+            row(2,ATA,M,null),
+            row(2,TGA,W,null),
+            row(3,ATA,M,null),
+            row(3,CGA,R,null),  //wikipedia out of date https://doi.org/10.1093/dnares/dsx026
+            row(3,CGC,R,null),  // https://doi.org/10.1093/dnares/dsx026
+            row(3,CTA,T,null),
+            row(3,CTC,T,null),
+            row(3,CTG,T,null),
+            row(3,CTT,T,null),
+            row(3,TGA,W,null),
+            row(4,TGA,W,null),
+            row(5,AGA,S,null),
+            row(5,AGG,S,null),
+            row(5,ATA,M,null),
+            row(5,TGA,W,null),
+            row(6,TAA,Q,null),
+            row(6,TAG,Q,null),
+            row(9,AAA,N,null),
+            row(9,AGA,S,null),
+            row(9,AGG,S,null),
+            row(9,TGA,W,null),
+            row(10,TGA,C,null),
+            row(12,CTG,S,null),
+            row(13,AGA,G,null),
+            row(13,AGG,G,null),
+            row(13,ATA,M,null),
+            row(13,TGA,W,null),
+            row(14,AAA,N,null),
+            row(14,AGA,S,null),
+            row(14,AGG,S,null),
+            row(14,TAA,Y,null),
+            row(14,TGA,W,null),
+            row(15,TAG,Q,null),
+            row(16,TAG,L,null),
+            row(21,AAA,N,null),
+            row(21,AGA,S,null),
+            row(21,AGG,S,null),
+            row(21,ATA,M,null),
+            row(21,TGA,W,null),
+            row(22,TAG,L,null),
+            row(22,TCA,null,null),
+            row(23,TTA,null,null),
+            row(24,AGA,S,null),
+            row(24,AGG,K,null),
+            row(24,TGA,W,null),
+            row(25,TGA,G,null),
+            row(26,CTG,A,null),
+            row(27,TAA,Q,null),
+            row(27,TAG,Q,null),
+            row(27,TGA,null,W),
+            row(28,TAA,null,Q),
+            row(28,TAG,null,Q),
+            row(28,TGA,null,W),
+            row(29,TAA,Y,null),
+            row(29,TAG,Y,null),
+            row(30,TAA,E,null),
+            row(30,TAG,E,null),
+            row(31,TAA,null,E),
+            row(31,TAG,null,E),
+            row(31,TGA,W,null),
+            row(33,AGA,S,null),
+            row(33,AGG,K,null),
+            row(33,TAA,Y,null),
+            row(33,TGA,W,null)
     ) {id, codonString, primaryAA, secondaryAA ->
         val ct = CodonTables(id)
-        val codon = DNACodon[codonString]
+        val codon = codonString
         val aa : AminoAcid? = ct.codonToAA[codon]
-        if(primaryAA == '*') {
+        if(primaryAA !is AminoAcid) {
             ct.stop_codons shouldContain codon
             aa shouldBe secondaryAA
         } else {

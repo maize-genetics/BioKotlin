@@ -183,8 +183,8 @@ class DNASeq(seqB: ByteArray) : NucleotideSeq(seqB) {
     operator fun get(x: IntRange) = DNASeq(seqB.sliceArray(negativeSlice(x, seqB.size)))
     operator fun plus(seq2: DNASeq) = DNASeq(seqB.plus(seq2.seqB))
     operator fun times(n: Int) = DNASeq(super.repeat(n))
-    fun complement() = DNASeq(super.complementSeq(DNA.ambigDnaCompByByteArray))
-    fun reverse_complement() = DNASeq(super.reverse_complementSeq(DNA.ambigDnaCompByByteArray))
+    fun complement() = DNASeq(super.complementSeq(NUC.ambigDnaCompByByteArray))
+    fun reverse_complement() = DNASeq(super.reverse_complementSeq(NUC.ambigDnaCompByByteArray))
 
     fun transcribe() = RNASeq(replace('t'.toByte() to 'u'.toByte(), 'T'.toByte() to 'U'.toByte()))
 }
@@ -202,8 +202,8 @@ class RNASeq(seqB: ByteArray) : NucleotideSeq(seqB) {
     operator fun get(x: IntRange) = RNASeq(seqB.sliceArray(negativeSlice(x, seqB.size)))
     operator fun plus(seq2: RNASeq) = RNASeq(seqB.plus(seq2.seqB))
     operator fun times(n: Int) = RNASeq(super.repeat(n))
-    fun complement() = RNASeq(super.complementSeq(RNA.ambigRnaCompByByteArray))
-    fun reverse_complement() = RNASeq(super.reverse_complementSeq(RNA.ambigRnaCompByByteArray))
+    fun complement() = RNASeq(super.complementSeq(NUC.ambigRnaCompByByteArray))
+    fun reverse_complement() = RNASeq(super.reverse_complementSeq(NUC.ambigRnaCompByByteArray))
 
     fun translate(to_stop: Boolean = true) = ProteinSeq(seqB) //TODO
     fun back_transcribe() = DNASeq(replace('u'.toByte() to 't'.toByte(), 'U'.toByte() to 'T'.toByte()))

@@ -1,10 +1,9 @@
 @file:JvmName("IUPACData")
 package biokotlin.seq
 
+
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
-import org.jetbrains.annotations.NotNull
-import org.nield.kotlinstatistics.doubleRange
 import java.util.*
 
 /*
@@ -60,37 +59,29 @@ fun main() {
     println(em.toString() + em.ordinal.toString())
     println(AminoAcid.from3Letter("Ala"))
     println(AminoAcid.fromChar('T')?.weight)
-    println(DNA.T.complement)
-    println(RNA.U.complement)
-    println(RNA.A.complement)
-    println(DNA.T.twoBit)
-    println(DNA.T.weight)
-    println(RNA.U.weight)
-    println(DNA.T.weight - RNA.U.weight)
-    println(DNA.A.weight - RNA.A.weight)
-    println(DNA.C.weight - RNA.C.weight)
+    println(NUC.A.dnaComplement)
+    println(NUC.U.dnaComplement)
+    println(NUC.A.dnaComplement)
+    println(NUC.T.twoBit)
+    println(NUC.T.dnaWeight)
+    println(NUC.U.rnaWeight)
+    println(NUC.T.dnaWeight - NUC.U.rnaWeight)
+    println(NUC.A.dnaWeight - NUC.A.rnaWeight)
+    println(NUC.C.dnaWeight - NUC.C.rnaWeight)
 }
 
 //replaces BioPython - protein_letters with AminoAcid
 fun protein_letters_3to1(name3letter: String) = AminoAcid.from3Letter(name3letter)
 val protein_letters = AminoAcid
 
-interface IUPACEncoding {
-    val char:Char
-    val twoBit:Byte
-    val fourBit:Byte
-    val ambiguous: Boolean
-    val ambigString: String
-    val complement:IUPACEncoding
-    val weight:Double
-}
 
-enum class DNA(override val char: Char, override val twoBit: Byte, override val fourBit: Byte,
-               override val ambiguous: Boolean, override val ambigString: String) : IUPACEncoding {
+enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
+               val ambiguous: Boolean, val ambigString: String) {
     A('A', 0, 0, false, "A"),
     C('C', 1, 1, false, "C"),
     G('G', 2, 2, false, "G"),
     T('T', 3, 3, false, "T"),
+    U('U', 3, 3, false, "U"),
     M('M', -1, 4, true, "AC"),
     R('R', -1, 5, true, "AG"),
     W('W', -1, 6, true, "AT"),
@@ -104,20 +95,29 @@ enum class DNA(override val char: Char, override val twoBit: Byte, override val 
     X('X', -1, 14, true, "GATC"),
     N('N', -1, 15, true, "GATC");
 
-    override val complement
-        get() = compMap[this]!!
-    override val weight : Double
-        get() = weights[this]!!
-    val rnaAnalog: RNA
-        get() = if(this == T) RNA.U else RNA.valueOf(this.name)
+    val dnaComplement
+        get() = dnaCompMap[this]!!
+    val rnaComplement
+        get() = rnaCompMap[this]!!
+    val dnaWeight : Double
+        get() = dnaWeights[this]!!
+    val rnaWeight : Double
+        get() = rnaWeights[this]!!
+    val rnaAnalog: NUC
+        get() = if(this == T) U else this
+    val isRNA: Boolean
+        get() = (this != T)
+    val isDNA: Boolean
+        get() = (this != U)
 
     companion object {
-        private val charToDNA = DNA.values().associateBy{it.name[0]}
-        private val compMap:EnumMap<DNA,DNA> = EnumMap(mapOf(
+        private val charToDNA = NUC.values().associateBy{it.name[0]}
+        private val dnaCompMap:EnumMap<NUC,NUC> = EnumMap(mapOf(
                 A to T,
                 C to G,
                 G to C,
                 T to A,
+                U to A,
                 M to K,
                 R to Y,
                 W to W,
@@ -131,65 +131,42 @@ enum class DNA(override val char: Char, override val twoBit: Byte, override val 
                 X to X,
                 N to N
         ))
+        private val rnaCompMap:EnumMap<NUC,NUC> = EnumMap(dnaCompMap.entries.map { (key, comp) -> key to if(comp==T) U else comp }.toMap())
         val ambigDnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
-        private val weights : EnumMap<DNA,Double>
+        val ambigRnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
+        private val dnaWeights : EnumMap<NUC,Double>
+        private val rnaWeights : EnumMap<NUC,Double>
         init {
-            values().forEach { ambigDnaCompByByteArray[it.char.toInt()] = it.complement.char.toByte() }
-            val dnaWeights = mutableMapOf<DNA,Double>(
+            values().forEach { ambigDnaCompByByteArray[it.char.toInt()] = it.dnaComplement.char.toByte() }
+            values().forEach { ambigRnaCompByByteArray[it.char.toInt()] = it.rnaComplement.char.toByte() }
+            val dnaUnAmWeights = mutableMapOf<NUC,Double>(
                     A to 331.2218,
                     C to 307.1971,
                     G to 347.2212,
                     T to 322.2085)
             //Calculating average weights for the ambiquous nucleotides
-            weights = EnumMap(values().associate {nuc ->
+            dnaWeights = EnumMap(values().associate { nuc ->
                 nuc to nuc.ambigString
-                        .map { dnaWeights[nuc] ?: -1.0 }
+                        .map { dnaUnAmWeights[nuc] ?: -1.0 }
                         .average()
             })
-        }
-        fun fromChar(char:Char) = charToDNA[char]
-        /*Immutable Guava set back by EnumSet*/
-        val unambiguousDNA : ImmutableSet<DNA> = Sets.immutableEnumSet(EnumSet.of(A,C,G,T))
-    }
-}
-
-enum class RNA : IUPACEncoding {
-    A, C, G, U, M, R, W, S, Y, K, V, H, D, B, X, N;
-
-    val dnaAnalog = if(this.name.equals("U")) DNA.T else DNA.valueOf(this.name)
-    override val char = if(dnaAnalog == DNA.T) 'U' else dnaAnalog.char
-    override val twoBit:Byte = dnaAnalog.twoBit
-    override val fourBit:Byte = dnaAnalog.fourBit
-    override val ambiguous: Boolean = dnaAnalog.ambiguous
-    override val ambigString: String = dnaAnalog.ambigString.replace('T','U')
-
-    override val complement
-        get() = compMap[this]!!
-    override val weight : Double
-        get() = weights[this]!!
-
-    companion object {
-        private val charToRNA = values().associateBy{it.name[0]}
-        private val compMap:EnumMap<RNA,RNA> = EnumMap(values()
-                .associate { it to (if(it == A) U else it.dnaAnalog.complement.rnaAnalog)})
-        val ambigRnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
-        private val weights : EnumMap<RNA,Double>
-        init {
-            values().forEach { ambigRnaCompByByteArray[it.char.toInt()] = it.complement.char.toByte() }
-            val rnaWeights = mutableMapOf<RNA,Double>(
+            val rnaUnAmWeights = mutableMapOf<NUC,Double>(
                     A to 347.2212,
                     C to 323.1965,
                     G to 363.2206,
                     U to 324.1813)
             //Calculating average weights for the ambiquous nucleotides
-            weights = EnumMap(values().associate { nuc ->
+            rnaWeights = EnumMap(values().associate { nuc ->
                 nuc to nuc.ambigString
-                        .map { rnaWeights[nuc] ?: -1.0 }
+                        .map { rnaUnAmWeights[nuc] ?: -1.0 }
                         .average()
             })
         }
-        fun fromChar(char:Char) = charToRNA[char]
-        val unambiguousRNA: ImmutableSet<RNA> = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
+        fun fromChar(char:Char) = charToDNA[char]
+        /*Immutable Guava set back by EnumSet*/
+        val unambiguousDNA : ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A,C,G,T))
+        val DNA : ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A,C,G,T))
+        val RNA : ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A,C,G,U))
     }
 }
 
