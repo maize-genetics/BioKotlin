@@ -19,7 +19,7 @@ import biokotlin.seq.AminoAcid.*
 
 class CodonTableTest :StringSpec ({
 
-    val normalCodonTables =  CodonTablesAll()
+    val normalCodonTables =  CodonTablesAll
             .filterNot { ct -> ct.stop_codons.any() { stopCodon ->  ct.codonToAA.containsKey(stopCodon) } }
 
     "Default CodonTables() should be id 1" {

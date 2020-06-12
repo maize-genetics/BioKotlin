@@ -29,26 +29,28 @@ import biokotlin.seq.NucleicAcid
 
 /**Return codon table based on id, ambiguous not implemented*/
 fun CodonTables(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA): CodonTable =
-        CodonTableData()[id, ambiguous, nucleicAcid]
+        CodonTableData[id, ambiguous, nucleicAcid]
 
 /**Return codon table based on name, ambiguous not implemented*/
 fun CodonTables(name: String, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA): CodonTable =
-        CodonTableData()[name, ambiguous, nucleicAcid]
+        CodonTableData[name, ambiguous, nucleicAcid]
 
 /**Return the complete list of DNA and RNA tables*/
-fun CodonTablesAll(): List<CodonTable> = CodonTableData().allCodonTables.values
-        .sortedBy { it.id }
-        .toList()
+val CodonTablesAll: List<CodonTable> by lazy {
+    CodonTableData.allCodonTables.values
+            .sortedBy { it.id }
+            .toList()
+}
 
 /**Return the complete list of either DNA and RNA tables*/
 fun CodonTablesAll(nucleicAcid: NucleicAcid): List<CodonTable> =
-        CodonTableData().allCodonTables.values
+        CodonTableData.allCodonTables.values
                 .filter { it.nucleicAcid == nucleicAcid }
                 .sortedBy { it.id }
                 .toList()
 
 val CodonTables
-    get() = CodonTableData()
+    get() = CodonTableData
 
 /**
  * The genetic code or codon table for a clade.  [id] and [name] are the NCBI table id and names.  Codon are
@@ -137,7 +139,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
 
 data class CodonTableKey(val id: Int, val ambiguous: Boolean = false, val nucleicAcid: NucleicAcid = NucleicAcid.DNA)
 
-class CodonTableData {
+object CodonTableData {
     //Various precomputed Maps
     val allCodonTables: Map<CodonTableKey, CodonTable>
     val nameToId: Map<String, Int>
