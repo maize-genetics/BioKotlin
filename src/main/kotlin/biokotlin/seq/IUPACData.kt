@@ -1,4 +1,5 @@
 @file:JvmName("IUPACData")
+
 package biokotlin.seq
 
 
@@ -19,56 +20,36 @@ import java.util.*
 
 
 enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double) {
-    A("Ala",'A', 89.0932),
-    C("Cys",'C', 121.1582),
-    D("Asp",'D', 133.1027),
-    E("Glu",'E', 147.1293),
-    F("Phe",'F', 165.1891),
-    G("Gly",'G', 75.0666),
-    H("His",'H', 155.1546),
-    I("Ile",'I', 131.1729),
-    K("Lys",'K', 146.1876),
-    L("Leu",'L', 131.1729),
-    M("Met",'M', 149.2113),
-    N("Asn",'N', 132.1179),
-    P("Pro",'P', 115.1305),
-    Q("Gln",'Q', 146.1445),
-    R("Arg",'R', 174.201),
-    S("Ser",'S', 105.0926),
-    T("Thr",'T', 119.1192),
-    V("Val",'V', 117.1463),
-    W("Trp",'W', 204.2252),
-    Y("Tyr",'Y', 181.1885);
+    A("Ala", 'A', 89.0932),
+    C("Cys", 'C', 121.1582),
+    D("Asp", 'D', 133.1027),
+    E("Glu", 'E', 147.1293),
+    F("Phe", 'F', 165.1891),
+    G("Gly", 'G', 75.0666),
+    H("His", 'H', 155.1546),
+    I("Ile", 'I', 131.1729),
+    K("Lys", 'K', 146.1876),
+    L("Leu", 'L', 131.1729),
+    M("Met", 'M', 149.2113),
+    N("Asn", 'N', 132.1179),
+    P("Pro", 'P', 115.1305),
+    Q("Gln", 'Q', 146.1445),
+    R("Arg", 'R', 174.201),
+    S("Ser", 'S', 105.0926),
+    T("Thr", 'T', 119.1192),
+    V("Val", 'V', 117.1463),
+    W("Trp", 'W', 204.2252),
+    Y("Tyr", 'Y', 181.1885);
 
     companion object {
         private val a3LetterToAA = values().associateBy(AminoAcid::name3letter)
-        private val charToAA = values().associateBy{it.name[0]}
+        private val charToAA = values().associateBy { it.name[0] }
 
         fun from3Letter(name3letter: String) = a3LetterToAA[name3letter]
-        fun fromChar(char:Char) = charToAA[char]
+        fun fromChar(char: Char) = charToAA[char]
     }
 }
 
-
-fun main() {
-    println(AminoAcid.A.name3letter)
-    println(AminoAcid.values().joinToString { it.name })
-    println(AminoAcid.values().joinToString { it.name3letter })
-    val map = AminoAcid.values().associate { it.name3letter to it.name }
-    val em = AminoAcid.valueOf("Y")
-    println(em.toString() + em.ordinal.toString())
-    println(AminoAcid.from3Letter("Ala"))
-    println(AminoAcid.fromChar('T')?.weight)
-    println(NUC.A.dnaComplement)
-    println(NUC.U.dnaComplement)
-    println(NUC.A.dnaComplement)
-    println(NUC.T.twoBit)
-    println(NUC.T.dnaWeight)
-    println(NUC.U.rnaWeight)
-    println(NUC.T.dnaWeight - NUC.U.rnaWeight)
-    println(NUC.A.dnaWeight - NUC.A.rnaWeight)
-    println(NUC.C.dnaWeight - NUC.C.rnaWeight)
-}
 
 //replaces BioPython - protein_letters with AminoAcid
 fun protein_letters_3to1(name3letter: String) = AminoAcid.from3Letter(name3letter)
@@ -76,43 +57,49 @@ val protein_letters = AminoAcid
 
 
 enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
-               val ambiguous: Boolean, val ambigString: String) {
-    A('A', 0, 0, false, "A"),
-    C('C', 1, 1, false, "C"),
-    G('G', 2, 2, false, "G"),
-    T('T', 3, 3, false, "T"),
-    U('U', 3, 3, false, "U"),
-    M('M', -1, 4, true, "AC"),
-    R('R', -1, 5, true, "AG"),
-    W('W', -1, 6, true, "AT"),
-    S('S', -1, 7, true, "CG"),
-    Y('Y', -1, 8, true, "CT"),
-    K('K', -1, 9, true, "GT"),
-    V('V', -1, 10, true, "ACG"),
-    H('H', -1, 11, true, "ACT"),
-    D('D', -1, 12, true, "AGT"),
-    B('B', -1, 13, true, "CGT"),
-    X('X', -1, 14, true, "GATC"),
-    N('N', -1, 15, true, "GATC");
+               val ambiguous: Boolean) {
+    A('A', 0, 0, false),
+    C('C', 1, 1, false),
+    G('G', 2, 2, false),
+    T('T', 3, 3, false),
+    U('U', 3, 3, false),
+    M('M', -1, 4, true),
+    R('R', -1, 5, true),
+    W('W', -1, 6, true),
+    S('S', -1, 7, true),
+    Y('Y', -1, 8, true),
+    K('K', -1, 9, true),
+    V('V', -1, 10, true),
+    H('H', -1, 11, true),
+    D('D', -1, 12, true),
+    B('B', -1, 13, true),
+    X('X', -1, 14, true),
+    N('N', -1, 15, true);
 
     val dnaComplement
         get() = dnaCompMap[this]!!
     val rnaComplement
         get() = rnaCompMap[this]!!
-    val dnaWeight : Double
+    val dnaWeight: Double
         get() = dnaWeights[this]!!
-    val rnaWeight : Double
+    val rnaWeight: Double
         get() = rnaWeights[this]!!
+    val dnaAnalog: NUC
+        get() = if (this == U) T else this
     val rnaAnalog: NUC
-        get() = if(this == T) U else this
+        get() = if (this == T) U else this
     val isRNA: Boolean
         get() = (this != T)
     val isDNA: Boolean
         get() = (this != U)
+    val ambigDNA: Set<NUC>
+        get() = nucToAmbigDNA[this]!!
+    val ambigRNA: Set<NUC>
+        get() = nucToAmbigRNA[this]!!
 
     companion object {
-        private val charToDNA = NUC.values().associateBy{it.name[0]}
-        private val dnaCompMap:EnumMap<NUC,NUC> = EnumMap(mapOf(
+        private val charToDNA = NUC.values().associateBy { it.name[0] }
+        private val dnaCompMap: EnumMap<NUC, NUC> = EnumMap(mapOf(
                 A to T,
                 C to G,
                 G to C,
@@ -131,42 +118,68 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                 X to X,
                 N to N
         ))
-        private val rnaCompMap:EnumMap<NUC,NUC> = EnumMap(dnaCompMap.entries.map { (key, comp) -> key to if(comp==T) U else comp }.toMap())
+        private val rnaCompMap: EnumMap<NUC, NUC> = EnumMap(dnaCompMap.entries.map { (key, comp) -> key to if (comp == T) U else comp }.toMap())
         val ambigDnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
         val ambigRnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
-        private val dnaWeights : EnumMap<NUC,Double>
-        private val rnaWeights : EnumMap<NUC,Double>
+
+        private val nucToAmbigDNA: EnumMap<NUC, Set<NUC>> = EnumMap(mapOf(
+                A to setOf(A),
+                C to setOf(C),
+                G to setOf(G),
+                T to setOf(T),
+                U to setOf(T),
+                M to setOf(A, C),
+                R to setOf(A, G),
+                W to setOf(A, T),
+                S to setOf(C, G),
+                Y to setOf(C, T),
+                K to setOf(G, T),
+                V to setOf(A, C, G),
+                H to setOf(A, C, T),
+                D to setOf(A, G, T),
+                B to setOf(C, G, T),
+                X to setOf(G, A, T, C),
+                N to setOf(G, A, T, C)
+        ))
+        private val nucToAmbigRNA: EnumMap<NUC, Set<NUC>> = EnumMap(nucToAmbigDNA.entries.map {(nuc, ambigSet) ->
+            nuc to ambigSet.map { if(it==T) U else it  }.toSet()
+        }.toMap())
+        
+        private val dnaWeights: EnumMap<NUC, Double>
+        private val rnaWeights: EnumMap<NUC, Double>
         init {
             values().forEach { ambigDnaCompByByteArray[it.char.toInt()] = it.dnaComplement.char.toByte() }
             values().forEach { ambigRnaCompByByteArray[it.char.toInt()] = it.rnaComplement.char.toByte() }
-            val dnaUnAmWeights = mutableMapOf<NUC,Double>(
+            val dnaUnAmWeights = mapOf<NUC, Double>(
                     A to 331.2218,
                     C to 307.1971,
                     G to 347.2212,
                     T to 322.2085)
             //Calculating average weights for the ambiquous nucleotides
             dnaWeights = EnumMap(values().associate { nuc ->
-                nuc to nuc.ambigString
-                        .map { dnaUnAmWeights[nuc] ?: -1.0 }
+                nuc to nuc.ambigDNA
+                        .map { dnaUnAmWeights[it]!!}
                         .average()
             })
-            val rnaUnAmWeights = mutableMapOf<NUC,Double>(
+            val rnaUnAmWeights = mapOf<NUC, Double>(
                     A to 347.2212,
                     C to 323.1965,
                     G to 363.2206,
                     U to 324.1813)
             //Calculating average weights for the ambiquous nucleotides
             rnaWeights = EnumMap(values().associate { nuc ->
-                nuc to nuc.ambigString
-                        .map { rnaUnAmWeights[nuc] ?: -1.0 }
+                nuc to nuc.ambigRNA
+                        .map { rnaUnAmWeights[it]!! }
                         .average()
             })
         }
-        fun fromChar(char:Char) = charToDNA[char]
+
+        fun fromChar(char: Char) = charToDNA[char]
+
         /*Immutable Guava set back by EnumSet*/
-        val unambiguousDNA : ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A,C,G,T))
-        val DNA : ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A,C,G,T))
-        val RNA : ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A,C,G,U))
+        val unambiguousDNA: ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
+        val DNA: ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
+        val RNA: ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
     }
 }
 
@@ -176,6 +189,7 @@ For Center of Mass Calculation.
 Taken from http://www.chem.qmul.ac.uk/iupac/AtWt/ & PyMol
  */
 val atom_weights = mapOf(
+        //Ordered by atomic number
         "H" to 1.00794,
         "D" to 2.01410,
         "He" to 4.002602,
