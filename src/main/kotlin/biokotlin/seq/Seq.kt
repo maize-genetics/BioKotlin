@@ -71,10 +71,12 @@ MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF
 >>> my_seq.alphabet
 IUPACProtein()
  */
-abstract class Seq(val seqB: ByteArray) {
+abstract class Seq protected constructor(protected val seqB: ByteArray) {
     abstract val alphabet: ALPHABET
 
     fun seq(): String = String(seqB)
+    /*Copy of the underlying bytes array*/
+    internal fun copyOfBytes(): ByteArray = seqB.copyOf()
 
     /**Return the full sequence as string*/
     override fun toString(): String {
@@ -146,7 +148,7 @@ fun negativeSlice(x: IntRange, size: Int): IntRange {
 }
 
 
-abstract class NucleotideSeq(seqB: ByteArray) : Seq(seqB) {
+abstract class NucleotideSeq protected constructor(seqB: ByteArray) : Seq(seqB) {
 
     protected fun complementSeq(nucComplementByByteArray: ByteArray): ByteArray {
         val comp = ByteArray(seqB.size)
@@ -171,8 +173,15 @@ abstract class NucleotideSeq(seqB: ByteArray) : Seq(seqB) {
 }
 
 
-class DNASeq(seqB: ByteArray) : NucleotideSeq(seqB) {
+class DNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
     constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
+    constructor(rnaSeq : RNASeq) : this(rnaSeq.copyOfBytes()) {
+        for (i in this.seqB.indices) {
+            if (this.seqB[i] == NUC.U.char.toByte()) this.seqB[i] = NUC.T.char.toByte()
+            //TODO need to decide whether to support lowercase
+            if (this.seqB[i] == NUC.U.char.toLowerCase().toByte()) this.seqB[i] = NUC.T.char.toLowerCase().toByte()
+        }
+    }
 
     override val alphabet = ALPHABET.DNAAlphabet
     operator fun get(i: Int, j: Int) = DNASeq(seqB.sliceArray(i..j))
@@ -186,12 +195,19 @@ class DNASeq(seqB: ByteArray) : NucleotideSeq(seqB) {
     fun complement() = DNASeq(super.complementSeq(NUC.ambigDnaCompByByteArray))
     fun reverse_complement() = DNASeq(super.reverse_complementSeq(NUC.ambigDnaCompByByteArray))
 
-    fun transcribe() = RNASeq(replace('t'.toByte() to 'u'.toByte(), 'T'.toByte() to 'U'.toByte()))
+    fun transcribe() = RNASeq(this)
 }
 
 
-class RNASeq(seqB: ByteArray) : NucleotideSeq(seqB) {
+class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
     constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
+    constructor(dnaSeq : DNASeq) : this(dnaSeq.copyOfBytes()) {
+        for (i in this.seqB.indices) {
+            if (this.seqB[i] == NUC.T.char.toByte()) this.seqB[i] = NUC.U.char.toByte()
+            //TODO need to decide whether to support lowercase
+            if (this.seqB[i] == NUC.T.char.toLowerCase().toByte()) this.seqB[i] = NUC.U.char.toLowerCase().toByte()
+        }
+    }
 
     override val alphabet = ALPHABET.RNAAlphabet
     operator fun get(i: Int, j: Int) = RNASeq(seqB.sliceArray(i..j))
@@ -206,7 +222,7 @@ class RNASeq(seqB: ByteArray) : NucleotideSeq(seqB) {
     fun reverse_complement() = RNASeq(super.reverse_complementSeq(NUC.ambigRnaCompByByteArray))
 
     fun translate(to_stop: Boolean = true) = ProteinSeq(seqB) //TODO
-    fun back_transcribe() = DNASeq(replace('u'.toByte() to 't'.toByte(), 'U'.toByte() to 'T'.toByte()))
+    fun back_transcribe() = DNASeq(this)
 }
 
 
@@ -227,7 +243,7 @@ class ProteinSeq(seqB: ByteArray) : Seq(seqB) {
     operator fun plus(seq2: ProteinSeq) = ProteinSeq(seqB.plus(seq2.seqB))
     operator fun times(n: Int) = ProteinSeq(super.repeat(n))
 
-    fun back_translate() = RNASeq(seqB) //TODO - use degenerate everywhere
+    fun back_translate():RNASeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
 }
 /**
 import array
