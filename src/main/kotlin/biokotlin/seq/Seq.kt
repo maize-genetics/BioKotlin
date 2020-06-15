@@ -1,5 +1,7 @@
 package biokotlin.seq
 
+import java.util.*
+
 //import biokotlin.seq.
 /*
 # Copyright 2000 Andrew Dalke.
@@ -13,15 +15,6 @@ package biokotlin.seq
 # Please see the LICENSE file that should have been included as part of this
 # package.
 */
-
-enum class NucleicAcid {
-    DNA, RNA
-}
-
-enum class ALPHABET {
-    Generic_alphabet, ProteinAlphabet, SingleLetterAlphabet, NucleotideAlphabet,
-    RNAAlphabet, DNAAlphabet
-}
 
 
 /**
@@ -71,10 +64,39 @@ MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF
 >>> my_seq.alphabet
 IUPACProtein()
  */
-abstract class Seq protected constructor(protected val seqB: ByteArray) {
-    abstract val alphabet: ALPHABET
+
+
+fun Seq(seq: String): BioSeq {
+    val bytePresent: BitSet = BitSet(128)
+    for (i in seq) bytePresent[i.toInt()] = true
+    val compatibleSets = charBitsToBioSeq.entries
+            .filter {
+                val origCharBits = bytePresent.clone() as BitSet
+                origCharBits.andNot(it.key)
+                origCharBits.cardinality() == 0
+            }.toList()
+    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatiable with RNA, DNA, or AminoAcids")
+    return compatibleSets[0].value(seq)
+}
+
+private val charBitsToBioSeq: Map<BitSet, (String) -> BioSeq> = linkedMapOf(
+        bitSetOfChars(NUC.DNA) to { s: String -> DNASeq(s, false) },
+        bitSetOfChars(NUC.RNA) to { s: String -> RNASeq(s, false) },
+        bitSetOfChars(NUC.AmbiguousDNA) to { s: String -> DNASeq(s, true) },
+        bitSetOfChars(NUC.AmbiguousRNA) to { s: String -> RNASeq(s, true) },
+        AminoAcid.bitSetOfChars to { s: String -> ProteinSeq(s) }
+)
+
+private fun bitSetOfChars(nucs: NucSet): BitSet {
+    val bsc = BitSet(128)
+    nucs.forEach { bsc.set(it.char.toInt()) }
+    return bsc
+}
+
+abstract class BioSeq protected constructor(protected val seqB: ByteArray) {
 
     fun seq(): String = String(seqB)
+
     /*Copy of the underlying bytes array*/
     internal fun copyOfBytes(): ByteArray = seqB.copyOf()
 
@@ -85,14 +107,14 @@ abstract class Seq protected constructor(protected val seqB: ByteArray) {
 
     /**Returns (truncated) representation of the sequence for debugging*/
     fun repr(): String = "${this::class.simpleName}('${if (seqB.size < 60) seq()
-    else "${seq().substring(0, 54)}...${seq().takeLast(3)}"}', $alphabet)"
+    else "${seq().substring(0, 54)}...${seq().takeLast(3)}"}')"
 
     /**Returns on Char at the given position, if negative returns from the end of the sequence*/
     operator fun get(i: Int) = if (i > 0) seqB[i].toChar() else seqB[seqB.size + i].toChar()
 
     /**Returns the length of the sequence*/
     fun len() = seqB.size
-    operator fun compareTo(other: Seq) = seq().compareTo(other.seq())
+    operator fun compareTo(other: BioSeq) = seq().compareTo(other.seq())
     fun count(query: Char) = seq().count { it == query }
     fun count(query: String) = seq().split(query).size - 1
     fun count_overlap(query: String) = seq().windowedSequence(query.length).count { it.equals(query) }
@@ -115,27 +137,24 @@ abstract class Seq protected constructor(protected val seqB: ByteArray) {
         return replaceByteArray
     }
 
-    /**Equality is check for by both the [seqB] and [alphabet] */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-        other as Seq
+
+        other as BioSeq
+
         if (!seqB.contentEquals(other.seqB)) return false
-        if (alphabet != other.alphabet) return false
+
         return true
     }
 
     override fun hashCode(): Int {
-        var result = seqB.hashCode()
-        result = 31 * result + alphabet.hashCode()
-        return result
+        return seqB.contentHashCode()
     }
 
 
-    //find
-
-
 }
+
 /*Negative slices are used to pull subsequences from the end of the sequence*/
 fun negativeSlice(x: IntRange, size: Int): IntRange {
     var (first, last) = x.first to x.last
@@ -148,7 +167,7 @@ fun negativeSlice(x: IntRange, size: Int): IntRange {
 }
 
 
-abstract class NucleotideSeq protected constructor(seqB: ByteArray) : Seq(seqB) {
+abstract class NucleotideSeq protected constructor(seqB: ByteArray, ambiguous: Boolean = true) : BioSeq(seqB) {
 
     protected fun complementSeq(nucComplementByByteArray: ByteArray): ByteArray {
         val comp = ByteArray(seqB.size)
@@ -174,8 +193,8 @@ abstract class NucleotideSeq protected constructor(seqB: ByteArray) : Seq(seqB) 
 
 
 class DNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
-    constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
-    constructor(rnaSeq : RNASeq) : this(rnaSeq.copyOfBytes()) {
+    constructor(seq: String, ambiguous: Boolean = true) : this(seq.toByteArray(Charsets.UTF_8))
+    constructor(rnaSeq: RNASeq) : this(rnaSeq.copyOfBytes()) {
         for (i in this.seqB.indices) {
             if (this.seqB[i] == NUC.U.char.toByte()) this.seqB[i] = NUC.T.char.toByte()
             //TODO need to decide whether to support lowercase
@@ -183,7 +202,6 @@ class DNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
         }
     }
 
-    override val alphabet = ALPHABET.DNAAlphabet
     operator fun get(i: Int, j: Int) = DNASeq(seqB.sliceArray(i..j))
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
@@ -200,8 +218,8 @@ class DNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
 
 
 class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
-    constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
-    constructor(dnaSeq : DNASeq) : this(dnaSeq.copyOfBytes()) {
+    constructor(seq: String, ambiguous: Boolean = true) : this(seq.toByteArray(Charsets.UTF_8))
+    constructor(dnaSeq: DNASeq) : this(dnaSeq.copyOfBytes()) {
         for (i in this.seqB.indices) {
             if (this.seqB[i] == NUC.T.char.toByte()) this.seqB[i] = NUC.U.char.toByte()
             //TODO need to decide whether to support lowercase
@@ -209,7 +227,6 @@ class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
         }
     }
 
-    override val alphabet = ALPHABET.RNAAlphabet
     operator fun get(i: Int, j: Int) = RNASeq(seqB.sliceArray(i..j))
 
     /**Note Kotlin [IntRange] are end inclusive, while Python slices end exclusive
@@ -226,10 +243,9 @@ class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
 }
 
 
-class ProteinSeq(seqB: ByteArray) : Seq(seqB) {
+class ProteinSeq(seqB: ByteArray) : BioSeq(seqB) {
     constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
 
-    override val alphabet = ALPHABET.ProteinAlphabet
     operator fun get(i: Int, j: Int) = ProteinSeq(seqB.copyOfRange(i, j))
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
@@ -243,7 +259,7 @@ class ProteinSeq(seqB: ByteArray) : Seq(seqB) {
     operator fun plus(seq2: ProteinSeq) = ProteinSeq(seqB.plus(seq2.seqB))
     operator fun times(n: Int) = ProteinSeq(super.repeat(n))
 
-    fun back_translate():RNASeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
+    fun back_translate(): RNASeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
 }
 /**
 import array

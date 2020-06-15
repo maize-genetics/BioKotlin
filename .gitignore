@@ -91,3 +91,4 @@ vignettes/*.pdf
 docs/
 *.Rproj
 kotlinScripting.xml
+uiDesigner.xml

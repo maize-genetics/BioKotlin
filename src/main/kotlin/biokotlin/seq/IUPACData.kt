@@ -3,6 +3,7 @@
 package biokotlin.seq
 
 
+import biokotlin.data.Codon
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
 import java.util.*
@@ -47,6 +48,12 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
 
         fun from3Letter(name3letter: String) = a3LetterToAA[name3letter]
         fun fromChar(char: Char) = charToAA[char]
+        val all: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java))
+        internal val bitSetOfChars : BitSet
+            get() {val bsc = BitSet(128)
+                all.forEach { bsc.set(it.char.toInt()) }
+                return bsc
+            }
     }
 }
 
@@ -55,6 +62,7 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
 fun protein_letters_3to1(name3letter: String) = AminoAcid.from3Letter(name3letter)
 val protein_letters = AminoAcid
 
+typealias NucSet = ImmutableSet<NUC>
 
 enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                val ambiguous: Boolean) {
@@ -177,9 +185,10 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
         fun fromChar(char: Char) = charToDNA[char]
 
         /*Immutable Guava set back by EnumSet*/
-        val unambiguousDNA: ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
-        val DNA: ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
-        val RNA: ImmutableSet<NUC> = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
+        val DNA :NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
+        val RNA : NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
+        val AmbiguousDNA: NucSet = Sets.immutableEnumSet(EnumSet.allOf(NUC::class.java)-U)
+        val AmbiguousRNA: NucSet = Sets.immutableEnumSet(EnumSet.allOf(NUC::class.java)-T)
     }
 }
 

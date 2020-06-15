@@ -1,7 +1,6 @@
 package biokotlin.data
 
 import biokotlin.seq.AminoAcid
-import biokotlin.seq.NucleicAcid
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.data.blocking.forAll
 import io.kotest.data.row
@@ -59,21 +58,21 @@ class CodonTableTest :StringSpec ({
     }
 
     "Test Standard Codon DNA Table" {
-        val ctDNA = CodonTables(name ="Standard", nucleicAcid = NucleicAcid.DNA)
+        val ctDNA = CodonTables(name ="Standard", nucleicAcid = Codon.DNA)
         ctDNA.name shouldContainInOrder  listOf("Standard", "SGC0")
         ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, TGA)
         ctDNA.start_codons shouldContainAll listOf(ATG, TTG, CTG)
     }
 
     "Test Standard Codon RNA Table" {
-        val ctRNA = CodonTables(name ="Standard", nucleicAcid = NucleicAcid.RNA)
+        val ctRNA = CodonTables(name ="Standard", nucleicAcid = Codon.RNA)
         ctRNA.name shouldContainInOrder  listOf("Standard", "SGC0")
         ctRNA.stop_codons shouldContainAll listOf(UAA, UAG, UGA)
         ctRNA.start_codons shouldContainAll listOf(AUG, UUG, CUG)
     }
 
     "Test Vertebrate Mitochondrial DNA Table" {
-        val ctDNA = CodonTables(name ="Vertebrate Mitochondrial", nucleicAcid = NucleicAcid.DNA)
+        val ctDNA = CodonTables(name ="Vertebrate Mitochondrial", nucleicAcid = Codon.DNA)
         ctDNA.name shouldContain "Vertebrate Mitochondrial"
         ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, AGA, AGG)
     }

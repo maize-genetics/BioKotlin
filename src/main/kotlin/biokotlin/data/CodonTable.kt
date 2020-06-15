@@ -4,7 +4,10 @@ import biokotlin.data.Codon.*
 import biokotlin.seq.AminoAcid
 import biokotlin.seq.AminoAcid.*
 import biokotlin.seq.NUC
-import biokotlin.seq.NucleicAcid
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Sets
+import java.util.*
+import kotlin.NoSuchElementException
 
 
 /**
@@ -28,11 +31,11 @@ import biokotlin.seq.NucleicAcid
 //TODO see if guava immutable hashMap even faster
 
 /**Return codon table based on id, ambiguous not implemented*/
-fun CodonTables(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA): CodonTable =
+fun CodonTables(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable =
         CodonTableData[id, ambiguous, nucleicAcid]
 
 /**Return codon table based on name, ambiguous not implemented*/
-fun CodonTables(name: String, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA): CodonTable =
+fun CodonTables(name: String, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable =
         CodonTableData[name, ambiguous, nucleicAcid]
 
 /**Return the complete list of DNA and RNA tables*/
@@ -43,7 +46,7 @@ val CodonTablesAll: List<CodonTable> by lazy {
 }
 
 /**Return the complete list of either DNA and RNA tables*/
-fun CodonTablesAll(nucleicAcid: NucleicAcid): List<CodonTable> =
+fun CodonTablesAll(nucleicAcid: CodonSet): List<CodonTable> =
         CodonTableData.allCodonTables.values
                 .filter { it.nucleicAcid == nucleicAcid }
                 .sortedBy { it.id }
@@ -66,7 +69,7 @@ val CodonTables
  * @property[aaToCodon] multimap to amino acid code to list of codons
  */
 data class CodonTable(val id: Int, val name: List<String>, val start_codons: List<Codon>, val stop_codons: List<Codon>,
-                      val codonToAA: Map<Codon, AminoAcid>, val nucleicAcid: NucleicAcid = NucleicAcid.DNA, val ambiguous: Boolean = false) {
+                      val codonToAA: Map<Codon, AminoAcid>, val nucleicAcid: CodonSet = Codon.DNA, val ambiguous: Boolean = false) {
 
     fun key(): CodonTableKey = CodonTableKey(id, ambiguous, nucleicAcid)
 
@@ -104,7 +107,7 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
      */
     override fun toString(): String {
         val sb = StringBuilder()
-        val baseOrder: List<NUC> = if (nucleicAcid == NucleicAcid.DNA) listOf(NUC.T, NUC.C, NUC.A, NUC.G)
+        val baseOrder: List<NUC> = if (nucleicAcid == Codon.DNA) listOf(NUC.T, NUC.C, NUC.A, NUC.G)
         else listOf(NUC.U, NUC.C, NUC.A, NUC.G)
         sb.append("""
             Table $id ${name.joinToString()}
@@ -134,10 +137,10 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
             .groupBy({ it.value }, { it.key })
 
     val standard_dna_table
-        get() = CodonTables(1, nucleicAcid = NucleicAcid.DNA)
+        get() = CodonTables(1, nucleicAcid = Codon.DNA)
 }
 
-data class CodonTableKey(val id: Int, val ambiguous: Boolean = false, val nucleicAcid: NucleicAcid = NucleicAcid.DNA)
+data class CodonTableKey(val id: Int, val ambiguous: Boolean = false, val nucleicAcid: CodonSet = Codon.DNA)
 
 object CodonTableData {
     //Various precomputed Maps
@@ -205,7 +208,7 @@ object CodonTableData {
                 .associate { (name, id) -> name to id }
     }
 
-    operator fun get(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA): CodonTable {
+    operator fun get(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable {
         val codonTableKey = CodonTableKey(id, ambiguous, nucleicAcid)
         return allCodonTables.getOrElse(codonTableKey) {
             throw NoSuchElementException("""
@@ -216,7 +219,7 @@ object CodonTableData {
         }
     }
 
-    operator fun get(name: String, ambiguous: Boolean = false, nucleicAcid: NucleicAcid = NucleicAcid.DNA): CodonTable {
+    operator fun get(name: String, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable {
         val id = nameToId.getOrElse(name) {
             throw NoSuchElementException("""
             Codon Table of "$name" not available.
@@ -253,14 +256,15 @@ object CodonTableData {
                 .toList()
         val rnaCodonToAA: Map<Codon, AminoAcid> = dnaTable.codonToAA.entries
                 .associate { (codon, amino) -> codon.rnaAnalog to amino }
-        return dnaTable.copy(stop_codons = rnaStop, start_codons = rnaStart, codonToAA = rnaCodonToAA, nucleicAcid = NucleicAcid.RNA)
+        return dnaTable.copy(stop_codons = rnaStop, start_codons = rnaStart, codonToAA = rnaCodonToAA, nucleicAcid = Codon.RNA)
     }
 
-    val standard_dna_table = get(1, nucleicAcid = NucleicAcid.DNA)
-    val standard_rna_table = get(1, nucleicAcid = NucleicAcid.RNA)
+    val standard_dna_table = get(1, nucleicAcid = Codon.DNA)
+    val standard_rna_table = get(1, nucleicAcid = Codon.RNA)
 
 }
 
+typealias CodonSet = ImmutableSet<Codon>
 
 enum class Codon {
     AAA, ACA, AGA, ATA, AAC, ACC, AGC, ATC, AAG, ACG, AGG, ATG,
@@ -286,5 +290,7 @@ enum class Codon {
         operator fun get(s: String) = valueOf(s)
         fun get(c1: Char, c2: Char, c3: Char) = valueOf(String(charArrayOf(c1, c2, c3)))
         fun get(c1: NUC, c2: NUC, c3: NUC) = Companion.get(c1.char, c2.char, c3.char)
+        val DNA: CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isDNACodon }))
+        val RNA : CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isRNACodon }))
     }
 }

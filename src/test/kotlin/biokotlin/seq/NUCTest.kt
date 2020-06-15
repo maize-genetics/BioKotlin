@@ -1,15 +1,15 @@
 package biokotlin.seq
 
-import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
 import biokotlin.seq.NUC.*
+import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
 
 class NUCTest : StringSpec({
 
     //Values based on Thermofisher products MW(g/mol)
     val rnaWeights = mapOf("AMP" to 347.2, "CMP" to 323.2, "GMP" to 363.2, "UMP" to 324.2)
-    val dnaWeights = mapOf("dAMP" to 331.2,"dCMP" to 307.2,"dGMP" to 347.2,"dTMP" to 322.2)
+    val dnaWeights = mapOf("dAMP" to 331.2, "dCMP" to 307.2, "dGMP" to 347.2, "dTMP" to 322.2)
 
     "dnaWeight" {
         NUC.DNA.forEach {
@@ -17,7 +17,7 @@ class NUCTest : StringSpec({
         }
         val avgDNA = dnaWeights.values.average()
         N.dnaWeight shouldBe avgDNA.plusOrMinus(0.1)
-        R.dnaWeight shouldBe ((dnaWeights["dAMP"]!! + dnaWeights["dGMP"]!!)/2.0).plusOrMinus(0.1)
+        R.dnaWeight shouldBe ((dnaWeights["dAMP"]!! + dnaWeights["dGMP"]!!) / 2.0).plusOrMinus(0.1)
     }
 
     "rnaWeight" {
@@ -26,7 +26,7 @@ class NUCTest : StringSpec({
         }
         val avgRNA = rnaWeights.values.average()
         N.rnaWeight shouldBe avgRNA.plusOrMinus(0.1)
-        Y.rnaWeight shouldBe ((rnaWeights["CMP"]!! + rnaWeights["UMP"]!!)/2.0).plusOrMinus(0.1)
+        Y.rnaWeight shouldBe ((rnaWeights["CMP"]!! + rnaWeights["UMP"]!!) / 2.0).plusOrMinus(0.1)
     }
 
     "Test complementary nucleotide" {
@@ -39,8 +39,8 @@ class NUCTest : StringSpec({
     }
 
     "Test ambiguous nucleotide sets" {
-        S.ambigDNA shouldBe setOf(G,C)
-        K.ambigDNA shouldBe setOf(G,T)
-        K.ambigRNA shouldBe setOf(G,U)
+        S.ambigDNA shouldBe setOf(G, C)
+        K.ambigDNA shouldBe setOf(G, T)
+        K.ambigRNA shouldBe setOf(G, U)
     }
 })

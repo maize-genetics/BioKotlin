@@ -15,12 +15,20 @@ internal class SeqTest {
     val dnaSeq = DNASeq("ACGTGGTGA")
     val rnaSeq = RNASeq("ACGUGGUGA")
     val proteinSeq = ProteinSeq("TW*")
-    val proteinSeq3Letter = ProteinSeq("ThrTrpTer")
 
     @Test
     fun `DNA transciption`() {
         assertEquals(rnaSeq, dnaSeq.transcribe(), "DNA transciption error")
         assertEquals(dnaSeq, rnaSeq.back_transcribe(), "RNA back transciption error")
+    }
+
+    @Test
+    fun `Seq function to make BioSeq`() {
+        assertEquals(DNASeq("GCAT"), Seq("GCAT"), "DNASeq error")
+        assertEquals(RNASeq("GCAU"), Seq("GCAU"), "RNASeq error")
+        assertEquals(DNASeq("GCRT"), Seq("GCRT"), "DNASeq ambiguous error")
+        assertEquals(RNASeq("GCRU"), Seq("GCRU"), "RNASeq ambiguous error")
+        assertEquals(ProteinSeq("GCDF"), Seq("GCDF"), "ProteinSeq error")
     }
 
     @ParameterizedTest(name = "dnaSeq[{0}..{1}].seq = {2}")
@@ -88,7 +96,4 @@ internal class SeqTest {
 //        //val d
 //    }
 
-    @Test
-    fun getAlphabet() {
-    }
 }
