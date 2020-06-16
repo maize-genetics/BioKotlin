@@ -82,6 +82,14 @@ internal class SeqTest {
 
         val time2 = measureTimeMillis { bigSeq.reverse_complement() }
         println("Reverse complement of ${bigSeq.len()/1E6}Mb took $time2 ms")
+
+        val time3 = measureTimeMillis { bigSeq.transcribe().translate() }
+        println("transcribe & translate of ${bigSeq.len()/1E6}Mb took $time3 ms")
+    }
+
+    @Test
+    fun `RNA translation`() {
+        assertEquals(RNASeq("AAAACAAC").translate(),ProteinSeq("KT*"), "RNA translation")
     }
 
 
