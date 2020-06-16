@@ -33,7 +33,8 @@ class CodonTableTest :StringSpec ({
 
     "Test for all codons" {
         checkAll(normalCodonTableArb) { codonTable ->
-            codonTable.codonToAA.size + codonTable.stop_codons.size shouldBeExactly  64
+            (codonTable.codonToAA.keys + codonTable.stop_codons).filter { it.isDNACodon }.count() shouldBeExactly  64
+            (codonTable.codonToAA.keys + codonTable.stop_codons).filter { it.isRNACodon }.count() shouldBeExactly  64
             codonTable.start_codons.size shouldBeGreaterThan 0
             codonTable.stop_codons.size shouldBeGreaterThan 0
         }
@@ -50,36 +51,38 @@ class CodonTableTest :StringSpec ({
                 row(CodonTables.standard_dna_table.aaToCodon),
                 row(CodonTables.standard_rna_table.aaToCodon)
         ) { aaToCodon ->
-            aaToCodon[AminoAcid.L]?.size shouldBe 6
-            aaToCodon[AminoAcid.W]?.size shouldBe 1
-            aaToCodon[AminoAcid.P]?.size shouldBe 4
+            //These are the numbers for both RNA and DNA codons
+            aaToCodon[AminoAcid.L]?.size shouldBe 12
+            (aaToCodon[AminoAcid.L]?.filter { it.isDNACodon }?.size ?: 0) shouldBe 6
+            aaToCodon[AminoAcid.W]?.size shouldBe 2
+            aaToCodon[AminoAcid.P]?.size shouldBe 5
             //aaToCodon['*']?.size shouldBe null  //don't store stop here
         }
     }
 
     "Test Standard Codon DNA Table" {
-        val ctDNA = CodonTables(name ="Standard", nucleicAcid = Codon.DNA)
+        val ctDNA = CodonTables(name ="Standard")
         ctDNA.name shouldContainInOrder  listOf("Standard", "SGC0")
         ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, TGA)
         ctDNA.start_codons shouldContainAll listOf(ATG, TTG, CTG)
     }
 
     "Test Standard Codon RNA Table" {
-        val ctRNA = CodonTables(name ="Standard", nucleicAcid = Codon.RNA)
+        val ctRNA = CodonTables(name ="Standard")
         ctRNA.name shouldContainInOrder  listOf("Standard", "SGC0")
         ctRNA.stop_codons shouldContainAll listOf(UAA, UAG, UGA)
         ctRNA.start_codons shouldContainAll listOf(AUG, UUG, CUG)
     }
 
     "Test Vertebrate Mitochondrial DNA Table" {
-        val ctDNA = CodonTables(name ="Vertebrate Mitochondrial", nucleicAcid = Codon.DNA)
+        val ctDNA = CodonTables(name ="Vertebrate Mitochondrial")
         ctDNA.name shouldContain "Vertebrate Mitochondrial"
         ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, AGA, AGG)
     }
 
 
     "Test printing" {
-        CodonTables.standard_rna_table.toString() shouldBe
+        CodonTables.standard_rna_table.toString(Codon.RNA) shouldBe
 """Table 1 Standard, SGC0
 
 1 |  U      |  C      |  A      |  G      | 3
