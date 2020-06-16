@@ -75,7 +75,7 @@ fun Seq(seq: String): BioSeq {
                 origCharBits.andNot(it.key)
                 origCharBits.cardinality() == 0
             }.toList()
-    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatiable with RNA, DNA, or AminoAcids")
+    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids")
     return compatibleSets[0].value(seq)
 }
 
@@ -243,7 +243,7 @@ class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
 }
 
 
-class ProteinSeq(seqB: ByteArray) : BioSeq(seqB) {
+class ProteinSeq internal constructor(seqB: ByteArray) : BioSeq(seqB) {
     constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
 
     operator fun get(i: Int, j: Int) = ProteinSeq(seqB.copyOfRange(i, j))
