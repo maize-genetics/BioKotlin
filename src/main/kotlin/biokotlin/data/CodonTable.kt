@@ -27,8 +27,6 @@ import kotlin.NoSuchElementException
  * in Python it would be:
  * `CodonTable[1]`
  */
-//TODO fast translate methods that rely on encoding into a short
-//TODO see if guava immutable hashMap even faster
 
 /**Return codon table based on id, ambiguous not implemented*/
 fun CodonTables(id: Int = 1, ambiguous: Boolean = false): CodonTable =
@@ -133,6 +131,19 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
 
     val standard_dna_table
         get() = CodonTables(1)
+
+    private val illegalCodon = Byte.MIN_VALUE
+    private val nuc3bytesToCodonByte: ByteArray = ByteArray(65){illegalCodon}
+    init {
+        Codon.values()
+                .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.toByte() ?: illegalCodon }
+        stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.stopChar.toByte() }
+    }
+    fun nucBytesToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
+        val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
+        if(codonB == illegalCodon) IllegalArgumentException("Illegal bytes used to encode codon")
+        return codonB
+    }
 }
 
 data class CodonTableKey(val id: Int, val ambiguous: Boolean = false)
@@ -210,7 +221,7 @@ object CodonTableData {
             throw NoSuchElementException("""
             Codon Table of that id, ambiguous state, or nucleic acid is not available.
             Note ambiguous codon are not implemented.
-            Valid id = ${nameToId.values.toString()}
+            Valid id = ${nameToId.values}
         """.trimIndent())
         }
     }
@@ -219,19 +230,12 @@ object CodonTableData {
         val id = nameToId.getOrElse(name) {
             throw NoSuchElementException("""
             Codon Table of "$name" not available.
-            Valid names are ${nameToId.keys.toString()}
+            Valid names are ${nameToId.keys}
         """.trimIndent())
         }
         return get(id, ambiguous)
     }
 
-
-//    private fun createDNARNATables(dnaCodonTables: List<CodonTable>): Map<CodonTableKey, CodonTable> {
-//        //val dnaCodonTables = createDNATables(diffsWithStandard)
-//        return dnaCodonTables
-//                .flatMap { dnaCT -> listOf(dnaCT, createRNATable(dnaCT)) }
-//                .associate { codonTable -> codonTable.key() to codonTable }
-//    }
 
     /*Builds on the new codon to amino acid map based on the standardCodonTable and list of differences.
     * If the codon is no longer used.  AminoAcid is set to null
@@ -248,18 +252,6 @@ object CodonTableData {
 
     private fun addRNA(vararg dnaCodons: Codon) : List<Codon> =
         dnaCodons.flatMap { dnaCodon -> listOf<Codon>(dnaCodon, dnaCodon.rnaAnalog)  }
-
-//    private fun createRNATable(dnaTable: CodonTable): CodonTable {
-//        val rnaStop = dnaTable.stop_codons
-//                .map { codon -> codon.rnaAnalog }
-//                .toList()
-//        val rnaStart = dnaTable.start_codons
-//                .map { codon -> codon.rnaAnalog }
-//                .toList()
-//        val rnaCodonToAA: Map<Codon, AminoAcid> = dnaTable.codonToAA.entries
-//                .associate { (codon, amino) -> codon.rnaAnalog to amino }
-//        return dnaTable.copy(stop_codons = rnaStop, start_codons = rnaStart, codonToAA = rnaCodonToAA, nucleicAcid = Codon.RNA)
-//    }
 
     val standard_dna_table = get(1)
     val standard_rna_table = get(1)
@@ -296,5 +288,18 @@ enum class Codon {
         val RNA : CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isRNACodon }))
         val nucToCodon : Map<List<Byte>,Codon>
             get() = Codon.values().associate { codon -> codon.name.toByteArray().toList() to codon}
+
+
+        internal fun toPackedInt(codon : String):Int {
+            if(codon.length!=3) throw IllegalArgumentException("Codon must be length of 3")
+            return NUC.byteTo2Bit(codon[0].toByte()).toInt().shl(4) or
+                    NUC.byteTo2Bit(codon[1].toByte()).toInt().shl(2) or
+                    NUC.byteTo2Bit(codon[2].toByte()).toInt()
+        }
+        internal fun toPackedInt(c1 : Byte, c2 : Byte, c3 : Byte):Int {
+            return NUC.byteTo2Bit(c1).toInt().shl(4) or
+                    NUC.byteTo2Bit(c2).toInt().shl(2) or
+                    NUC.byteTo2Bit(c3).toInt()
+        }
     }
 }

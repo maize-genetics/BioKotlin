@@ -73,7 +73,7 @@ internal class SeqTest {
     }
 
     @Test
-    fun `dna reverse complement speed`() {
+    fun `dna reverse complement and translate speed`() {
         val heapSize = Runtime.getRuntime().totalMemory()
         println("Heap size is ${heapSize/1E6} Mb")
         val bigSeq = dnaSeq * 1_000_000 //9Mb
@@ -89,7 +89,9 @@ internal class SeqTest {
 
     @Test
     fun `RNA translation`() {
-        assertEquals(RNASeq("AAAACAAC").translate(),ProteinSeq("KT*"), "RNA translation")
+        assertEquals(ProteinSeq("KT"),RNASeq("AAAACA").translate(), "RNA translation")
+        assertEquals(ProteinSeq("KT*"),RNASeq("AAAACAUAG").translate(), "RNA translation with stop")
+
     }
 
 

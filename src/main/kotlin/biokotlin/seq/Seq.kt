@@ -334,12 +334,11 @@ class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
     ValueError: You cannot use 'to_stop=True' with this table ...
     */
     fun translate(codonTable: CodonTable = standard_rna_table, to_stop: Boolean = true, cds : Boolean =false):ProteinSeq {
-        val s= seqB.asSequence()
-                .chunked(3) { Codon.nucToCodon[it] }
-                .map { codonTable.codonToAA.get(it)?.char ?: '*' }
-                .map{ it.toByte()}
-                .toList().toByteArray()
-        return ProteinSeq(s)
+        val pB = ByteArray(size = len()/3)
+        for (i in 0 until (len()-2) step 3) {
+            pB[i/3] = codonTable.nucBytesToCodonByte(seqB[i],seqB[i+1],seqB[i+2])
+        }
+        return ProteinSeq(pB)
     }
     fun back_transcribe() = DNASeq(this)
 }

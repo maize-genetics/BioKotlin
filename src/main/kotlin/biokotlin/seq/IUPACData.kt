@@ -54,6 +54,7 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
                 all.forEach { bsc.set(it.char.toInt()) }
                 return bsc
             }
+        const val stopChar='*'
     }
 }
 
@@ -107,6 +108,9 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
 
     companion object {
         private val charToDNA = NUC.values().associateBy { it.name[0] }
+        private val byteTo2Bit: ByteArray = ByteArray(Byte.MAX_VALUE.toInt()){-1}
+        private val byteTo4Bit: ByteArray = ByteArray(Byte.MAX_VALUE.toInt()){-1}
+
         private val dnaCompMap: EnumMap<NUC, NUC> = EnumMap(mapOf(
                 A to T,
                 C to G,
@@ -156,6 +160,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
         private val dnaWeights: EnumMap<NUC, Double>
         private val rnaWeights: EnumMap<NUC, Double>
         init {
+            values().forEach { byteTo2Bit[it.char.toInt()] = it.twoBit }
+            values().forEach { byteTo4Bit[it.char.toInt()] = it.fourBit }
             values().forEach { ambigDnaCompByByteArray[it.char.toInt()] = it.dnaComplement.char.toByte() }
             values().forEach { ambigRnaCompByByteArray[it.char.toInt()] = it.rnaComplement.char.toByte() }
             val dnaUnAmWeights = mapOf<NUC, Double>(
@@ -183,6 +189,16 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
         }
 
         fun fromChar(char: Char) = charToDNA[char]
+        fun byteTo2Bit(base: Byte):Byte {
+            val b = byteTo2Bit[base.toInt()]
+            if(b<0) throw IllegalArgumentException("Only unambiguous nucleotides allowed for 2 bit conversion")
+            return b
+        }
+        fun byteTo4Bit(base: Byte): Byte{
+            val b = byteTo4Bit[base.toInt()]
+            if(b<0) throw IllegalArgumentException("Only IUPAC nucleotides allowed for 4 bit conversion")
+            return b
+        }
 
         /*Immutable Guava set back by EnumSet*/
         val DNA :NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
