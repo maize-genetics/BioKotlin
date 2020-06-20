@@ -1,8 +1,8 @@
 package biokotlin.seq
 
-import biokotlin.data.Codon
 import biokotlin.data.CodonTable
-import biokotlin.data.CodonTableData.standard_rna_table
+import biokotlin.data.CodonTableData
+import com.google.common.collect.ImmutableSet
 import java.util.*
 
 //import biokotlin.seq.
@@ -36,7 +36,7 @@ for example generic DNA, or IUPAC DNA. This describes the type of molecule
 (e.g. RNA, DNA, protein) and may also indicate the expected symbols
 (letters).
 
-Unlike BioPython, BioKotlin has three subclasses [DNASeq], [RNASeq], and [ProteinSeq]
+Unlike BioPython, BioKotlin has three subclasses [DNASeqByte], [RNASeqByte], and [ProteinSeqByte]
 that enforces type safe usages (i.e. no adding of DNA + Protein)
 
 The Seq object also provides some biological methods, such as complement,
@@ -68,27 +68,38 @@ MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF
 IUPACProtein()
  */
 
-
-fun Seq(seq: String): BioSeq {
-    val bytePresent: BitSet = BitSet(128)
-    for (i in seq) bytePresent[i.toInt()] = true
-    val compatibleSets = charBitsToBioSeq.entries
-            .filter {
-                val origCharBits = bytePresent.clone() as BitSet
-                origCharBits.andNot(it.key)
-                origCharBits.cardinality() == 0
-            }.toList()
-    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatiable with RNA, DNA, or AminoAcids")
-    return compatibleSets[0].value(seq)
+fun Seq(seq: String): BioSeqByte {
+    return compatibleBioSet(seq)[0].creator(seq)
 }
 
-private val charBitsToBioSeq: Map<BitSet, (String) -> BioSeq> = linkedMapOf(
-        bitSetOfChars(NUC.DNA) to { s: String -> DNASeq(s, false) },
-        bitSetOfChars(NUC.RNA) to { s: String -> RNASeq(s, false) },
-        bitSetOfChars(NUC.AmbiguousDNA) to { s: String -> DNASeq(s, true) },
-        bitSetOfChars(NUC.AmbiguousRNA) to { s: String -> RNASeq(s, true) },
-        AminoAcid.bitSetOfChars to { s: String -> ProteinSeq(s) }
-)
+internal fun compatibleBioSet(seq: String): List<BioSet> {
+    val bytePresent: BitSet = BitSet(128)
+    for (i in seq) bytePresent[i.toInt()] = true
+    val compatibleSets = BioSet.values()
+            .filter {
+                val origCharBits = bytePresent.clone() as BitSet
+                origCharBits.andNot(it.bitSets)
+                origCharBits.cardinality() == 0
+            }.map { it }
+    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids")
+    return compatibleSets
+}
+
+internal fun compatibleNucSet(seq: String): List<NucSet> {
+    val bioSet = compatibleBioSet(seq)
+    if (bioSet[0] == BioSet.AminoAcid) throw IllegalStateException("The characters in the String are AminoAcids not Nucleotides")
+    @Suppress("UNCHECKED_CAST")
+    return bioSet.filter { it != BioSet.AminoAcid }
+            .map { it.set as NucSet }
+}
+
+internal enum class BioSet(val set: ImmutableSet<*>, val bitSets: BitSet, val creator: (String) -> BioSeqByte) {
+    DNA(NUC.DNA, bitSetOfChars(NUC.DNA), { s: String -> NucSeqByte(s, NUC.DNA) }),
+    RNA(NUC.RNA, bitSetOfChars(NUC.RNA), { s: String -> NucSeqByte(s, NUC.RNA) }),
+    AmbiguousDNA(NUC.AmbiguousDNA, bitSetOfChars(NUC.AmbiguousDNA), { s: String -> NucSeqByte(s, NUC.AmbiguousDNA) }),
+    AmbiguousRNA(NUC.AmbiguousRNA, bitSetOfChars(NUC.AmbiguousRNA), { s: String -> NucSeqByte(s, NUC.AmbiguousRNA) }),
+    AminoAcid(biokotlin.seq.AminoAcid.all, biokotlin.seq.AminoAcid.bitSetOfChars, { s: kotlin.String -> ProteinSeqByte(s) }),
+}
 
 private fun bitSetOfChars(nucs: NucSet): BitSet {
     val bsc = BitSet(128)
@@ -96,73 +107,44 @@ private fun bitSetOfChars(nucs: NucSet): BitSet {
     return bsc
 }
 
-abstract class BioSeq protected constructor(protected val seqB: ByteArray) {
-
-    fun seq(): String = String(seqB)
+interface Seq {
+    fun seq(): String
 
     /*Copy of the underlying bytes array*/
-    internal fun copyOfBytes(): ByteArray = seqB.copyOf()
+    fun copyOfBytes(): ByteArray
 
     /**Return the full sequence as string*/
-    override fun toString(): String {
-        return seq()
-    }
+    override fun toString(): String
 
     /**Returns (truncated) representation of the sequence for debugging*/
-    fun repr(): String = "${this::class.simpleName}('${if (seqB.size < 60) seq()
-    else "${seq().substring(0, 54)}...${seq().takeLast(3)}"}')"
+    fun repr(): String
 
     /**Returns on Char at the given position, if negative returns from the end of the sequence*/
-    operator fun get(i: Int) = if (i > 0) seqB[i].toChar() else seqB[seqB.size + i].toChar()
+    operator fun get(i: Int): Char
 
     /**Returns the length of the sequence*/
-    fun len() = seqB.size
-    operator fun compareTo(other: BioSeq) = seq().compareTo(other.seq())
-    fun count(query: Char) = seq().count { it == query }
-    fun count(query: String) = seq().split(query).size - 1
-    fun count_overlap(query: String) = seq().windowedSequence(query.length).count { it.equals(query) }
+    fun len(): Int
 
-    fun repeat(n: Int): ByteArray {
-        val dupSeqB = ByteArray(seqB.size * n)
-        for (i in 0 until n) {
-            seqB.copyInto(dupSeqB, i * seqB.size)
-        }
-        return dupSeqB
-    }
+    operator fun compareTo(other: BioSeqByte): Int
+    fun count(query: Char): Int
+    fun count(query: String): Int
+    fun count_overlap(query: String): Int
+    fun repeat(n: Int): ByteArray
 
     /**Used from converting RNA and DNA and back*/
-    protected fun replace(aTob: Pair<Byte, Byte>, cTod: Pair<Byte, Byte>): ByteArray {
-        val replaceByteArray = seqB.copyOf()
-        for (i in replaceByteArray.indices) {
-            if (replaceByteArray[i] == aTob.first) replaceByteArray[i] = aTob.second
-            if (replaceByteArray[i] == cTod.first) replaceByteArray[i] = cTod.second
-        }
-        return replaceByteArray
-    }
+    fun replace(aTob: Pair<Byte, Byte>, cTod: Pair<Byte, Byte>): ByteArray
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+    override fun equals(other: Any?): Boolean
 
-        other as BioSeq
-
-        if (!seqB.contentEquals(other.seqB)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return seqB.contentHashCode()
-    }
-
-
+    override fun hashCode(): Int
 }
 
 /*Negative slices are used to pull subsequences from the end of the sequence*/
 fun negativeSlice(x: IntRange, size: Int): IntRange {
-    var (first, last) = x.first to x.last
-    if (x.first < 0 && x.last < 0) {
-        first += size; last += size
+    val (first, last) = if (x.first < 0 && x.last < 0) {
+        x.first + size to x.last + size
+    } else {
+        x.first to x.last
     }
     if (first < 0 || last < 0 || last > size) throw StringIndexOutOfBoundsException("IntRange values not within range of string: $x")
     if (first > last) throw StringIndexOutOfBoundsException("IntRange values are ascending: $x")
@@ -170,198 +152,41 @@ fun negativeSlice(x: IntRange, size: Int): IntRange {
 }
 
 
-abstract class NucleotideSeq protected constructor(seqB: ByteArray, ambiguous: Boolean = true) : BioSeq(seqB) {
+interface NucSeq : Seq {
+    val nucSet: NucSet
+    fun complement(): NucSeq
+    fun reverse_complement(): NucSeq
+    fun gc(): Int
+    fun transcribe(): NucSeq
+    fun back_transcribe(): NucSeq
 
-    protected fun complementSeq(nucComplementByByteArray: ByteArray): ByteArray {
-        val comp = ByteArray(seqB.size)
-        //Code a version to do reverse complement directly
-        for (i in seqB.indices) {
-            comp[i] = nucComplementByByteArray[seqB[i].toInt()]
-        }
-        return comp
-    }
-
-    protected fun reverse_complementSeq(nucComplementByByteArray: ByteArray): ByteArray {
-        val comp = ByteArray(seqB.size)
-        for (i in seqB.indices) {
-            comp[comp.size - i - 1] = nucComplementByByteArray[seqB[i].toInt()]
-        }
-        return comp
-    }
-
-    fun gc() = 0 //TODO
-    //count both strands
-
-}
-
-
-class DNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
-    constructor(seq: String, ambiguous: Boolean = true) : this(seq.toByteArray(Charsets.UTF_8))
-    constructor(rnaSeq: RNASeq) : this(rnaSeq.copyOfBytes()) {
-        for (i in this.seqB.indices) {
-            if (this.seqB[i] == NUC.U.char.toByte()) this.seqB[i] = NUC.T.char.toByte()
-            //TODO need to decide whether to support lowercase
-            if (this.seqB[i] == NUC.U.char.toLowerCase().toByte()) this.seqB[i] = NUC.T.char.toLowerCase().toByte()
-        }
-    }
-
-    operator fun get(i: Int, j: Int) = DNASeq(seqB.sliceArray(i..j))
+    operator fun get(i: Int, j: Int): NucSeq
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases)
      */
-    operator fun get(x: IntRange) = DNASeq(seqB.sliceArray(negativeSlice(x, seqB.size)))
-    operator fun plus(seq2: DNASeq) = DNASeq(seqB.plus(seq2.seqB))
-    operator fun times(n: Int) = DNASeq(super.repeat(n))
-    fun complement() = DNASeq(super.complementSeq(NUC.ambigDnaCompByByteArray))
-    fun reverse_complement() = DNASeq(super.reverse_complementSeq(NUC.ambigDnaCompByByteArray))
-
-    fun transcribe() = RNASeq(this)
+    operator fun get(x: IntRange): NucSeq
+    operator fun plus(seq2: NucSeq): NucSeq
+    operator fun times(n: Int): NucSeq
+    fun translate(codonTable: CodonTable = CodonTableData.standard_rna_table, to_stop: Boolean = true, cds: Boolean = false): ProteinSeq
 }
 
+interface ProteinSeq : Seq {
 
-class RNASeq private constructor(seqB: ByteArray) : NucleotideSeq(seqB) {
-    constructor(seq: String, ambiguous: Boolean = true) : this(seq.toByteArray(Charsets.UTF_8))
-    constructor(dnaSeq: DNASeq) : this(dnaSeq.copyOfBytes()) {
-        for (i in this.seqB.indices) {
-            if (this.seqB[i] == NUC.T.char.toByte()) this.seqB[i] = NUC.U.char.toByte()
-            //TODO need to decide whether to support lowercase
-            if (this.seqB[i] == NUC.T.char.toLowerCase().toByte()) this.seqB[i] = NUC.U.char.toLowerCase().toByte()
-        }
-    }
-
-    operator fun get(i: Int, j: Int) = RNASeq(seqB.sliceArray(i..j))
-
-    /**Note Kotlin [IntRange] are end inclusive, while Python slices end exclusive
-     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases)
-     */
-    operator fun get(x: IntRange) = RNASeq(seqB.sliceArray(negativeSlice(x, seqB.size)))
-    operator fun plus(seq2: RNASeq) = RNASeq(seqB.plus(seq2.seqB))
-    operator fun times(n: Int) = RNASeq(super.repeat(n))
-    fun complement() = RNASeq(super.complementSeq(NUC.ambigRnaCompByByteArray))
-    fun reverse_complement() = RNASeq(super.reverse_complementSeq(NUC.ambigRnaCompByByteArray))
-
-    /***
-     Translate a nucleotide sequence into amino acids.
-
-    If given a string, returns a new string object. Given a Seq or
-    MutableSeq, returns a Seq object with a protein alphabet.
-
-    Arguments:
-     - table - Which codon table to use?  This can be either a name
-       (string), an NCBI identifier (integer), or a CodonTable object
-       (useful for non-standard genetic codes).  Defaults to the "Standard"
-       table.
-     - stop_symbol - Single character string, what to use for any
-       terminators, defaults to the asterisk, "*".
-     - to_stop - Boolean, defaults to False meaning do a full
-       translation continuing on past any stop codons
-       (translated as the specified stop_symbol).  If
-       True, translation is terminated at the first in
-       frame stop codon (and the stop_symbol is not
-       appended to the returned protein sequence).
-     - cds - Boolean, indicates this is a complete CDS.  If True, this
-       checks the sequence starts with a valid alternative start
-       codon (which will be translated as methionine, M), that the
-       sequence length is a multiple of three, and that there is a
-       single in frame stop codon at the end (this will be excluded
-       from the protein sequence, regardless of the to_stop option).
-       If these tests fail, an exception is raised.
-     - gap - Single character string to denote symbol used for gaps.
-       Defaults to None.
-
-    A simple string example using the default (standard) genetic code:
-
-    >>> coding_dna = "GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG"
-    >>> translate(coding_dna)
-    'VAIVMGR*KGAR*'
-    >>> translate(coding_dna, stop_symbol="@")
-    'VAIVMGR@KGAR@'
-    >>> translate(coding_dna, to_stop=True)
-    'VAIVMGR'
-
-    Now using NCBI table 2, where TGA is not a stop codon:
-
-    >>> translate(coding_dna, table=2)
-    'VAIVMGRWKGAR*'
-    >>> translate(coding_dna, table=2, to_stop=True)
-    'VAIVMGRWKGAR'
-
-    In fact this example uses an alternative start codon valid under NCBI
-    table 2, GTG, which means this example is a complete valid CDS which
-    when translated should really start with methionine (not valine):
-
-    >>> translate(coding_dna, table=2, cds=True)
-    'MAIVMGRWKGAR'
-
-    Note that if the sequence has no in-frame stop codon, then the to_stop
-    argument has no effect:
-
-    >>> coding_dna2 = "GTGGCCATTGTAATGGGCCGC"
-    >>> translate(coding_dna2)
-    'VAIVMGR'
-    >>> translate(coding_dna2, to_stop=True)
-    'VAIVMGR'
-
-    NOTE - Ambiguous codons like "TAN" or "NNN" could be an amino acid
-    or a stop codon.  These are translated as "X".  Any invalid codon
-    (e.g. "TA?" or "T-A") will throw a TranslationError.
-
-    It will however translate either DNA or RNA.
-
-    NOTE - Since version 1.71 Biopython contains codon tables with 'ambiguous
-    stop codons'. These are stop codons with unambiguous sequence but which
-    have a context dependent coding as STOP or as amino acid. With these tables
-    'to_stop' must be False (otherwise a ValueError is raised). The dual
-    coding codons will always be translated as amino acid, except for
-    'cds=True', where the last codon will be translated as STOP.
-
-    >>> coding_dna3 = "ATGGCACGGAAGTGA"
-    >>> translate(coding_dna3)
-    'MARK*'
-
-    >>> translate(coding_dna3, table=27)  # Table 27: TGA -> STOP or W
-    'MARKW'
-
-    It will however raise a BiopythonWarning (not shown).
-
-    >>> translate(coding_dna3, table=27, cds=True)
-    'MARK'
-
-    >>> translate(coding_dna3, table=27, to_stop=True)
-    Traceback (most recent call last):
-       ...
-    ValueError: You cannot use 'to_stop=True' with this table ...
-    */
-    fun translate(codonTable: CodonTable = standard_rna_table, to_stop: Boolean = true, cds : Boolean =false):ProteinSeq {
-        val pB = ByteArray(size = len()/3)
-        for (i in 0 until (len()-2) step 3) {
-            pB[i/3] = codonTable.nucBytesToCodonByte(seqB[i],seqB[i+1],seqB[i+2])
-        }
-        return ProteinSeq(pB)
-    }
-    fun back_transcribe() = DNASeq(this)
-}
-
-
-class ProteinSeq(seqB: ByteArray) : BioSeq(seqB) {
-    constructor(seq: String) : this(seq.toByteArray(Charsets.UTF_8))
-
-    operator fun get(i: Int, j: Int) = ProteinSeq(seqB.copyOfRange(i, j))
+    operator fun get(i: Int, j: Int): ProteinSeq
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three residues)
      */
-    operator fun get(x: IntRange): ProteinSeq {
-        val range = negativeSlice(x, seqB.size)
-        return get(range.start, range.last)
-    }
+    operator fun get(x: IntRange): ProteinSeq
 
-    operator fun plus(seq2: ProteinSeq) = ProteinSeq(seqB.plus(seq2.seqB))
-    operator fun times(n: Int) = ProteinSeq(super.repeat(n))
+    operator fun plus(seq2: ProteinSeq): ProteinSeq
+    operator fun times(n: Int): ProteinSeq
 
-    fun back_translate(): RNASeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
+    fun back_translate(): NucSeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
 }
+
+
 /**
 import array
 import sys
