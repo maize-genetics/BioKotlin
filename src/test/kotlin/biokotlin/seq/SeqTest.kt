@@ -12,8 +12,8 @@ import kotlin.system.measureTimeMillis
 
 @ExperimentalStdlibApi
 internal class SeqTest {
-    val dnaSeq = NucSeqByte("ACGTGGTGA")
-    val rnaSeq = NucSeqByte("ACGUGGUGA", NUC.RNA)
+    val dnaSeq = NucSeqByteEncode("ACGTGGTGA")
+    val rnaSeq = NucSeqByteEncode("ACGUGGUGA", NUC.RNA)
     val proteinSeq = ProteinSeqByte("TW*")
 
     @Test
@@ -25,13 +25,13 @@ internal class SeqTest {
 
     @Test
     fun `Seq function to make BioSeq`() {
-        assertEquals(NucSeqByte("GCAT"), Seq("GCAT"), "DNASeq error")
-        assertNotEquals(NucSeqByte("GCAT", NUC.AmbiguousDNA), Seq("GCAT"), "DNASeq error")
-        assertEquals(NucSeqByte("GCAU"), Seq("GCAU"), "RNASeq error")
-        assertEquals(NucSeqByte("GCRT"), Seq("GCRT"), "DNASeq ambiguous error")
-        assertEquals(NUC.AmbiguousRNA, NucSeqByte("GCRU").nucSet, "RNASeq ambiguous error")
+        assertEquals(NucSeqByteEncode("GCAT"), Seq("GCAT"), "DNASeq error")
+        assertNotEquals(NucSeqByteEncode("GCAT", NUC.AmbiguousDNA), Seq("GCAT"), "DNASeq error")
+        assertEquals(NucSeqByteEncode("GCAU"), Seq("GCAU"), "RNASeq error")
+        assertEquals(NucSeqByteEncode("GCRT"), Seq("GCRT"), "DNASeq ambiguous error")
+        assertEquals(NUC.AmbiguousRNA, NucSeqByteEncode("GCRU").nucSet, "RNASeq ambiguous error")
         assertEquals(NUC.AmbiguousRNA, (Seq("GCRU") as NucSeqByte).nucSet, "RNASeq ambiguous error")
-        assertEquals(NucSeqByte("GCRU"), Seq("GCRU"), "RNASeq ambiguous error")
+        assertEquals(NucSeqByteEncode("GCRU"), Seq("GCRU"), "RNASeq ambiguous error")
         assertEquals(ProteinSeqByte("GCDF"), Seq("GCDF"), "ProteinSeq error")
     }
 
@@ -70,10 +70,10 @@ internal class SeqTest {
 
     @Test
     fun `dna and rna complements`() {
-        assertEquals(NucSeqByte("TGCACCACT"), dnaSeq.complement(), "DNA complementation")
-        assertEquals(NucSeqByte("UGCACCACU"), rnaSeq.complement(), "RNA complementation")
-        assertEquals(NucSeqByte("TCACCACGT"), dnaSeq.reverse_complement(), "DNA reverse complementation")
-        assertEquals(NucSeqByte("UCACCACGU"), rnaSeq.reverse_complement(), "RNA reverse complementation")
+        assertEquals(NucSeqByteEncode("TGCACCACT"), dnaSeq.complement(), "DNA complementation")
+        assertEquals(NucSeqByteEncode("UGCACCACU"), rnaSeq.complement(), "RNA complementation")
+        assertEquals(NucSeqByteEncode("TCACCACGT"), dnaSeq.reverse_complement(), "DNA reverse complementation")
+        assertEquals(NucSeqByteEncode("UCACCACGU"), rnaSeq.reverse_complement(), "RNA reverse complementation")
     }
 
     @Test
@@ -93,11 +93,22 @@ internal class SeqTest {
 
     @Test
     fun `RNA translation`() {
-        assertEquals(ProteinSeqByte("KT"), NucSeqByte("AAAACA").translate(), "RNA translation")
-        assertEquals(ProteinSeqByte("KT*"), NucSeqByte("AAAACAUAG").translate(), "RNA translation with stop")
+        assertEquals(ProteinSeqByte("KT"), NucSeqByteEncode("AAAACA").translate(), "RNA translation")
+        assertEquals(ProteinSeqByte("KT*"), NucSeqByteEncode("AAAACAUAG").translate(), "RNA translation with stop")
 
     }
 
+
+    @Test
+    fun `Index of subsequences`() {
+        assertEquals(0, NucSeqByteEncode("ACGTGGTGA").indexOf("A"), "First position")
+        assertEquals(2, NucSeqByteEncode("ACGTGGTGA").indexOf("G"), "RNA translation")
+        assertEquals(7, NucSeqByteEncode("ACGTGGTGA").indexOf("GA"), "Index of for last sequence")
+        assertEquals(3, NucSeqByteEncode("ACGTGGTGA").indexOf("U"), "RNA conversion failed")
+        assertEquals(-1, NucSeqByteEncode("ACGTGGTGA").indexOf("TT"), "Not found")
+        assertEquals(-1, NucSeqByteEncode("ACGTGGTGA").indexOf("ACGTGGTGAACGTGGTGA"), "Not found")
+        assertEquals(3, NucSeqByteEncode("ACGTGGTGA").indexOf("t"), "Case conversion failed")
+    }
 
 //    @Test
 //    fun treatSeqAsString() {
