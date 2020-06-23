@@ -4,7 +4,7 @@ package biokotlin.seq
 import biokotlin.data.CodonTable
 
 
-internal abstract class BioSeqByte protected constructor(protected val seqB: ByteArray) : Seq {
+internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Seq {
 
     /*Copy of the underlying bytes array*/
     override fun copyOfBytes(): ByteArray = seqB.copyOf()
