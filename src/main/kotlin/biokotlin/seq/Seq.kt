@@ -160,16 +160,32 @@ interface NucSeq : Seq {
     /**Returns the complement sequence of DNA or RNA*/
     fun reverse_complement(): NucSeq
     /**Counts the NUC.G + NUC.C within a NucSeq*/
-
     fun gc(): Int
+    /**Transcribes a NucSeq - essentially changes the NucSet from [NUC.DNA] to [NUC.RNA]*/
     fun transcribe(): NucSeq
+    /**Transcribes a NucSeq - essentially changes the NucSet from [NUC.RNA] to [NUC.DNA]*/
     fun back_transcribe(): NucSeq
-
-
+    /**Returns the [NUC] of this [NucSeq] at the specified index [i] with i starting at zero
+     * Negative index start from the end of the sequence, i.e. -1 is the last base
+     * ```
+     * NucSeq("ACGT")[1] == NUC.C
+     * ```
+     */
     operator fun get(i: Int): NUC
+    /**
+     * Returns a subset [NucSeq] based on the inclusive start [i] and inclusive last [j]
+     * Indices start at zero.
+     * Negative index start from the end of the sequence, i.e. -1 is the last base
+     * ```kotlin
+     * NucSeq("ACGT")[1,2] == NucSeq("CG")
+     * ```
+     */
     operator fun get(i: Int, j: Int): NucSeq
 
-    /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
+    /**
+     * Returns a subset [NucSeq] based on the [IntRange] of Nucleotides.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases)
      */
     operator fun get(x: IntRange): NucSeq
