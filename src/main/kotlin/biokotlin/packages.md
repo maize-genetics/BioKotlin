@@ -15,49 +15,46 @@ its powerful and efficient SAM tools that work with GATK.
 
 # Package biokotlin.seq
 
-Read-only sequence object (essentially a string with an alphabet).
+Read-only sequence object for DNA, RNA, and Protein Sequences.
 
-Sequence object is immutable. This prevents you from doing my_seq`[5]` = "A" for example,
-but does allow Seq objects to be used as map keys.
+Sequence objects are immutable. This prevents you from doing `mySeq[5] = "A"` for example,
+but does allow Seq objects to be used in multi-threaded applications.  While String are used to initially create
+these objects, their sequences are elements of enum classes [NUC] and [AminoAcid].  [NUC] represents the full IUPAC encoding
+of DNA and RNA.  These classes support information on ambiguity, masses, complements, etc.
 
-The Seq object provides a number of string like methods (such as count,
-find, split and strip), which are alphabet aware where appropriate.  Please note while the Kotlin "x..y" range operator
+The Seq object provides a number of string like methods (such as [ProteinSeq.count], [NucSeq.indexOf],
+find, split), which are alphabet aware where appropriate.  Please note while the Kotlin "x..y" range operator
 is supported, and works very similarly to Python's slice "x:y".  y is inclusive here in Kotlin, and exclusive in Python.
 
-In addition to the string like sequence, the Seq object has an alphabet
-property. This is an instance of an Alphabet class from Bio.Alphabet,
-for example generic DNA, or IUPAC DNA. This describes the type of molecule
-(e.g. RNA, DNA, protein) and may also indicate the expected symbols
-(letters).
 
-Unlike BioPython, BioKotlin has three subclasses [DNASeq], [RNASeq], and [ProteinSeq]
-that enforces type safe usages (i.e. no adding of DNA + Protein)
+Unlike BioPython, BioKotlin has two subclasses [NucSeq] and [ProteinSeq]
+that enforces type safe usages (i.e. no adding of DNA + Protein).  Note DNA and RNA are stored in the same
+classes and backed data structure - only the view is different (T for DNA, U or RNA).  A DNA sequence can be 
+used to search RNA, and vice versa.
 
-The Seq object also provides some biological methods, such as complement,
-reverse_complement, transcribe, back_transcribe and translate (which are
+The Seq object provides a few methods, but most of the methods are part of [NucSeq] and [ProteinSeq] such
+ as complement, reverse_complement, transcribe, back_transcribe and translate (which are
 not applicable to sequences with a protein alphabet).
 
-Create a Seq object.
+Create a NucSeq object with a string for the sequence, and optional NucSet [NUC.DNA],[NUC.RNA],[NUC.AmbiguousDNA],
+[NUC.AmbiguousRNA]. 
+```kotlin
+import biokotlin.seq.*
+val dna = NucSeq("GCTA")  //inferred DNA
+val rna = NucSeq("GCUA")  //inferred RNA
+val rnaSpecified = NucSeq("GCACCCCC", NUC.RNA)
 
-Arguments:
-- seq - Sequence, required (string)
-- alphabet - Optional argument, an Alphabet object from
-Bio.Alphabet
+println(dna.transcribe() == rna)  //true
+println(dna) //GCTA
+println(dna.repr()) //NucSeqByte('GCTA',[A,C,G,T])
+``` 
+
+A protein sequence is simply:
+```kotlin
+import biokotlin.seq.*
+val protein = ProteinSeq("TGWR")
+```
 
 You will typically use Bio.SeqIO to read in sequences from files as
 SeqRecord objects, whose sequence will be exposed as a Seq object via
 the seq property.
-
-However, you will often want to create your own Seq objects directly:
-```jupyterkotlin
->>> from Bio.Seq import Seq
->>> from Bio.Alphabet import IUPAC
-[ ] my_seq = Seq("MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF",
-...              IUPAC.protein)
-[ ] my_seq
-Seq('MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF', IUPACProtein())
-[ ] println(my_seq)
-MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF
-[ ] my_seq.alphabet
-IUPACProtein()
-```

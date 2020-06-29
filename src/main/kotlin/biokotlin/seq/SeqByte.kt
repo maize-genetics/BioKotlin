@@ -4,7 +4,7 @@ package biokotlin.seq
 import biokotlin.data.CodonTable
 
 
-internal abstract class BioSeqByte protected constructor(protected val seqB: ByteArray) : Seq {
+internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Seq {
 
     /*Copy of the underlying bytes array*/
     override fun copyOfBytes(): ByteArray = seqB.copyOf()
@@ -17,16 +17,26 @@ internal abstract class BioSeqByte protected constructor(protected val seqB: Byt
     else "${seq().substring(0, 54)}...${seq().takeLast(3)}"}')"
 
     /**Returns on Char at the given position, if negative returns from the end of the sequence*/
-    override operator fun get(i: Int) = if (i > 0) seqB[i].toChar() else seqB[seqB.size + i].toChar()
+ //   override operator fun get(i: Int) = if (i > 0) seqB[i].toChar() else seqB[seqB.size + i].toChar()
 
     /**Returns the length of the sequence*/
     override fun len() = seqB.size
     override operator fun compareTo(other: Seq) = seq().compareTo(other.seq())
-    override fun count(query: Char) = seq().count { it == query }
-    override fun count(query: String) = seq().split(query).size - 1
-    override fun count_overlap(query: String) = seq().windowedSequence(query.length).count { it.equals(query) }
+    protected fun count(query: Byte) = seqB.count { it == query }
+    protected fun count(query: Seq, overlap: Boolean): Int {
+        val queryB = query.copyOfBytes()
+        var matchCount =0
+        var currentOffset = 0
+        var nextIndex= indexOf(queryB, currentOffset, len()-queryB.size, false)
+        while(nextIndex!= -1) {
+            matchCount++
+            currentOffset = if(overlap) (nextIndex+1) else (nextIndex + queryB.size)
+            nextIndex = indexOf(queryB, currentOffset, len()-queryB.size, false) //check if I need +1 on end
+        }
+        return matchCount
+    }
 
-    override fun repeat(n: Int): ByteArray {
+    protected fun repeat(n: Int): ByteArray {
         val dupSeqB = ByteArray(seqB.size * n)
         for (i in 0 until n) {
             seqB.copyInto(dupSeqB, i * seqB.size)
@@ -34,13 +44,12 @@ internal abstract class BioSeqByte protected constructor(protected val seqB: Byt
         return dupSeqB
     }
 
-    private fun indexOf(queryB: ByteArray, start: Int, end: Int, startAtLast: Boolean): Int {
+    protected fun indexOf(queryB: ByteArray, start: Int, end: Int, startAtLast: Boolean): Int {
         val indices = if(!startAtLast)
             start.coerceAtLeast(0)..end.coerceAtMost(len()-queryB.size)
         else
-            start.coerceAtMost(len()-queryB.size) downTo end.coerceAtLeast(0)
-        if(this is NucSeq) println("Convert to DNA")
-        println(indices)
+            start.coerceAtMost(len()-1) downTo end.coerceAtLeast(queryB.size)
+        //println(indices)
         seqBloop@ for (thisIndex in indices) {
             for (queryIndex in queryB.indices) {
                 if (seqB[thisIndex + queryIndex] != queryB[queryIndex])
@@ -50,18 +59,6 @@ internal abstract class BioSeqByte protected constructor(protected val seqB: Byt
         }
         return -1
     }
-
-    override fun indexOf(query: String, start: Int, end: Int): Int =
-            indexOf(query.toSeqByteArray(),start,end,false)
-
-    override fun indexOf(query: Seq, start: Int, end: Int): Int =
-        indexOf(query.copyOfBytes(),start,end,false)
-
-    override fun lastIndexOf(query: String, start: Int, end: Int): Int =
-            indexOf(query.toSeqByteArray(),start,end,true)
-
-    override fun lastIndexOf(query: Seq, start: Int, end: Int): Int =
-            indexOf(query.copyOfBytes(),start,end,true)
 
     override fun ungap(): Seq {
         TODO("Not yet implemented")
@@ -103,11 +100,21 @@ private fun String.toSeqByteArray() = this.toUpperCase().toByteArray().replaceUr
  */
 internal class NucSeqByte private constructor(seqB: ByteArray, override val nucSet: NucSet) : BioSeqByte(seqB), NucSeq {
     constructor(seq: String, preferredNucSet: NucSet): this(seq.toSeqByteArray(), preferredNucSet)
+    /**
+     * TODO- Violates Bloch Item 23 - Prefer class hierarchies to tagged classes
+     * Should make this abstract with two small class DNASeqByte and RNASeqByte to cover the few specific methods
+     */
+    private val isDNA:Boolean = (nucSet == NUC.DNA || nucSet == NUC.AmbiguousDNA)
 
     override fun seq(): String {
-        return if (nucSet == NUC.DNA || nucSet == NUC.AmbiguousDNA) String(seqB)
+        return if (isDNA) String(seqB)
         else String(seqB).replace(NUC.T.char, NUC.T.rnaAnalog.char)
     }
+
+    /**Returns (truncated) representation of the sequence for debugging*/
+    override fun repr(): String = "${this::class.simpleName}('${if (seqB.size < 60) seq()
+    else "${seq().substring(0, 54)}...${seq().takeLast(3)}"}',${nucSet})"
+
 
     override fun complement(): NucSeq {
         val comp = ByteArray(seqB.size)
@@ -126,14 +133,18 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         return NucSeqByte(comp, nucSet)
     }
 
-    override fun join(vararg seqs: Seq): Seq {
+    override fun join(vararg seqs: NucSeq): NucSeq {
         TODO("Not yet implemented")
     }
 
 
-    override fun gc() = TODO()
-    //count both strands
+    override fun gc() = seqB.count { it.equals(NUC.G.char.toByte()) ||  it.equals(NUC.C.char.toByte())}
 
+    private fun toNUC(i: Int):NUC {
+        val n = NUC.byteToNUC(seqB[i])
+        return if(!isDNA && n == NUC.T) NUC.U else n
+    }
+    override operator fun get(i: Int): NUC = if (i >= 0) toNUC(i) else toNUC(seqB.size + i)
     override operator fun get(i: Int, j: Int) = NucSeqByte(seqB.sliceArray(i..j), nucSet)
 
     override operator fun get(x: IntRange) = NucSeqByte(seqB.sliceArray(negativeSlice(x, seqB.size)), nucSet)
@@ -143,6 +154,14 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     }
 
     override operator fun times(n: Int) = NucSeqByte(super.repeat(n), nucSet)
+    override fun count(query: NUC): Int = count(query.dnaAnalog.char.toByte())
+    override fun count(query: NucSeq): Int = count(query, false)
+    override fun count_overlap(query: NucSeq): Int = count(query, true)
+    override fun indexOf(query: NucSeq, start: Int, end: Int): Int =
+            indexOf(query.copyOfBytes(),start,end,false)
+
+    override fun lastIndexOf(query: NucSeq, start: Int, end: Int): Int =
+            indexOf(query.copyOfBytes(),start,end,true)
 
     override fun transcribe(): NucSeq = NucSeqByte(seqB, NUC.transcipt_equivalent(nucSet))
     override fun back_transcribe(): NucSeq = NucSeqByte(seqB, NUC.transcipt_equivalent(nucSet))
@@ -152,7 +171,8 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         for (i in 0 until (len() - 2) step 3) {
             pB[i / 3] = codonTable.nucBytesToCodonByte(seqB[i], seqB[i + 1], seqB[i + 2])
         }
-        return ProteinSeqByte(String(pB))
+        val proStr: String = if(to_stop) String(pB).split("\\*", limit = 1)[0] else String(pB)
+        return ProteinSeqByte(proStr)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -185,6 +205,8 @@ internal class ProteinSeqByte private constructor(seqB: ByteArray) : BioSeqByte(
     constructor(seq: String) : this(seq.toUpperCase().toByteArray(Charsets.UTF_8))
 
     override fun seq(): String = String(seqB)
+    override fun get(i: Int): AminoAcid = if (i >= 0) AminoAcid.byteToAA(seqB[i]) else AminoAcid
+            .byteToAA(seqB[seqB.size + i])
 
     override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqB.copyOfRange(i, j))
 
@@ -202,8 +224,16 @@ internal class ProteinSeqByte private constructor(seqB: ByteArray) : BioSeqByte(
     }
 
     override operator fun times(n: Int) = ProteinSeqByte(super.repeat(n))
+    override fun count(query: AminoAcid): Int = count(query.char.toByte())
+    override fun count(query: ProteinSeq): Int = count(query, false)
+    override fun count_overlap(query: ProteinSeq): Int = count(query, true)
+    override fun indexOf(query: ProteinSeq, start: Int, end: Int): Int =
+            indexOf(query.copyOfBytes(),start,end,false)
 
-    override fun join(vararg seqs: Seq): Seq {
+    override fun lastIndexOf(query: ProteinSeq, start: Int, end: Int): Int =
+            indexOf(query.copyOfBytes(),start,end,true)
+
+    override fun join(vararg seqs: ProteinSeq): ProteinSeq {
         TODO("Not yet implemented")
     }
 
