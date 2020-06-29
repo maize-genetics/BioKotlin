@@ -1,9 +1,11 @@
+@file:JvmName("SeqInterfaces")
 package biokotlin.seq
 
 import biokotlin.data.CodonTable
 import biokotlin.data.CodonTableData
 import com.google.common.collect.ImmutableSet
 import java.util.*
+import kotlin.random.Random
 
 //import biokotlin.seq.
 /*
@@ -21,61 +23,34 @@ import java.util.*
 
 
 /**
-Read-only sequence object (essentially a string with an alphabet).
-
-Sequence object is immutable. This prevents you from doing my_seq`[5]` = "A" for example,
-but does allow Seq objects to be used as map keys.
-
-The Seq object provides a number of string like methods (such as count,
-find, split and strip), which are alphabet aware where appropriate.  Please note while the Kotlin "x..y" range operator
-is supported, and works very similarly to Python's slice "x:y".  y is inclusive here in Kotlin, and exclusive in Python.
-
-In addition to the string like sequence, the Seq object has an alphabet
-property. This is an instance of an Alphabet class from Bio.Alphabet,
-for example generic DNA, or IUPAC DNA. This describes the type of molecule
-(e.g. RNA, DNA, protein) and may also indicate the expected symbols
-(letters).
-
-Unlike BioPython, BioKotlin has three subclasses [DNASeqByte], [RNASeqByte], and [ProteinSeqByte]
-that enforces type safe usages (i.e. no adding of DNA + Protein)
-
-The Seq object also provides some biological methods, such as complement,
-reverse_complement, transcribe, back_transcribe and translate (which are
-not applicable to sequences with a protein alphabet).
-
-Create a Seq object.
-
-Arguments:
-- seq - Sequence, required (string)
-- alphabet - Optional argument, an Alphabet object from
-Bio.Alphabet
-
-You will typically use Bio.SeqIO to read in sequences from files as
-SeqRecord objects, whose sequence will be exposed as a Seq object via
-the seq property.
-
-However, you will often want to create your own Seq objects directly:
-
->>> from Bio.Seq import Seq
->>> from Bio.Alphabet import IUPAC
->>> my_seq = Seq("MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF",
-...              IUPAC.protein)
->>> my_seq
-Seq('MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF', IUPACProtein())
->>> print(my_seq)
-MKQHKAMIVALIVICITAVVAALVTRKDLCEVHIRTGQTEVAVF
->>> my_seq.alphabet
-IUPACProtein()
+ * Create a Seq from a String, could be DNA, RNA, or Protein.
+ * This functions provides compatibility with BioPython, but the preferred
+ * use is to use either [NucSeq] or [ProteinSeq()], as the Seq type has less functionality
+ * than either of these other two.
+ *
+ * The String is tested for with compatibility DNA, RNA, and Protein in order.  It will
+ * throw an [IllegalStateException], if it is not compatible with any.
+ * [Seq] can be cast to [NucSeq] or [ProteinSeq]:
+ * ```
+ * val aSeq = Seq("GCATA")
+ * val aNucSeq = Seq("GCATA") as NucSeq
+ * val nSeq = NucSeq("GCATA")
+ * ```
  */
-
 fun Seq(seq: String): Seq {
     // factory functions used to create instances of classes can have the same name as the abstract return
     return compatibleBioSet(seq)[0].creator(seq)
 }
 
-fun NucSeq(seq: String): NucSeq {
+/**
+ * Preferred method for creating a DNA or RNA sequence.
+ * It will infer DNA from RNA based on whether there are T or U in the sequence (DNA is default if neither).
+ * To specify use:
+ *
+ */
+fun NucSeq(vararg seq: String): NucSeq {
     //TODO when there are 4bit and 2bit versions logic can be expanded
-    return NucSeqByteEncode(seq)
+    return NucSeqByteEncode(seq.joinToString(separator = ""))
 }
 
 fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
@@ -83,20 +58,44 @@ fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
     return NucSeqByteEncode(seq, preferredNucSet)
 }
 
+fun NucSeq(seq: List<NUC>): NucSeq = TODO()
+fun NucSeq(vararg nucleotides: NUC): NucSeq = TODO()
+
 fun ProteinSeq(seq: String):ProteinSeq {
     return ProteinSeqByte(seq)
 }
 
+fun RandomNucSeq(length: Int, nucSet: NucSet = NUC.DNA, seed: Int = 0): NucSeq {
+    val random = Random(seed)
+    val baseBytes = ByteArray(length)
+    val nucBytes = NUC.DNA.map { it.char.toByte() }.toByteArray()
+    for (i in baseBytes.indices) {
+        baseBytes[i]=nucBytes[random.nextInt(nucBytes.size)]
+    }
+    return NucSeq(String(baseBytes),nucSet)
+}
+
+fun RandomProteinSeq(length: Int, seed: Int = 0): ProteinSeq {
+    val random = Random(seed)
+    val baseBytes = ByteArray(length)
+    val aaBytes = AminoAcid.all.map { it.char.toByte() }.toByteArray()
+    for (i in baseBytes.indices) {
+        baseBytes[i]=aaBytes[random.nextInt(aaBytes.size)]
+    }
+    return ProteinSeq(String(baseBytes))
+}
+
 internal fun compatibleBioSet(seq: String): List<BioSet> {
     val bytePresent: BitSet = BitSet(128)
-    for (i in seq) bytePresent[i.toInt()] = true
+    for (i in seq) bytePresent[i.toUpperCase().toInt()] = true
     val compatibleSets = BioSet.values()
             .filter {
                 val origCharBits = bytePresent.clone() as BitSet
                 origCharBits.andNot(it.bitSets)
                 origCharBits.cardinality() == 0
             }.map { it }
-    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids")
+    if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids. " +
+            "Or they are a mix of RNA and DNA")
     return compatibleSets
 }
 
@@ -122,6 +121,7 @@ private fun bitSetOfChars(nucs: NucSet): BitSet {
     return bsc
 }
 
+/**Basic interface for biological sequences - Nucleotide or Protein*/
 interface Seq {
     fun seq(): String
 
@@ -134,70 +134,75 @@ interface Seq {
     /**Returns (truncated) representation of the sequence for debugging*/
     fun repr(): String
 
-    /**Returns on Char at the given position, if negative returns from the end of the sequence*/
-    operator fun get(i: Int): Char
-
     /**Returns the length of the sequence*/
     fun len(): Int
 
     operator fun compareTo(other: Seq): Int
-    fun count(query: Char): Int
-    fun count(query: String): Int
-    fun count_overlap(query: String): Int
-    fun repeat(n: Int): ByteArray
-
-    fun indexOf(query: String, start: Int = 0, end: Int = Int.MAX_VALUE): Int
-    fun indexOf(query: Seq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
-    fun lastIndexOf(query: String, start: Int = 0, end: Int = Int.MAX_VALUE): Int
-    fun lastIndexOf(query: Seq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
-
-    /*Same as [indexOf] but provides compatibility with BioPython*/
-    fun find(query: String, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
-    fun find(query: Seq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
-    fun rfind(query: String, start: Int = 0, end: Int = Int.MAX_VALUE): Int = lastIndexOf(query,start,end)
-    fun rfind(query: Seq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = lastIndexOf(query,start,end)
 
 
+    /**TODO - needs to be implemented*/
     fun ungap(): Seq
-
-    //TODO may need to move to NucSeq and ProteinSeq, so that type incompatibility is not an issue
-    fun join(vararg seqs: Seq) : Seq
-
-    override fun equals(other: Any?): Boolean
-
-    override fun hashCode(): Int
 }
 
+/**Main interface for working with DNA and RNA sequences*/
 interface NucSeq : Seq {
+    /**The type of nucleotides - DNA or RNA and ambiguous or not*/
     val nucSet: NucSet
+    /**Returns the complement sequence of DNA or RNA, ambiguity is preserved
+     * ```
+     * import biokotlin.seq.*
+     * val myDNA = NucSeq("CCCCCGATAG")
+     * myDNA.complement()
+     * ```
+     * GGGGGCTATC
+     * */
     fun complement(): NucSeq
+    /**Returns the complement sequence of DNA or RNA*/
     fun reverse_complement(): NucSeq
+    /**Counts the NUC.G + NUC.C within a NucSeq*/
+
     fun gc(): Int
     fun transcribe(): NucSeq
     fun back_transcribe(): NucSeq
 
+
+    operator fun get(i: Int): NUC
     operator fun get(i: Int, j: Int): NucSeq
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases)
      */
     operator fun get(x: IntRange): NucSeq
+    fun join(vararg seqs: NucSeq) : NucSeq
     operator fun plus(seq2: NucSeq): NucSeq
     operator fun times(n: Int): NucSeq
+    fun indexOf(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    fun lastIndexOf(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int
+    /*Same as [indexOf] but provides compatibility with BioPython*/
+    fun find(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
+    fun rfind(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int = lastIndexOf(query,start,end)
+    /*Counts the number of a specified nucleotide.  T and U are treated the same*/
+    fun count(query: NUC): Int
+    /*Counts the number of a specified nucleotide sequence.  T and U are treated the same*/
+    fun count(query: NucSeq): Int
+    fun count_overlap(query: NucSeq): Int
 
-    /***
-    Translate a nucleotide sequence into amino acids.
-
-    If given a string, returns a new string object. Given a Seq or
-    MutableSeq, returns a Seq object with a protein alphabet.
+    /**
+    * Translate a nucleotide sequence [NucSeq] into amino acids [ProteinSeq].
+    * @param codonTable - CodonTable to be used (defaults to Standard)
+     *  @param to_stop  defaults to False meaning do a full translation continuing on past any stop codons
+    * (translated as the specified stop_symbol).  If True, translation is terminated at the first in
+    * frame stop codon (and the stop_symbol is not appended to the returned protein sequence).
+     * @param cds If True, this checks the sequence starts with a valid alternative start
+    codon (which will be translated as methionine, M), that the sequence length is a multiple of three, and that there is a
+    single in frame stop codon at the end (this will be excluded from the protein sequence, regardless of the to_stop option).
+    If these tests fail, an exception is raised.
 
     Arguments:
     - table - Which codon table to use?  This can be either a name
     (string), an NCBI identifier (integer), or a CodonTable object
     (useful for non-standard genetic codes).  Defaults to the "Standard"
     table.
-    - stop_symbol - Single character string, what to use for any
-    terminators, defaults to the asterisk, "*".
     - to_stop - Boolean, defaults to False meaning do a full
     translation continuing on past any stop codons
     (translated as the specified stop_symbol).  If
@@ -277,11 +282,28 @@ interface NucSeq : Seq {
     ...
     ValueError: You cannot use 'to_stop=True' with this table ...
      */
+
+    /**
+     * Translate a nucleotide sequence [NucSeq] into amino acids [ProteinSeq].
+     * @param codonTable CodonTable to be used (defaults to Standard)
+     * @param to_stop  defaults to False meaning do a full translation continuing on past any stop codons
+     * (translated as the specified stop_symbol).  If True, translation is terminated at the first in
+     * frame stop codon (and the stop_symbol is not appended to the returned protein sequence).
+     * @param cds If True, this checks the sequence starts with a valid alternative start
+     * codon (which will be translated as methionine, M), that the sequence length is a multiple of three, and that there is a
+     * single in frame stop codon at the end (this will be excluded from the protein sequence, regardless of the to_stop option).
+     * If these tests fail, an exception is raised.
+     *
+     *
+     */
     fun translate(codonTable: CodonTable = CodonTableData.standard_rna_table, to_stop: Boolean = true, cds: Boolean = false): ProteinSeq
 }
 
+/**Main interface for working with Protein sequences*/
 interface ProteinSeq : Seq {
 
+    /**Returns on AminoAcid at the given position, if negative returns from the end of the sequence*/
+    operator fun get(i: Int): AminoAcid
     operator fun get(i: Int, j: Int): ProteinSeq
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
@@ -289,8 +311,17 @@ interface ProteinSeq : Seq {
      */
     operator fun get(x: IntRange): ProteinSeq
 
+    fun join(vararg seqs: ProteinSeq) : ProteinSeq
     operator fun plus(seq2: ProteinSeq): ProteinSeq
     operator fun times(n: Int): ProteinSeq
+    fun indexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    fun lastIndexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    /*Same as [indexOf] but provides compatibility with BioPython*/
+    fun find(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
+    fun rfind(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = lastIndexOf(query,start,end)
+    fun count(query: AminoAcid): Int
+    fun count(query: ProteinSeq): Int
+    fun count_overlap(query: ProteinSeq): Int
 
     fun back_translate(): NucSeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
 }
@@ -303,6 +334,6 @@ fun negativeSlice(x: IntRange, size: Int): IntRange {
         x.first to x.last
     }
     if (first < 0 || last < 0 || last > size) throw StringIndexOutOfBoundsException("IntRange values not within range of string: $x")
-    if (first > last) throw StringIndexOutOfBoundsException("IntRange values are ascending: $x")
+    if (first > last) throw StringIndexOutOfBoundsException("IntRange values should be ascending: $x")
     return IntRange(first, last)
 }
