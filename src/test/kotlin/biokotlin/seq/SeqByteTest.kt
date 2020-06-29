@@ -112,9 +112,12 @@ class SeqByteTest : StringSpec({
 
     "Test of get [] of single base/residue should be enum" {
         dnaSeq[1] shouldBe NUC.C
+        dnaSeq[0] shouldBe NUC.A
         dnaSeq[-2] shouldBe NUC.G
         dnaSeq[3] shouldBe NUC.T
+        rnaSeq[0] shouldBe NUC.A
         rnaSeq[3] shouldBe NUC.U
+        proteinSeq[0] shouldBe AminoAcid.T
         proteinSeq[1] shouldBe AminoAcid.W
         proteinSeq[1].name3letter shouldBe "Trp"
     }

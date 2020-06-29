@@ -144,7 +144,7 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         val n = NUC.byteToNUC(seqB[i])
         return if(!isDNA && n == NUC.T) NUC.U else n
     }
-    override operator fun get(i: Int): NUC = if (i > 0) toNUC(i) else toNUC(seqB.size + i)
+    override operator fun get(i: Int): NUC = if (i >= 0) toNUC(i) else toNUC(seqB.size + i)
     override operator fun get(i: Int, j: Int) = NucSeqByte(seqB.sliceArray(i..j), nucSet)
 
     override operator fun get(x: IntRange) = NucSeqByte(seqB.sliceArray(negativeSlice(x, seqB.size)), nucSet)
@@ -205,7 +205,8 @@ internal class ProteinSeqByte private constructor(seqB: ByteArray) : BioSeqByte(
     constructor(seq: String) : this(seq.toUpperCase().toByteArray(Charsets.UTF_8))
 
     override fun seq(): String = String(seqB)
-    override fun get(i: Int): AminoAcid = if (i > 0) AminoAcid.byteToAA(seqB[i]) else AminoAcid.byteToAA(seqB[seqB.size + i])
+    override fun get(i: Int): AminoAcid = if (i >= 0) AminoAcid.byteToAA(seqB[i]) else AminoAcid
+            .byteToAA(seqB[seqB.size + i])
 
     override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqB.copyOfRange(i, j))
 
