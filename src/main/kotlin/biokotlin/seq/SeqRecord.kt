@@ -22,9 +22,4 @@ class SeqRecord(seq: Seq, id: String, name: String? = null, description: String?
         return sequence.len();
     }
 
-    operator fun get(i: Int): Char {
-        return sequence[i];
-    }
-
-
 }
