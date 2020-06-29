@@ -1,3 +1,4 @@
+@file:JvmName("SeqRecord")
 package biokotlin.seq
 
 /**
@@ -7,12 +8,15 @@ Main attributes:
 - id          - Identifier such as a locus tag (string)
 - seq         - The sequence itself ([Seq])
 Additional attributes:
+- name        - Sequence name, e.g. gene name (string)
 - description - Additional text (string)
 
  */
-class SeqRecord(seq: Seq, id: String) {
-    private val sequence = seq;
-    private val id = id;
+class SeqRecord(seq: Seq, id: String, name: String? = null, description: String? = null) {
+    val sequence = seq;
+    val id = id;
+    val name = name;
+    val description = name;
 
     fun len(): Int {
         return sequence.len();
@@ -21,5 +25,6 @@ class SeqRecord(seq: Seq, id: String) {
     operator fun get(i: Int): Char {
         return sequence[i];
     }
+
 
 }

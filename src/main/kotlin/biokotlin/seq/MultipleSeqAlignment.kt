@@ -56,8 +56,10 @@ class MultipleSeqAlignment(sequences: List<SeqRecord>) {
         return alignmentLength;
     }
 
-    operator fun get(i: Int): SeqRecord {
-        return sequences[i];
+    operator fun get(i: Int): SeqRecord = if (i >= 0) sequences[i] else sequences[i+sequences.size]
+
+    operator fun get(i: IntRange): List<SeqRecord>{
+        return sequences.slice(i);
     }
 
 }
