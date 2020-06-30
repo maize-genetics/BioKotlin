@@ -26,7 +26,7 @@ class CodonTableTest : StringSpec({
     }
 
     "Standard table should be id 1" {
-        CodonTables.standardCodonTable.id shouldBe 1
+        standardCodonTable.id shouldBe 1
     }
 
     val normalCodonTableArb = normalCodonTables.exhaustive()
@@ -48,8 +48,7 @@ class CodonTableTest : StringSpec({
 
     "Test for degeneracy" {
         forAll(
-                row(CodonTables.standard_dna_table.aaToCodon),
-                row(CodonTables.standard_rna_table.aaToCodon)
+                row(standardCodonTable.aaToCodon)
         ) { aaToCodon ->
             //These are the numbers for both RNA and DNA codons
             aaToCodon[AminoAcid.L]?.size shouldBe 12
@@ -82,7 +81,7 @@ class CodonTableTest : StringSpec({
 
 
     "Test printing" {
-        CodonTables.standard_rna_table.toString(Codon.RNA) shouldBe
+        standardCodonTable.toString(Codon.RNA) shouldBe
                 """Table 1 Standard, SGC0
 
 1 |  U      |  C      |  A      |  G      | 3

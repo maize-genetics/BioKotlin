@@ -107,7 +107,8 @@ tasks.withType<KotlinCompile>().configureEach {
 tasks {
     println("Ed say ${sourceSets["main"].allSource.srcDirs}")
     val dokka by getting(DokkaTask::class) {
-        outputFormat = "html"
+        //outputFormat = "html"
+        outputFormat = "gfm"
         outputDirectory = "$buildDir/dokka"
         configuration {
             includes = listOf("/Users/edbuckler/Code/biokotlin/src/main/kotlin/biokotlin/packages.md")

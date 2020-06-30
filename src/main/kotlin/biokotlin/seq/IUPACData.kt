@@ -26,25 +26,45 @@ import java.util.*
  * @param weight Mass in Daltons
  */
 enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double) {
+    /**Alanine*/
     A("Ala", 'A', 89.0932),
+    /**Cysteine*/
     C("Cys", 'C', 121.1582),
+    /**Aspartic acid*/
     D("Asp", 'D', 133.1027),
+    /**Glutamic acid*/
     E("Glu", 'E', 147.1293),
+    /**Phenylalanine*/
     F("Phe", 'F', 165.1891),
+    /**Glycine*/
     G("Gly", 'G', 75.0666),
+    /**Histidine*/
     H("His", 'H', 155.1546),
+    /**Isoleucine*/
     I("Ile", 'I', 131.1729),
+    /**Lysine*/
     K("Lys", 'K', 146.1876),
+    /**Leucine*/
     L("Leu", 'L', 131.1729),
+    /**Methionine*/
     M("Met", 'M', 149.2113),
+    /**Asparagine*/
     N("Asn", 'N', 132.1179),
+    /**Proline*/
     P("Pro", 'P', 115.1305),
+    /**Glutamic acid*/
     Q("Gln", 'Q', 146.1445),
+    /**Arginine*/
     R("Arg", 'R', 174.201),
+    /**Serine*/
     S("Ser", 'S', 105.0926),
+    /**Threonine*/
     T("Thr", 'T', 119.1192),
+    /**Valine*/
     V("Val", 'V', 117.1463),
+    /**Trytophan*/
     W("Trp", 'W', 204.2252),
+    /**Tyrosine*/
     Y("Tyr", 'Y', 181.1885);
     //GAP("Gap", '-', Double.NaN);
 
@@ -77,16 +97,17 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
     }
 }
 
-
-//replaces BioPython - protein_letters with AminoAcid
-fun protein_letters_3to1(name3letter: String) = AminoAcid.from3Letter(name3letter)
-val protein_letters = AminoAcid
-
-/**Immutable Guava set backed by EnumSet*/
+/**Define nucleotide sets for DNA, RNA, and associated ambiguity sets
+ *
+ * Possible sets: [NUC.DNA],[NUC.RNA],[NUC.AmbiguousDNA] and [NUC.AmbiguousRNA]
+ *
+ * Immutable Guava Set backed by [EnumSet]
+ * */
 typealias NucSet = ImmutableSet<NUC>
 
 /**
- * Definition of all Nucleotides and IUPAC ambiguity codes, and numerous functions involved in DNA and RNA
+ * Definition of DNA and RNA Nucleotides, IUPAC ambiguity, and nucleotide properties
+ *
  * TODO - GAP may be included in the codes
  * @param char Single [Char] representation of nucleotide, e.g. [NUC.A] is 'A' (also used for byte level encoding)
  * @param twoBit encoding scheme for two bit encoding for unambiguous nucleotides
