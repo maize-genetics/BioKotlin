@@ -338,7 +338,7 @@ interface NucSeq : Seq {
 
 /**Main data structure for working with Protein sequences*/
 interface ProteinSeq : Seq {
-
+    
     /**Returns on AminoAcid at the given position, if negative returns from the end of the sequence*/
     operator fun get(i: Int): AminoAcid
     operator fun get(i: Int, j: Int): ProteinSeq
