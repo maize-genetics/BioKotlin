@@ -2,7 +2,7 @@
 package biokotlin.seq
 
 import biokotlin.data.CodonTable
-import biokotlin.data.CodonTableData
+import biokotlin.data.CodonTables
 import com.google.common.collect.ImmutableSet
 import java.util.*
 import kotlin.random.Random
@@ -31,10 +31,11 @@ import kotlin.random.Random
  * The String is tested for with compatibility DNA, RNA, and Protein in order.  It will
  * throw an [IllegalStateException], if it is not compatible with any.
  * [Seq] can be cast to [NucSeq] or [ProteinSeq]:
- * ```
+ * ```kotlin
  * val aSeq = Seq("GCATA")
  * val aNucSeq = Seq("GCATA") as NucSeq
  * val nSeq = NucSeq("GCATA")
+ * val pSeq = ProteinSeq("MAIVMGR")
  * ```
  */
 fun Seq(seq: String): Seq {
@@ -44,8 +45,14 @@ fun Seq(seq: String): Seq {
 
 /**
  * Preferred method for creating a DNA or RNA sequence.
+ *
  * It will infer DNA from RNA based on whether there are T or U in the sequence (DNA is default if neither).
- * To specify use:
+ * Multiple string will be concatenated.
+ * ```kotlin
+ * val dnaSeq = NucSeq("GCATA")
+ * val rnaSeq = Seq("GCAUA")
+ * println( dnaSeq == NucSeq("GCA", "TA"))
+ * ```
  *
  */
 fun NucSeq(vararg seq: String): NucSeq {
@@ -53,18 +60,31 @@ fun NucSeq(vararg seq: String): NucSeq {
     return NucSeqByteEncode(seq.joinToString(separator = ""))
 }
 
+/**Create a NucSeq with a specified NucSet
+ *
+ * @param preferredNucSet can be [NUC.DNA],[NUC.RNA],[NUC.AmbiguousDNA] or [NUC.AmbiguousRNA]
+ * */
 fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
     //TODO when there are 4bit and 2bit versions logic can be expanded
     return NucSeqByteEncode(seq, preferredNucSet)
 }
 
-fun NucSeq(seq: List<NUC>): NucSeq = TODO()
-fun NucSeq(vararg nucleotides: NUC): NucSeq = TODO()
+//fun NucSeq(seq: List<NUC>): NucSeq = TODO()
+//fun NucSeq(vararg nucleotides: NUC): NucSeq = TODO()
 
+/**Preferred method for creating a Protein sequence
+ *
+ * ```kotlin
+ * val proteinSeq = ProteinSeq("MAIVMGR")
+ * ```
+ */
 fun ProteinSeq(seq: String):ProteinSeq {
     return ProteinSeqByte(seq)
 }
 
+/**Creates a random [NucSeq] of the specified length
+ * @param length of the resulting sequence
+ * */
 fun RandomNucSeq(length: Int, nucSet: NucSet = NUC.DNA, seed: Int = 0): NucSeq {
     val random = Random(seed)
     val baseBytes = ByteArray(length)
@@ -75,6 +95,7 @@ fun RandomNucSeq(length: Int, nucSet: NucSet = NUC.DNA, seed: Int = 0): NucSeq {
     return NucSeq(String(baseBytes),nucSet)
 }
 
+/**Creates a random [ProteinSeq] of the specified length*/
 fun RandomProteinSeq(length: Int, seed: Int = 0): ProteinSeq {
     val random = Random(seed)
     val baseBytes = ByteArray(length)
@@ -121,7 +142,7 @@ private fun bitSetOfChars(nucs: NucSet): BitSet {
     return bsc
 }
 
-/**Basic interface for biological sequences - Nucleotide or Protein*/
+/**Basic data structure for biological sequences - Nucleotide or Protein*/
 interface Seq {
     fun seq(): String
 
@@ -144,12 +165,12 @@ interface Seq {
     fun ungap(): Seq
 }
 
-/**Main interface for working with DNA and RNA sequences*/
+/**Main data structure for working with DNA and RNA sequences*/
 interface NucSeq : Seq {
     /**The type of nucleotides - DNA or RNA and ambiguous or not*/
     val nucSet: NucSet
     /**Returns the complement sequence of DNA or RNA, ambiguity is preserved
-     * ```
+     * ```kotlin
      * import biokotlin.seq.*
      * val myDNA = NucSeq("CCCCCGATAG")
      * myDNA.complement()
@@ -160,16 +181,32 @@ interface NucSeq : Seq {
     /**Returns the complement sequence of DNA or RNA*/
     fun reverse_complement(): NucSeq
     /**Counts the NUC.G + NUC.C within a NucSeq*/
-
     fun gc(): Int
+    /**Transcribes a NucSeq - essentially changes the NucSet from [NUC.DNA] to [NUC.RNA]*/
     fun transcribe(): NucSeq
+    /**Transcribes a NucSeq - essentially changes the NucSet from [NUC.RNA] to [NUC.DNA]*/
     fun back_transcribe(): NucSeq
-
-
+    /**Returns the [NUC] of this [NucSeq] at the specified index [i] with i starting at zero
+     * Negative index start from the end of the sequence, i.e. -1 is the last base
+     * ```kotlin
+     * NucSeq("ACGT")[1] == NUC.C
+     * ```
+     */
     operator fun get(i: Int): NUC
+    /**
+     * Returns a subset [NucSeq] based on the inclusive start [i] and inclusive last [j]
+     * Indices start at zero.
+     * Negative index start from the end of the sequence, i.e. -1 is the last base
+     * ```kotlin
+     * NucSeq("ACGT")[1,2] == NucSeq("CG")
+     * ```
+     */
     operator fun get(i: Int, j: Int): NucSeq
 
-    /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
+    /**
+     * Returns a subset [NucSeq] based on the [IntRange] of Nucleotides.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases)
      */
     operator fun get(x: IntRange): NucSeq
@@ -296,12 +333,12 @@ interface NucSeq : Seq {
      *
      *
      */
-    fun translate(codonTable: CodonTable = CodonTableData.standard_rna_table, to_stop: Boolean = true, cds: Boolean = false): ProteinSeq
+    fun translate(codonTable: CodonTable = CodonTables(1), to_stop: Boolean = true, cds: Boolean = false): ProteinSeq
 }
 
-/**Main interface for working with Protein sequences*/
+/**Main data structure for working with Protein sequences*/
 interface ProteinSeq : Seq {
-
+    
     /**Returns on AminoAcid at the given position, if negative returns from the end of the sequence*/
     operator fun get(i: Int): AminoAcid
     operator fun get(i: Int, j: Int): ProteinSeq
@@ -326,8 +363,8 @@ interface ProteinSeq : Seq {
     fun back_translate(): NucSeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
 }
 
-/*Negative slices are used to pull subsequences from the end of the sequence*/
-fun negativeSlice(x: IntRange, size: Int): IntRange {
+/**Negative slices are used to pull subsequences from the end of the sequence*/
+internal fun negativeSlice(x: IntRange, size: Int): IntRange {
     val (first, last) = if (x.first < 0 && x.last < 0) {
         x.first + size to x.last + size
     } else {

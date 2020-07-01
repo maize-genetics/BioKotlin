@@ -28,41 +28,50 @@ import kotlin.NoSuchElementException
  * `CodonTable[1]`
  */
 
-/**Return codon table based on id, ambiguous not implemented*/
+/**Return the DNA and RNA [CodonTable] based on NCBI id
+ * @param id is the NCBI defined id
+ * @param ambiguous is not implemented
+ */
 fun CodonTables(id: Int = 1, ambiguous: Boolean = false): CodonTable =
         CodonTableData[id, ambiguous]
 
-/**Return codon table based on name, ambiguous not implemented*/
+/**Return the DNA and RNA [CodonTable] based on name
+ * @param name is the NCBI defined name, e.g. "Standard", "SGC0", etc.
+ * @param ambiguous is not implemented
+ */
 fun CodonTables(name: String, ambiguous: Boolean = false): CodonTable =
         CodonTableData[name, ambiguous]
 
-/**Return the complete list of DNA and RNA tables*/
+/**Return the complete list of DNA and RNA [CodonTable]*/
 val CodonTablesAll: List<CodonTable> by lazy {
     CodonTableData.allCodonTables.values
             .sortedBy { it.id }
             .toList()
 }
 
-val CodonTables
-    get() = CodonTableData
+/**Standard DNA and RNA Codon table (Table 1 or "SGC0")*/
+val standardCodonTable: CodonTable = CodonTables(1)
 
 /**
- * The genetic code or codon table for a clade.  [id] and [name] are the NCBI table id and names.  Codon are
- * represented at 3 letter [String].  [ambiguous] is not implemented.  [stop_codons] are not included in the
- * [codonToAA] map unless used for both stop and encoding (a few clades), and will return a null.
+ * The genetic code or codon table for a clade of life
+ *
+ * Both DNA and RNA are represented in a single table (this differs from BioPython).
+ * [Codon] are mapped to [AminoAcid] with [codonToAA] map and vice versa with [aaToCodon] multimap.
+ * [stop_codons] are not included in the [codonToAA] map unless used for both stop and encoding (a few clades),
+ * and will return a null.
+ * [ambiguous] codons are not implemented.
  * @property[id] [NCBI](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi) id number
- * @property[name] a list of all names with preferred first
- * @property[codonToAA] map of codons to single letter amino acid code
+ * @property[name] a list of all NCBI names in preferred order
+ * @property[codonToAA] map of [Codon] to [AminoAcid] - is null for stop codons
  * @property[start_codons] a list of start codons, which are also in the [codonToAA] map
  * @property[stop_codons] a list of stop codons (generally not in [codonToAA] map)
- * @property[nucleicAcid] whether the codons are presented in [DNA] or [RNA]
  * @property[ambiguous] whether ambiguous codons are used (currently not implemented)
- * @property[aaToCodon] multimap to amino acid code to list of codons
+ * @property[aaToCodon] multimap to [AminoAcid] to list of [Codon]
  */
 data class CodonTable(val id: Int, val name: List<String>, val start_codons: List<Codon>, val stop_codons: List<Codon>,
                       val codonToAA: Map<Codon, AminoAcid>, val ambiguous: Boolean = false) {
 
-    fun key(): CodonTableKey = CodonTableKey(id, ambiguous)
+    internal fun key(): CodonTableKey = CodonTableKey(id, ambiguous)
 
     /**Return a text representation of the codon table.
 
@@ -125,12 +134,10 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
 
     override fun toString(): String = toString(Codon.DNA)
 
+
     val aaToCodon: Map<AminoAcid, List<Codon>> = codonToAA.entries
             .sortedBy { it.key.toString() } //keep the codon in standard order
             .groupBy({ it.value }, { it.key })
-
-    val standard_dna_table
-        get() = CodonTables(1)
 
     private val illegalCodon = Byte.MIN_VALUE
     private val nuc3bytesToCodonByte: ByteArray = ByteArray(65){illegalCodon}
@@ -139,16 +146,16 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
                 .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.toByte() ?: illegalCodon }
         stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.stopChar.toByte() }
     }
-    fun nucBytesToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
+    internal fun nucBytesToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
         val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
         if(codonB == illegalCodon) IllegalArgumentException("Illegal bytes used to encode codon")
         return codonB
     }
 }
 
-data class CodonTableKey(val id: Int, val ambiguous: Boolean = false)
+internal data class CodonTableKey(val id: Int, val ambiguous: Boolean = false)
 
-object CodonTableData {
+internal object CodonTableData {
     //Various precomputed Maps
     val allCodonTables: Map<CodonTableKey, CodonTable>
     val nameToId: Map<String, Int>

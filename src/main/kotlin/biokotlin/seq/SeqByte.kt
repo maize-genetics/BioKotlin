@@ -80,13 +80,13 @@ internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Se
     }
 }
 
-fun NucSeqByteEncode(seq: String, preferredNucSet: NucSet): NucSeq {
+internal fun NucSeqByteEncode(seq: String, preferredNucSet: NucSet): NucSeq {
     if (compatibleNucSet(seq).contains(preferredNucSet))
         return NucSeqByte(seq, preferredNucSet)
     else throw IllegalArgumentException("Preferred NucSet ($preferredNucSet) is incompatible with Seq ($seq) compatible are: ${compatibleNucSet(seq)}")
 }
 
-fun NucSeqByteEncode(seq: String): NucSeq {
+internal fun NucSeqByteEncode(seq: String): NucSeq {
     val compatibleNucSet = compatibleNucSet(seq)
     return NucSeqByte(seq, compatibleNucSet[0])
 }
