@@ -1,5 +1,6 @@
 package biokotlin.seq
 
+import biokotlin.data.CodonTables
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
@@ -102,8 +103,6 @@ class SeqByteTest : StringSpec({
         }
     }
 
-
-
     "repr" {
         dnaSeq.repr() shouldBe "NucSeqByte('$dnaString',[A, C, G, T])"
         dnaSeq.times(10).repr() shouldBe "NucSeqByte('ACGTGGTGAACGTGGTGAACGTGGTGAACGTGGTGAACGTGGTGAACGTGGTGA...TGA',[A, C, G, T])"
@@ -154,12 +153,17 @@ class SeqByteTest : StringSpec({
     "Test RNA translation" {
         NucSeqByteEncode("AAAACA").translate() shouldBe ProteinSeqByte("KT")
         NucSeqByteEncode("AAAACAUAG").translate() shouldBe ProteinSeqByte("KT*")
+        NucSeqByteEncode("AAAACAUAG").translate(to_stop = true) shouldBe ProteinSeqByte("KT")
+        NucSeqByteEncode("AAAACAUAG").translate(to_stop = false) shouldBe ProteinSeqByte("KT*")
+        val codingDNA = NucSeq("GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG")
+        codingDNA.translate(table = CodonTables(1), to_stop = true) shouldBe ProteinSeq("VAIVMGR")
+        codingDNA.translate(table = CodonTables(2), to_stop = true) shouldBe ProteinSeq("VAIVMGRWKGAR")
     }
 
     "Report on the speed of complementation and translation" {
         val heapSize = Runtime.getRuntime().totalMemory()
         println("Heap size is ${heapSize / 1E6} Mb")
-        val bigSeq = RandomNucSeq(40_000_000)
+        val bigSeq = RandomNucSeq(1_000_000)
         val time = measureTimeMillis { bigSeq.complement() }
         println("Complement of ${bigSeq.len() / 1E6}Mb took $time ms")
 
@@ -177,6 +181,19 @@ class SeqByteTest : StringSpec({
         (dnaSeq * 3).len() shouldBe dnaSeq.len()*3
         (proteinSeq * 2) shouldBe (proteinSeq + proteinSeq)
         (proteinSeq * 3).len() shouldBe proteinSeq.len()*3
+    }
+
+    "Test random sequence generation" {
+        var bigSeq: NucSeq = NucSeq("A")
+        var time: Long
+        val seqSize=1_000_000
+        for(i in 0..10) {
+            time = measureTimeMillis {
+                bigSeq = RandomNucSeq(seqSize)
+                //bigSeq= bigSeq.complement()
+            }
+            println("RandomNucSeq of ${bigSeq.len() / 1E6}Mb took $time ms")
+        }
     }
 
 

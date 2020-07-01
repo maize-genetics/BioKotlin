@@ -171,7 +171,12 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         for (i in 0 until (len() - 2) step 3) {
             pB[i / 3] = codonTable.nucBytesToCodonByte(seqB[i], seqB[i + 1], seqB[i + 2])
         }
-        val proStr: String = if(to_stop) String(pB).split("\\*", limit = 1)[0] else String(pB)
+        val proStr= if(to_stop) {
+            val stopIndex = pB.indexOf(AminoAcid.stopChar.toByte())
+            if(stopIndex<0)  String(pB) else String(pB.sliceArray(0..(stopIndex-1)))
+        } else {
+            String(pB)
+        }
         return ProteinSeqByte(proStr)
     }
 

@@ -114,7 +114,7 @@ internal fun compatibleBioSet(seq: String): List<BioSet> {
                 val origCharBits = bytePresent.clone() as BitSet
                 origCharBits.andNot(it.bitSets)
                 origCharBits.cardinality() == 0
-            }.map { it }
+            }
     if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids. " +
             "Or they are a mix of RNA and DNA")
     return compatibleSets
@@ -333,7 +333,7 @@ interface NucSeq : Seq {
      *
      *
      */
-    fun translate(codonTable: CodonTable = CodonTables(1), to_stop: Boolean = true, cds: Boolean = false): ProteinSeq
+    fun translate(table: CodonTable = CodonTables(1), to_stop: Boolean = false, cds: Boolean = false): ProteinSeq
 }
 
 /**Main data structure for working with Protein sequences*/
