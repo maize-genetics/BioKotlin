@@ -1,5 +1,6 @@
 package biokotlin.seq
 
+import biokotlin.data.CodonTables
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
@@ -154,6 +155,11 @@ class SeqByteTest : StringSpec({
     "Test RNA translation" {
         NucSeqByteEncode("AAAACA").translate() shouldBe ProteinSeqByte("KT")
         NucSeqByteEncode("AAAACAUAG").translate() shouldBe ProteinSeqByte("KT*")
+        NucSeqByteEncode("AAAACAUAG").translate(to_stop = true) shouldBe ProteinSeqByte("KT")
+        NucSeqByteEncode("AAAACAUAG").translate(to_stop = false) shouldBe ProteinSeqByte("KT*")
+        val codingDNA = NucSeq("GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG")
+        codingDNA.translate(table = CodonTables(1), to_stop = true) shouldBe ProteinSeq("VAIVMGR")
+        codingDNA.translate(table = CodonTables(2), to_stop = true) shouldBe ProteinSeq("VAIVMGRWKGAR")
     }
 
     "Report on the speed of complementation and translation" {

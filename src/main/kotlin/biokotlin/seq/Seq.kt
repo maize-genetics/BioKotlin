@@ -333,7 +333,7 @@ interface NucSeq : Seq {
      *
      *
      */
-    fun translate(codonTable: CodonTable = CodonTables(1), to_stop: Boolean = true, cds: Boolean = false): ProteinSeq
+    fun translate(table: CodonTable = CodonTables(1), to_stop: Boolean = false, cds: Boolean = false): ProteinSeq
 }
 
 /**Main data structure for working with Protein sequences*/
