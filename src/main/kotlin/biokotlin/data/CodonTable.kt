@@ -18,28 +18,18 @@ import kotlin.NoSuchElementException
  * Will implement as needed
  */
 
-/**TODO there is a namespace issue to really imitate Biopython -
- * CodonTable is appropriately the data class
- * but BioPython uses CodonTable.standard_dna_table to get the standard table
- * so it would be nice to call a static method without parentheses
- * It is mimic by making a function with CapitalLetter, and adding an 's'
- * `CodonTables(id = 1)`
- * in Python it would be:
- * `CodonTable[1]`
- */
-
 /**Return the DNA and RNA [CodonTable] based on NCBI id
  * @param id is the NCBI defined id
  * @param ambiguous is not implemented
  */
-fun CodonTables(id: Int = 1, ambiguous: Boolean = false): CodonTable =
+fun CodonTable(id: Int = 1, ambiguous: Boolean = false): CodonTable =
         CodonTableData[id, ambiguous]
 
 /**Return the DNA and RNA [CodonTable] based on name
  * @param name is the NCBI defined name, e.g. "Standard", "SGC0", etc.
  * @param ambiguous is not implemented
  */
-fun CodonTables(name: String, ambiguous: Boolean = false): CodonTable =
+fun CodonTable(name: String, ambiguous: Boolean = false): CodonTable =
         CodonTableData[name, ambiguous]
 
 /**Return the complete list of DNA and RNA [CodonTable]*/
@@ -50,7 +40,7 @@ val CodonTablesAll: List<CodonTable> by lazy {
 }
 
 /**Standard DNA and RNA Codon table (Table 1 or "SGC0")*/
-val standardCodonTable: CodonTable = CodonTables(1)
+val standardCodonTable: CodonTable = CodonTable(1)
 
 /**
  * The genetic code or codon table for a clade of life
