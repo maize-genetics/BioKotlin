@@ -65,8 +65,12 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
     /**Trytophan*/
     W("Trp", 'W', 204.2252),
     /**Tyrosine*/
-    Y("Tyr", 'Y', 181.1885);
-    //GAP("Gap", '-', Double.NaN);
+    Y("Tyr", 'Y', 181.1885),
+    /**Stop*/
+    STOP("Stp",'*', Double.NaN),
+    /**Gap*/
+    GAP("Gap", '-', Double.NaN);
+    val utf8 = char.toByte()
 
     companion object {
         private val a3LetterToAA = values().associateBy(AminoAcid::name3letter)
@@ -81,11 +85,12 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
         /**Returns [AminoAcid] based on the IUPAC [Char]*/
         fun fromChar(char: Char) =  byteToAA[char.toInt()] ?: throw IllegalArgumentException("Illegal char allowed for AminoAcid conversion")
         /**EnumSet of all [AminoAcid] made immutable with Guava's ImmutableSet*/
-        val all: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java))
+        val all: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java)-GAP-STOP)
+        val allStopGap: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java))
         internal val bitSetOfChars: BitSet
             get() {
                 val bsc = BitSet(128)
-                all.forEach { bsc.set(it.char.toInt()) }
+                allStopGap.forEach { bsc.set(it.char.toInt()) }
                 return bsc
             }
 
@@ -182,6 +187,7 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
     /**Returns the set of unambiguous RNA nucleotides represented by this [NUC], e.g. `NUC.R.ambigRNA == [A,G]`*/
     val ambigRNA: Set<NUC>
         get() = nucToAmbigRNA[this]!!
+    val utf8 = char.toByte()
 
     companion object {
         private val charToDNA = NUC.values().associateBy { it.name[0] } //TODO change to array
@@ -243,8 +249,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                 byteTo2Bit[it.char.toInt()] = it.twoBit
                 byteTo4Bit[it.char.toInt()] = it.fourBit
                 byteToNUC[it.char.toInt()] = it
-                ambigDnaCompByByteArray[it.char.toInt()] = it.dnaComplement.char.toByte()
-                ambigRnaCompByByteArray[it.char.toInt()] = it.rnaComplement.char.toByte()
+                ambigDnaCompByByteArray[it.char.toInt()] = it.dnaComplement.utf8
+                ambigRnaCompByByteArray[it.char.toInt()] = it.rnaComplement.utf8
             }
             val dnaUnAmWeights = mapOf<NUC, Double>(
                     A to 331.2218,
