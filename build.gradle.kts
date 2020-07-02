@@ -1,5 +1,6 @@
 import org.gradle.api.JavaVersion.VERSION_11
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 //Note Kotlin version nears to be updated in both the buildscript and plugins.
 //Dependencies will follow the buildscript
@@ -99,10 +100,15 @@ java {
 //    }
 //}
 
+tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions.jvmTarget = "11"
+}
+
 tasks {
     println("Ed say ${sourceSets["main"].allSource.srcDirs}")
     val dokka by getting(DokkaTask::class) {
-        outputFormat = "html"
+        //outputFormat = "html"
+        outputFormat = "gfm"
         outputDirectory = "$buildDir/dokka"
         configuration {
             includes = listOf("/Users/edbuckler/Code/biokotlin/src/main/kotlin/biokotlin/packages.md")

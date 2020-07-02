@@ -18,60 +18,50 @@ import kotlin.NoSuchElementException
  * Will implement as needed
  */
 
-/**TODO there is a namespace issue to really imitate Biopython -
- * CodonTable is appropriately the data class
- * but BioPython uses CodonTable.standard_dna_table to get the standard table
- * so it would be nice to call a static method without parentheses
- * It is mimic by making a function with CapitalLetter, and adding an 's'
- * `CodonTables(id = 1)`
- * in Python it would be:
- * `CodonTable[1]`
+/**Return the DNA and RNA [CodonTable] based on NCBI id
+ * @param id is the NCBI defined id
+ * @param ambiguous is not implemented
  */
-//TODO fast translate methods that rely on encoding into a short
-//TODO see if guava immutable hashMap even faster
+fun CodonTable(id: Int = 1, ambiguous: Boolean = false): CodonTable =
+        CodonTableData[id, ambiguous]
 
-/**Return codon table based on id, ambiguous not implemented*/
-fun CodonTables(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable =
-        CodonTableData[id, ambiguous, nucleicAcid]
+/**Return the DNA and RNA [CodonTable] based on name
+ * @param name is the NCBI defined name, e.g. "Standard", "SGC0", etc.
+ * @param ambiguous is not implemented
+ */
+fun CodonTable(name: String, ambiguous: Boolean = false): CodonTable =
+        CodonTableData[name, ambiguous]
 
-/**Return codon table based on name, ambiguous not implemented*/
-fun CodonTables(name: String, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable =
-        CodonTableData[name, ambiguous, nucleicAcid]
-
-/**Return the complete list of DNA and RNA tables*/
+/**Return the complete list of DNA and RNA [CodonTable]*/
 val CodonTablesAll: List<CodonTable> by lazy {
     CodonTableData.allCodonTables.values
             .sortedBy { it.id }
             .toList()
 }
 
-/**Return the complete list of either DNA and RNA tables*/
-fun CodonTablesAll(nucleicAcid: CodonSet): List<CodonTable> =
-        CodonTableData.allCodonTables.values
-                .filter { it.nucleicAcid == nucleicAcid }
-                .sortedBy { it.id }
-                .toList()
-
-val CodonTables
-    get() = CodonTableData
+/**Standard DNA and RNA Codon table (Table 1 or "SGC0")*/
+val standardCodonTable: CodonTable = CodonTable(1)
 
 /**
- * The genetic code or codon table for a clade.  [id] and [name] are the NCBI table id and names.  Codon are
- * represented at 3 letter [String].  [ambiguous] is not implemented.  [stop_codons] are not included in the
- * [codonToAA] map unless used for both stop and encoding (a few clades), and will return a null.
+ * The genetic code or codon table for a clade of life
+ *
+ * Both DNA and RNA are represented in a single table (this differs from BioPython).
+ * [Codon] are mapped to [AminoAcid] with [codonToAA] map and vice versa with [aaToCodon] multimap.
+ * [stop_codons] are not included in the [codonToAA] map unless used for both stop and encoding (a few clades),
+ * and will return a null.
+ * [ambiguous] codons are not implemented.
  * @property[id] [NCBI](https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi) id number
- * @property[name] a list of all names with preferred first
- * @property[codonToAA] map of codons to single letter amino acid code
+ * @property[name] a list of all NCBI names in preferred order
+ * @property[codonToAA] map of [Codon] to [AminoAcid] - is null for stop codons
  * @property[start_codons] a list of start codons, which are also in the [codonToAA] map
  * @property[stop_codons] a list of stop codons (generally not in [codonToAA] map)
- * @property[nucleicAcid] whether the codons are presented in [DNA] or [RNA]
  * @property[ambiguous] whether ambiguous codons are used (currently not implemented)
- * @property[aaToCodon] multimap to amino acid code to list of codons
+ * @property[aaToCodon] multimap to [AminoAcid] to list of [Codon]
  */
 data class CodonTable(val id: Int, val name: List<String>, val start_codons: List<Codon>, val stop_codons: List<Codon>,
-                      val codonToAA: Map<Codon, AminoAcid>, val nucleicAcid: CodonSet = Codon.DNA, val ambiguous: Boolean = false) {
+                      val codonToAA: Map<Codon, AminoAcid>, val ambiguous: Boolean = false) {
 
-    fun key(): CodonTableKey = CodonTableKey(id, ambiguous, nucleicAcid)
+    internal fun key(): CodonTableKey = CodonTableKey(id, ambiguous)
 
     /**Return a text representation of the codon table.
 
@@ -105,9 +95,9 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
     --+---------+---------+---------+---------+--
     ```
      */
-    override fun toString(): String {
+    fun toString(codonSet: CodonSet): String {
         val sb = StringBuilder()
-        val baseOrder: List<NUC> = if (nucleicAcid == Codon.DNA) listOf(NUC.T, NUC.C, NUC.A, NUC.G)
+        val baseOrder: List<NUC> = if (codonSet == Codon.DNA) listOf(NUC.T, NUC.C, NUC.A, NUC.G)
         else listOf(NUC.U, NUC.C, NUC.A, NUC.G)
         sb.append("""
             Table $id ${name.joinToString()}
@@ -132,17 +122,30 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
         return sb.toString()
     }
 
+    override fun toString(): String = toString(Codon.DNA)
+
+
     val aaToCodon: Map<AminoAcid, List<Codon>> = codonToAA.entries
             .sortedBy { it.key.toString() } //keep the codon in standard order
             .groupBy({ it.value }, { it.key })
 
-    val standard_dna_table
-        get() = CodonTables(1, nucleicAcid = Codon.DNA)
+    private val illegalCodon = Byte.MIN_VALUE
+    private val nuc3bytesToCodonByte: ByteArray = ByteArray(65){illegalCodon}
+    init {
+        Codon.values()
+                .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.toByte() ?: illegalCodon }
+        stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.STOP.char.toByte() }
+    }
+    internal fun nucBytesToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
+        val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
+        if(codonB == illegalCodon) throw IllegalArgumentException("Illegal bytes used to encode codon")
+        return codonB
+    }
 }
 
-data class CodonTableKey(val id: Int, val ambiguous: Boolean = false, val nucleicAcid: CodonSet = Codon.DNA)
+internal data class CodonTableKey(val id: Int, val ambiguous: Boolean = false)
 
-object CodonTableData {
+internal object CodonTableData {
     //Various precomputed Maps
     val allCodonTables: Map<CodonTableKey, CodonTable>
     val nameToId: Map<String, Int>
@@ -173,94 +176,82 @@ object CodonTableData {
 
     init {
         val dnaCodonTables = listOf(
-                CodonTable(1, listOf("Standard", "SGC0"), listOf(TTG, CTG, ATG), listOf(TAA, TAG, TGA), diffsToAll()),
-                CodonTable(2, listOf("Vertebrate Mitochondrial", "SGC1"), listOf(ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG, AGA, AGG), diffsToAll(AGA to null, AGG to null, ATA to M, TGA to W)),
-                CodonTable(3, listOf("Yeast Mitochondrial", "SGC2"), listOf(ATA, ATG, GTG), listOf(TAA, TAG), diffsToAll(ATA to M, CTA to T, CTC to T, CTG to T, CTT to T, TGA to W)),
-                CodonTable(4, listOf("Mold Mitochondrial", "Protozoan Mitochondrial", "Coelenterate Mitochondrial", "Mycoplasma", "Spiroplasma", "SGC3"), listOf(TTA, TTG, CTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG), diffsToAll(TGA to W)),
-                CodonTable(5, listOf("Invertebrate Mitochondrial", "SGC4"), listOf(TTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG), diffsToAll(AGA to S, AGG to S, ATA to M, TGA to W)),
-                CodonTable(6, listOf("Ciliate Nuclear", "Dasycladacean Nuclear", "Hexamita Nuclear", "SGC5"), listOf(ATG), listOf(TGA), diffsToAll(TAA to Q, TAG to Q)),
-                CodonTable(9, listOf("Echinoderm Mitochondrial", "Flatworm Mitochondrial", "SGC8"), listOf(ATG, GTG), listOf(TAA, TAG), diffsToAll(AAA to N, AGA to S, AGG to S, TGA to W)),
-                CodonTable(10, listOf("Euplotid Nuclear", "SGC9"), listOf(ATG), listOf(TAA, TAG), diffsToAll(TGA to C)),
-                CodonTable(11, listOf("Bacterial", "Archaeal", "Plant Plastid"), listOf(TTG, CTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TAG, TGA), diffsToAll()),
-                CodonTable(12, listOf("Alternative Yeast Nuclear"), listOf(CTG, ATG), listOf(TAA, TAG, TGA), diffsToAll(CTG to S)),
-                CodonTable(13, listOf("Ascidian Mitochondrial"), listOf(TTG, ATA, ATG, GTG), listOf(TAA, TAG), diffsToAll(AGA to G, AGG to G, ATA to M, TGA to W)),
-                CodonTable(14, listOf("Alternative Flatworm Mitochondrial"), listOf(ATG), listOf(TAG), diffsToAll(AAA to N, AGA to S, AGG to S, TAA to Y, TGA to W)),
-                CodonTable(15, listOf("Blepharisma Macronuclear"), listOf(ATG), listOf(TAA, TGA), diffsToAll(TAG to Q)),
-                CodonTable(16, listOf("Chlorophycean Mitochondrial"), listOf(ATG), listOf(TAA, TGA), diffsToAll(TAG to L)),
-                CodonTable(21, listOf("Trematode Mitochondrial"), listOf(ATG, GTG), listOf(TAA, TAG), diffsToAll(AAA to N, AGA to S, AGG to S, ATA to M, TGA to W)),
-                CodonTable(22, listOf("Scenedesmus obliquus Mitochondrial"), listOf(ATG), listOf(TCA, TAA, TGA), diffsToAll(TAG to L, TCA to null)),
-                CodonTable(23, listOf("Thraustochytrium Mitochondrial"), listOf(ATT, ATG, GTG), listOf(TTA, TAA, TAG, TGA), diffsToAll(TTA to null)),
-                CodonTable(24, listOf("Pterobranchia Mitochondrial"), listOf(TTG, CTG, ATG, GTG), listOf(TAA, TAG), diffsToAll(AGA to S, AGG to K, TGA to W)),
-                CodonTable(25, listOf("Candidate Division SR1", "Gracilibacteria"), listOf(TTG, ATG, GTG), listOf(TAA, TAG), diffsToAll(TGA to G)),
-                CodonTable(26, listOf("Pachysolen tannophilus Nuclear"), listOf(CTG, ATG), listOf(TAA, TAG, TGA), diffsToAll(CTG to A)),
-                CodonTable(27, listOf("Karyorelict Nuclear"), listOf(ATG), listOf(TGA), diffsToAll(TAA to Q, TAG to Q, TGA to W)),
-                CodonTable(28, listOf("Condylostoma Nuclear"), listOf(ATG), listOf(TAA, TAG, TGA), diffsToAll(TAA to Q, TAG to Q, TGA to W)),
-                CodonTable(29, listOf("Mesodinium Nuclear"), listOf(ATG), listOf(TGA), diffsToAll(TAA to Y, TAG to Y)),
-                CodonTable(30, listOf("Peritrich Nuclear"), listOf(ATG), listOf(TGA), diffsToAll(TAA to E, TAG to E)),
-                CodonTable(31, listOf("Blastocrithidia Nuclear"), listOf(ATG), listOf(TAA, TAG), diffsToAll(TAA to E, TAG to E, TGA to W)),
-                CodonTable(32, listOf("Balanophoraceae Plastid"), listOf(TTG, CTG, ATT, ATC, ATA, ATG, GTG), listOf(TAA, TGA), diffsToAll(TAG to W)),
-                CodonTable(33, listOf("Cephalodiscidae Mitochondrial"), listOf(TTG, CTG, ATG, GTG), listOf(TAG), diffsToAll(AGA to S, AGG to K, TAA to Y, TGA to W))
-        )
+                CodonTable(1,listOf("Standard", "SGC0"),addRNA(TTG, CTG, ATG), addRNA(TAA, TAG, TGA),diffsToAll()),
+                CodonTable(2,listOf("Vertebrate Mitochondrial", "SGC1"),addRNA(ATT, ATC, ATA, ATG, GTG), addRNA(TAA, TAG, AGA, AGG),diffsToAll(AGA to null,AGG to null,ATA to M,TGA to W)),
+                CodonTable(3,listOf("Yeast Mitochondrial", "SGC2"),addRNA(ATA, ATG, GTG), addRNA(TAA, TAG),diffsToAll(ATA to M,CTA to T,CTC to T,CTG to T,CTT to T,TGA to W)),
+                CodonTable(4,listOf("Mold Mitochondrial", "Protozoan Mitochondrial", "Coelenterate Mitochondrial", "Mycoplasma", "Spiroplasma", "SGC3"),addRNA(TTA, TTG, CTG, ATT, ATC, ATA, ATG, GTG), addRNA(TAA, TAG),diffsToAll(TGA to W)),
+                CodonTable(5,listOf("Invertebrate Mitochondrial", "SGC4"),addRNA(TTG, ATT, ATC, ATA, ATG, GTG), addRNA(TAA, TAG),diffsToAll(AGA to S,AGG to S,ATA to M,TGA to W)),
+                CodonTable(6,listOf("Ciliate Nuclear", "Dasycladacean Nuclear", "Hexamita Nuclear", "SGC5"),addRNA(ATG), addRNA(TGA),diffsToAll(TAA to Q,TAG to Q)),
+                CodonTable(9,listOf("Echinoderm Mitochondrial", "Flatworm Mitochondrial", "SGC8"),addRNA(ATG, GTG), addRNA(TAA, TAG),diffsToAll(AAA to N,AGA to S,AGG to S,TGA to W)),
+                CodonTable(10,listOf("Euplotid Nuclear", "SGC9"),addRNA(ATG), addRNA(TAA, TAG),diffsToAll(TGA to C)),
+                CodonTable(11,listOf("Bacterial", "Archaeal", "Plant Plastid"),addRNA(TTG, CTG, ATT, ATC, ATA, ATG, GTG), addRNA(TAA, TAG, TGA),diffsToAll()),
+                CodonTable(12,listOf("Alternative Yeast Nuclear"),addRNA(CTG, ATG), addRNA(TAA, TAG, TGA),diffsToAll(CTG to S)),
+                CodonTable(13,listOf("Ascidian Mitochondrial"),addRNA(TTG, ATA, ATG, GTG), addRNA(TAA, TAG),diffsToAll(AGA to G,AGG to G,ATA to M,TGA to W)),
+                CodonTable(14,listOf("Alternative Flatworm Mitochondrial"),addRNA(ATG), addRNA(TAG),diffsToAll(AAA to N,AGA to S,AGG to S,TAA to Y,TGA to W)),
+                CodonTable(15,listOf("Blepharisma Macronuclear"),addRNA(ATG), addRNA(TAA, TGA),diffsToAll(TAG to Q)),
+                CodonTable(16,listOf("Chlorophycean Mitochondrial"),addRNA(ATG), addRNA(TAA, TGA),diffsToAll(TAG to L)),
+                CodonTable(21,listOf("Trematode Mitochondrial"),addRNA(ATG, GTG), addRNA(TAA, TAG),diffsToAll(AAA to N,AGA to S,AGG to S,ATA to M,TGA to W)),
+                CodonTable(22,listOf("Scenedesmus obliquus Mitochondrial"),addRNA(ATG), addRNA(TCA, TAA, TGA),diffsToAll(TAG to L,TCA to null)),
+                CodonTable(23,listOf("Thraustochytrium Mitochondrial"),addRNA(ATT, ATG, GTG), addRNA(TTA, TAA, TAG, TGA),diffsToAll(TTA to null)),
+                CodonTable(24,listOf("Pterobranchia Mitochondrial"),addRNA(TTG, CTG, ATG, GTG), addRNA(TAA, TAG),diffsToAll(AGA to S,AGG to K,TGA to W)),
+                CodonTable(25,listOf("Candidate Division SR1", "Gracilibacteria"),addRNA(TTG, ATG, GTG), addRNA(TAA, TAG),diffsToAll(TGA to G)),
+                CodonTable(26,listOf("Pachysolen tannophilus Nuclear"),addRNA(CTG, ATG), addRNA(TAA, TAG, TGA),diffsToAll(CTG to A)),
+                CodonTable(27,listOf("Karyorelict Nuclear"),addRNA(ATG), addRNA(TGA),diffsToAll(TAA to Q,TAG to Q,TGA to W)),
+                CodonTable(28,listOf("Condylostoma Nuclear"),addRNA(ATG), addRNA(TAA, TAG, TGA),diffsToAll(TAA to Q,TAG to Q,TGA to W)),
+                CodonTable(29,listOf("Mesodinium Nuclear"),addRNA(ATG), addRNA(TGA),diffsToAll(TAA to Y,TAG to Y)),
+                CodonTable(30,listOf("Peritrich Nuclear"),addRNA(ATG), addRNA(TGA),diffsToAll(TAA to E,TAG to E)),
+                CodonTable(31,listOf("Blastocrithidia Nuclear"),addRNA(ATG), addRNA(TAA, TAG),diffsToAll(TAA to E,TAG to E,TGA to W)),
+                CodonTable(32,listOf("Balanophoraceae Plastid"),addRNA(TTG, CTG, ATT, ATC, ATA, ATG, GTG), addRNA(TAA, TGA),diffsToAll(TAG to W)),
+                CodonTable(33,listOf("Cephalodiscidae Mitochondrial"),addRNA(TTG, CTG, ATG, GTG), addRNA(TAG),diffsToAll(AGA to S,AGG to K,TAA to Y,TGA to W))
+
+                )
         println(standardCodonTable.id)
-        allCodonTables = createDNARNATables(dnaCodonTables)
+        allCodonTables = dnaCodonTables.associate { it.key() to it }
         nameToId = allCodonTables.values
                 .flatMap { codonTable -> codonTable.name.map { it to codonTable.id } }  //the list of names need to be associated with single id
                 .associate { (name, id) -> name to id }
     }
 
-    operator fun get(id: Int = 1, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable {
-        val codonTableKey = CodonTableKey(id, ambiguous, nucleicAcid)
+    operator fun get(id: Int = 1, ambiguous: Boolean = false): CodonTable {
+        val codonTableKey = CodonTableKey(id, ambiguous)
         return allCodonTables.getOrElse(codonTableKey) {
             throw NoSuchElementException("""
             Codon Table of that id, ambiguous state, or nucleic acid is not available.
             Note ambiguous codon are not implemented.
-            Valid id = ${nameToId.values.toString()}
+            Valid id = ${nameToId.values}
         """.trimIndent())
         }
     }
 
-    operator fun get(name: String, ambiguous: Boolean = false, nucleicAcid: CodonSet = Codon.DNA): CodonTable {
+    operator fun get(name: String, ambiguous: Boolean = false): CodonTable {
         val id = nameToId.getOrElse(name) {
             throw NoSuchElementException("""
             Codon Table of "$name" not available.
-            Valid names are ${nameToId.keys.toString()}
+            Valid names are ${nameToId.keys}
         """.trimIndent())
         }
-        return get(id, ambiguous, nucleicAcid)
+        return get(id, ambiguous)
     }
 
-
-    private fun createDNARNATables(dnaCodonTables: List<CodonTable>): Map<CodonTableKey, CodonTable> {
-        //val dnaCodonTables = createDNATables(diffsWithStandard)
-        return dnaCodonTables
-                .flatMap { dnaCT -> listOf(dnaCT, createRNATable(dnaCT)) }
-                .associate { codonTable -> codonTable.key() to codonTable }
-    }
 
     /*Builds on the new codon to amino acid map based on the standardCodonTable and list of differences.
     * If the codon is no longer used.  AminoAcid is set to null
     * */
     private fun diffsToAll(vararg diffs: Pair<Codon, AminoAcid?>): Map<Codon, AminoAcid> {
         val newCodonToAA = standardCodonTable.codonToAA.toMutableMap()
-        //TODO this previous hack worked with text - need a solution with enums
         diffs.forEach { (codon, amino) -> if (amino is AminoAcid) newCodonToAA[codon] = amino else newCodonToAA -= codon }
-        return newCodonToAA
+        Codon.RNA
+                .filter { it.dnaAnalog != it.rnaAnalog }
+                .filter { newCodonToAA.contains(it.dnaAnalog) }
+                .forEach{ newCodonToAA[it] = newCodonToAA[it.dnaAnalog]!!}
+        return newCodonToAA.toMap()
     }
 
-    private fun createRNATable(dnaTable: CodonTable): CodonTable {
-        val rnaStop = dnaTable.stop_codons
-                .map { codon -> codon.rnaAnalog }
-                .toList()
-        val rnaStart = dnaTable.start_codons
-                .map { codon -> codon.rnaAnalog }
-                .toList()
-        val rnaCodonToAA: Map<Codon, AminoAcid> = dnaTable.codonToAA.entries
-                .associate { (codon, amino) -> codon.rnaAnalog to amino }
-        return dnaTable.copy(stop_codons = rnaStop, start_codons = rnaStart, codonToAA = rnaCodonToAA, nucleicAcid = Codon.RNA)
-    }
+    private fun addRNA(vararg dnaCodons: Codon) : List<Codon> =
+        dnaCodons.flatMap { dnaCodon -> listOf<Codon>(dnaCodon, dnaCodon.rnaAnalog)  }
 
-    val standard_dna_table = get(1, nucleicAcid = Codon.DNA)
-    val standard_rna_table = get(1, nucleicAcid = Codon.RNA)
+    val standard_dna_table = get(1)
+    val standard_rna_table = get(1)
 
 }
 
@@ -287,10 +278,33 @@ enum class Codon {
         get() = !this.name.contains('T')
 
     companion object {
+        private val nuc3bytesToCodon: Array<Codon?> = Array(65){null}
+        init {
+            Codon.values().forEach{nuc3bytesToCodon[toPackedInt(it.name)] =  it }
+        }
         operator fun get(s: String) = valueOf(s)
-        fun get(c1: Char, c2: Char, c3: Char) = valueOf(String(charArrayOf(c1, c2, c3)))
-        fun get(c1: NUC, c2: NUC, c3: NUC) = Companion.get(c1.char, c2.char, c3.char)
+        fun get(c1: Char, c2: Char, c3: Char) = get(c1.toByte(), c2.toByte(), c3.toByte())
+        fun get(c1: NUC, c2: NUC, c3: NUC) = get(c1.utf8, c2.utf8, c3.utf8)
         val DNA: CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isDNACodon }))
         val RNA : CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isRNACodon }))
+        val nucToCodon : Map<List<Byte>,Codon>
+            get() = Codon.values().associate { codon -> codon.name.toByteArray().toList() to codon}
+
+
+        internal fun toPackedInt(codon : String):Int {
+            if(codon.length!=3) throw IllegalArgumentException("Codon must be length of 3")
+            return NUC.byteTo2Bit(codon[0].toByte()).toInt().shl(4) or
+                    NUC.byteTo2Bit(codon[1].toByte()).toInt().shl(2) or
+                    NUC.byteTo2Bit(codon[2].toByte()).toInt()
+        }
+        internal fun toPackedInt(c1 : Byte, c2 : Byte, c3 : Byte):Int {
+            return NUC.byteTo2Bit(c1).toInt().shl(4) or
+                    NUC.byteTo2Bit(c2).toInt().shl(2) or
+                    NUC.byteTo2Bit(c3).toInt()
+        }
+
+        operator fun get(c1: Byte, c2: Byte, c3: Byte): Codon {
+            return nuc3bytesToCodon[toPackedInt(c1,c2,c3)]?:throw IllegalStateException("Byte are not standard nucleotides for codon")
+        }
     }
 }
