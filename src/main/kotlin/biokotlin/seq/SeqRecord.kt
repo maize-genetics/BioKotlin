@@ -11,12 +11,25 @@ Additional attributes:
 - name        - Sequence name, e.g. gene name (string)
 - description - Additional text (string)
 
+>>> from Bio.Seq import Seq
+>>> from Bio.Seq import SeqRecord
+>>> val record_1 = SeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
+
  */
 interface SeqRecord {
     val id: String;
     val name: String?;
     val description: String?;
+
+    /** Returns the length of the sequence in the record.*/
     fun len() : Int;
+
+    /** Returns a subset [Seq] of the sequence in the record based on the [IntRange] given.
+     *
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange]s are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
     operator fun get(i: IntRange): Seq;
 }
 

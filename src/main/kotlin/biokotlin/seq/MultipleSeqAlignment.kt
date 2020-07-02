@@ -29,9 +29,9 @@ You can also create a MultipleSeqAlignment object directly, with argument:
 >>> from Bio.Seq import Seq
 >>> from Bio.Seq import SeqRecord
 >>> from Bio.Seq import MultipleSeqAlignment
->>> record_1 = SeqRecord(Seq("ATCG"), "1")
->>> record_2 = SeqRecord(Seq("ATCC"), "2")
->>> alignment = MultipleSeqAlignment(listOf(record_1, record_2))
+>>> val record_1 = SeqRecord(Seq("ATCG"), "1")
+>>> val record_2 = SeqRecord(Seq("ATCC"), "2")
+>>> val alignment = MultipleSeqAlignment(listOf(record_1, record_2))
 
 
  */
@@ -56,8 +56,17 @@ class MultipleSeqAlignment(sequences: List<SeqRecord>) {
         return alignmentLength;
     }
 
+    /**Returns the [SeqRecord] at the specified index [i] with [i] starting at zero.
+     * Negative indices start from the end of the sequence, i.e. -1 is the last base
+     */
     operator fun get(i: Int): SeqRecord = if (i >= 0) sequences[i] else sequences[i+sequences.size]
 
+    /** Returns a subset of the [SeqRecord]s in the [MultipleSeqAlignment] as a [List], based on
+     * the [IntRange] given.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
     operator fun get(i: IntRange): List<SeqRecord>{
         return sequences.slice(i);
     }
