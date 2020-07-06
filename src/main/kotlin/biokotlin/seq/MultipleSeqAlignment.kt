@@ -1,7 +1,7 @@
 @file:JvmName("MultipleSeqAlignment")
 
 package biokotlin.seq
-import kotlin.collections.ArrayList;
+import kotlin.collections.ArrayList
 
 class SeqLengthException(): Exception("Sequences of unequal length")
 class TooFewElementsException(): Exception("Less than two elements in the sequence record list")
@@ -23,8 +23,8 @@ MultipleSeqAlignment object.
 You can also create a MultipleSeqAlignment object directly, with argument:
 - [seqs] - List of sequence records, required (type: List<SeqRecord>)
 
-@throws [TooFewElementsException] if [seqs] has less than two elements.
-@throws [SeqLengthException] if the sequence records in [seqs] are not all of the same length.
+@throws [IllegalStateException] if [seqs] has less than two elements, or if the sequence records in
+[seqs] are not all of the same length.
 
 >>> from Bio.Seq import Seq
 >>> from Bio.Seq import SeqRecord
@@ -37,23 +37,26 @@ You can also create a MultipleSeqAlignment object directly, with argument:
  */
 
 class MultipleSeqAlignment(sequences: List<SeqRecord>) {
-    private val sequences = sequences;
-    private val alignmentLength: Int;
+    private val sequences = sequences.toList()
+    private val alignmentLength: Int
     init {
-        if (sequences.isNullOrEmpty() || sequences.size < 2) throw TooFewElementsException();
-        alignmentLength = sequences[0].len();
+        if (sequences.isNullOrEmpty() || sequences.size < 2)
+            throw IllegalStateException("Too few sequence records given - requires at least 2 " +
+                    "sequences.")
+        alignmentLength = sequences[0].len()
         for (seq in sequences) {
-            if (seq.len() != alignmentLength) throw SeqLengthException();
+            if (seq.len() != alignmentLength)
+                throw IllegalStateException("The sequence records are not of equal length.")
         }
     }
     /** Returns the number of sequences in the alignment.*/
     fun len(): Int {
-        return sequences.size;
+        return sequences.size
     }
 
     /** Returns the length of each [SeqRecord] in the alignment. */
     fun get_alignment_length(): Int {
-        return alignmentLength;
+        return alignmentLength
     }
 
     /**Returns the [SeqRecord] at the specified index [i] with [i] starting at zero.
@@ -68,7 +71,8 @@ class MultipleSeqAlignment(sequences: List<SeqRecord>) {
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
     operator fun get(i: IntRange): List<SeqRecord>{
-        return sequences.slice(i);
+        return sequences.slice(i)
     }
 
 }
+

@@ -16,13 +16,13 @@ Additional attributes:
 >>> val record_1 = SeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
 
  */
-interface SeqRecord {
-    val id: String;
-    val name: String?;
-    val description: String?;
+sealed class SeqRecord(id: String, name: String?, description: String?) {
+    val id = id
+    val name = name
+    val description = description
 
     /** Returns the length of the sequence in the record.*/
-    fun len() : Int;
+    abstract fun len() : Int
 
     /** Returns a subset [Seq] of the sequence in the record based on the [IntRange] given.
      *
@@ -30,28 +30,22 @@ interface SeqRecord {
      * Note Kotlin [IntRange]s are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
-    operator fun get(i: IntRange): Seq;
+    abstract operator fun get(i: IntRange): Seq
 }
 
 class NucSeqRecord(seq: NucSeq, id: String, name: String? = null, description: String? = null) :
-        SeqRecord {
-    override val id = id;
-    override val name = name;
-    override val description = name;
-    val sequence = seq;
-    operator fun get(i: Int): NUC = sequence[i];
-    override operator fun get(i: IntRange): NucSeq = sequence[i];
-    override fun len() : Int = sequence.len();
+        SeqRecord(id, name, description) {
+    val sequence = seq
+    operator fun get(i: Int): NUC = sequence[i]
+    override operator fun get(i: IntRange): NucSeq = sequence[i]
+    override fun len() : Int = sequence.len()
 }
 
 class ProteinSeqRecord(seq: ProteinSeq, id: String, name: String? = null, description: String? =
         null) :
-        SeqRecord {
-    val sequence = seq;
-    override val id = id;
-    override val name = name;
-    override val description = name;
-    operator fun get(i: Int): AminoAcid = sequence[i];
-    override operator fun get(i: IntRange): ProteinSeq = sequence[i];
-    override fun len() : Int = sequence.len();
+        SeqRecord(id, name, description) {
+    val sequence = seq
+    operator fun get(i: Int): AminoAcid = sequence[i]
+    override operator fun get(i: IntRange): ProteinSeq = sequence[i]
+    override fun len() : Int = sequence.len()
 }
