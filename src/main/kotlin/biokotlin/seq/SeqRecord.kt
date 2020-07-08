@@ -16,10 +16,7 @@ Additional attributes:
 >>> val record_1 = SeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
 
  */
-sealed class SeqRecord(id: String, name: String?, description: String?) {
-    val id = id
-    val name = name
-    val description = description
+sealed class SeqRecord(val id: String, val name: String?, val description: String?) {
 
     /** Returns the length of the sequence in the record.*/
     abstract fun len() : Int
@@ -33,18 +30,16 @@ sealed class SeqRecord(id: String, name: String?, description: String?) {
     abstract operator fun get(i: IntRange): Seq
 }
 
-class NucSeqRecord(seq: NucSeq, id: String, name: String? = null, description: String? = null) :
+class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? =
+        null) :
         SeqRecord(id, name, description) {
-    val sequence = seq
     operator fun get(i: Int): NUC = sequence[i]
     override operator fun get(i: IntRange): NucSeq = sequence[i]
     override fun len() : Int = sequence.len()
 }
 
-class ProteinSeqRecord(seq: ProteinSeq, id: String, name: String? = null, description: String? =
-        null) :
-        SeqRecord(id, name, description) {
-    val sequence = seq
+class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = null,
+                       description: String? = null) : SeqRecord(id, name, description) {
     operator fun get(i: Int): AminoAcid = sequence[i]
     override operator fun get(i: IntRange): ProteinSeq = sequence[i]
     override fun len() : Int = sequence.len()
