@@ -2,6 +2,9 @@
 
 package biokotlin.seq
 
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+
 /**
 A [SeqRecord] consists of a [Seq] and several optional annotations.
 
@@ -18,20 +21,32 @@ Additional attributes:
 
  */
 sealed class SeqRecord(val id: String, val name: String?, val description: String?,
-                       annotations: Map<String, String>?) {
+                       val annotations: ImmutableMap<String, String>?) {
 
-    val annotations = annotations?.toMap();
     /** Returns the length of the sequence in the record.*/
     abstract fun len(): Int
 
 }
 
 class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? =
-        null, annotations: Map<String, String>? = null) :
+        null, annotations: ImmutableMap<String, String>? = null) :
         SeqRecord(id, name, description, annotations), NucSeq by sequence {
+
+    constructor(sequence: NucSeq, id: String, name: String?, description: String?, annotations:
+    Map<String, String>?)
+            : this(sequence, id, name, description,
+            if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
+    }
 }
 
 class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = null,
-                       description: String? = null, annotations: Map<String, String>? = null) :
+                       description: String? = null, annotations: ImmutableMap<String, String>? =
+                               null) :
 SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
+
+    constructor(sequence: ProteinSeq, id: String, name: String?, description: String?, annotations:
+    Map<String, String>?)
+            : this(sequence, id, name, description,
+            if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
+    }
 }
