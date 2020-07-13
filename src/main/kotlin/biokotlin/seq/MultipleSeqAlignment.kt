@@ -36,9 +36,9 @@ You can also create a MultipleSeqAlignment object directly, with argument:
 
  */
 
-class MultipleSeqAlignment(sequences: List<SeqRecord>) {
-    private val sequences = sequences.toList()
+sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     private val alignmentLength: Int
+    private val size = sequences.size
     init {
         if (sequences.isNullOrEmpty() || sequences.size < 2)
             throw IllegalStateException("Too few sequence records given - requires at least 2 " +
@@ -51,28 +51,51 @@ class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     }
     /** Returns the number of sequences in the alignment.*/
     fun len(): Int {
-        return sequences.size
+        return size
     }
 
     /** Returns the length of each [SeqRecord] in the alignment. */
     fun get_alignment_length(): Int {
         return alignmentLength
     }
+}
 
-    /**Returns the [SeqRecord] at the specified index [i] with [i] starting at zero.
+class NucMSA(sequences: List<NucSeqRecord>) : MultipleSeqAlignment(sequences) {
+    val sequences = sequences.toList()
+
+    /**Returns the [NucSeqRecord] at the specified index [i] with [i] starting at zero.
      * Negative indices start from the end of the sequence, i.e. -1 is the last base
      */
-    operator fun get(i: Int): SeqRecord = if (i >= 0) sequences[i] else sequences[i+sequences.size]
+    operator fun get(i: Int): NucSeqRecord =
+            if (i >= 0) sequences[i] else sequences[i+sequences.size]
 
-    /** Returns a subset of the [SeqRecord]s in the [MultipleSeqAlignment] as a [List], based on
+    /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [List], based on
      * the [IntRange] given.
      * Kotlin range operator is "..". Indices start at zero.
      * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
-    operator fun get(i: IntRange): List<SeqRecord>{
-        return sequences.slice(i)
-    }
+    operator fun get(i: IntRange) = sequences.slice(i)
+
+}
+
+class ProteinMSA(sequences: List<ProteinSeqRecord>) : MultipleSeqAlignment(sequences) {
+    val sequences = sequences.toList()
+
+    /**Returns the [ProteinSeqRecord] at the specified index [i] with [i] starting at zero.
+     * Negative indices start from the end of the sequence, i.e. -1 is the last base
+     */
+    operator fun get(i: Int): ProteinSeqRecord =
+            if (i >= 0) sequences[i] else sequences[i+sequences.size]
+
+    /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List],
+     * based on
+     * the [IntRange] given.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: IntRange) = sequences.slice(i)
 
 }
 
