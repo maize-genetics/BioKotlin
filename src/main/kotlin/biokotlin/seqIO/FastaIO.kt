@@ -1,86 +1,130 @@
 package biokotlin.seqIO
 
+import biokotlin.seq.NucSeq
 import biokotlin.seq.Seq
-import java.io.BufferedReader
+import com.google.common.collect.ImmutableMap
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.receiveOrNull
 import java.io.File
 import java.util.*
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import kotlin.collections.LinkedHashMap
+import kotlin.system.measureNanoTime
+import biokotlin.seqIO.SeqFormat.*
 
-fun fastaIterator(reader: BufferedReader): SeqRecord {
-    TODO()
-}
+class FastaIO(val filename: String) : SequenceIterator {
 
-fun readFasta(filename: String): Map<String, TempSeqRecord> {
+    private val inputChannel = Channel<Pair<String, List<String>>>(10)
+    private val outputChannel = Channel<SeqRecord>(5)
 
-    lateinit var pool: ExecutorService
-    try {
+    init {
 
-        File(filename).bufferedReader().use { reader ->
+        assert(filename.isNotEmpty())
 
-            pool = Executors.newWorkStealingPool()
-            val futures: MutableList<Future<ProcessSequence>> = ArrayList()
+        GlobalScope.launch {
+            readFastaLines(filename, inputChannel)
+        }
 
-            val result = LinkedHashMap<String, TempSeqRecord>()
-
-            var line = reader.readLine()
-            while (line != null) {
-                line = line.trim { it <= ' ' }
-                if (line.startsWith(";")) {
-                    line = reader.readLine()
-                } else if (line.startsWith(">")) {
-                    val tokens = StringTokenizer(line)
-                    var id = tokens.nextToken()
-                    id = if (id.length == 1) {
-                        tokens.nextToken()
-                    } else {
-                        id.substring(1).trim { it <= ' ' }
-                    }
-
-                    val temp = StringBuilder()
-                    line = reader.readLine()
-                    while (line != null && !line.startsWith(">") && !line.startsWith(";")) {
-                        line = line.trim { it <= ' ' }.toUpperCase()
-                        temp.append(line)
-                        line = reader.readLine()
-                    }
-
-                    futures.add(pool.submit(ProcessSequence(id, temp.toString())))
-                    
-                } else {
-                    println("FastaIO: readFasta: file: $filename invalid format.")
-                    throw IllegalArgumentException("SeqIO: readFasta: invalid format.")
+        GlobalScope.launch {
+            runBlocking {
+                repeat(3) {
+                    launch { processInput(inputChannel, outputChannel, it) }
                 }
             }
+            outputChannel.close()
+        }
 
-            for (future in futures) {
-                val processed: ProcessSequence = future.get()
-                result[processed.id] = TempSeqRecord(processed.id, null, null, processed.result)
+    }
+
+    override fun read(): SeqRecord? {
+        return runBlocking {
+            outputChannel.receiveOrNull()
+        }
+    }
+
+    override fun readAll(): Map<String, SeqRecord> {
+        val result = ImmutableMap.builder<String, SeqRecord>()
+        runBlocking {
+            for (record in outputChannel) {
+                result.put(record.id, record)
+            }
+        }
+        return result.build()
+    }
+
+    companion object {
+
+        private suspend fun readFastaLines(filename: String, inputChannel: Channel<Pair<String, List<String>>>) {
+
+            try {
+
+                File(filename).bufferedReader().use { reader ->
+
+                    var line = reader.readLine()
+                    while (line != null) {
+                        line = line.trim()
+                        if (line.startsWith(";")) {
+                            line = reader.readLine()
+                        } else if (line.startsWith(">")) {
+                            val tokens = StringTokenizer(line)
+                            var id = tokens.nextToken()
+                            id = if (id.length == 1) {
+                                tokens.nextToken()
+                            } else {
+                                id.substring(1).trim()
+                            }
+
+                            val temp = mutableListOf<String>()
+                            line = reader.readLine()
+                            while (line != null && !line.startsWith(">") && !line.startsWith(";")) {
+                                temp.add(line)
+                                line = reader.readLine()
+                            }
+
+                            inputChannel.send(Pair(id, temp))
+
+                        } else {
+                            throw IllegalArgumentException("FastaIO: readFastaLines: invalid format file: $filename")
+                        }
+                    }
+
+                }
+
+                inputChannel.close()
+
+            } catch (e: Exception) {
+                throw IllegalStateException("""FastaIO: readFasta: problem reading file: $filename  Error: ${e.message}""")
             }
 
-            return result
         }
 
-    } catch (e: Exception) {
-        throw IllegalStateException("""FastaIO: readFasta: problem reading file: $filename  Error: ${e.message}""")
-    } finally {
-        if (pool != null) {
-            pool!!.shutdown()
+        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<SeqRecord>, processNum: Int) = withContext(Dispatchers.Default) {
+
+            for (entry in inputChannel) {
+                val builder = StringBuilder()
+                entry.second.forEach { builder.append(it.trim()) }
+                val seq = Seq(builder.toString())
+                outputChannel.send(NucSeqRecord(seq as NucSeq, entry.first))
+            }
+
         }
+
     }
 
 }
 
-private class ProcessSequence(val id: String, val seq: String) : Callable<ProcessSequence> {
-
-    lateinit var result: Seq
-
-    override fun call(): ProcessSequence {
-        result = Seq(seq)
-        return this
+fun main() {
+    val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa", fasta)
+    val time = measureNanoTime {
+        val seqMap = seqio.readAll()
+        println("number of records: ${seqMap.size}")
+        // var record = seqio.read()
+        // var numRecords = 0
+        // while (record != null) {
+        //     numRecords++
+        //     println("${(record as NucSeqRecord).id}: ${(record as NucSeqRecord).sequence.len()}")
+        //     record = seqio.read()
+        // }
+        // println("num of records: $numRecords")
     }
-
+    println("time: ${time / 1e9} secs.")
 }
