@@ -29,7 +29,8 @@ class SeqByteTest : StringSpec({
         NucSeqByteEncode("GCRU").nucSet shouldBe NUC.AmbiguousRNA
         (Seq("GCRU") as NucSeqByte).nucSet shouldBe NUC.AmbiguousRNA
         NucSeq("GCRU").nucSet shouldBe NUC.AmbiguousRNA
-        ProteinSeqByte("GCDF") shouldBe Seq("GCDF")
+        ProteinSeqByte("GCDF").seq() shouldBe "GCDF"
+        shouldThrow<IllegalStateException> { Seq("GCDF")}
         shouldThrow<IllegalStateException> { NucSeq("GCDF")}
     }
 
