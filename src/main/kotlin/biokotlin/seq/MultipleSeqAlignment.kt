@@ -1,10 +1,8 @@
 @file:JvmName("MultipleSeqAlignment")
 
 package biokotlin.seq
-import kotlin.collections.ArrayList
 
-class SeqLengthException(): Exception("Sequences of unequal length")
-class TooFewElementsException(): Exception("Less than two elements in the sequence record list")
+import com.google.common.collect.ImmutableList
 
 /**
 Immutable multiple sequence alignment object, consisting of two or more [SeqRecord]s with equal
@@ -60,8 +58,10 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     }
 }
 
-class NucMSA(sequences: List<NucSeqRecord>) : MultipleSeqAlignment(sequences) {
-    val sequences = sequences.toList()
+class NucMSA(val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences) {
+
+    constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
+    }
 
     /**Returns the [NucSeqRecord] at the specified index [i] with [i] starting at zero.
      * Negative indices start from the end of the sequence, i.e. -1 is the last base
@@ -79,8 +79,10 @@ class NucMSA(sequences: List<NucSeqRecord>) : MultipleSeqAlignment(sequences) {
 
 }
 
-class ProteinMSA(sequences: List<ProteinSeqRecord>) : MultipleSeqAlignment(sequences) {
-    val sequences = sequences.toList()
+class ProteinMSA(val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment(sequences) {
+
+    constructor(sequences: List<ProteinSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
+    }
 
     /**Returns the [ProteinSeqRecord] at the specified index [i] with [i] starting at zero.
      * Negative indices start from the end of the sequence, i.e. -1 is the last base
