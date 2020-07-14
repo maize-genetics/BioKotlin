@@ -5,15 +5,12 @@ import biokotlin.seq.NucSeq
 import biokotlin.seq.Seq
 import java.io.File
 import java.nio.file.Path
-import kotlin.reflect.KClass
-import kotlin.reflect.full.primaryConstructor
 
 
 // TODO this doesn't seem right.  I should just be passing the class, not an instance.
-enum class SeqFormat(val suffixes: List<String>, val reader: KClass<out SequenceIterator>, val writer: ((filename: String) -> Unit)? = null) {
-    fasta(listOf("fa", "fasta"), FastaIO::class)
-    // fasta(listOf("fa", "fasta"), FastaIO, FastaIO);
-    // fastq(listOf("fa", "fasta"), FastaIO(), FastaIO()),
+enum class SeqFormat(val suffixes: List<String>) {
+    fasta(listOf("fa", "fasta")),
+    fastq(listOf("fq", "fastq")),
     // clustal(),
     // phylip()
     // genbank()
@@ -32,6 +29,15 @@ interface SequenceWriter {
     fun writeHeader(): Boolean
     fun writeRecord(): Boolean
     fun writeFooter(): Boolean
+}
+
+private fun seqIterator(format: SeqFormat, filename: String): SequenceIterator {
+
+    return when (format) {
+        SeqFormat.fasta -> FastaIO(filename)
+        else -> throw IllegalArgumentException("SeqIO: seqIterator: unknown format: ${format.name}")
+    }
+
 }
 
 @Deprecated("Temporary SeqRecord is being written")
@@ -71,11 +77,7 @@ class SeqIO(filename: String, format: SeqFormat? = null) {
 
         }
 
-        try {
-            reader = this.format.reader.primaryConstructor!!.call(filename)
-        } catch (e: Exception) {
-            throw IllegalStateException("${this.format.reader.simpleName} doesn't have correct primary constructor.")
-        }
+        reader = seqIterator(this.format, filename)
 
     }
 

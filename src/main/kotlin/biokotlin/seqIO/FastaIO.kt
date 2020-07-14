@@ -9,7 +9,6 @@ import kotlinx.coroutines.channels.receiveOrNull
 import java.io.File
 import java.util.*
 import kotlin.system.measureNanoTime
-import biokotlin.seqIO.SeqFormat.*
 
 class FastaIO(val filename: String) : SequenceIterator {
 
@@ -20,18 +19,16 @@ class FastaIO(val filename: String) : SequenceIterator {
 
         assert(filename.isNotEmpty())
 
-        GlobalScope.launch {
+        CoroutineScope(Dispatchers.IO).launch {
             readFastaLines(filename, inputChannel)
         }
 
-        GlobalScope.launch {
-            runBlocking {
-                repeat(3) {
-                    launch { processInput(inputChannel, outputChannel, it) }
-                }
+        val processInputJob = CoroutineScope(Dispatchers.Default).launch {
+            repeat(3) {
+                launch { processInput(inputChannel, outputChannel) }
             }
-            outputChannel.close()
         }
+        processInputJob.invokeOnCompletion { outputChannel.close() }
 
     }
 
@@ -97,7 +94,7 @@ class FastaIO(val filename: String) : SequenceIterator {
 
         }
 
-        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<SeqRecord>, processNum: Int) = withContext(Dispatchers.Default) {
+        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<SeqRecord>) = withContext(Dispatchers.Default) {
 
             for (entry in inputChannel) {
                 val builder = StringBuilder()
@@ -113,7 +110,7 @@ class FastaIO(val filename: String) : SequenceIterator {
 }
 
 fun main() {
-    val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa", fasta)
+    val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa")
     val time = measureNanoTime {
         val seqMap = seqio.readAll()
         println("number of records: ${seqMap.size}")
