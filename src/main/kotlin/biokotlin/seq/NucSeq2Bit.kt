@@ -212,8 +212,13 @@ internal class Nuc2BitArray(utf8BA: ByteArray) : TwoBitArray {
     override operator fun get(index: Int): Byte {
         //surprisingly caching blocks is slower than this
         //       if (index>=size) throw IndexOutOfBoundsException()
-        //TODO check if twoBitToUTF8[] table is better than bit shifting
-        return NUC.twoBitToUTF8(packedNucs[index/4].toInt().shr(6-(index%4 *2)).and(0b11))
+
+        // replaced NUC.twoBitToUTF8(packedNucs[index/4].toInt().shr(6-(index%4 *2)).and(0b11))
+        // 6-(index%4 *2) = (3 - index%4) << 1. Since anything mod 4 ranges from 0 to 3, inverting
+        // index and getting the rightmost 2 bits (equivalent to doing mod 4) will give us a
+        // mapping from (index % 4) to (3 - index % 4). This is then left-shifted by 1 as mentioned.
+        
+        return NUC.twoBitToUTF8(packedNucs[index/4].toInt().shr(index.inv().and(0b11).shl(1)).and(0b11))
     }
 
     fun utf8All() =ByteArray(size){ i -> get(i) }

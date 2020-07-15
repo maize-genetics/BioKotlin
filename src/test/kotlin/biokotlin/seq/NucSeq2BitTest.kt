@@ -39,6 +39,7 @@ class NucSeq2BitTest : StringSpec({
     "Test Nuc2Bit Timing" {
         val seqSize = 100_000_000
         val times = mutableListOf<Long>()
+        val times2 = mutableListOf<Long>()
         for (i in 0..15) {
             val bigSeq = RandomNucSeq(seqSize, seed = System.currentTimeMillis().toInt())
             val someSeq=bigSeq[0..7].copyOfBytes()
@@ -48,8 +49,10 @@ class NucSeq2BitTest : StringSpec({
             times+=time
             val time2 = measureTimeMillis { big2BitSeq.utf8All().size }
             println("Decoding of ${bigSeq.len() / 1E6}Mb took ${time2} ms")
+            times2+=time2
         }
         println("Average encoding time of ${seqSize / 1E6}Mb took ${times.average()} ms")
+        println("Average decoding time of ${seqSize / 1E6}Mb took ${times2.average()} ms")
     }
 
     "size" { }
