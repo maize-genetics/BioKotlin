@@ -16,7 +16,7 @@ enum class SeqFormat(val suffixes: List<String>) {
     // genbank()
 }
 
-interface SequenceIterator {
+interface SequenceIterator : Iterator<SeqRecord> {
     /**Says [Seq] will be converted to SeqRecord when finished*/
     // fun read(file: File): Iterator<TempSeqRecord>
     fun read(): SeqRecord?
@@ -50,7 +50,7 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
 data class TempSeqRecord(val id: String, val name: String? = null, val description: String? = null, val seq: Seq)
 
 
-class SeqIO(filename: String, format: SeqFormat? = null) {
+class SeqIO(filename: String, format: SeqFormat? = null) : Iterable<SeqRecord> {
 
     private val reader: SequenceIterator
     private val format: SeqFormat
@@ -96,6 +96,10 @@ class SeqIO(filename: String, format: SeqFormat? = null) {
 
     fun to_dict(sequences: List<Seq>, keyFunction: (Seq) -> String): Map<String, TempSeqRecord> {
         TODO("Not yet implemented")
+    }
+
+    override fun iterator(): Iterator<SeqRecord> {
+        return reader.iterator()
     }
 
 }

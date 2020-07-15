@@ -12,8 +12,9 @@ import kotlin.system.measureNanoTime
 
 class FastaIO(val filename: String) : SequenceIterator {
 
-    private val inputChannel = Channel<Pair<String, List<String>>>(10)
+    private val inputChannel = Channel<Pair<String, List<String>>>(5)
     private val outputChannel = Channel<SeqRecord>(5)
+    private val outputIterator = outputChannel.iterator()
 
     init {
 
@@ -46,6 +47,18 @@ class FastaIO(val filename: String) : SequenceIterator {
             }
         }
         return result.build()
+    }
+
+    override fun hasNext(): Boolean {
+        return runBlocking {
+            outputIterator.hasNext()
+        }
+    }
+
+    override fun next(): SeqRecord {
+        return runBlocking {
+            outputIterator.next()
+        }
     }
 
     companion object {
@@ -112,16 +125,9 @@ class FastaIO(val filename: String) : SequenceIterator {
 fun main() {
     val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa")
     val time = measureNanoTime {
-        val seqMap = seqio.readAll()
-        println("number of records: ${seqMap.size}")
-        // var record = seqio.read()
-        // var numRecords = 0
-        // while (record != null) {
-        //     numRecords++
-        //     println("${(record as NucSeqRecord).id}: ${(record as NucSeqRecord).sequence.len()}")
-        //     record = seqio.read()
-        // }
-        // println("num of records: $numRecords")
+        seqio.forEachIndexed { index, record ->
+            println("$index: ${(record as NucSeqRecord).id}: ${(record as NucSeqRecord).sequence.len()}")
+        }
     }
     println("time: ${time / 1e9} secs.")
 }
