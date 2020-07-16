@@ -49,7 +49,7 @@ internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Se
         val indices = if(!startAtLast)
             start.coerceAtLeast(0)..end.coerceAtMost(len()-queryB.size)
         else
-            start.coerceAtMost(len()-1) downTo end.coerceAtLeast(queryB.size)
+            start.coerceAtMost(len()-queryB.size) downTo end.coerceAtLeast(0)
         //println(indices)
         seqBloop@ for (thisIndex in indices) {
             for (queryIndex in queryB.indices) {
@@ -154,6 +154,12 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         else Seq(this.toString() + seq2.toString()) as NucSeq
     }
 
+    /*Used for calling NucSeq2Bit plus and resulting in NucSeqByte*/
+    internal fun prepend(seq1: NucSeq): NucSeq {
+        return if (nucSet == seq1.nucSet) NucSeqByte(seq1.copyOfBytes().plus(seqB), nucSet)
+        else Seq(seq1.toString() + this.toString()) as NucSeq
+    }
+
     override operator fun times(n: Int) = NucSeqByte(super.repeat(n), nucSet)
     override fun count(query: NUC): Int = count(query.dnaAnalog.utf8)
     override fun count(query: NucSeq): Int = count(query, false)
@@ -185,7 +191,6 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         } else {
             String(pB)
         }
-
         return ProteinSeqByte(proStr)
     }
 
