@@ -311,7 +311,7 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
             return b
         }
 
-
+        internal fun dnaComplementOfUtf8(base: Byte) = ambigDnaCompByByteArray[base.toInt()]
 
 
         internal fun transcipt_equivalent(nucSet: NucSet) = when (nucSet) {
