@@ -352,15 +352,15 @@ internal class Nuc2BitArray(utf8BA: ByteArray) : TwoBitArray {
     private val packedNucs = ByteArray((utf8BA.size + 3) / 4)
 
     companion object {
-        internal fun pack8Utf8Bytes(currLong: Long): Pair<Byte,Byte> {
+        internal fun pack8Utf8Bytes(currLong: Long): Pair<Byte, Byte> {
             var currLong1 = currLong
-            currLong1 = currLong1.shr(1)        and  0x0303030303030303
-            currLong1 = (currLong1 or (currLong1 shr 6)) and  0x000F000F000F000F
+            currLong1 = currLong1.shr(1) and 0x0303030303030303
+            currLong1 = (currLong1 or (currLong1 shr 6)) and 0x000F000F000F000F
             currLong1 = (currLong1 or (currLong1 shr 12)) and 0x000000FF000000FF
-            return  (currLong1 shr 32).toByte() to currLong1.toByte()
+            return (currLong1 shr 32).toByte() to currLong1.toByte()
         }
 
-        fun packedInteger(utf8BA: ByteArray, start: Int) : Int {
+        fun packedInteger(utf8BA: ByteArray, start: Int): Int {
             var i = start
             return utf8To2BitInt(utf8BA[i++]).shl(6) or
                     utf8To2BitInt(utf8BA[i++]).shl(4) or
@@ -373,21 +373,21 @@ internal class Nuc2BitArray(utf8BA: ByteArray) : TwoBitArray {
         //long packing is 3X faster
         //TODO can't pad beyond when you wrap
         val byteBuffer = ByteBuffer.wrap(utf8BA)
-        var packedNucPos=0
-        val longCycles = (packedNucs.size+1)/2-1
+        var packedNucPos = 0
+        val longCycles = (packedNucs.size + 1) / 2 - 1
         for (i in 0..longCycles) {
             var currLong = try {
                 byteBuffer.long
             } catch (e: BufferUnderflowException) {
                 var lastLong = 0L
                 while (byteBuffer.hasRemaining()) lastLong = lastLong.shl(8) or byteBuffer.get().toLong()
-                lastLong.shl(((i*8)-utf8BA.size + 8) * 8)
+                lastLong.shl(((i * 8) - utf8BA.size + 8) * 8)
             }
-            val (first4, second4)= pack8Utf8Bytes(currLong)
-            packedNucs[packedNucPos++]=first4
+            val (first4, second4) = pack8Utf8Bytes(currLong)
+            packedNucs[packedNucPos++] = first4
             try {
-                packedNucs[packedNucPos++]=second4
-            }catch (e:ArrayIndexOutOfBoundsException) {
+                packedNucs[packedNucPos++] = second4
+            } catch (e: ArrayIndexOutOfBoundsException) {
                 //println("Hit ArrayIndexOutOfBoundsException $i $currLong")
             }
         }
@@ -396,10 +396,13 @@ internal class Nuc2BitArray(utf8BA: ByteArray) : TwoBitArray {
     override operator fun get(index: Int): Byte {
         //surprisingly caching blocks is slower than this
         //       if (index>=size) throw IndexOutOfBoundsException()
+        // replaced NUC.twoBitToUTF8(packedNucs[index/4].toInt().shr(6-(index%4 *2)).and(0b11))
+        // 6-(index%4 *2) = (3 - index%4) << 1. Since anything mod 4 ranges from 0 to 3, inverting
+        // index and getting the rightmost 2 bits (equivalent to doing mod 4) will give us a
+        // mapping from (index % 4) to (3 - index % 4). This is then left-shifted by 1 as mentioned.
         //TODO check if twoBitToUTF8[] table is better than bit shifting
-       // return NUC.twoBitToUTF8(packedNucs[index/4].toInt().shr(6-(index%4 *2)).and(0b11))
-        //.shr(index.inv().and(0b11).shl(1)) is equilavent to .shr(6-(index%4 *2)) developed by Vaishnavi Gupta
-        return NUC.twoBitToUTF8(packedNucs[index/4].toInt().shr(index.inv().and(0b11).shl(1)).and(0b11))
+
+        return NUC.twoBitToUTF8(packedNucs[index / 4].toInt().shr(index.inv().and(0b11).shl(1)).and(0b11))
     }
 
     override fun utf8All() =ByteArray(size){ i -> get(i) }
