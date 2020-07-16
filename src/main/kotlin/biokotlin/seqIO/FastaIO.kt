@@ -13,7 +13,7 @@ import kotlin.system.measureNanoTime
 class FastaIO(val filename: String) : SequenceIterator {
 
     private val inputChannel = Channel<Pair<String, List<String>>>(5)
-    private val outputChannel = Channel<SeqRecord>(5)
+    private val outputChannel = Channel<Deferred<SeqRecord>>(5)
     private val outputIterator = outputChannel.iterator()
 
     init {
@@ -24,10 +24,8 @@ class FastaIO(val filename: String) : SequenceIterator {
             readFastaLines(filename, inputChannel)
         }
 
-        val processInputJob = CoroutineScope(Dispatchers.Default).launch {
-            repeat(3) {
-                launch { processInput(inputChannel, outputChannel) }
-            }
+        val processInputJob = CoroutineScope(Dispatchers.IO).launch {
+            processInput(inputChannel, outputChannel)
         }
         processInputJob.invokeOnCompletion { outputChannel.close() }
 
@@ -35,14 +33,15 @@ class FastaIO(val filename: String) : SequenceIterator {
 
     override fun read(): SeqRecord? {
         return runBlocking {
-            outputChannel.receiveOrNull()
+            outputChannel.receiveOrNull()?.await()
         }
     }
 
     override fun readAll(): Map<String, SeqRecord> {
         val result = ImmutableMap.builder<String, SeqRecord>()
         runBlocking {
-            for (record in outputChannel) {
+            for (deferred in outputChannel) {
+                val record = deferred.await()
                 result.put(record.id, record)
             }
         }
@@ -57,7 +56,7 @@ class FastaIO(val filename: String) : SequenceIterator {
 
     override fun next(): SeqRecord {
         return runBlocking {
-            outputIterator.next()
+            outputIterator.next().await()
         }
     }
 
@@ -107,13 +106,16 @@ class FastaIO(val filename: String) : SequenceIterator {
 
         }
 
-        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<SeqRecord>) = withContext(Dispatchers.Default) {
+        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
 
             for (entry in inputChannel) {
-                val builder = StringBuilder()
-                entry.second.forEach { builder.append(it.trim()) }
-                val seq = Seq(builder.toString())
-                outputChannel.send(NucSeqRecord(seq as NucSeq, entry.first))
+                val deffered = async {
+                    val builder = StringBuilder()
+                    entry.second.forEach { builder.append(it.trim()) }
+                    val seq = Seq(builder.toString())
+                    NucSeqRecord(seq as NucSeq, entry.first)
+                }
+                outputChannel.send(deffered)
             }
 
         }
