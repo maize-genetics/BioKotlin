@@ -15,44 +15,53 @@ import kotlin.system.measureTimeMillis
 
 class NucSeq2BitTest : StringSpec({
     val dnaString = "ACGTGGTGTNNNNNGCGCGC"
-    val rnaString = "ACGUGGUGANNNNNGCGCGC"
-   // val dnaSeq = NucSeq2Bit(dnaString)
-//    val rnaSeq = NucSeqByteEncode(rnaString, NUC.RNA)
+    val rnaString = "ACGUGGUGUNNNNNGCGCGC"
+    val dnaSeq = NucSeq2Bit(dnaString)
+    val rnaSeq = NucSeq2Bit(rnaString, NUC.RNA)
    // val leftDNAString = dnaString.substringBefore("N")
     val leftDNAString = "GCGAGAGA"
 
     "Test Nuc2Bit PackedInteger" {
         val nucBits = Nuc2BitArray(leftDNAString.toByteArray())
         nucBits.size shouldBe leftDNAString.length
-        nucBits.iterator().forEach { println(it) }
+  //      nucBits.iterator().forEach { println(it) }
         nucBits.utf8All() shouldBe leftDNAString.toByteArray()
         for(lengths in 1..60) {
             val byteSeq = RandomNucSeq(lengths)
-            println("$lengths $byteSeq")
+  //          println("$lengths $byteSeq")
             val bitSeq = Nuc2BitArray(byteSeq.copyOfBytes())
-            println("$lengths Byte:$byteSeq Bit:${String(bitSeq.utf8All())} ${byteSeq.toString().equals(String(bitSeq.utf8All()))}")
+  //          println("$lengths Byte:$byteSeq Bit:${String(bitSeq.utf8All())} ${byteSeq.toString().equals(String(bitSeq.utf8All()))}")
             bitSeq.utf8All() shouldBe byteSeq.copyOfBytes()
         }
-        println(String(nucBits.utf8All()))
+ //       println(String(nucBits.utf8All()))
     }
 
     "Test Nuc2Bit Timing" {
-        val seqSize = 100_000_000
-        val times = mutableListOf<Long>()
+        val seqSize = 1_000_000
+        val encodeTimes = mutableListOf<Long>()
+        val decodeTimes = mutableListOf<Long>()
         for (i in 0..15) {
             val bigSeq = RandomNucSeq(seqSize, seed = System.currentTimeMillis().toInt())
             val someSeq=bigSeq[0..7].copyOfBytes()
             var big2BitSeq : Nuc2BitArray = Nuc2BitArray(someSeq)
             val time = measureTimeMillis { big2BitSeq=Nuc2BitArray(bigSeq.copyOfBytes()) }
             println("Encoding of ${bigSeq.len() / 1E6}Mb took $time ms")
-            times+=time
+            encodeTimes+=time
             val time2 = measureTimeMillis { big2BitSeq.utf8All().size }
             println("Decoding of ${bigSeq.len() / 1E6}Mb took ${time2} ms")
+            decodeTimes+=time2
         }
-        println("Average encoding time of ${seqSize / 1E6}Mb took ${times.average()} ms")
+        println("Average encoding time of ${seqSize / 1E6}Mb took ${encodeTimes.average()} ms")
+        println("Average encoding time of ${seqSize / 1E6}Mb took ${decodeTimes.average()} ms")
     }
 
-    "size" { }
+    "Test Evaluate splitting of sequence" {
+        val aNucSeq2Bit = NucSeq2Bit(dnaString)
+        aNucSeq2Bit.seq() shouldBe dnaString
+        aNucSeq2Bit.len() shouldBe dnaString.length
+        NucSeq2Bit(rnaString, NUC.RNA).toString() shouldBe rnaString
+
+    }
 
     "iterator" { }
 /*
@@ -67,12 +76,12 @@ class NucSeq2BitTest : StringSpec({
         ProteinSeqByte("GCDF") shouldBe Seq("GCDF")
         shouldThrow<IllegalStateException> { NucSeq("GCDF")}
     }
-
+*/
     "Test conversion of X to N in DNA" {
-        NucSeqByteEncode("GCXT").seq() shouldBe "GCNT"
-        NucSeqByteEncode("GCxT").seq() shouldBe "GCNT"
-        NucSeqByteEncode("GCNT").seq() shouldBe "GCNT"
-        shouldThrow<IllegalStateException> {ProteinSeq("GCXT")}  //currently X not a state in AminoAcid
+        shouldThrow<java.lang.IllegalStateException> { NucSeq2Bit("GCXT") }
+        NucSeq2Bit("GCXT", convertStates = true).seq() shouldBe "GCNT"
+        NucSeq2Bit("GCxT", convertStates = true).seq() shouldBe "GCNT"
+        NucSeq2Bit("GCNT").seq() shouldBe "GCNT"
     }
 
 
@@ -89,7 +98,7 @@ class NucSeq2BitTest : StringSpec({
         rnaSeq.copyOfBytes()[3] shouldBe 'T'.toByte()  //the byte array has U -> T
     }
 
-    "Test of transcription" {
+    "Test of transcription and equality" {
         dnaSeq.transcribe() shouldBe rnaSeq
         rnaSeq.back_transcribe() shouldBe dnaSeq
     }
@@ -102,7 +111,7 @@ class NucSeq2BitTest : StringSpec({
                 row(4, 1) //Testing slicer order
         )
         { first: Int, second: Int ->
-            val exception = shouldThrow<StringIndexOutOfBoundsException> { dnaSeq[first..second].seq() }
+            val exception = shouldThrow<IndexOutOfBoundsException> { dnaSeq[first..second].seq() }
             println(exception.toString())
         }
     }
@@ -110,31 +119,31 @@ class NucSeq2BitTest : StringSpec({
     "range slicer"{
         forAll(
                 row(0, 1, "AC"),
-                row(-2, -1, "GA"),
+                row(-2, -1, "GC"),
                 row(0, 2, "ACG")
         )
         { first: Int, second: Int, expectedResult: String ->
-            dnaSeq[first..second] shouldBe NucSeq(expectedResult)
+            dnaSeq[first..second].seq() shouldBe NucSeq(expectedResult).seq()
         }
     }
 
     "Test DNA and RNA complements"{
-        dnaSeq.complement() shouldBe NucSeqByteEncode("TGCACCACT")
-        rnaSeq.complement() shouldBe NucSeqByteEncode("UGCACCACU")
-        dnaSeq.reverse_complement() shouldBe NucSeqByteEncode("TCACCACGT")
-        rnaSeq.reverse_complement() shouldBe NucSeqByteEncode("UCACCACGU")
+        dnaSeq.complement().seq() shouldBe NucSeqByteEncode(dnaString).complement().seq()
+        rnaSeq.complement().seq() shouldBe NucSeqByteEncode(rnaString).complement().seq()
+        dnaSeq.reverse_complement().seq() shouldBe NucSeqByteEncode(dnaString).reverse_complement().seq()
+        rnaSeq.reverse_complement().seq() shouldBe NucSeqByteEncode(rnaString).reverse_complement().seq()
     }
 
     "indexOf and find subsequences" {
-        dnaSeq.seq() shouldBe "ACGTGGTGA"
+        dnaSeq.seq() shouldBe "ACGTGGTGTNNNNNGCGCGC"
         forAll(
-                row("A",0,8),
-                row("G",2, 7),
-                row("GA",7,7), //Getting the end boundary
-                row("U",3,6), //T & U difference ignored
+                row("A",0,0),
+                row("G",2, 18),
+                row("GC",14,18), //Getting the end boundary
+                row("U",3,8), //T & U difference ignored
                 row("TT",-1, -1),
                 row("ACGTGGTGAACGTGGTGA", -1, -1),  //larger than query
-                row("t", 3, 6)  //testing case conversion in NucSeq
+                row("t", 3, 8)  //testing case conversion in NucSeq
         ) {seqStr: String, expIndex: Int, expLastIndex: Int ->
             dnaSeq.indexOf(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.find(NucSeq(seqStr)) shouldBe expIndex
@@ -144,9 +153,10 @@ class NucSeq2BitTest : StringSpec({
     }
 
     "repr" {
-        dnaSeq.repr() shouldBe "NucSeqByte('$dnaString',[A, C, G, T])"
-        dnaSeq.times(10).repr() shouldBe "NucSeqByte('ACGTGGTGAACGTGGTGAACGTGGTGAACGTGGTGAACGTGGTGAACGTGGTGA...TGA',[A, C, G, T])"
-        rnaSeq.repr() shouldBe "NucSeqByte('$rnaString',[A, C, G, U])"
+        dnaSeq.repr() shouldBe "DNASeq2Bit('$dnaString',[A, C, G, T, M, R, W, S, Y, K, V, H, D, B, X, N])"
+        dnaSeq.times(10).repr() shouldBe "DNASeq2Bit('ACGTGGTGTNNNNNGCGCGCACGTGGTGTNNNNNGCGCGCACGTGGTGTNNNNNG...CGC'," +
+                "[A, C, G, T, M, R, W, S, Y, K, V, H, D, B, X, N])"
+        rnaSeq.repr() shouldBe "RNASeq2Bit('$rnaString',[A, C, G, U, M, R, W, S, Y, K, V, H, D, B, X, N])"
     }
 
     "Test of get [] of single base/residue should be enum" {
@@ -165,17 +175,20 @@ class NucSeq2BitTest : StringSpec({
     "compareTo" { }
 
     "Test count" {
-        dnaSeq.count(NUC.G) shouldBe 4
-        rnaSeq.count(NUC.T) shouldBe 2
-        rnaSeq.count(NUC.U) shouldBe 2
-        rnaSeq.count(NUC.C) shouldBe 1
-        dnaSeq.count(NucSeq("GT")) shouldBe 2
+//        val dnaString = "ACGTGGTGTNNNNNGCGCGC"
+//        val rnaString = "ACGUGGUGUNNNNNGCGCGC"
+        dnaSeq.count(NUC.G) shouldBe 7
+        rnaSeq.count(NUC.T) shouldBe 3
+        rnaSeq.count(NUC.U) shouldBe 3
+        rnaSeq.count(NUC.C) shouldBe 4
+        dnaSeq.count(NUC.N) shouldBe 5
+        dnaSeq.count(NucSeq("GT")) shouldBe 3
         dnaSeq.count(NucSeq("GAT")) shouldBe 0
     }
 
 
     "Test count_overlap" {
-        val overLapSeq = NucSeq("GCCTATATACCCTTT")
+        val overLapSeq = NucSeq2Bit("GCCTATATACCCTTT")
         overLapSeq.count(NucSeq("TA")) shouldBe 3
         overLapSeq.count_overlap(NucSeq("TA")) shouldBe 3
         overLapSeq.count(NucSeq("TAT")) shouldBe 1
@@ -185,11 +198,11 @@ class NucSeq2BitTest : StringSpec({
     }
 
     "Test RNA translation" {
-        NucSeqByteEncode("AAAACA").translate() shouldBe ProteinSeqByte("KT")
-        NucSeqByteEncode("AAAACAUAG").translate() shouldBe ProteinSeqByte("KT*")
-        NucSeqByteEncode("AAAACAUAG").translate(to_stop = true) shouldBe ProteinSeqByte("KT")
-        NucSeqByteEncode("AAAACAUAG").translate(to_stop = false) shouldBe ProteinSeqByte("KT*")
-        val codingDNA = NucSeq("GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG")
+        NucSeq2Bit("AAAACA").translate() shouldBe ProteinSeqByte("KT")
+        NucSeq2Bit("AAAACAUAG").translate() shouldBe ProteinSeqByte("KT*")
+        NucSeq2Bit("AAAACAUAG").translate(to_stop = true) shouldBe ProteinSeqByte("KT")
+        NucSeq2Bit("AAAACAUAG").translate(to_stop = false) shouldBe ProteinSeqByte("KT*")
+        val codingDNA = NucSeq2Bit("GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG")
         codingDNA.translate(table = CodonTable(1)) shouldBe ProteinSeq("VAIVMGR*KGAR*")
         codingDNA.translate(table = CodonTable(1), to_stop = true) shouldBe ProteinSeq("VAIVMGR")
         //Does have a valid start for Table 1
@@ -198,7 +211,7 @@ class NucSeq2BitTest : StringSpec({
         codingDNA.translate(table = CodonTable(2), to_stop = true) shouldBe ProteinSeq("VAIVMGRWKGAR")
         //This works be GTG is an alternative start codon for Table 2
         codingDNA.translate(table = CodonTable(2), to_stop = true, cds = true) shouldBe ProteinSeq("MAIVMGRWKGAR")
-        shouldThrowAny { NucSeqByteEncode("AAAACAUA").translate(cds=true) }
+        shouldThrowAny { NucSeq2Bit("AAAACAUA").translate(cds=true) }
 
     }
 
@@ -219,24 +232,9 @@ class NucSeq2BitTest : StringSpec({
 
     "Test times * and plus" {
         (dnaSeq * 2) shouldBe (dnaSeq + dnaSeq)
+        (dnaSeq * 3).copyOfBytes() shouldBe (dnaSeq + dnaSeq + dnaSeq).copyOfBytes()
         shouldThrow<IllegalStateException> { dnaSeq + rnaSeq }
         (dnaSeq * 3).len() shouldBe dnaSeq.len()*3
-    }
-
-    "Test random sequence generation" {
-        //Expectations are uniform distribution over 4 nucleotides or 20 amino acids
-        val expectedRange = 4500..5500
-        val mean = expectedRange.median().toInt()
-        RandomNucSeq(mean * NUC.DNA.size).seq()
-                .groupingBy { it }
-                .eachCount()
-                .forEach { (_, count) -> count shouldBeInRange expectedRange }
-        RandomProteinSeq(mean * AminoAcid.all.size).seq()
-                .groupingBy { it }
-                .eachCount()
-                .forEach { (_, count) -> count shouldBeInRange expectedRange }
-
-        println(CodonTable(1).name)
     }
 
 
@@ -244,6 +242,6 @@ class NucSeq2BitTest : StringSpec({
     "ungap" {
         //TODO need to decide on how the GAP character is implemented
     }
-    */
+
 
 })
