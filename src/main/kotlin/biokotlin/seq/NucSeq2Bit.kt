@@ -100,7 +100,7 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
     override fun reverse_complement(): NucSeq {
         val rangeToSeq = ImmutableRangeMap.builder<Int, TwoBitArray>()
         seqs2B.asMapOfRanges().forEach { (range, twoBitSeq) ->
-            rangeToSeq.put(Range.closed(size-range.upperEndpoint(),size-range.lowerEndpoint()),twoBitSeq.reverseComplement())
+            rangeToSeq.put(Range.closed(size-range.upperEndpoint()-1,size-range.lowerEndpoint()-1),twoBitSeq.reverseComplement())
         }
         return if (this is DNASeq2Bit) DNASeq2Bit(rangeToSeq.build()) else RNASeq2Bit(rangeToSeq.build())
     }
@@ -112,6 +112,7 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
     override fun transcribe(): NucSeq = RNASeq2Bit(seqs2B)
 
     override fun back_transcribe(): NucSeq = DNASeq2Bit(seqs2B)
+
 
     protected fun getUTF8(i: Int): Byte {
         //TODO consider caching of adjacent TwoBitArrays

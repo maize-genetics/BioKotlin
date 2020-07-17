@@ -132,6 +132,7 @@ class NucSeq2BitTest : StringSpec({
         rnaSeq.complement().seq() shouldBe NucSeqByteEncode(rnaString).complement().seq()
         dnaSeq.reverse_complement().seq() shouldBe NucSeqByteEncode(dnaString).reverse_complement().seq()
         rnaSeq.reverse_complement().seq() shouldBe NucSeqByteEncode(rnaString).reverse_complement().seq()
+        dnaSeq.reverse_complement()[0] shouldBe NUC.G
     }
 
     "indexOf and find subsequences" {
@@ -237,10 +238,31 @@ class NucSeq2BitTest : StringSpec({
         (dnaSeq * 3).len() shouldBe dnaSeq.len()*3
     }
 
-
-
     "ungap" {
         //TODO need to decide on how the GAP character is implemented
+    }
+
+    "Compare NucSeqByte and NucSeq2Bit Speed" {
+        val heapSize = Runtime.getRuntime().totalMemory()
+        println("Heap size is ${heapSize / 1E6} Mb")
+        for (r in 0..10) {
+            val unmissingBigSeq = RandomNucSeq(100_000_000).copyOfBytes()
+            val aGap = ByteArray(50) { NUC.N.utf8 }
+            for (i in 100 until unmissingBigSeq.size - 100 step unmissingBigSeq.size / 10) {
+                aGap.copyInto(unmissingBigSeq, i)
+            }
+            val bigSeqByte = NucSeq(String(unmissingBigSeq))
+            val bigSeq2Bit = NucSeq2Bit(String(unmissingBigSeq))
+            val time = measureTimeMillis { bigSeqByte.complement() }
+            println("Complement Byte of ${bigSeqByte.len() / 1E6}Mb took $time ms")
+            val timeBit = measureTimeMillis { bigSeq2Bit.complement() }
+            println("Complement 2Bit of ${bigSeq2Bit.len() / 1E6}Mb took $timeBit ms")
+
+            val time2 = measureTimeMillis { bigSeqByte.reverse_complement() }
+            println("Reverse complement Byte of ${bigSeqByte.len() / 1E6}Mb took $time2 ms")
+            val time2bit = measureTimeMillis { bigSeq2Bit.reverse_complement() }
+            println("Reverse complement 2Bit of ${bigSeq2Bit.len() / 1E6}Mb took $time2bit ms")
+        }
     }
 
 
