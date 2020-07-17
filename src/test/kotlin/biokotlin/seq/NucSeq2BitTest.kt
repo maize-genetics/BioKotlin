@@ -40,7 +40,7 @@ class NucSeq2BitTest : StringSpec({
         val seqSize = 1_000_000
         val encodeTimes = mutableListOf<Long>()
         val decodeTimes = mutableListOf<Long>()
-        for (i in 0..15) {
+        repeat (15) {
             val bigSeq = RandomNucSeq(seqSize, seed = System.currentTimeMillis().toInt())
             val someSeq=bigSeq[0..7].copyOfBytes()
             var big2BitSeq : Nuc2BitArray = Nuc2BitArray(someSeq)
@@ -245,8 +245,8 @@ class NucSeq2BitTest : StringSpec({
     "Compare NucSeqByte and NucSeq2Bit Speed" {
         val heapSize = Runtime.getRuntime().totalMemory()
         println("Heap size is ${heapSize / 1E6} Mb")
-        for (r in 0..10) {
-            val unmissingBigSeq = RandomNucSeq(100_000_000).copyOfBytes()
+        repeat(10){
+            val unmissingBigSeq = RandomNucSeq(10_000_000).copyOfBytes()
             val aGap = ByteArray(50) { NUC.N.utf8 }
             for (i in 100 until unmissingBigSeq.size - 100 step unmissingBigSeq.size / 10) {
                 aGap.copyInto(unmissingBigSeq, i)
