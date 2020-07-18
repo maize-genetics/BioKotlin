@@ -1,12 +1,15 @@
 # README #
 
-BioKotlin leverages the performance and type safety of the JVM languages with ease of Python like scripting.  
-Because the Kotlin language is compiled on the fly it can be thousands of times faster for certain applications than 
-scripting languages.  BioKotlin is in the early stages of development, but we expect to support nucleotide and 
-protein sequence manipulation, fast sequence IO, alignment, motif, pathway support.  Plus interoperability with
- [GATK](https://gatk.broadinstitute.org/hc/en-us), SamTools [HTSJDK](https://samtools.github.io/htsjdk/), 
- BioJava, [BioPython](https://biopython.org), [TASSEL](https://www.maizegenetics.net/tassel) for GWAS and Genome Wide Prediction, and the PHG - the 
- pangenome representation.
+BioKotlin is in the early stages of development, but we expect to support nucleotide and 
+protein sequence manipulation, fast sequence IO, alignment, motif, pathway support.  
+
+BioKotlin leverages the performance and type safety of the JVM languages with ease of Python like scripting.
+Because the Kotlin language is compiled on the fly it can be thousands of times faster for
+certain applications than scripting languages.  Because it uses the JVM, we expect high interoperability with
+[GATK](https://gatk.broadinstitute.org/hc/en-us), SamTools [HTSJDK](https://samtools.github.io/htsjdk/), 
+BioJava, [TASSEL](https://www.maizegenetics.net/tassel) for GWAS and Genome Wide Prediction, and the PHG - the 
+pangenome representation.  Additionally, since we have mimicked the beautiful API of [BioPython](https://biopython.org), 
+we expect fast and efficient interoperability with BioPython through GraalVM.
  
  We expect to have extensive cross language support with the use of GraalVM's support of JVM, Python, and R (FastR). 
  
