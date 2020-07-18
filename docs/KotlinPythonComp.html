@@ -1,0 +1,61 @@
+<!-- CSS style sheets for Prism.js -->
+<link
+        href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.20.0/themes/prism.min.css"
+        rel="stylesheet"
+/>
+<link
+        href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.20.0/plugins/line-numbers/prism-line-numbers.min.css"
+        rel="stylesheet"
+/>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Create two equal columns that floats next to each other */
+        .column {
+            float: left;
+            width: 50%;
+            padding: 10px;
+            height: 300px; /* Should be removed. Only for demonstration */
+        }
+        /* Clear floats after the columns */
+        .row:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+    </style>
+</head>
+<!-- Code snippet content -->
+<div class="row">
+    <div class="column">
+        <pre>
+          <code style="font-family: Monaco, sans-serif" class="language-kotlin">BioKotlin
+import subprocess
+val seq = Seq("GTAC")
+val seq = NucSeq("GTAC")
+          </code>
+        </pre>
+    </div>
+    <div class="column">
+        <pre>
+          <code style="font-family: Monaco, sans-serif" class="language-kotlin">BioPython
+import subprocess
+copy = sorted(pool)
+size = len(copy)
+seq = Seq("GTAC")
+seq = NucSeq("GTAC")
+seq.translate()*10
+      </code>
+        </pre>
+    </div>
+</div>
+<!-- Javascript for Prism.js core, line number display, and python syntax highlight -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.20.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.20.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.20.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.20.0/components/prism-kotlin.min.js"></script>
