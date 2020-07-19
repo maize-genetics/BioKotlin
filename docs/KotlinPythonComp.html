@@ -35,21 +35,30 @@
     <div class="column">
         <pre>
           <code style="font-family: Monaco, sans-serif" class="language-kotlin">BioKotlin
-import subprocess
-val seq = Seq("GTAC")
-val seq = NucSeq("GTAC")
+import biokotlin.seq.*
+
+
+val seq = Seq("GCAGAT")
+seq.complement()
+seq.translate()
+seq.transcribe()
+val proseq = ProteinSeq("GCAGAT")
+val gCount = proseq.count(AminoAcid.G)
           </code>
         </pre>
     </div>
     <div class="column">
         <pre>
           <code style="font-family: Monaco, sans-serif" class="language-kotlin">BioPython
-import subprocess
-copy = sorted(pool)
-size = len(copy)
-seq = Seq("GTAC")
-seq = NucSeq("GTAC")
-seq.translate()*10
+import Bio
+from Bio.Seq import Seq
+from Bio.Alphabet import IUPAC
+seq = Seq("GCAGAT")
+seq.complement()
+seq.translate()
+seq.transcribe()
+proseq = Seq("GCAGAT", IUPAC.protein)
+gCount = proseq.count("G")
       </code>
         </pre>
     </div>
