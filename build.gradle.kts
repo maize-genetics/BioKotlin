@@ -170,6 +170,22 @@ publishing {
                         name.set("Terry Casstevens")
                         email.set("tmc46@cornell.edu")
                     }
+                    developer {
+                        name.set("Zack Miller")
+                        email.set("zrm22@cornell.edu")
+                    }
+                    developer {
+                        name.set("Lynn Johnson")
+                        email.set("lcj34@cornell.edu")
+                    }
+                    developer {
+                        name.set("Brandon Monier")
+                        email.set("bm646@cornell.edu")
+                    }
+                    developer {
+                        name.set("Peter Bradbury")
+                        email.set("pjb39@cornell.edu")
+                    }
                 }
                 scm {
                     connection.set("scm:git:git://bitbucket.org:bucklerlab/biokotlin.git")
@@ -182,7 +198,7 @@ publishing {
 }
 
 signing {
-    sign(publishing.publications["mavenJava"])
+    sign(publishing.publications["maven"])
 }
 
 tasks.javadoc {
