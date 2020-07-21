@@ -167,6 +167,7 @@ publishing {
                         email.set("vg222@cornell.edu")
                     }
                     developer {
+                        id.set("tmc46")
                         name.set("Terry Casstevens")
                         email.set("tmc46@cornell.edu")
                     }
@@ -198,6 +199,7 @@ publishing {
 }
 
 signing {
+    useGpgCmd()
     sign(publishing.publications["maven"])
 }
 
