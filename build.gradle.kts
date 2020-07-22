@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 // Dependencies will follow the buildscript
 
 group = "org.biokotlin"
-version = "1.0"
+version = "0.01"
 
 /*
 This build script is need to use the early access
@@ -144,6 +144,10 @@ publishing {
                     val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
                     val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
                     url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
+                    credentials {
+                        username = property("ossrhUsername") as String
+                        password = property("ossrhPassword") as String
+                    }
                 }
             }
 
