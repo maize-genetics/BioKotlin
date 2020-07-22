@@ -56,7 +56,6 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
 
 
     implementation("org.nield:kotlin-statistics:1.2.1")
@@ -125,8 +124,10 @@ tasks.test {
 
 publishing {
     publications {
+
         create<MavenPublication>("maven") {
             artifactId = "biokotlin"
+            description = "org.biokotlin:biokotlin:$version"
 
             from(components["java"])
 
@@ -141,12 +142,16 @@ publishing {
 
             repositories {
                 maven {
-                    val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-                    val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                    val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                    val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
                     url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
                     credentials {
-                        username = property("ossrhUsername") as String
-                        password = property("ossrhPassword") as String
+                        try {
+                            username = property("ossrhUsername") as String?
+                            password = property("ossrhPassword") as String?
+                        } catch (e: Exception) {
+                            println("Unable to get username and password for nexus maven central release.")
+                        }
                     }
                 }
             }
