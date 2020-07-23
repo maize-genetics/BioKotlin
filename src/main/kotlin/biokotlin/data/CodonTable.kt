@@ -293,14 +293,14 @@ enum class Codon {
 
         internal fun toPackedInt(codon : String):Int {
             if(codon.length!=3) throw IllegalArgumentException("Codon must be length of 3")
-            return NUC.byteTo2Bit(codon[0].toByte()).toInt().shl(4) or
-                    NUC.byteTo2Bit(codon[1].toByte()).toInt().shl(2) or
-                    NUC.byteTo2Bit(codon[2].toByte()).toInt()
+            return NUC.utf8To2BitInt(codon[0].toByte()).toInt().shl(4) or
+                    NUC.utf8To2BitInt(codon[1].toByte()).toInt().shl(2) or
+                    NUC.utf8To2BitInt(codon[2].toByte()).toInt()
         }
         internal fun toPackedInt(c1 : Byte, c2 : Byte, c3 : Byte):Int {
-            return NUC.byteTo2Bit(c1).toInt().shl(4) or
-                    NUC.byteTo2Bit(c2).toInt().shl(2) or
-                    NUC.byteTo2Bit(c3).toInt()
+            return NUC.utf8To2BitInt(c1).toInt().shl(4) or
+                    NUC.utf8To2BitInt(c2).toInt().shl(2) or
+                    NUC.utf8To2BitInt(c3).toInt()
         }
 
         operator fun get(c1: Byte, c2: Byte, c3: Byte): Codon {
