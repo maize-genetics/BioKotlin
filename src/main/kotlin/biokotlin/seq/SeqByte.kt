@@ -151,13 +151,13 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     override operator fun get(x: IntRange) = NucSeqByte(seqB.sliceArray(negativeSlice(x, seqB.size)), nucSet)
     override operator fun plus(seq2: NucSeq): NucSeq {
         return if (seq2 is NucSeqByte && nucSet == seq2.nucSet) NucSeqByte(seqB.plus(seq2.seqB), nucSet)
-        else Seq(this.toString() + seq2.toString()) as NucSeq
+        else Seq(this.toString() + seq2.toString())
     }
 
     /*Used for calling NucSeq2Bit plus and resulting in NucSeqByte*/
     internal fun prepend(seq1: NucSeq): NucSeq {
         return if (nucSet == seq1.nucSet) NucSeqByte(seq1.copyOfBytes().plus(seqB), nucSet)
-        else Seq(seq1.toString() + this.toString()) as NucSeq
+        else Seq(seq1.toString() + this.toString())
     }
 
     override operator fun times(n: Int) = NucSeqByte(super.repeat(n), nucSet)
