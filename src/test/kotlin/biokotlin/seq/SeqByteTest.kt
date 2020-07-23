@@ -29,7 +29,8 @@ class SeqByteTest : StringSpec({
         NucSeqByteEncode("GCRU").nucSet shouldBe NUC.AmbiguousRNA
         (Seq("GCRU") as NucSeqByte).nucSet shouldBe NUC.AmbiguousRNA
         NucSeq("GCRU").nucSet shouldBe NUC.AmbiguousRNA
-        ProteinSeqByte("GCDF") shouldBe Seq("GCDF")
+        ProteinSeqByte("GCDF").seq() shouldBe "GCDF"
+        shouldThrow<IllegalStateException> { Seq("GCDF")}
         shouldThrow<IllegalStateException> { NucSeq("GCDF")}
     }
 
@@ -96,13 +97,14 @@ class SeqByteTest : StringSpec({
         dnaSeq.seq() shouldBe "ACGTGGTGA"
         forAll(
                 row("A",0,8),
+                row("AC",0,0),
                 row("G",2, 7),
                 row("GA",7,7), //Getting the end boundary
                 row("U",3,6), //T & U difference ignored
                 row("TT",-1, -1),
                 row("ACGTGGTGAACGTGGTGA", -1, -1),  //larger than query
                 row("t", 3, 6)  //testing case conversion in NucSeq
-        ) {seqStr: String, expIndex: Int, expLastIndex: Int ->
+        ){seqStr: String, expIndex: Int, expLastIndex: Int ->
             dnaSeq.indexOf(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.find(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.lastIndexOf(NucSeq(seqStr)) shouldBe expLastIndex
