@@ -69,7 +69,20 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
             NucSeqRecord(sequence.complement(), id, name?: this.name, description?: this.description,
                     annotations?: this.annotations)
 
-
+    /**
+     * Returns a string summary of the [NucSeqRecord]. Uses the representational string version of
+     * the
+     * [sequence].
+     *
+     * >>> from Bio.Seq import Seq
+     * >>> from Bio.Seq import SeqRecord
+     * >>> val record = NucSeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
+     * >>> print(record)
+     * ID: 1
+     * Name: seq1
+     * Description: the first sequence
+     * Sequence: ATCG
+     */
     override fun toString(): String {
         return "${stringHelper()}Sequence: ${sequence.repr()}"
     }
@@ -86,6 +99,20 @@ SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
             if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
     }
 
+    /**
+     * Returns a string summary of the [ProteinSeqRecord]. Uses the representational string
+     * version of the
+     * [sequence].
+     *
+     * >>> from Bio.Seq import Seq
+     * >>> from Bio.Seq import SeqRecord
+     * >>> val record = ProteinSeqRecord(Seq(""), "1", "seq1", "the first sequence")
+     * >>> print(record)
+     * ID: 1
+     * Name: seq1
+     * Description: the first sequence
+     * Sequence:
+     */
     override fun toString(): String {
         return "${stringHelper()}Sequence: ${sequence.repr()}"
     }
