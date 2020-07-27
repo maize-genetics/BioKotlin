@@ -59,7 +59,7 @@ dependencies {
 
 
     implementation("org.nield:kotlin-statistics:1.2.1")
-    implementation("de.mpicbg.scicomp:krangl:0.11")
+    implementation("de.mpicbg.scicomp:krangl:0.13")
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
@@ -78,7 +78,7 @@ dependencies {
 
     implementation("org.graalvm.sdk:graal-sdk:20.0.0")
     implementation("org.apache.commons:commons-csv:1.8")
-    implementation("com.github.jkcclemens:khttp:0.1.0")
+    implementation("khttp:khttp:1.0.0")
 
 
     implementation("com.google.guava:guava:29.0-jre")
@@ -96,7 +96,6 @@ dependencies {
 java {
     sourceCompatibility = VERSION_11
     targetCompatibility = VERSION_11
-    withJavadocJar()
     withSourcesJar()
 }
 
@@ -105,7 +104,7 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 tasks {
-    println("Ed say ${sourceSets["main"].allSource.srcDirs}")
+    println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
     val dokka by getting(DokkaTask::class) {
         //outputFormat = "html"
         outputFormat = "gfm"
@@ -115,6 +114,19 @@ tasks {
         }
     }
 }
+
+val dokkaJavadoc = tasks.register<DokkaTask>("dokkaJavadoc") {
+    outputFormat = "javadoc"
+    outputDirectory = "$buildDir/dokkaJavadoc"
+}
+
+val dokkaJar by tasks.creating(Jar::class) {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    description = "BioKotlin: ${property("version")}"
+    archiveClassifier.set("javadoc")
+    from(dokkaJavadoc)
+}
+
 tasks.test {
     useJUnitPlatform()
     testLogging {
@@ -130,6 +142,7 @@ publishing {
             description = "org.biokotlin:biokotlin:$version"
 
             from(components["java"])
+            artifact(dokkaJar)
 
             versionMapping {
                 usage("java-api") {
@@ -213,6 +226,7 @@ signing {
 }
 
 tasks.javadoc {
+    dependsOn("dokkaJavadoc")
     if (JavaVersion.current().isJava9Compatible) {
         (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
     }
