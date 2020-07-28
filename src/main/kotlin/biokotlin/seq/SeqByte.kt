@@ -49,7 +49,7 @@ internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Se
         val indices = if(!startAtLast)
             start.coerceAtLeast(0)..end.coerceAtMost(len()-queryB.size)
         else
-            start.coerceAtMost(len()-1) downTo end.coerceAtLeast(queryB.size)
+            start.coerceAtMost(len()-queryB.size) downTo end.coerceAtLeast(0)
         //println(indices)
         seqBloop@ for (thisIndex in indices) {
             for (queryIndex in queryB.indices) {
@@ -151,7 +151,13 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     override operator fun get(x: IntRange) = NucSeqByte(seqB.sliceArray(negativeSlice(x, seqB.size)), nucSet)
     override operator fun plus(seq2: NucSeq): NucSeq {
         return if (seq2 is NucSeqByte && nucSet == seq2.nucSet) NucSeqByte(seqB.plus(seq2.seqB), nucSet)
-        else Seq(this.toString() + seq2.toString()) as NucSeq
+        else Seq(this.toString() + seq2.toString())
+    }
+
+    /*Used for calling NucSeq2Bit plus and resulting in NucSeqByte*/
+    internal fun prepend(seq1: NucSeq): NucSeq {
+        return if (nucSet == seq1.nucSet) NucSeqByte(seq1.copyOfBytes().plus(seqB), nucSet)
+        else Seq(seq1.toString() + this.toString())
     }
 
     override operator fun times(n: Int) = NucSeqByte(super.repeat(n), nucSet)
@@ -185,7 +191,6 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
         } else {
             String(pB)
         }
-
         return ProteinSeqByte(proStr)
     }
 

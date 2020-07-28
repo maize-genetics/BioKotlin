@@ -22,24 +22,30 @@ import kotlin.random.Random
 
 
 /**
- * Create a Seq from a String, could be DNA, RNA, or Protein.
+ * Create a Seq from a String, could be DNA or RNA.
  * This functions provides compatibility with BioPython, but the preferred
- * use is to use either [NucSeq] or [ProteinSeq()], as the Seq type has less functionality
- * than either of these other two.
+ * use is to use either [NucSeq] or [ProteinSeq], as the Seq is less clear.  Unlike
+ * Biopython Seq will not convert Protein String to Protein - use [ProteinSeq]
  *
- * The String is tested for with compatibility DNA, RNA, and Protein in order.  It will
+ * The String is tested for with compatibility DNA, RNA, and then ambiguous versions.  It will
  * throw an [IllegalStateException], if it is not compatible with any.
- * [Seq] can be cast to [NucSeq] or [ProteinSeq]:
+
  * ```kotlin
  * val aSeq = Seq("GCATA")
- * val aNucSeq = Seq("GCATA") as NucSeq
+ * val aNucSeq = Seq("GCATA")
  * val nSeq = NucSeq("GCATA")
  * val pSeq = ProteinSeq("MAIVMGR")
+ *
+ * val pSeq = Seq("MAIVMGR")  //Throw error
  * ```
  */
-fun Seq(seq: String): Seq {
+fun Seq(seq: String): NucSeq {
     // factory functions used to create instances of classes can have the same name as the abstract return
-    return compatibleBioSet(seq)[0].creator(seq)
+    val compatibleBioSet = compatibleBioSet(seq)
+    if(compatibleBioSet[0] == BioSet.AminoAcid) {
+        throw IllegalStateException("Protein Sequence should be created with ProteinSeq(SEQUENCE)")
+    }
+    return compatibleBioSet[0].creator(seq) as NucSeq
 }
 
 /**
