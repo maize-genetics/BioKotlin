@@ -91,6 +91,10 @@ enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
 
     fun get(query: String): String = KeggServer.query(get, query)
 
+    companion object{
+        internal val prefixToDB: Map<String, KeggDB> = KeggDB.values()
+                .flatMap { db -> db.kid_prefix.map { it to db } }.toMap()
+    }
 }
 
 enum class KeggOperations {
@@ -101,15 +105,15 @@ object KeggCache : AutoCloseable {
     private var cacheFile = "kegg.cache.json"
 
     /**key is dbentry <dbentry> = <kid> | <org>:<gene> | <database>:<entry>*/
-    private val cache: MutableMap<KID, KeggEntry> = mutableMapOf()
+    private val cache: MutableMap<KeggEntry, KeggInfo> = mutableMapOf()
 
     /**map of three letter orgCode to KeggGenome*/
     private var orgToKE: Map<String, KeggGenome> = mutableMapOf()
     private val messageModule = SerializersModule { // 1
-        polymorphic(KeggEntry::class) { // 2
+        polymorphic(KeggInfo::class) { // 2
             KeggGenome::class with KeggGenome.serializer() // 3
             KeggGene::class with KeggGene.serializer()
-            KeggEntryImpl::class with KeggEntryImpl.serializer() // 4
+            KeggInfoImpl::class with KeggInfoImpl.serializer() // 4
         }
     }
 
@@ -120,30 +124,35 @@ object KeggCache : AutoCloseable {
     fun updateOrgToKE() {
         orgToKE = cache.values
                 .filterIsInstance<KeggGenome>()
-                .associate { it.genome!!.orgCode to it }
+                .associate { it.orgCode to it }
     }
+
+    internal fun getKInfo(dbAndkid: String, queryKegg: Boolean = false): KeggInfo? {
+        return getKInfo(KeggEntry(dbAndkid),queryKegg)
+    }
+
 
     /**
      * Gene [kid] are to be prefaced by genome code.
      */
-    internal fun getKE(dbentry: String, queryKegg: Boolean = false): KeggEntry? {
-        var ke = cache[KID(dbentry)]
-        if (ke == null && queryKegg) {
-            val string = KeggServer.query(get, dbentry)
-            ke = when (dbentry.keggPrefix()) {
+    internal fun getKInfo(dbentry: KeggEntry, queryKegg: Boolean = false): KeggInfo? {
+        var kInfo = cache[dbentry]
+        if (kInfo == null && queryKegg) {
+            val string = KeggServer.query(get, dbentry.dbentry())
+            kInfo = when (dbentry.kidPrefix) {
                 "T" -> geneParser(string)
                 else -> null
             }
-            if (ke != null) cache[ke.dbentry()] = ke
+            if (kInfo != null) cache[kInfo.keggEntry] = kInfo
         }
-        return ke
+        return kInfo
     }
 
     internal fun genome(orgCode: String): KeggGenome? = orgToKE[orgCode]
 
     fun addGenomes() {
         organismKE().forEach {
-            cache[it.kid] = it
+            cache[it.keggEntry] = it
         }
     }
 
@@ -153,7 +162,7 @@ object KeggCache : AutoCloseable {
             val json = Json(JsonConfiguration.Stable, context = messageModule)
             File(fileName).forEachLine {
                 val ke = json.parse(KeggSerializer, it)
-                cache[ke.kid] = ke
+                cache[ke.keggEntry] = ke
             }
         } else {
             addGenomes()
@@ -167,7 +176,7 @@ object KeggCache : AutoCloseable {
             cache.values.distinct().forEach { v ->
                 val jsonStr = when (v) {
                     is KeggGenome -> json.stringify(KeggGenome.serializer(), v)
-                    is KeggEntryImpl -> json.stringify(KeggEntryImpl.serializer(), v)
+                    is KeggInfoImpl -> json.stringify(KeggInfoImpl.serializer(), v)
                     else -> ""
                 }
                 if (jsonStr != "") out.println("${jsonStr}")
@@ -176,11 +185,11 @@ object KeggCache : AutoCloseable {
         }
     }
 
-    object KeggSerializer : JsonParametricSerializer<KeggEntry>(KeggEntry::class) {
-        override fun selectSerializer(element: JsonElement): KSerializer<out KeggEntry> = when {
+    object KeggSerializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
+        override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
             "orgCode" in element -> KeggGenome.serializer()
             "nucSeq" in element -> KeggGene.serializer()
-            else -> KeggEntryImpl.serializer()
+            else -> KeggInfoImpl.serializer()
         }
     }
 
@@ -228,7 +237,7 @@ fun organisms(): DataFrame {
  */
 internal fun organismKE(): List<KeggGenome> {
     return organisms().rows.map {
-        val ke = KeggEntryImpl(KeggDB.genome, KID(it["kid"].toString()), it["species"].toString())
+        val ke = KeggInfoImpl(KeggDB.genome, KeggEntry(it["kid"].toString()), it["species"].toString())
         KeggGenome(ke, it["org"].toString(), it["taxonomy"].toString().split(";"))
     }
 }

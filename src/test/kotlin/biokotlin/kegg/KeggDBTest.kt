@@ -32,6 +32,18 @@ class KeggDBTest : StringSpec({
         println(gene)
     }
 
+    "Test parse pathway" {
+        val pathwayText = KeggDB.pathway.get("zma00500")
+        val pathway = pathwayParser(pathwayText)
+        println(pathway)
+    }
+
+    "Test parse orthology" {
+        val orthoText = KeggDB.orthology.get("K01214")
+        val orthoGroup = orthologyParser(orthoText)
+        println(orthoGroup)
+    }
+
     "Test organisms" {
         KeggCache.loadCache()
         val keggOrg: DataFrame = organisms()
@@ -43,7 +55,6 @@ class KeggDBTest : StringSpec({
         parseKEGG(testGene)
         parseKEGG(testPathway)
     }
-
 
 })
 
