@@ -1,7 +1,10 @@
 package biokotlin.kegg
 
+import biokotlin.kegg.KeggDB.*
 import biokotlin.kegg.KeggOperations.*
-import khttp.get
+import com.google.common.collect.BiMap
+import com.google.common.collect.HashBiMap
+import com.google.common.collect.ImmutableBiMap
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
@@ -51,7 +54,7 @@ enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
     orthology("ko", listOf("K")),
 
     /**KEGG organisms*/
-    genome("ko", listOf("T")),
+    genome("gn", listOf("T")),
 
     /**Genes in KEGG organisms - composite DBs - one for each species plus vg for virus*/
     genes("<org>", emptyList()),
@@ -77,23 +80,36 @@ enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
 //    variant,
 //    disease, drug, dgroup, environ, ligand,
     /**Kegg all the DBs*/
-    kegg("kegg", emptyList()), ;
+    kegg("kegg", emptyList()),
 
+    /**Organisms covered by the KEGG - not official DB*/
+    organism("org", emptyList())
+    ;
+
+    /**Provides basic statistics on the Kegg Database*/
     fun info(): String = KeggServer.query(info, this.name)
 
+    /**Provides basic statistics on the Kegg Database*/
     fun find(query: String): DataFrame {
         return KeggServer.query(find, this.name, query).lines()
                 .map { it.split("\t") }
                 .filter { it.size == 2 } //there is EOF line
                 .deparseRecords { mapOf("kid" to it[0], "name" to it[1]) }
-        //TODO how to return
+        //TODO might want to provide KeggEntry column
     }
 
+    /**Query the Kegg Database provide the raw string reponse*/
     fun get(query: String): String = KeggServer.query(get, query)
 
     companion object{
-        internal val prefixToDB: Map<String, KeggDB> = KeggDB.values()
+        /**Map to look up the [KeggDB] based on the KID prefix*/
+        internal val prefixToDB: Map<String, KeggDB> = values()
                 .flatMap { db -> db.kid_prefix.map { it to db } }.toMap()
+        /**Map to look up the [KeggDB] based on the database abbreviation*/
+        internal val abbrToDB: Map<String, KeggDB> = values()
+                .associate { it.abbr to it }
+        /**Evaluates whether the database abbreviation is valid*/
+        fun validDBAbbr(abbr: String) = abbrToDB.containsKey(abbr)
     }
 }
 
@@ -101,19 +117,54 @@ enum class KeggOperations {
     info, list, find, get, conv, link, ddi
 }
 
+/**
+ * Local cache (Object database) of all downloaded Kegg Objects.  The keys for this cache
+ * are [KeggEntry] and the values are any of [KeggInfo] implementations including
+ * [KeggGene],[KeggPathway],[KeggOrthology].  This cache will eventually be populated with null values,
+ * which implies that the Kegg Database should be queried
+ *
+ * The cache file is located in the local home of this - named - "kegg.cache.json"
+ * The cache is loaded by [loadCache].
+ * To save the cache to disk for the next use - call [saveCache].
+ *
+ * TODO - place an species or clade filter to only retain these.
+ */
 object KeggCache : AutoCloseable {
     private var cacheFile = "kegg.cache.json"
 
-    /**key is dbentry <dbentry> = <kid> | <org>:<gene> | <database>:<entry>*/
-    private val cache: MutableMap<KeggEntry, KeggInfo> = mutableMapOf()
+    /**
+     * Main cache for all the KEGG data.  Key are KeggEntry (DB+kid)
+     * Values are all the various classes that have KeggInfo.
+     * key is dbentry <dbentry> = <kid> | <org>:<gene> | <database>:<entry>
+     *
+     * KeggEntry are interned as soon as they are created.  KeggInfo can be
+     * null if the data has not been pulled from the DB.
+     * */
+    private val cache: MutableMap<KeggEntry, KeggInfo?> = mutableMapOf()
 
-    /**map of three letter orgCode to KeggGenome*/
-    private var orgToKE: Map<String, KeggGenome> = mutableMapOf()
-    private val messageModule = SerializersModule { // 1
-        polymorphic(KeggInfo::class) { // 2
-            KeggGenome::class with KeggGenome.serializer() // 3
+    /**map of three letter orgCode to KeggEntry for the various genomes*/
+    private var orgWithKeGenome: BiMap<String, KeggEntry> = HashBiMap.create(7000)
+
+    /**Required for serializing the delegated classes from KeggInfo*/
+    private val messageModule = SerializersModule {
+        polymorphic(KeggInfo::class) {
+            KeggOrg::class with KeggOrg.serializer()
             KeggGene::class with KeggGene.serializer()
-            KeggInfoImpl::class with KeggInfoImpl.serializer() // 4
+            KeggGenome::class with KeggGenome.serializer()
+            KeggOrthology::class with KeggOrthology.serializer()
+            KeggPathway::class with KeggPathway.serializer()
+            KeggInfoImpl::class with KeggInfoImpl.serializer()
+        }
+    }
+
+    object KeggSerializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
+        override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
+            "orgCode" in element -> KeggOrg.serializer()
+            "nucSeq" in element -> KeggGene.serializer()
+            "refSeqID" in element -> KeggGenome.serializer()
+            "ec" in element -> KeggOrthology.serializer()
+            "genes" in element && "compounds" in element -> KeggPathway.serializer()
+            else -> KeggInfoImpl.serializer()
         }
     }
 
@@ -121,41 +172,45 @@ object KeggCache : AutoCloseable {
         loadCache()
     }
 
-    fun updateOrgToKE() {
-        orgToKE = cache.values
-                .filterIsInstance<KeggGenome>()
-                .associate { it.orgCode to it }
+    /**If organisms are reset - this updates the org to genome map*/
+    internal fun updateOrgToKE() {
+        orgWithKeGenome = cache.values
+                .filterIsInstance<KeggOrg>()
+                .associate { it.orgCode to it.genome }
+                .let { ImmutableBiMap.copyOf(it) }
     }
 
-    internal fun getKInfo(dbAndkid: String, queryKegg: Boolean = false): KeggInfo? {
-        return getKInfo(KeggEntry(dbAndkid),queryKegg)
-    }
-
-
-    /**
-     * Gene [kid] are to be prefaced by genome code.
-     */
-    internal fun getKInfo(dbentry: KeggEntry, queryKegg: Boolean = false): KeggInfo? {
-        var kInfo = cache[dbentry]
-        if (kInfo == null && queryKegg) {
-            val string = KeggServer.query(get, dbentry.dbentry())
-            kInfo = when (dbentry.kidPrefix) {
-                "T" -> geneParser(string)
-                else -> null
-            }
-            if (kInfo != null) cache[kInfo.keggEntry] = kInfo
+    /**Lookup genome KeggEntry for a org code, e.g. hsa, zma*/
+    internal fun genomeEntry(orgCode: String): KeggEntry? = orgWithKeGenome[orgCode]
+    /**Lookup org code for genome KeggEntry object*/
+    internal fun orgCode(keGenome: KeggEntry): String? = orgWithKeGenome.inverse()[keGenome]
+    /**Lookup org code for genome KID (e.g. T#####)*/
+    internal fun orgCode(kidGenome: String): String? = orgCode(KeggEntry.of(genome.abbr,kidGenome))
+    /**Evaluates whether this is an valid org code */
+    internal fun isOrgCode(orgCode: String?): Boolean = orgWithKeGenome.containsKey(orgCode)
+    /**Provides a list of valid DBs for a given KID prefix.  This will not work for genes, enzymes, or variants*/
+    internal fun validDB(prefix: String): List<KeggDB> =
+        when {
+            KeggDB.prefixToDB.containsKey(prefix) -> listOf(KeggDB.prefixToDB[prefix]!!)
+            isOrgCode(prefix) -> listOf(pathway,brite)
+            isOrgCode(prefix.substringBefore("_")) -> listOf(module)
+            else -> emptyList()
         }
-        return kInfo
+
+    /**Queries the Kegg Database and adds all organisms to cache*/
+    internal fun addGenomes() {
+        orgWithKeGenome = HashBiMap.create(7000)  //clear and rebuild
+        val orgDataFrame= organisms()
+        orgDataFrame.rows.map {
+            val (keOrganism, keGenome) = KeggEntry.orgAndGenome(it["org"].toString(),it["kid"].toString())
+            orgWithKeGenome.forcePut(keOrganism.kid,keGenome)
+            val ki = KeggInfo.of(organism, keOrganism, it["species"].toString(), org = it["org"].toString())
+            KeggOrg(ki, it["org"].toString(), it["taxonomy"].toString().split(";"), keGenome)
+        }.forEach { cache[it.keggEntry] = it }
+        orgWithKeGenome= ImmutableBiMap.copyOf(orgWithKeGenome)
     }
 
-    internal fun genome(orgCode: String): KeggGenome? = orgToKE[orgCode]
-
-    fun addGenomes() {
-        organismKE().forEach {
-            cache[it.keggEntry] = it
-        }
-    }
-
+    /**Load the cache from the local file, if missing it creates a new cache.*/
     fun loadCache(fileName: String = cacheFile) {
         println("Loading cache")
         if (File(fileName).exists()) {
@@ -164,32 +219,27 @@ object KeggCache : AutoCloseable {
                 val ke = json.parse(KeggSerializer, it)
                 cache[ke.keggEntry] = ke
             }
+            updateOrgToKE()
         } else {
+            println("Kegg cache file '${cacheFile}' not found.  KeggDB being queried.")
             addGenomes()
         }
-        updateOrgToKE()
     }
 
+    /**Save the cache to the specified file*/
     fun saveCache(fileName: String = cacheFile) {
         val json = Json(JsonConfiguration.Stable, context = messageModule)
         File(fileName).printWriter().use { out ->
             cache.values.distinct().forEach { v ->
                 val jsonStr = when (v) {
-                    is KeggGenome -> json.stringify(KeggGenome.serializer(), v)
+                    is KeggOrg -> json.stringify(KeggOrg.serializer(), v)
                     is KeggInfoImpl -> json.stringify(KeggInfoImpl.serializer(), v)
+                    //TODO may need to serialize null
                     else -> ""
                 }
-                if (jsonStr != "") out.println("${jsonStr}")
-                else println("Unkown object ${v::class}")
+                if (jsonStr != "") out.println(jsonStr)
+                else println("Unkown object ${if(v==null) "null" else v::class.toString()}")
             }
-        }
-    }
-
-    object KeggSerializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
-        override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
-            "orgCode" in element -> KeggGenome.serializer()
-            "nucSeq" in element -> KeggGene.serializer()
-            else -> KeggInfoImpl.serializer()
         }
     }
 
@@ -204,24 +254,19 @@ object KeggCache : AutoCloseable {
  * Singleton that supports caching queries, building queries, and dealing with errors
  */
 object KeggServer {
-    private val implCacheSet = setOf<KeggDB>(KeggDB.genome)
-    // private var cache = KeggCache(mutableMapOf())
-
     private var httpRoot = "http://rest.kegg.jp"  //there is a .net version with paid subscription
 
     internal fun query(operation: KeggOperations, vararg args: String = emptyArray()): String {
         val queryAction = listOf(operation.name, *args).joinToString("/")
         val queryText = "$httpRoot/$queryAction"
-        //TODO query cache first
         val reponse = khttp.get(queryText)
         when (reponse.statusCode) {
-            200 -> println("Query success")
+            200 -> println("Query success: $queryText")
             400 -> System.err.println("Bad request (syntax error, wrong database name, etc.)\n$queryText")
             404 -> System.err.println("Not found in KEGG\n$queryText")
         }
         return reponse.text
     }
-
 }
 
 fun organisms(): DataFrame {
@@ -232,21 +277,9 @@ fun organisms(): DataFrame {
             .addColumn("taxaIndex") { it["kid"].asStrings().map { it!!.substring(1) } }
 }
 
-/**
- * Populate a list with all the organism entries.  Used to prime the cache
- */
-internal fun organismKE(): List<KeggGenome> {
-    return organisms().rows.map {
-        val ke = KeggInfoImpl(KeggDB.genome, KeggEntry(it["kid"].toString()), it["species"].toString())
-        KeggGenome(ke, it["org"].toString(), it["taxonomy"].toString().split(";"))
-    }
-}
-
-
-fun gene(kid: String): String {
-    val text = get("http://rest.kegg.jp/get/${kid}").text.lines()
-    println(text)
-    return text.joinToString { "\n" }
+/**Get the text response from Kegg*/
+fun geneText(orgCode: String, kid: String): String {
+    return khttp.get("http://rest.kegg.jp/get/$orgCode:$kid").text
 }
 
 

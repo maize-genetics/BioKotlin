@@ -25,6 +25,13 @@ class KeggDBTest : StringSpec({
         // KeggDB.genes.find("zma542318").nrow shouldBe 0  //currently this errors, but it should caught and be zero rows
     }
 
+    "Test organisms" {
+        KeggCache.loadCache()
+        val keggOrg: DataFrame = organisms()
+        keggOrg.print(maxWidth = 200)
+        KeggCache.close()
+    }
+
     "Test get genes" {
         val geneText = KeggDB.genes.get("zma:542318")
 //        val (keggEntry, attMap) = parseKEGG(geneText)
@@ -42,13 +49,6 @@ class KeggDBTest : StringSpec({
         val orthoText = KeggDB.orthology.get("K01214")
         val orthoGroup = orthologyParser(orthoText)
         println(orthoGroup)
-    }
-
-    "Test organisms" {
-        KeggCache.loadCache()
-        val keggOrg: DataFrame = organisms()
-        keggOrg.print(maxWidth = 200)
-        KeggCache.close()
     }
 
     "Test parse of text" {
