@@ -40,78 +40,6 @@ import java.io.File
 //nice tutorial
 //https://widdowquinn.github.io/2018-03-06-ibioic/02-sequence_databases/09-KEGG_programming.html
 
-enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
-    /**KEGG pathway maps*/
-    pathway("path", listOf("map", "ko", "ec", "rn", "<org>")),
-
-    /**BRITE functional hierarchies*/
-    brite("br", listOf("br", "jp", "ko", "<org>")),
-
-    /**KEGG modules*/
-    module("md", listOf("M", "<org>_M")),
-
-    /**KO functional orthologs*/
-    orthology("ko", listOf("K")),
-
-    /**KEGG organisms*/
-    genome("gn", listOf("T")),
-
-    /**Genes in KEGG organisms - composite DBs - one for each species plus vg for virus*/
-    genes("<org>", emptyList()),
-
-    /**Small molecules*/
-    compound("cpd", listOf("C")),
-
-    /**Glycan*/
-    glycan("gl", listOf("G")),
-
-    /**Biochemical reactions*/
-    reaction("rn", listOf("R")),
-
-    /**Reaction class*/
-    rclass("rc", listOf("RC")),
-
-    /**Enzyme nomenclature*/
-    enzyme("ec", emptyList()),
-
-    /**Network elements*/
-    network("ne", listOf("N")),
-//
-//    variant,
-//    disease, drug, dgroup, environ, ligand,
-    /**Kegg all the DBs*/
-    kegg("kegg", emptyList()),
-
-    /**Organisms covered by the KEGG - not official DB*/
-    organism("org", emptyList())
-    ;
-
-    /**Provides basic statistics on the Kegg Database*/
-    fun info(): String = KeggServer.query(info, this.name)
-
-    /**Provides basic statistics on the Kegg Database*/
-    fun find(query: String): DataFrame {
-        return KeggServer.query(find, this.name, query).lines()
-                .map { it.split("\t") }
-                .filter { it.size == 2 } //there is EOF line
-                .deparseRecords { mapOf("kid" to it[0], "name" to it[1]) }
-        //TODO might want to provide KeggEntry column
-    }
-
-    /**Query the Kegg Database provide the raw string reponse*/
-    fun get(query: String): String = KeggServer.query(get, query)
-
-    companion object{
-        /**Map to look up the [KeggDB] based on the KID prefix*/
-        internal val prefixToDB: Map<String, KeggDB> = values()
-                .flatMap { db -> db.kid_prefix.map { it to db } }.toMap()
-        /**Map to look up the [KeggDB] based on the database abbreviation*/
-        internal val abbrToDB: Map<String, KeggDB> = values()
-                .associate { it.abbr to it }
-        /**Evaluates whether the database abbreviation is valid*/
-        fun validDBAbbr(abbr: String) = abbrToDB.containsKey(abbr)
-    }
-}
 
 enum class KeggOperations {
     info, list, find, get, conv, link, ddi
@@ -120,7 +48,7 @@ enum class KeggOperations {
 /**
  * Local cache (Object database) of all downloaded Kegg Objects.  The keys for this cache
  * are [KeggEntry] and the values are any of [KeggInfo] implementations including
- * [KeggGene],[KeggPathway],[KeggOrthology].  This cache will eventually be populated with null values,
+ * [KeggGene],[KeggPathway],[KeggOrtholog].  This cache will eventually be populated with null values,
  * which implies that the Kegg Database should be queried
  *
  * The cache file is located in the local home of this - named - "kegg.cache.json"
@@ -151,7 +79,7 @@ object KeggCache : AutoCloseable {
             KeggOrg::class with KeggOrg.serializer()
             KeggGene::class with KeggGene.serializer()
             KeggGenome::class with KeggGenome.serializer()
-            KeggOrthology::class with KeggOrthology.serializer()
+            KeggOrtholog::class with KeggOrtholog.serializer()
             KeggPathway::class with KeggPathway.serializer()
             KeggInfoImpl::class with KeggInfoImpl.serializer()
         }
@@ -160,9 +88,20 @@ object KeggCache : AutoCloseable {
     object KeggSerializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
         override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
             "orgCode" in element -> KeggOrg.serializer()
+            "ntSeq" in element -> KeggGene.serializer()
+            "refSeqID" in element -> KeggGenome.serializer()
+            "ec" in element -> KeggOrtholog.serializer()
+            "genes" in element && "compounds" in element -> KeggPathway.serializer()
+            else -> KeggInfoImpl.serializer()
+        }
+    }
+
+    object Kegg2Serializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
+        override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
+            "orgCode" in element -> KeggOrg.serializer()
             "nucSeq" in element -> KeggGene.serializer()
             "refSeqID" in element -> KeggGenome.serializer()
-            "ec" in element -> KeggOrthology.serializer()
+            "ec" in element -> KeggOrtholog.serializer()
             "genes" in element && "compounds" in element -> KeggPathway.serializer()
             else -> KeggInfoImpl.serializer()
         }
@@ -172,8 +111,25 @@ object KeggCache : AutoCloseable {
         loadCache()
     }
 
+    operator fun get(keggEntry: KeggEntry): KeggInfo? {
+        var ki = cache[keggEntry]
+        if(ki == null) {
+            val textReponse=KeggServer.query(get, keggEntry.dbEntry())
+            ki = when(keggEntry.db()) {
+                //organism should all exist
+                genes -> geneParser(textReponse)
+                pathway -> pathwayParser(textReponse)
+                orthology -> orthologyParser(textReponse)
+                //genome -> genomeParser(textReponse)
+                else -> null
+            }
+            if(ki != null) cache[keggEntry] = ki
+        }
+        return ki
+    }
+
     /**If organisms are reset - this updates the org to genome map*/
-    internal fun updateOrgToKE() {
+    private fun updateOrgToKE() {
         orgWithKeGenome = cache.values
                 .filterIsInstance<KeggOrg>()
                 .associate { it.orgCode to it.genome }
@@ -191,7 +147,7 @@ object KeggCache : AutoCloseable {
     /**Provides a list of valid DBs for a given KID prefix.  This will not work for genes, enzymes, or variants*/
     internal fun validDB(prefix: String): List<KeggDB> =
         when {
-            KeggDB.prefixToDB.containsKey(prefix) -> listOf(KeggDB.prefixToDB[prefix]!!)
+            KeggDB.prefixToDB.containsKey(prefix) -> listOf(KeggDB.prefixToDB.getValue(prefix))
             isOrgCode(prefix) -> listOf(pathway,brite)
             isOrgCode(prefix.substringBefore("_")) -> listOf(module)
             else -> emptyList()
@@ -233,6 +189,9 @@ object KeggCache : AutoCloseable {
             cache.values.distinct().forEach { v ->
                 val jsonStr = when (v) {
                     is KeggOrg -> json.stringify(KeggOrg.serializer(), v)
+                    is KeggGene -> json.stringify(KeggGene.serializer(), v)
+                    is KeggPathway -> json.stringify(KeggPathway.serializer(), v)
+                    is KeggOrtholog -> json.stringify(KeggOrtholog.serializer(), v)
                     is KeggInfoImpl -> json.stringify(KeggInfoImpl.serializer(), v)
                     //TODO may need to serialize null
                     else -> ""

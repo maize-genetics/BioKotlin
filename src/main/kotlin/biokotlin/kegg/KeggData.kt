@@ -2,9 +2,8 @@ package biokotlin.kegg
 
 import biokotlin.seq.NucSeq
 import biokotlin.seq.ProteinSeq
-import kotlinx.serialization.Polymorphic
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import biokotlin.seq.Seq
+import kotlinx.serialization.*
 
 /**
  * Fundamental key for a KEGG entities.  A combination of DB abbreviation combined with a KEGG ID (kid)
@@ -15,10 +14,25 @@ data class KeggEntry private constructor(val dbAbbrev: String, val kid: String) 
     fun kidPrefix(): String = kid.keggPrefix()
     fun kidIndex(): String = kid.keggSuffix()
     fun dbEntry() = "$dbAbbrev:$kid"
+    fun db() = KeggDB.getKeggDB(dbAbbrev)
 
-//    fun gene(): KeggGene {
-//        if(!dbAbbrev.startsWith("T")) throw IllegalStateException("Can only get genes from gene entries")
-//    }
+    fun gene(): KeggGene {
+        val ki = KeggCache.get(this)?: error("$this could not be recovered or not supported type")
+        if(ki !is KeggGene) throw IllegalStateException("This is not a KeggGene but rather ${ki::class}")
+        return ki
+    }
+
+    fun pathway(): KeggPathway {
+        val ki = KeggCache.get(this)?: error("$this could not be recovered or not supported type")
+        if(ki !is KeggPathway) throw IllegalStateException("This is not a KeggPathway but rather ${ki::class}")
+        return ki
+    }
+
+    fun ortholog(): KeggOrtholog {
+        val ki = KeggCache.get(this)?: error("$this could not be recovered or not supported type")
+        if(ki !is KeggOrtholog) throw IllegalStateException("This is not a KeggOrthology but rather ${ki::class}")
+        return ki
+    }
 
     companion object {
         /**
@@ -49,11 +63,11 @@ data class KeggEntry private constructor(val dbAbbrev: String, val kid: String) 
             if (KeggCache.isOrgCode(dbAbbr)) {//no more checks for genes
                 return KeggEntry(dbAbbr, kid)
             }
-            val db = KeggDB.abbrToDB[dbAbbr]
+            val db = KeggDB.getKeggDB(dbAbbr)
                     ?: throw IllegalArgumentException("DB abbreviation '$dbAbbr' is not supported")
             val validDBs = KeggCache.validDB(kid.keggPrefix())
             if (validDBs.contains(db)) return KeggEntry(dbAbbr, kid)
-            else throw IllegalArgumentException("DB abbreviation '$dbAbbr' does not match kid prefix '${kid.keggPrefix()}'")
+            else throw IllegalArgumentException("DB abbreviation '$dbAbbr' does not match kid prefix '${kid.keggPrefix()}' of $kid")
         }
 
         /**Require an internal method to start building IDs without checking org code to build
@@ -94,15 +108,15 @@ interface KeggInfo {
     /**[KeggGenome], [KeggGene], [KeggPathway] generally have org (organism) codes*/
     val org: String?
 
-    val alias: List<String>?
-    val definition: String?
-    val otherDBs: List<String>?
-    val pubs: List<String>?
+    val alias: List<String>
+    val definition: String
+    val otherDBs: List<String>
+    val pubs: List<String>
 
     companion object {
         fun of(keggType: KeggDB, keggEntry: KeggEntry, name: String, org: String? = null,
-               alias: List<String>? = null, definition: String? = null,
-               otherDBs: List<String>? = null, pubs: List<String>? = null): KeggInfo {
+               alias: List<String> = emptyList(), definition: String= "",
+               otherDBs: List<String> = emptyList(), pubs: List<String> = emptyList()): KeggInfo {
             if (org == null && (keggType == KeggDB.genes || keggType == KeggDB.genome)) throw IllegalArgumentException("Must have org code for Genome and Gene")
             if (org != null && !KeggCache.isOrgCode(org)) throw IllegalArgumentException("Unknown org code: $org")
             //TODO intern
@@ -121,11 +135,8 @@ interface KeggInfo {
 @Polymorphic
 internal data class KeggInfoImpl(override val keggType: KeggDB, override val keggEntry: KeggEntry, override val name: String,
                                  override val org: String? = null,
-                                 override val alias: List<String>? = null, override val definition: String? = null,
-                                 override val otherDBs: List<String>? = null, override val pubs: List<String>? = null) : KeggInfo {
-//    constructor(keggInfo: KeggInfo, alias: List<String>? = null, definition: String? = null,
-//                otherDBs: List<String>? = null, pubs: List<String>? = null) :
-//            this(keggInfo.keggType, keggInfo.keggEntry, keggInfo.name, keggInfo.org, alias, definition, otherDBs, pubs)
+                                 override val alias: List<String> = emptyList(), override val definition: String = "",
+                                 override val otherDBs: List<String> = emptyList(), override val pubs: List<String> = emptyList()) : KeggInfo {
 }
 
 
@@ -162,10 +173,15 @@ data class KeggGenome(val keggInfo: KeggInfo, override val org: String, val line
 
 /**
  * KEGG Gene object with orthologs, [NucSeq] and [ProteinSeq]
+ * TODO add gene parsing
  */
 @kotlinx.serialization.Serializable
-data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val position: String?, val nucSeq: NucSeq?,
-                    val proteinSeq: ProteinSeq?) : KeggInfo by keggInfo
+data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val position: String="", val ntSeq: String="",
+                    val aaSeq: String="") : KeggInfo by keggInfo {
+    @Transient val nucSeq: NucSeq by lazy{ Seq(ntSeq) }
+    @Transient val proteinSeq: ProteinSeq by lazy{ ProteinSeq(aaSeq) }
+}
+
 
 /**
  * KEGG Orthology group (related genes that have similar gene functions)
@@ -173,7 +189,7 @@ data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val positi
  * @param genes Map of organism codes to list of gene [KeggEntry]
  */
 @kotlinx.serialization.Serializable
-data class KeggOrthology(val keggInfo: KeggInfo, val ec: String, val genes: Map<String, List<KeggEntry>>) : KeggInfo by keggInfo {
+data class KeggOrtholog(val keggInfo: KeggInfo, val ec: String, val genes: Map<String, List<KeggEntry>>) : KeggInfo by keggInfo {
 
 }
 
