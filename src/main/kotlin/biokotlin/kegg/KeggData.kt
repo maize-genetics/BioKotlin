@@ -64,7 +64,6 @@ data class KeggEntry private constructor(val dbAbbrev: String, val kid: String) 
                 return KeggEntry(dbAbbr, kid)
             }
             val db = KeggDB.getKeggDB(dbAbbr)
-                    ?: throw IllegalArgumentException("DB abbreviation '$dbAbbr' is not supported")
             val validDBs = KeggCache.validDB(kid.keggPrefix())
             if (validDBs.contains(db)) return KeggEntry(dbAbbr, kid)
             else throw IllegalArgumentException("DB abbreviation '$dbAbbr' does not match kid prefix '${kid.keggPrefix()}' of $kid")
@@ -178,8 +177,8 @@ data class KeggGenome(val keggInfo: KeggInfo, override val org: String, val line
 @kotlinx.serialization.Serializable
 data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val position: String="", val ntSeq: String="",
                     val aaSeq: String="") : KeggInfo by keggInfo {
-    @Transient val nucSeq: NucSeq by lazy{ Seq(ntSeq) }
-    @Transient val proteinSeq: ProteinSeq by lazy{ ProteinSeq(aaSeq) }
+    val nucSeq: NucSeq by lazy{ Seq(ntSeq) }
+    val proteinSeq: ProteinSeq by lazy{ ProteinSeq(aaSeq) }
 }
 
 

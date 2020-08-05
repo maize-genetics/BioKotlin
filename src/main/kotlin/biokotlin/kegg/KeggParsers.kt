@@ -70,8 +70,7 @@ private fun cleanSeqWithLength(sizeSeq: String): String {
 /**Parses the Kegg Response to a [KeggPathway]*/
 internal fun pathwayParser(keggResponseText: String): KeggPathway {
     val attributes = parseKEGG(keggResponseText)
-    val kid = attributes.getValue("ENTRY").split(whiteSpace)?.get(0)?.let { KeggEntry.of("path", it) }
-            ?: error("KID not in ENTRY")
+    val kid = (attributes.get("ENTRY")?:error("KID not in ENTRY")).split(whiteSpace)[0].let { KeggEntry.of("path", it) }
     val orgCode = attributes["ORGANISM"]?.let { orgCodeInGN.find(it)?.value?.toLowerCase() }.orEmpty()
     val nameAndDefinition = attributes["NAME"].orEmpty()
 
