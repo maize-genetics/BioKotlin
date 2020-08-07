@@ -35,7 +35,15 @@ object Kegg {
     }
 }
 
-enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
+/**
+ * The set of supported Kegg DBs along with their [abbr] and [kidPrefix]
+ * Kegg data is generally accessed through a combination of <abbr:kid>, where
+ * each kid starts with a prefix.
+ *
+ * Organism specific data is prefaced by an <org> codes.
+ *
+ */
+enum class KeggDB(val abbr: String, val kidPrefix: List<String>) {
     /**KEGG pathway maps*/
     pathway("path", listOf("map", "ko", "ec", "rn", "<org>")),
 
@@ -105,7 +113,7 @@ enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
     companion object{
         /**Map to look up the [KeggDB] based on the KID prefix*/
         internal val prefixToDB: Map<String, KeggDB> = values()
-                .flatMap { db -> db.kid_prefix.map { it to db } }.toMap()
+                .flatMap { db -> db.kidPrefix.map { it to db } }.toMap()
         /**Map to look up the [KeggDB] based on the database abbreviation
          * Does not include the organism DBs
          * */

@@ -95,18 +95,7 @@ object KeggCache : AutoCloseable {
             else -> KeggInfoImpl.serializer()
         }
     }
-
-    object Kegg2Serializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
-        override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
-            "orgCode" in element -> KeggOrg.serializer()
-            "nucSeq" in element -> KeggGene.serializer()
-            "refSeqID" in element -> KeggGenome.serializer()
-            "ec" in element -> KeggOrtholog.serializer()
-            "genes" in element && "compounds" in element -> KeggPathway.serializer()
-            else -> KeggInfoImpl.serializer()
-        }
-    }
-
+    
     init {
         loadCache()
     }
