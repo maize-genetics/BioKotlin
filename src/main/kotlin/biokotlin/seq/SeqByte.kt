@@ -1,6 +1,7 @@
 @file:JvmName("SeqByte")
 package biokotlin.seq
 
+import biokotlin.data.Codon
 import biokotlin.data.CodonTable
 
 
@@ -48,7 +49,7 @@ internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Se
         val indices = if(!startAtLast)
             start.coerceAtLeast(0)..end.coerceAtMost(len()-queryB.size)
         else
-            start.coerceAtMost(len()-1) downTo end.coerceAtLeast(queryB.size)
+            start.coerceAtMost(len()-queryB.size) downTo end.coerceAtLeast(0)
         //println(indices)
         seqBloop@ for (thisIndex in indices) {
             for (queryIndex in queryB.indices) {
@@ -92,14 +93,14 @@ internal fun NucSeqByteEncode(seq: String): NucSeq {
 }
 
 /*Note protein don't use U, so the uracil conversion has no effect*/
-private fun String.toSeqByteArray() = this.toUpperCase().toByteArray().replaceUracil()
+private fun String.toNucSeqByteArray() = this.toUpperCase().toByteArray().replaceUracilAndX()
 
 /**A byte level encoding of Nucleotides.
  *NOTE: Both DNA and RNA are represented internally with U as T.  NucSet - determines which is displayed.
  * This provides compatibility with more compressed set such as NucSeq4Bit and NucSeq2Bit
  */
 internal class NucSeqByte private constructor(seqB: ByteArray, override val nucSet: NucSet) : BioSeqByte(seqB), NucSeq {
-    constructor(seq: String, preferredNucSet: NucSet): this(seq.toSeqByteArray(), preferredNucSet)
+    constructor(seq: String, preferredNucSet: NucSet): this(seq.toNucSeqByteArray(), preferredNucSet)
     /**
      * TODO- Violates Bloch Item 23 - Prefer class hierarchies to tagged classes
      * Should make this abstract with two small class DNASeqByte and RNASeqByte to cover the few specific methods
@@ -138,7 +139,7 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     }
 
 
-    override fun gc() = seqB.count { it.equals(NUC.G.char.toByte()) ||  it.equals(NUC.C.char.toByte())}
+    override fun gc() = seqB.count { it.equals(NUC.G.utf8) ||  it.equals(NUC.C.utf8)}
 
     private fun toNUC(i: Int):NUC {
         val n = NUC.byteToNUC(seqB[i])
@@ -150,11 +151,17 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     override operator fun get(x: IntRange) = NucSeqByte(seqB.sliceArray(negativeSlice(x, seqB.size)), nucSet)
     override operator fun plus(seq2: NucSeq): NucSeq {
         return if (seq2 is NucSeqByte && nucSet == seq2.nucSet) NucSeqByte(seqB.plus(seq2.seqB), nucSet)
-        else Seq(this.toString() + seq2.toString()) as NucSeq
+        else Seq(this.toString() + seq2.toString())
+    }
+
+    /*Used for calling NucSeq2Bit plus and resulting in NucSeqByte*/
+    internal fun prepend(seq1: NucSeq): NucSeq {
+        return if (nucSet == seq1.nucSet) NucSeqByte(seq1.copyOfBytes().plus(seqB), nucSet)
+        else Seq(seq1.toString() + this.toString())
     }
 
     override operator fun times(n: Int) = NucSeqByte(super.repeat(n), nucSet)
-    override fun count(query: NUC): Int = count(query.dnaAnalog.char.toByte())
+    override fun count(query: NUC): Int = count(query.dnaAnalog.utf8)
     override fun count(query: NucSeq): Int = count(query, false)
     override fun count_overlap(query: NucSeq): Int = count(query, true)
     override fun indexOf(query: NucSeq, start: Int, end: Int): Int =
@@ -166,12 +173,19 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     override fun transcribe(): NucSeq = NucSeqByte(seqB, NUC.transcipt_equivalent(nucSet))
     override fun back_transcribe(): NucSeq = NucSeqByte(seqB, NUC.transcipt_equivalent(nucSet))
 
-    override fun translate(codonTable: CodonTable, to_stop: Boolean, cds: Boolean): ProteinSeqByte {
+    override fun translate(table: CodonTable, to_stop: Boolean, cds: Boolean): ProteinSeqByte {
+        if(cds && len()%3!=0) throw IllegalStateException("Sequence not multiple of three")
         val pB = ByteArray(size = len() / 3)
         for (i in 0 until (len() - 2) step 3) {
-            pB[i / 3] = codonTable.nucBytesToCodonByte(seqB[i], seqB[i + 1], seqB[i + 2])
+            pB[i / 3] = table.nucBytesToCodonByte(seqB[i], seqB[i + 1], seqB[i + 2])
+            if(cds && i==0 && pB[0]!=AminoAcid.M.char.toByte()) {
+                val startCodon = Codon[seqB[i], seqB[i + 1], seqB[i + 2]]
+                if(table.start_codons.contains(startCodon)) pB[0]=AminoAcid.M.char.toByte()
+                else throw IllegalStateException("Sequence does not with valid start codon")
+            }
         }
-        val proStr= if(to_stop) {
+        if(cds && pB[pB.lastIndex]!=AminoAcid.STOP.char.toByte())  throw IllegalStateException("Sequence does end with valid stop codon")
+        val proStr= if(to_stop || cds) {
             val stopIndex = pB.indexOf(AminoAcid.stopChar.toByte())
             if(stopIndex<0)  String(pB) else String(pB.sliceArray(0..(stopIndex-1)))
         } else {
@@ -200,8 +214,11 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
 
 }
 
-private fun ByteArray.replaceUracil(): ByteArray {
-    for (i in this.indices) if (this[i] == NUC.U.char.toByte()) this[i] = NUC.T.char.toByte()
+private fun ByteArray.replaceUracilAndX(): ByteArray {
+    for (i in this.indices) {
+        if (this[i] == NUC.U.utf8) this[i] = NUC.T.utf8
+        if (this[i] == NUC.X.utf8) this[i] = NUC.N.utf8
+    }
     return this
 }
 

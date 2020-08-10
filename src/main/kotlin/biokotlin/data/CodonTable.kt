@@ -18,28 +18,18 @@ import kotlin.NoSuchElementException
  * Will implement as needed
  */
 
-/**TODO there is a namespace issue to really imitate Biopython -
- * CodonTable is appropriately the data class
- * but BioPython uses CodonTable.standard_dna_table to get the standard table
- * so it would be nice to call a static method without parentheses
- * It is mimic by making a function with CapitalLetter, and adding an 's'
- * `CodonTables(id = 1)`
- * in Python it would be:
- * `CodonTable[1]`
- */
-
 /**Return the DNA and RNA [CodonTable] based on NCBI id
  * @param id is the NCBI defined id
  * @param ambiguous is not implemented
  */
-fun CodonTables(id: Int = 1, ambiguous: Boolean = false): CodonTable =
+fun CodonTable(id: Int = 1, ambiguous: Boolean = false): CodonTable =
         CodonTableData[id, ambiguous]
 
 /**Return the DNA and RNA [CodonTable] based on name
  * @param name is the NCBI defined name, e.g. "Standard", "SGC0", etc.
  * @param ambiguous is not implemented
  */
-fun CodonTables(name: String, ambiguous: Boolean = false): CodonTable =
+fun CodonTable(name: String, ambiguous: Boolean = false): CodonTable =
         CodonTableData[name, ambiguous]
 
 /**Return the complete list of DNA and RNA [CodonTable]*/
@@ -50,7 +40,7 @@ val CodonTablesAll: List<CodonTable> by lazy {
 }
 
 /**Standard DNA and RNA Codon table (Table 1 or "SGC0")*/
-val standardCodonTable: CodonTable = CodonTables(1)
+val standardCodonTable: CodonTable = CodonTable(1)
 
 /**
  * The genetic code or codon table for a clade of life
@@ -144,11 +134,11 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
     init {
         Codon.values()
                 .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.toByte() ?: illegalCodon }
-        stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.stopChar.toByte() }
+        stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.STOP.char.toByte() }
     }
     internal fun nucBytesToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
         val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
-        if(codonB == illegalCodon) IllegalArgumentException("Illegal bytes used to encode codon")
+        if(codonB == illegalCodon) throw IllegalArgumentException("Illegal bytes used to encode codon")
         return codonB
     }
 }
@@ -288,9 +278,13 @@ enum class Codon {
         get() = !this.name.contains('T')
 
     companion object {
+        private val nuc3bytesToCodon: Array<Codon?> = Array(65){null}
+        init {
+            Codon.values().forEach{nuc3bytesToCodon[toPackedInt(it.name)] =  it }
+        }
         operator fun get(s: String) = valueOf(s)
-        fun get(c1: Char, c2: Char, c3: Char) = valueOf(String(charArrayOf(c1, c2, c3)))
-        fun get(c1: NUC, c2: NUC, c3: NUC) = Companion.get(c1.char, c2.char, c3.char)
+        fun get(c1: Char, c2: Char, c3: Char) = get(c1.toByte(), c2.toByte(), c3.toByte())
+        fun get(c1: NUC, c2: NUC, c3: NUC) = get(c1.utf8, c2.utf8, c3.utf8)
         val DNA: CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isDNACodon }))
         val RNA : CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isRNACodon }))
         val nucToCodon : Map<List<Byte>,Codon>
@@ -299,14 +293,18 @@ enum class Codon {
 
         internal fun toPackedInt(codon : String):Int {
             if(codon.length!=3) throw IllegalArgumentException("Codon must be length of 3")
-            return NUC.byteTo2Bit(codon[0].toByte()).toInt().shl(4) or
-                    NUC.byteTo2Bit(codon[1].toByte()).toInt().shl(2) or
-                    NUC.byteTo2Bit(codon[2].toByte()).toInt()
+            return NUC.utf8To2BitInt(codon[0].toByte()).toInt().shl(4) or
+                    NUC.utf8To2BitInt(codon[1].toByte()).toInt().shl(2) or
+                    NUC.utf8To2BitInt(codon[2].toByte()).toInt()
         }
         internal fun toPackedInt(c1 : Byte, c2 : Byte, c3 : Byte):Int {
-            return NUC.byteTo2Bit(c1).toInt().shl(4) or
-                    NUC.byteTo2Bit(c2).toInt().shl(2) or
-                    NUC.byteTo2Bit(c3).toInt()
+            return NUC.utf8To2BitInt(c1).toInt().shl(4) or
+                    NUC.utf8To2BitInt(c2).toInt().shl(2) or
+                    NUC.utf8To2BitInt(c3).toInt()
+        }
+
+        operator fun get(c1: Byte, c2: Byte, c3: Byte): Codon {
+            return nuc3bytesToCodon[toPackedInt(c1,c2,c3)]?:throw IllegalStateException("Byte are not standard nucleotides for codon")
         }
     }
 }

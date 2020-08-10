@@ -2,7 +2,6 @@
 package biokotlin.seq
 
 import biokotlin.data.CodonTable
-import biokotlin.data.CodonTables
 import com.google.common.collect.ImmutableSet
 import java.util.*
 import kotlin.random.Random
@@ -23,24 +22,30 @@ import kotlin.random.Random
 
 
 /**
- * Create a Seq from a String, could be DNA, RNA, or Protein.
+ * Create a Seq from a String, could be DNA or RNA.
  * This functions provides compatibility with BioPython, but the preferred
- * use is to use either [NucSeq] or [ProteinSeq()], as the Seq type has less functionality
- * than either of these other two.
+ * use is to use either [NucSeq] or [ProteinSeq], as the Seq is less clear.  Unlike
+ * Biopython Seq will not convert Protein String to Protein - use [ProteinSeq]
  *
- * The String is tested for with compatibility DNA, RNA, and Protein in order.  It will
+ * The String is tested for with compatibility DNA, RNA, and then ambiguous versions.  It will
  * throw an [IllegalStateException], if it is not compatible with any.
- * [Seq] can be cast to [NucSeq] or [ProteinSeq]:
+
  * ```kotlin
  * val aSeq = Seq("GCATA")
- * val aNucSeq = Seq("GCATA") as NucSeq
+ * val aNucSeq = Seq("GCATA")
  * val nSeq = NucSeq("GCATA")
  * val pSeq = ProteinSeq("MAIVMGR")
+ *
+ * val pSeq = Seq("MAIVMGR")  //Throw error
  * ```
  */
-fun Seq(seq: String): Seq {
+fun Seq(seq: String): NucSeq {
     // factory functions used to create instances of classes can have the same name as the abstract return
-    return compatibleBioSet(seq)[0].creator(seq)
+    val compatibleBioSet = compatibleBioSet(seq)
+    if(compatibleBioSet[0] == BioSet.AminoAcid) {
+        throw IllegalStateException("Protein Sequence should be created with ProteinSeq(SEQUENCE)")
+    }
+    return compatibleBioSet[0].creator(seq) as NucSeq
 }
 
 /**
@@ -79,7 +84,8 @@ fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
  * ```
  */
 fun ProteinSeq(seq: String):ProteinSeq {
-    return ProteinSeqByte(seq)
+    if(compatibleBioSet(seq).contains(BioSet.AminoAcid)) return ProteinSeqByte(seq)
+    else throw IllegalStateException("The characters in the String are not compatible with AminoAcids. ")
 }
 
 /**Creates a random [NucSeq] of the specified length
@@ -88,7 +94,7 @@ fun ProteinSeq(seq: String):ProteinSeq {
 fun RandomNucSeq(length: Int, nucSet: NucSet = NUC.DNA, seed: Int = 0): NucSeq {
     val random = Random(seed)
     val baseBytes = ByteArray(length)
-    val nucBytes = NUC.DNA.map { it.char.toByte() }.toByteArray()
+    val nucBytes = NUC.DNA.map { it.utf8 }.toByteArray()
     for (i in baseBytes.indices) {
         baseBytes[i]=nucBytes[random.nextInt(nucBytes.size)]
     }
@@ -99,7 +105,7 @@ fun RandomNucSeq(length: Int, nucSet: NucSet = NUC.DNA, seed: Int = 0): NucSeq {
 fun RandomProteinSeq(length: Int, seed: Int = 0): ProteinSeq {
     val random = Random(seed)
     val baseBytes = ByteArray(length)
-    val aaBytes = AminoAcid.all.map { it.char.toByte() }.toByteArray()
+    val aaBytes = AminoAcid.all.map { it.utf8 }.toByteArray()
     for (i in baseBytes.indices) {
         baseBytes[i]=aaBytes[random.nextInt(aaBytes.size)]
     }
@@ -225,102 +231,6 @@ interface NucSeq : Seq {
     fun count_overlap(query: NucSeq): Int
 
     /**
-    * Translate a nucleotide sequence [NucSeq] into amino acids [ProteinSeq].
-    * @param codonTable - CodonTable to be used (defaults to Standard)
-     *  @param to_stop  defaults to False meaning do a full translation continuing on past any stop codons
-    * (translated as the specified stop_symbol).  If True, translation is terminated at the first in
-    * frame stop codon (and the stop_symbol is not appended to the returned protein sequence).
-     * @param cds If True, this checks the sequence starts with a valid alternative start
-    codon (which will be translated as methionine, M), that the sequence length is a multiple of three, and that there is a
-    single in frame stop codon at the end (this will be excluded from the protein sequence, regardless of the to_stop option).
-    If these tests fail, an exception is raised.
-
-    Arguments:
-    - table - Which codon table to use?  This can be either a name
-    (string), an NCBI identifier (integer), or a CodonTable object
-    (useful for non-standard genetic codes).  Defaults to the "Standard"
-    table.
-    - to_stop - Boolean, defaults to False meaning do a full
-    translation continuing on past any stop codons
-    (translated as the specified stop_symbol).  If
-    True, translation is terminated at the first in
-    frame stop codon (and the stop_symbol is not
-    appended to the returned protein sequence).
-    - cds - Boolean, indicates this is a complete CDS.  If True, this
-    checks the sequence starts with a valid alternative start
-    codon (which will be translated as methionine, M), that the
-    sequence length is a multiple of three, and that there is a
-    single in frame stop codon at the end (this will be excluded
-    from the protein sequence, regardless of the to_stop option).
-    If these tests fail, an exception is raised.
-    - gap - Single character string to denote symbol used for gaps.
-    Defaults to None.
-
-    A simple string example using the default (standard) genetic code:
-
-    >>> coding_dna = "GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG"
-    >>> translate(coding_dna)
-    'VAIVMGR*KGAR*'
-    >>> translate(coding_dna, stop_symbol="@")
-    'VAIVMGR@KGAR@'
-    >>> translate(coding_dna, to_stop=True)
-    'VAIVMGR'
-
-    Now using NCBI table 2, where TGA is not a stop codon:
-
-    >>> translate(coding_dna, table=2)
-    'VAIVMGRWKGAR*'
-    >>> translate(coding_dna, table=2, to_stop=True)
-    'VAIVMGRWKGAR'
-
-    In fact this example uses an alternative start codon valid under NCBI
-    table 2, GTG, which means this example is a complete valid CDS which
-    when translated should really start with methionine (not valine):
-
-    >>> translate(coding_dna, table=2, cds=True)
-    'MAIVMGRWKGAR'
-
-    Note that if the sequence has no in-frame stop codon, then the to_stop
-    argument has no effect:
-
-    >>> coding_dna2 = "GTGGCCATTGTAATGGGCCGC"
-    >>> translate(coding_dna2)
-    'VAIVMGR'
-    >>> translate(coding_dna2, to_stop=True)
-    'VAIVMGR'
-
-    NOTE - Ambiguous codons like "TAN" or "NNN" could be an amino acid
-    or a stop codon.  These are translated as "X".  Any invalid codon
-    (e.g. "TA?" or "T-A") will throw a TranslationError.
-
-    It will however translate either DNA or RNA.
-
-    NOTE - Since version 1.71 Biopython contains codon tables with 'ambiguous
-    stop codons'. These are stop codons with unambiguous sequence but which
-    have a context dependent coding as STOP or as amino acid. With these tables
-    'to_stop' must be False (otherwise a ValueError is raised). The dual
-    coding codons will always be translated as amino acid, except for
-    'cds=True', where the last codon will be translated as STOP.
-
-    >>> coding_dna3 = "ATGGCACGGAAGTGA"
-    >>> translate(coding_dna3)
-    'MARK*'
-
-    >>> translate(coding_dna3, table=27)  # Table 27: TGA -> STOP or W
-    'MARKW'
-
-    It will however raise a BiopythonWarning (not shown).
-
-    >>> translate(coding_dna3, table=27, cds=True)
-    'MARK'
-
-    >>> translate(coding_dna3, table=27, to_stop=True)
-    Traceback (most recent call last):
-    ...
-    ValueError: You cannot use 'to_stop=True' with this table ...
-     */
-
-    /**
      * Translate a nucleotide sequence [NucSeq] into amino acids [ProteinSeq].
      * @param codonTable CodonTable to be used (defaults to Standard)
      * @param to_stop  defaults to False meaning do a full translation continuing on past any stop codons
@@ -329,11 +239,23 @@ interface NucSeq : Seq {
      * @param cds If True, this checks the sequence starts with a valid alternative start
      * codon (which will be translated as methionine, M), that the sequence length is a multiple of three, and that there is a
      * single in frame stop codon at the end (this will be excluded from the protein sequence, regardless of the to_stop option).
-     * If these tests fail, an exception is raised.
+     * If these tests fail, an [IllegalStateException] is raised.
      *
+     * ```kotlin
+     * val codingDNA = NucSeq("GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG")
+     * println(codingDNA.translate())                                      //VAIVMGR*KGAR*
+     * println(codingDNA.translate(to_stop = true))                        //VAIVMGR
+     * val mitoTable = CodonTable(2)
+     * println(codingDNA.translate(table = mitoTable))                     //VAIVMGRWKGAR*
+     * println(codingDNA.translate(mitoTable, to_stop = true))             //VAIVMGRWKGAR
      *
+     * //With CDS true, it then checks for alternative start and GTG is converted to M
+     * println(codingDNA.translate(mitoTable, to_stop = true, cds = true)) //MAIVMGRWKGAR
+     *
+     * ```
+     * Ambiguous nucleotides are not supported and will throw errors
      */
-    fun translate(table: CodonTable = CodonTables(1), to_stop: Boolean = false, cds: Boolean = false): ProteinSeq
+    fun translate(table: CodonTable = CodonTable(1), to_stop: Boolean = false, cds: Boolean = false): ProteinSeq
 }
 
 /**Main data structure for working with Protein sequences*/

@@ -1,16 +1,15 @@
 package biokotlin.seq
 
-import biokotlin.data.CodonTables
+import biokotlin.data.CodonTable
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.data.blocking.forAll
 import io.kotest.data.row
+import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
-import java.lang.IllegalArgumentException
+import org.nield.kotlinstatistics.median
 import kotlin.system.measureTimeMillis
 
 
@@ -30,9 +29,18 @@ class SeqByteTest : StringSpec({
         NucSeqByteEncode("GCRU").nucSet shouldBe NUC.AmbiguousRNA
         (Seq("GCRU") as NucSeqByte).nucSet shouldBe NUC.AmbiguousRNA
         NucSeq("GCRU").nucSet shouldBe NUC.AmbiguousRNA
-        ProteinSeqByte("GCDF") shouldBe Seq("GCDF")
+        ProteinSeqByte("GCDF").seq() shouldBe "GCDF"
+        shouldThrow<IllegalStateException> { Seq("GCDF")}
         shouldThrow<IllegalStateException> { NucSeq("GCDF")}
     }
+
+    "Test conversion of X to N in DNA" {
+        NucSeqByteEncode("GCXT").seq() shouldBe "GCNT"
+        NucSeqByteEncode("GCxT").seq() shouldBe "GCNT"
+        NucSeqByteEncode("GCNT").seq() shouldBe "GCNT"
+        shouldThrow<IllegalStateException> {ProteinSeq("GCXT")}  //currently X not a state in AminoAcid
+    }
+
 
     "Evaluating seq() and toString() " {
         dnaSeq.seq() shouldBe dnaString
@@ -89,13 +97,14 @@ class SeqByteTest : StringSpec({
         dnaSeq.seq() shouldBe "ACGTGGTGA"
         forAll(
                 row("A",0,8),
+                row("AC",0,0),
                 row("G",2, 7),
                 row("GA",7,7), //Getting the end boundary
                 row("U",3,6), //T & U difference ignored
                 row("TT",-1, -1),
                 row("ACGTGGTGAACGTGGTGA", -1, -1),  //larger than query
                 row("t", 3, 6)  //testing case conversion in NucSeq
-        ) {seqStr: String, expIndex: Int, expLastIndex: Int ->
+        ){seqStr: String, expIndex: Int, expLastIndex: Int ->
             dnaSeq.indexOf(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.find(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.lastIndexOf(NucSeq(seqStr)) shouldBe expLastIndex
@@ -156,8 +165,16 @@ class SeqByteTest : StringSpec({
         NucSeqByteEncode("AAAACAUAG").translate(to_stop = true) shouldBe ProteinSeqByte("KT")
         NucSeqByteEncode("AAAACAUAG").translate(to_stop = false) shouldBe ProteinSeqByte("KT*")
         val codingDNA = NucSeq("GTGGCCATTGTAATGGGCCGCTGAAAGGGTGCCCGATAG")
-        codingDNA.translate(table = CodonTables(1), to_stop = true) shouldBe ProteinSeq("VAIVMGR")
-        codingDNA.translate(table = CodonTables(2), to_stop = true) shouldBe ProteinSeq("VAIVMGRWKGAR")
+        codingDNA.translate(table = CodonTable(1)) shouldBe ProteinSeq("VAIVMGR*KGAR*")
+        codingDNA.translate(table = CodonTable(1), to_stop = true) shouldBe ProteinSeq("VAIVMGR")
+        //Does have a valid start for Table 1
+        shouldThrow<IllegalStateException> {codingDNA.translate(table = CodonTable(1), to_stop = true, cds = true)}
+        codingDNA.translate(table = CodonTable(2)) shouldBe ProteinSeq("VAIVMGRWKGAR*")
+        codingDNA.translate(table = CodonTable(2), to_stop = true) shouldBe ProteinSeq("VAIVMGRWKGAR")
+        //This works be GTG is an alternative start codon for Table 2
+        codingDNA.translate(table = CodonTable(2), to_stop = true, cds = true) shouldBe ProteinSeq("MAIVMGRWKGAR")
+        shouldThrowAny { NucSeqByteEncode("AAAACAUA").translate(cds=true) }
+
     }
 
     "Report on the speed of complementation and translation" {
@@ -184,16 +201,19 @@ class SeqByteTest : StringSpec({
     }
 
     "Test random sequence generation" {
-        var bigSeq: NucSeq = NucSeq("A")
-        var time: Long
-        val seqSize=1_000_000
-        for(i in 0..10) {
-            time = measureTimeMillis {
-                bigSeq = RandomNucSeq(seqSize)
-                //bigSeq= bigSeq.complement()
-            }
-            println("RandomNucSeq of ${bigSeq.len() / 1E6}Mb took $time ms")
-        }
+        //Expectations are uniform distribution over 4 nucleotides or 20 amino acids
+        val expectedRange = 4500..5500
+        val mean = expectedRange.median().toInt()
+        RandomNucSeq(mean * NUC.DNA.size).seq()
+                .groupingBy { it }
+                .eachCount()
+                .forEach { (_, count) -> count shouldBeInRange expectedRange }
+        RandomProteinSeq(mean * AminoAcid.all.size).seq()
+                .groupingBy { it }
+                .eachCount()
+                .forEach { (_, count) -> count shouldBeInRange expectedRange }
+
+        println(CodonTable(1).name)
     }
 
 

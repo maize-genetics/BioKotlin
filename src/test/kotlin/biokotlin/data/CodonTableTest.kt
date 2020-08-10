@@ -22,7 +22,7 @@ class CodonTableTest : StringSpec({
             .filterNot { ct -> ct.stop_codons.any { stopCodon -> ct.codonToAA.containsKey(stopCodon) } }
 
     "Default CodonTables() should be id 1" {
-        CodonTables().id shouldBe 1
+        CodonTable().id shouldBe 1
     }
 
     "Standard table should be id 1" {
@@ -60,21 +60,21 @@ class CodonTableTest : StringSpec({
     }
 
     "Test Standard Codon DNA Table" {
-        val ctDNA = CodonTables(name = "Standard")
+        val ctDNA = CodonTable(name = "Standard")
         ctDNA.name shouldContainInOrder listOf("Standard", "SGC0")
         ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, TGA)
         ctDNA.start_codons shouldContainAll listOf(ATG, TTG, CTG)
     }
 
     "Test Standard Codon RNA Table" {
-        val ctRNA = CodonTables(name = "Standard")
+        val ctRNA = CodonTable(name = "Standard")
         ctRNA.name shouldContainInOrder listOf("Standard", "SGC0")
         ctRNA.stop_codons shouldContainAll listOf(UAA, UAG, UGA)
         ctRNA.start_codons shouldContainAll listOf(AUG, UUG, CUG)
     }
 
     "Test Vertebrate Mitochondrial DNA Table" {
-        val ctDNA = CodonTables(name = "Vertebrate Mitochondrial")
+        val ctDNA = CodonTable(name = "Vertebrate Mitochondrial")
         ctDNA.name shouldContain "Vertebrate Mitochondrial"
         ctDNA.stop_codons shouldContainAll listOf(TAA, TAG, AGA, AGG)
     }
@@ -179,7 +179,7 @@ G | GUG V   | GCG A   | GAG E   | GGG G   | G
                 row(33, TAA, Y, null),
                 row(33, TGA, W, null)
         ) { id, codon, primaryAA, secondaryAA ->
-            val ct = CodonTables(id)
+            val ct = CodonTable(id)
             val aa: AminoAcid? = ct.codonToAA[codon]
             if (primaryAA !is AminoAcid) {
                 ct.stop_codons shouldContain codon
