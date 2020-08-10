@@ -93,7 +93,7 @@ class SeqByteTest : StringSpec({
         rnaSeq.reverse_complement() shouldBe NucSeqByteEncode("UCACCACGU")
     }
 
-    "indexOf and find subsequences" {
+    "indexOf and find subsequences and contains" {
         dnaSeq.seq() shouldBe "ACGTGGTGA"
         forAll(
                 row("A",0,8),
@@ -109,6 +109,7 @@ class SeqByteTest : StringSpec({
             dnaSeq.find(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.lastIndexOf(NucSeq(seqStr)) shouldBe expLastIndex
             dnaSeq.rfind(NucSeq(seqStr)) shouldBe expLastIndex
+            (NucSeq(seqStr) in dnaSeq) shouldBe (expLastIndex != -1)
         }
     }
 

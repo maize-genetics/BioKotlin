@@ -45,8 +45,8 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
         null, annotations: ImmutableMap<String, String>? = null) :
         SeqRecord(id, name, description, annotations), NucSeq by sequence {
 
-    constructor(sequence: NucSeq, id: String, name: String?, description: String?, annotations:
-    Map<String, String>?)
+    constructor(sequence: NucSeq, id: String, name: String? = null, description: String? = null,
+                annotations: Map<String, String>? = null)
             : this(sequence, id, name, description,
             if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
     }
@@ -84,7 +84,7 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
      * Sequence: ATCG
      */
     override fun toString(): String {
-        return "${stringHelper()}Sequence: ${sequence.repr()}"
+        return "${stringHelper()}Sequence: $sequence\n"
     }
 }
 
@@ -93,8 +93,8 @@ class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = nul
                                null) :
 SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
 
-    constructor(sequence: ProteinSeq, id: String, name: String?, description: String?, annotations:
-    Map<String, String>?)
+    constructor(sequence: ProteinSeq, id: String, name: String? = null, description: String? =
+            null, annotations: Map<String, String>? = null)
             : this(sequence, id, name, description,
             if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
     }
@@ -114,7 +114,7 @@ SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
      * Sequence:
      */
     override fun toString(): String {
-        return "${stringHelper()}Sequence: ${sequence.repr()}"
+        return "${stringHelper()}Sequence: $sequence\n"
     }
 
 

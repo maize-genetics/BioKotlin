@@ -235,7 +235,8 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
     override fun count_overlap(query: NucSeq): Int = count(query, true)
     override fun indexOf(query: NucSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(), start, end, false)
-
+    override operator fun contains(element: NucSeq?): Boolean =
+            if (element == null) false else indexOf(element) != -1
     override fun lastIndexOf(query: NucSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(), start, end, true)
 
