@@ -9,7 +9,19 @@ import java.io.File
  * This class adds bedfile utilties e.g. flank and slop (called "extend" here) against
  * a NucSeq object.
  *
- * The code uses Guava RangeSet to store the values.  This allows for RangeSet methods e.g.
+ * function "intervalAround" is the same as extend, but it only takes 1 parameter, which
+ * is the extension applied to both ends.
+ *
+ * The code uses Guava RangeSet "closed" intervals to store the values.  This allows for RangeSet methods e.g. removeAll(RangeSet<>)
+ * Note:  RangeSet with "closedOpen" range sets will coalesce ranges that abut, e.g.
+ *    10 15, 15 20 become 1 range of 10 20
+ *
+ * RangeSet of "closed" will not abut 10 14 and 15 20.
+ *
+ * A RangeMap would not coalesce either, but it doesn't allow for removeAll.
+ *
+ * Initial implementation does not handle strand. It can be added, would need to store the bedRanges as negative numbers
+ * if strand is reverse.  And adjust flank/extend accordingly.
  *
  */
 class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
@@ -25,6 +37,7 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
                     // The question is the bedfile format.  The first 3 columns must be chr/start/end
                     // Will there be additional columns?  If yes, than I need to stop "end" at the next tab.
                     // If no, then I need to stop "end" at end of line.
+                    // The rangeSet does not allow for storing the strand, unless we store negative numbers
                     var tIndex1 = line.indexOf("\t")
                     var tIndex2 = line.indexOf("\t",tIndex1+1)
                     var tIndex3 = line.indexOf("\t",tIndex2+1)

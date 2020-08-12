@@ -63,7 +63,7 @@ class BedFileDataTest {
     }
 
     @Test
-    fun testBedFileChromEnds() {
+    fun testBedFileChromEndsNoCoalesce() {
 
         // create test bed files
         createBedFiles()
@@ -73,7 +73,50 @@ class BedFileDataTest {
         println("size of dnaString: ${dnaString.length}")
 
         val dnaSeq = NucSeqByteEncode(dnaString)
-        //val bedFile = "/Users/lcj34/git/biokotlin/src/test/kotlin/biokotlin/seq/testBedFileEnds.txt"
+        val bedFile = bedFileEnds
+
+        var bfd = BedFileData(dnaSeq, bedFile)
+        var rangeSize = bfd.bedRanges.asRanges().size
+        println("size of BedFileData ranges is : ${rangeSize}")
+        assertEquals(4, rangeSize)
+
+        val flankingRanges = bfd.flank(0,0,2)
+        val flankSize = flankingRanges.asRanges().size
+        println("\nsize of flankingRanges: ${flankSize}")
+        flankingRanges.asRanges().forEach {
+            println(it.toString())
+        }
+        assertEquals(7,flankSize)
+
+        val extendedRanges = bfd.extend(0,0,2)
+        val extendSize = extendedRanges.asRanges().size
+        println("\nsize of extendedRanges: ${extendSize}")
+
+        extendedRanges.asRanges().forEach {
+            println(it.toString())
+        }
+        assertEquals(4,extendSize)
+
+        val intervalAroundRanges = bfd.intervalAround(2)
+        val iaSize = intervalAroundRanges.asRanges().size
+        println("\nsize of intervalAroundRanges: ${iaSize}")
+        intervalAroundRanges.asRanges().forEach {
+            println(it.toString())
+        }
+        assertEquals(4,iaSize)
+    }
+
+    @Test
+    fun testBedFileChromEndsCoalesce() {
+
+        // create test bed files
+        createBedFiles()
+
+        // Length of this dnaString is 75
+        val dnaString = "ACGTGGTGACGCAGCCGGTCGACCAAAGGCACCTCTATGGGAGGTGGGGGTGAAAGGTGGGTGCACACCTTACTG"
+        println("size of dnaString: ${dnaString.length}")
+
+        val dnaSeq = NucSeqByteEncode(dnaString)
         val bedFile = bedFileEnds
 
         var bfd = BedFileData(dnaSeq, bedFile)
