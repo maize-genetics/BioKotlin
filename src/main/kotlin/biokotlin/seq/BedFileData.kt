@@ -5,6 +5,13 @@ import com.google.common.collect.RangeSet
 import com.google.common.collect.TreeRangeSet
 import java.io.File
 
+/**
+ * This class adds bedfile utilties e.g. flank and slop (called "extend" here) against
+ * a NucSeq object.
+ *
+ * The code uses Guava RangeSet to store the values.  This allows for RangeSet methods e.g.
+ *
+ */
 class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
 
     var bedRanges = BedFileToRangeSet(bedFile)
