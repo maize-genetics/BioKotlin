@@ -12,13 +12,18 @@ import java.io.File
  * function "intervalAround" is the same as extend, but it only takes 1 parameter, which
  * is the extension applied to both ends.
  *
- * The code uses Guava RangeSet "closed" intervals to store the values.  This allows for RangeSet methods e.g. removeAll(RangeSet<>)
+ * The code uses Guava RangeSet "closedOpen" intervals to store the values.
+ * Using RangeSet to take advantage of methods e.g. removeAll(RangeSet<>)
  * Note:  RangeSet with "closedOpen" range sets will coalesce ranges that abut, e.g.
  *    10 15, 15 20 become 1 range of 10 20
  *
- * RangeSet of "closed" will not abut 10 14 and 15 20.
+ * RangeSet of "closed" will not abut 10 14 and 15 20.  However, RangeSet in either case
+ * will abut anything that overlaps.
  *
- * A RangeMap would not coalesce either, but it doesn't allow for removeAll.
+ * I chose RangeSet of closedOpen as that makes the results compatible with bedtools
+ * flank and slop results.
+ *
+ * A RangeMap would not coalesce, but it doesn't allow for removeAll.
  *
  * Initial implementation does not handle strand. It can be added, would need to store the bedRanges as negative numbers
  * if strand is reverse.  And adjust flank/extend accordingly.
@@ -80,23 +85,23 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
 
             // ex: range = 90-95, moveLeft = moveRight = 3
             // 90 -3 = 87 = flankLeftLower
-            // 90 -1 = 89 = flankLeftUpper
-            // new range = 87 89
+            // 90  = flankLeftUpper (because range is closed/open
+            // new range = 87 90
 
-            // 95 + 1 = 96
+            // 95 = start (because range is closed/open
             // 95 + 3 = 99
-            // new range = 96 99
+            // new range = 95 99
 
             if (it.lowerEndpoint() > 0) {
                 var flankLeftLower = if (it.lowerEndpoint() - moveLeft > 0) it.lowerEndpoint()-moveLeft else 0
-                val flankLeftUpper =  it.lowerEndpoint() -1
-                flankingRanges.add(Range.closed(flankLeftLower, flankLeftUpper))
+                val flankLeftUpper =  it.lowerEndpoint()
+                flankingRanges.add(Range.closedOpen(flankLeftLower, flankLeftUpper))
             }
 
             // if the upperEndpoint is already at the end of the chromosome, skip - no flanking added
             val flankRightLower = if (it.upperEndpoint() < chromLength -1) it.upperEndpoint() + 1 else return@rangelist
-            val flankRightUpper = if (it.upperEndpoint() + moveRight < chromLength-1) it.upperEndpoint() + moveRight else chromLength -1
-            flankingRanges.add(Range.closed(flankRightLower, flankRightUpper))
+            val flankRightUpper = if (it.upperEndpoint() + moveRight < chromLength) it.upperEndpoint() + moveRight else chromLength
+            flankingRanges.add(Range.closedOpen(flankRightLower, flankRightUpper+1)) // plus 1 due to "open"
         }
         return flankingRanges
     }
@@ -114,9 +119,8 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
 
         bedRanges.asRanges().forEach rangelist@{
             val newLeft = if (it.lowerEndpoint() - extendLeft > 0) it.lowerEndpoint()- extendLeft else 0
-            val newRight = if (it.upperEndpoint() + extendRight < chromLength-1) it.upperEndpoint() + extendRight else chromLength -1
-            //if (newLeft == 0 && newRight == chromLength -1) return@rangelist // exsiting entry spans entire chromosome. skip
-            extendedRanges.add(Range.closed(newLeft,newRight))
+            val newRight = if (it.upperEndpoint() + extendRight < chromLength) it.upperEndpoint() + extendRight else chromLength
+            extendedRanges.add(Range.closedOpen(newLeft,newRight+1)) // plus 1 due to "open"
         }
         return extendedRanges
     }

@@ -37,6 +37,7 @@ class BedFileDataTest {
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(3,rangeSize)
 
+        println("call flank with 4")
         val flankingRanges = bfd.flank(0,0,4)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
@@ -45,6 +46,7 @@ class BedFileDataTest {
             println(it.toString())
         }
 
+        println("\ncall extend with 4")
         val extendedRanges = bfd.extend(0,0,4)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
@@ -53,6 +55,7 @@ class BedFileDataTest {
             println(it.toString())
         }
 
+        println("\ncall intervalAround with 4")
         val intervalAroundRanges = bfd.intervalAround(4)
         val iaSize = intervalAroundRanges.asRanges().size
         println("\nsize of intervalAroundRanges: ${iaSize}")
