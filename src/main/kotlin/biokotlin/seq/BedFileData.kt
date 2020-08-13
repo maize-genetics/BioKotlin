@@ -26,7 +26,8 @@ import java.io.File
  * A RangeMap would not coalesce, but it doesn't allow for removeAll.
  *
  * Initial implementation does not handle strand. It can be added, would need to store the bedRanges as negative numbers
- * if strand is reverse.  And adjust flank/extend accordingly.
+ * if strand is reverse.  And adjust flank/extend accordingly. But this would change the ordering of the items in the
+ * RangeSet.  Alternately, could use a RangeMap, keep the numbers positive, and store "strand" value as the map value.
  *
  */
 class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
@@ -50,7 +51,7 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
                     var start = line.substring(tIndex1+1,tIndex2)
                     var end = if (tIndex3 > 0) line.substring(tIndex2+1,tIndex3) else line.substring(tIndex2)
                     // Using closed ranges to prevent automatic coalescing
-                    val range = Range.closed(start.toInt(), end.toInt()-1)
+                    val range = Range.closedOpen(start.toInt(), end.toInt())
                     bedRanges.add(range)
 
                 }
@@ -86,12 +87,14 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
             // ex: range = 90-95, moveLeft = moveRight = 3
             // 90 -3 = 87 = flankLeftLower
             // 90  = flankLeftUpper (because range is closed/open
-            // new range = 87 90
+            // new lower flank range = 87 90
 
+            // upper flank
             // 95 = start (because range is closed/open
-            // 95 + 3 = 99
-            // new range = 95 99
+            // 95 + 3 = 98
+            // new upper range = 95 98 (includes 95, doesn't include 98)
 
+            // If lowerEndpoint is <= 0, no flanking range to add
             if (it.lowerEndpoint() > 0) {
                 var flankLeftLower = if (it.lowerEndpoint() - moveLeft > 0) it.lowerEndpoint()-moveLeft else 0
                 val flankLeftUpper =  it.lowerEndpoint()
@@ -99,9 +102,9 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
             }
 
             // if the upperEndpoint is already at the end of the chromosome, skip - no flanking added
-            val flankRightLower = if (it.upperEndpoint() < chromLength -1) it.upperEndpoint() + 1 else return@rangelist
+            val flankRightLower = if (it.upperEndpoint() < chromLength) it.upperEndpoint()  else return@rangelist
             val flankRightUpper = if (it.upperEndpoint() + moveRight < chromLength) it.upperEndpoint() + moveRight else chromLength
-            flankingRanges.add(Range.closedOpen(flankRightLower, flankRightUpper+1)) // plus 1 due to "open"
+            flankingRanges.add(Range.closedOpen(flankRightLower, flankRightUpper))
         }
         return flankingRanges
     }
@@ -120,7 +123,7 @@ class BedFileData(val nucSeq: NucSeq, val bedFile: String) {
         bedRanges.asRanges().forEach rangelist@{
             val newLeft = if (it.lowerEndpoint() - extendLeft > 0) it.lowerEndpoint()- extendLeft else 0
             val newRight = if (it.upperEndpoint() + extendRight < chromLength) it.upperEndpoint() + extendRight else chromLength
-            extendedRanges.add(Range.closedOpen(newLeft,newRight+1)) // plus 1 due to "open"
+            extendedRanges.add(Range.closedOpen(newLeft,newRight))
         }
         return extendedRanges
     }

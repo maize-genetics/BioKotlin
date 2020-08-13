@@ -37,7 +37,11 @@ class BedFileDataTest {
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(3,rangeSize)
 
-        println("call flank with 4")
+        println("BedRangeSet is: closed/open:")
+        bfd.bedRanges.asRanges().forEach {
+            println(it.toString())
+        }
+        println("\ncall flank with 4")
         val flankingRanges = bfd.flank(0,0,4)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
