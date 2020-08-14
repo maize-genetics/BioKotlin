@@ -3,6 +3,10 @@ package biokotlin.seq
 
 import biokotlin.data.CodonTable
 import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Range
+import com.google.common.collect.RangeSet
+import com.google.common.collect.TreeRangeSet
+import java.io.File
 import java.util.*
 import kotlin.random.Random
 
@@ -164,8 +168,119 @@ interface Seq {
     /**Returns the length of the sequence*/
     fun len(): Int
 
-    operator fun compareTo(other: Seq): Int
+    /** Returns a Guava RangeSet, 0-based, closedOpen, representing the ranges from the bed file
+     * Takes a bedfile and translates the intervals into a Guava RangeSet<Int>
+     * the ranges remain 0-based, closed/Open
+     * This method does NOT support strand.  It could, but if we stick with Guava RangeSet,
+     * the ranges would need to be negative.  This would result in a different ordering of
+     * the ranges.
+     * We could keep the ranges positive, use a RangeMap, with the "value" being the strand.
+     * RangeMap does not support removeAll, which may be a desired feature when these sets
+     * are used.
+     */
+    fun BedFileToRangeSet(bedfile: String) : RangeSet<Int> {
+        val bedRanges : RangeSet<Int> = TreeRangeSet.create()
+        try {
+            val lines = File(bedfile).readLines()
+            lines.forEach { line ->
+                // The question is the bedfile format.  The first 3 columns must be chr/start/end
+                // Will there be additional columns?  If yes,  stop "end" at the next tab.
+                // If no, stop "end" at end of line.
+                // The rangeSet does not allow for storing the strand, unless we store negative numbers
+                var tIndex1 = line.indexOf("\t")
+                var tIndex2 = line.indexOf("\t",tIndex1+1)
+                var tIndex3 = line.indexOf("\t",tIndex2+1)
 
+                var start = line.substring(tIndex1+1,tIndex2)
+                var end = if (tIndex3 > 0) line.substring(tIndex2+1,tIndex3) else line.substring(tIndex2)
+                val range = Range.closedOpen(start.toInt(), end.toInt())
+                bedRanges.add(range)
+
+            }
+        } catch (Exc: Exception) {
+            throw IllegalStateException("error parsing bedfile: $bedfile")
+        }
+
+        return bedRanges
+    }
+
+    /** Returns RangeSet of flanking intervals, 0-based, closedOpen, of the specified range for each interval
+     * in the bed file.
+     * Similar to bedTools flank command
+     */
+    fun flank( left: Int,  right: Int ,  both: Int, bedFile: String): RangeSet<Int> {
+
+        val moveLeft = if (both > 0) both else left
+        val moveRight = if (both > 0) both else right
+        val chromLength = this.len() // this is 1-based, our ranges are 0-based
+
+        var flankingRanges: RangeSet<Int> = TreeRangeSet.create()
+        if (moveLeft == 0 && moveRight == 0 && both == 0) {
+            // nothing created - return empty set
+            return flankingRanges
+        }
+
+        val bedRanges = this.BedFileToRangeSet(bedFile)
+        bedRanges.asRanges().forEach rangelist@{
+
+            // ex: range = 90-95, moveLeft = moveRight = 3
+            // 90 -3 = 87 = flankLeftLower
+            // 90  = flankLeftUpper (because range is closed/open
+            // new lower flank range = 87 90
+
+            // upper flank
+            // 95 = start (because range is closed/open)
+            // 95 + 3 = 98
+            // new upper range = 95 98 (includes 95, doesn't include 98)
+
+            // If lowerEndpoint is <= 0, no flanking range to add
+            if (it.lowerEndpoint() > 0) {
+                var flankLeftLower = if (it.lowerEndpoint() - moveLeft > 0) it.lowerEndpoint()-moveLeft else 0
+                val flankLeftUpper =  it.lowerEndpoint()
+                flankingRanges.add(Range.closedOpen(flankLeftLower, flankLeftUpper))
+            }
+
+            // if the upperEndpoint is already at the end of the chromosome, skip - no flanking added
+            val flankRightLower = if (it.upperEndpoint() < chromLength) it.upperEndpoint()  else return@rangelist
+            val flankRightUpper = if (it.upperEndpoint() + moveRight < chromLength) it.upperEndpoint() + moveRight else chromLength
+            flankingRanges.add(Range.closedOpen(flankRightLower, flankRightUpper))
+        }
+        return flankingRanges
+    }
+
+
+    /** Returns a RangeSet, 0-based, closedOpen, representing bedfile ranges extended by the specified interval
+     * on each side.
+     * Similar to bedTools slop command
+     */
+    fun extend (left: Int,  right: Int,  both: Int, bedFile: String): RangeSet<Int> {
+        val extendLeft = if (both > 0) both else left
+        val extendRight = if (both > 0) both else right
+        val chromLength = this.len() // this is 1-based, our ranges are 0-based
+
+        val bedRanges = this.BedFileToRangeSet(bedFile)
+
+        var extendedRanges: RangeSet<Int> = TreeRangeSet.create()
+        if (extendLeft == 0 && extendRight == 0 && both == 0) {
+            // nothing created - return original bed file RangeSet
+            return bedRanges
+        }
+
+        bedRanges.asRanges().forEach rangelist@{
+            val newLeft = if (it.lowerEndpoint() - extendLeft > 0) it.lowerEndpoint()- extendLeft else 0
+            val newRight = if (it.upperEndpoint() + extendRight < chromLength) it.upperEndpoint() + extendRight else chromLength
+            extendedRanges.add(Range.closedOpen(newLeft,newRight))
+        }
+        return extendedRanges
+    }
+
+    /** Returns a RangeSet, 0-based, closedOpen, of the bedFile ranges extended on each side by the specified interval.
+     */
+    fun intervalAround(interval: Int, bedFile: String) : RangeSet<Int> {
+        return (extend(0,0, interval, bedFile))
+    }
+
+    operator fun compareTo(other: Seq): Int
 
     /**TODO - needs to be implemented*/
     fun ungap(): Seq
@@ -192,6 +307,7 @@ interface NucSeq : Seq {
     fun transcribe(): NucSeq
     /**Transcribes a NucSeq - essentially changes the NucSet from [NUC.RNA] to [NUC.DNA]*/
     fun back_transcribe(): NucSeq
+
     /**Returns the [NUC] of this [NucSeq] at the specified index [i] with i starting at zero
      * Negative index start from the end of the sequence, i.e. -1 is the last base
      * ```kotlin

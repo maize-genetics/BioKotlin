@@ -32,17 +32,17 @@ class BedFileDataTest {
         //val bedFile = "/Users/lcj34/git/biokotlin/src/test/kotlin/biokotlin/seq/testBedFile.txt"
         val bedFile = bedFile1
 
-        var bfd = BedFileData(dnaSeq, bedFile)
-        var rangeSize = bfd.bedRanges.asRanges().size
+        val bedRanges = dnaSeq.BedFileToRangeSet(bedFile)
+        var rangeSize = bedRanges.asRanges().size
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(3,rangeSize)
 
         println("BedRangeSet is: closed/open:")
-        bfd.bedRanges.asRanges().forEach {
+        bedRanges.asRanges().forEach {
             println(it.toString())
         }
         println("\ncall flank with 4")
-        val flankingRanges = bfd.flank(0,0,4)
+        val flankingRanges = dnaSeq.flank(0,0,4,bedFile)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
         assertEquals(6,flankSize)
@@ -51,7 +51,7 @@ class BedFileDataTest {
         }
 
         println("\ncall extend with 4")
-        val extendedRanges = bfd.extend(0,0,4)
+        val extendedRanges = dnaSeq.extend(0,0,4,bedFile)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
         assertEquals(3,extendSize)
@@ -60,7 +60,7 @@ class BedFileDataTest {
         }
 
         println("\ncall intervalAround with 4")
-        val intervalAroundRanges = bfd.intervalAround(4)
+        val intervalAroundRanges = dnaSeq.intervalAround(4,bedFile)
         val iaSize = intervalAroundRanges.asRanges().size
         println("\nsize of intervalAroundRanges: ${iaSize}")
         assertEquals(3,iaSize)
@@ -82,12 +82,12 @@ class BedFileDataTest {
         val dnaSeq = NucSeqByteEncode(dnaString)
         val bedFile = bedFileEnds
 
-        var bfd = BedFileData(dnaSeq, bedFile)
-        var rangeSize = bfd.bedRanges.asRanges().size
+        var bedRanges = dnaSeq.BedFileToRangeSet(bedFile)
+        var rangeSize = bedRanges.asRanges().size
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(4, rangeSize)
 
-        val flankingRanges = bfd.flank(0,0,2)
+        val flankingRanges = dnaSeq.flank(0,0,2, bedFile)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
         flankingRanges.asRanges().forEach {
@@ -95,7 +95,7 @@ class BedFileDataTest {
         }
         assertEquals(7,flankSize)
 
-        val extendedRanges = bfd.extend(0,0,2)
+        val extendedRanges = dnaSeq.extend(0,0,2, bedFile)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
 
@@ -104,7 +104,7 @@ class BedFileDataTest {
         }
         assertEquals(4,extendSize)
 
-        val intervalAroundRanges = bfd.intervalAround(2)
+        val intervalAroundRanges = dnaSeq.intervalAround(2, bedFile)
         val iaSize = intervalAroundRanges.asRanges().size
         println("\nsize of intervalAroundRanges: ${iaSize}")
         intervalAroundRanges.asRanges().forEach {
@@ -126,12 +126,12 @@ class BedFileDataTest {
         val dnaSeq = NucSeqByteEncode(dnaString)
         val bedFile = bedFileEnds
 
-        var bfd = BedFileData(dnaSeq, bedFile)
-        var rangeSize = bfd.bedRanges.asRanges().size
+        var bedRanges = dnaSeq.BedFileToRangeSet( bedFile)
+        var rangeSize = bedRanges.asRanges().size
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(4, rangeSize)
 
-        val flankingRanges = bfd.flank(0,0,4)
+        val flankingRanges = dnaSeq.flank(0,0,4, bedFile)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
         flankingRanges.asRanges().forEach {
@@ -144,7 +144,7 @@ class BedFileDataTest {
         assertEquals(6,flankSize)
 
 
-        val extendedRanges = bfd.extend(0,0,4)
+        val extendedRanges = dnaSeq.extend(0,0,4, bedFile)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
 
@@ -155,7 +155,7 @@ class BedFileDataTest {
         // Again, 2 ranges are coalesced, so we started with 4 bedfile entries, now have 3
         assertEquals(3,extendSize)
 
-        val intervalAroundRanges = bfd.intervalAround(4)
+        val intervalAroundRanges = dnaSeq.intervalAround(4, bedFile)
         val iaSize = intervalAroundRanges.asRanges().size
         println("\nsize of intervalAroundRanges: ${iaSize}")
         intervalAroundRanges.asRanges().forEach {
