@@ -221,7 +221,28 @@ interface Seq {
         }
 
         val bedRanges = this.BedFileToRangeSet(bedFile)
-        bedRanges.asRanges().forEach rangelist@{
+        return flank(left,right,both,bedRanges)
+    }
+
+    /** Returns RangeSet of flanking intervals, 0-based, closedOpen, of the specified range for each interval
+     * in the bed file.
+     *
+     * Takes a RangeSet vs a BED formatted file
+     * Similar to bedTools flank command
+     */
+    fun flank( left: Int,  right: Int ,  both: Int, rangeSet: RangeSet<Int>): RangeSet<Int> {
+
+        val moveLeft = if (both > 0) both else left
+        val moveRight = if (both > 0) both else right
+        val chromLength = this.len() // this is 1-based, our ranges are 0-based
+
+        var flankingRanges: RangeSet<Int> = TreeRangeSet.create()
+        if (moveLeft == 0 && moveRight == 0 && both == 0) {
+            // nothing created - return empty set
+            return flankingRanges
+        }
+
+        rangeSet.asRanges().forEach rangelist@{
 
             // ex: range = 90-95, moveLeft = moveRight = 3
             // 90 -3 = 87 = flankLeftLower
@@ -248,7 +269,6 @@ interface Seq {
         return flankingRanges
     }
 
-
     /** Returns a RangeSet, 0-based, closedOpen, representing bedfile ranges extended by the specified interval
      * on each side.
      * Similar to bedTools slop command
@@ -259,14 +279,25 @@ interface Seq {
         val chromLength = this.len() // this is 1-based, our ranges are 0-based
 
         val bedRanges = this.BedFileToRangeSet(bedFile)
+        return extend(left, right, both, bedRanges)
+    }
+
+    /** Returns a RangeSet, 0-based, closedOpen, representing bedfile ranges extended by the specified interval
+     * on each side.
+     * Similar to bedTools slop command, but works on a RangeSet<Int> vs a bed file
+     */
+    fun extend (left: Int,  right: Int,  both: Int, rangeSet: RangeSet<Int>): RangeSet<Int> {
+        val extendLeft = if (both > 0) both else left
+        val extendRight = if (both > 0) both else right
+        val chromLength = this.len() // this is 1-based, our ranges are 0-based
 
         var extendedRanges: RangeSet<Int> = TreeRangeSet.create()
         if (extendLeft == 0 && extendRight == 0 && both == 0) {
             // nothing created - return original bed file RangeSet
-            return bedRanges
+            return rangeSet
         }
 
-        bedRanges.asRanges().forEach rangelist@{
+        rangeSet.asRanges().forEach rangelist@{
             val newLeft = if (it.lowerEndpoint() - extendLeft > 0) it.lowerEndpoint()- extendLeft else 0
             val newRight = if (it.upperEndpoint() + extendRight < chromLength) it.upperEndpoint() + extendRight else chromLength
             extendedRanges.add(Range.closedOpen(newLeft,newRight))
@@ -278,6 +309,13 @@ interface Seq {
      */
     fun intervalAround(interval: Int, bedFile: String) : RangeSet<Int> {
         return (extend(0,0, interval, bedFile))
+    }
+
+    /** Returns a RangeSet, 0-based, closedOpen, of the bedFile ranges extended on each side by the specified interval.
+     * This takes a RangeSet instead of a bedfile
+     */
+    fun intervalAround(interval: Int, rangeSet: RangeSet<Int>) : RangeSet<Int> {
+        return (extend(0,0, interval, rangeSet))
     }
 
     operator fun compareTo(other: Seq): Int
