@@ -101,6 +101,11 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     operator fun get(i: Int): NucSeqRecord =
             if (i >= 0) sequences[i] else sequences[i+sequences.size]
 
+    /**Returns the [NUC] at row [i] and column [j], starting at zero.
+     * Negative indices start from the end of the sequence, i.e. -1 is the last base.
+     */
+    operator fun get(i: Int, j: Int): NUC = this[i][j]
+
     /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [List], based on
      * the [IntRange] given.
      * Kotlin range operator is "..". Indices start at zero.
@@ -179,6 +184,11 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
      */
     operator fun get(i: Int): ProteinSeqRecord =
             if (i >= 0) sequences[i] else sequences[i+sequences.size]
+
+    /**Returns the [AminoAcid] at row [i] and column [j], starting at zero.
+     * Negative indices start from the end of the sequence, i.e. -1 is the last base.
+     */
+    operator fun get(i: Int, j: Int): AminoAcid = this[i][j]
 
     /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List],
      * based on
