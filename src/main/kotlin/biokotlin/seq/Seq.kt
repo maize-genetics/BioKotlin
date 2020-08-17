@@ -210,12 +210,11 @@ interface Seq {
      */
     fun flank( left: Int,  right: Int , bedFile: String): RangeSet<Int> {
 
-        val moveLeft =  left
-        val moveRight =  right
+
         val chromLength = this.len() // this is 1-based, our ranges are 0-based
 
         var flankingRanges: RangeSet<Int> = TreeRangeSet.create()
-        if (moveLeft == 0 && moveRight == 0 ) {
+        if (left == 0 && right == 0 ) {
             // nothing created - return empty set
             return flankingRanges
         }
@@ -232,12 +231,11 @@ interface Seq {
      */
     fun flank( left: Int,  right: Int ,  rangeSet: RangeSet<Int>): RangeSet<Int> {
 
-        val moveLeft =  left
-        val moveRight =  right
+
         val chromLength = this.len() // this is 1-based, our ranges are 0-based
 
         var flankingRanges: RangeSet<Int> = TreeRangeSet.create()
-        if (moveLeft == 0 && moveRight == 0 ) {
+        if (left == 0 && right == 0 ) {
             // nothing created - return empty set
             return flankingRanges
         }
@@ -256,14 +254,14 @@ interface Seq {
 
             // If lowerEndpoint is <= 0, no flanking range to add
             if (it.lowerEndpoint() > 0) {
-                var flankLeftLower = if (it.lowerEndpoint() - moveLeft > 0) it.lowerEndpoint()-moveLeft else 0
+                var flankLeftLower = if (it.lowerEndpoint() - left > 0) it.lowerEndpoint()-left else 0
                 val flankLeftUpper =  it.lowerEndpoint()
                 flankingRanges.add(Range.closedOpen(flankLeftLower, flankLeftUpper))
             }
 
             // if the upperEndpoint is already at the end of the chromosome, skip - no flanking added
             val flankRightLower = if (it.upperEndpoint() < chromLength) it.upperEndpoint()  else return@rangelist
-            val flankRightUpper = if (it.upperEndpoint() + moveRight < chromLength) it.upperEndpoint() + moveRight else chromLength
+            val flankRightUpper = if (it.upperEndpoint() + right < chromLength) it.upperEndpoint() + right else chromLength
             flankingRanges.add(Range.closedOpen(flankRightLower, flankRightUpper))
         }
         return flankingRanges
@@ -274,8 +272,7 @@ interface Seq {
      * Similar to bedTools slop command
      */
     fun extend (left: Int,  right: Int,  bedFile: String): RangeSet<Int> {
-        val extendLeft = left
-        val extendRight =  right
+
         val chromLength = this.len() // this is 1-based, our ranges are 0-based
 
         val bedRanges = this.BedFileToRangeSet(bedFile)
@@ -287,19 +284,19 @@ interface Seq {
      * Similar to bedTools slop command, but works on a RangeSet<Int> vs a bed file
      */
     fun extend (left: Int,  right: Int,  rangeSet: RangeSet<Int>): RangeSet<Int> {
-        val extendLeft =  left
-        val extendRight =  right
+
         val chromLength = this.len() // this is 1-based, our ranges are 0-based
 
         var extendedRanges: RangeSet<Int> = TreeRangeSet.create()
-        if (extendLeft == 0 && extendRight == 0 ) {
+        if (left == 0 && right == 0 ) {
             // nothing created - return original bed file RangeSet
             return rangeSet
         }
 
         rangeSet.asRanges().forEach rangelist@{
-            val newLeft = if (it.lowerEndpoint() - extendLeft > 0) it.lowerEndpoint()- extendLeft else 0
-            val newRight = if (it.upperEndpoint() + extendRight < chromLength) it.upperEndpoint() + extendRight else chromLength
+            val newLeft = if (it.lowerEndpoint() - left > 0) it.lowerEndpoint()- left else 0
+            val newRight = if (it.upperEndpoint() + right < chromLength) it.upperEndpoint() + right else chromLength
+
             extendedRanges.add(Range.closedOpen(newLeft,newRight))
         }
         return extendedRanges
