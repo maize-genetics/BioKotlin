@@ -1,4 +1,4 @@
-@file:JvmName("SeqRecord")
+@file:JvmName("SeqRecor")
 
 package biokotlin.seq
 
@@ -41,15 +41,15 @@ sealed class SeqRecord(val id: String, val name: String?, val description: Strin
 
 }
 
+fun NucSeqRecord(sequence: NucSeq, id: String, name: String? = null, description: String? = null,
+                 annotations: Map<String, String>): NucSeqRecord {
+    val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
+    return NucSeqRecord(sequence, id, name, description, map)
+}
+
 class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? =
         null, annotations: ImmutableMap<String, String>? = null) :
         SeqRecord(id, name, description, annotations), NucSeq by sequence {
-
-    constructor(sequence: NucSeq, id: String, name: String? = null, description: String? = null,
-                annotations: Map<String, String>? = null)
-            : this(sequence, id, name, description,
-            if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
-    }
 
     /**
      * Return a new SeqRecord with the reverse complement sequence. The sequence will have id [id].
@@ -88,16 +88,16 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
     }
 }
 
+fun ProteinSeqRecord(sequence: ProteinSeq, id: String, name: String? = null, description: String? =
+            null, annotations: Map<String, String>): ProteinSeqRecord {
+    val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
+    return ProteinSeqRecord(sequence, id, name, description, map)
+}
+
 class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = null,
                        description: String? = null, annotations: ImmutableMap<String, String>? =
                                null) :
 SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
-
-    constructor(sequence: ProteinSeq, id: String, name: String? = null, description: String? =
-            null, annotations: Map<String, String>? = null)
-            : this(sequence, id, name, description,
-            if (annotations != null) ImmutableMap.copyOf (annotations) else null) {
-    }
 
     /**
      * Returns a string summary of the [ProteinSeqRecord]. Uses the representational string
@@ -116,6 +116,5 @@ SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
     override fun toString(): String {
         return "${stringHelper()}Sequence: $sequence\n"
     }
-
 
 }
