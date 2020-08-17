@@ -42,7 +42,7 @@ class BedFileDataTest {
             println(it.toString())
         }
         println("\ncall flank with 4")
-        val flankingRanges = dnaSeq.flank(0,0,4,bedFile)
+        val flankingRanges = dnaSeq.flank(4,4,bedFile)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
         assertEquals(6,flankSize)
@@ -51,7 +51,7 @@ class BedFileDataTest {
         }
 
         println("\ncall extend with 4")
-        val extendedRanges = dnaSeq.extend(0,0,4,bedFile)
+        val extendedRanges = dnaSeq.extend(4,4,bedFile)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
         assertEquals(3,extendSize)
@@ -87,7 +87,7 @@ class BedFileDataTest {
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(4, rangeSize)
 
-        val flankingRanges = dnaSeq.flank(0,0,2, bedFile)
+        val flankingRanges = dnaSeq.flank(2,2, bedFile)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
         flankingRanges.asRanges().forEach {
@@ -95,7 +95,7 @@ class BedFileDataTest {
         }
         assertEquals(7,flankSize)
 
-        val extendedRanges = dnaSeq.extend(0,0,2, bedFile)
+        val extendedRanges = dnaSeq.extend(2,2, bedFile)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
 
@@ -131,7 +131,7 @@ class BedFileDataTest {
         println("size of BedFileData ranges is : ${rangeSize}")
         assertEquals(4, rangeSize)
 
-        val flankingRanges = dnaSeq.flank(0,0,4, bedFile)
+        val flankingRanges = dnaSeq.flank(4,4, bedFile)
         val flankSize = flankingRanges.asRanges().size
         println("\nsize of flankingRanges: ${flankSize}")
         flankingRanges.asRanges().forEach {
@@ -144,7 +144,7 @@ class BedFileDataTest {
         assertEquals(6,flankSize)
 
 
-        val extendedRanges = dnaSeq.extend(0,0,4, bedFile)
+        val extendedRanges = dnaSeq.extend(4,4, bedFile)
         val extendSize = extendedRanges.asRanges().size
         println("\nsize of extendedRanges: ${extendSize}")
 
