@@ -14,14 +14,21 @@ Main attributes:
 Additional attributes:
 - name        - Sequence name, e.g. gene name (string)
 - description - Additional text (string)
+- annotations - A map of strings containing key-value pairs of annotations for different features
+- letterAnnotations - Per letter/symbol annotation. This holds an [ImmutableList] whose
+length matches that of the sequence. A typical use would be to hold a list of integers representing
+sequencing quality scores.
 
->>> from Bio.Seq import Seq
->>> from Bio.Seq import SeqRecord
->>> val record_1 = SeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
 
  */
-sealed class SeqRecord(val id: String, val name: String?, val description: String?,
-                       val annotations: ImmutableMap<String, String>?) {
+sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val description: String?,
+                       val annotations: ImmutableMap<String, String>?, val letterAnnotations:
+                       ImmutableList<Object>? = null) {
+
+    init {
+        if (letterAnnotations != null && sequence.len() != letterAnnotations.size) throw
+        IllegalStateException("The letter annotations must have the same length as the sequence.")
+    }
 
     /** Returns the length of the sequence in the record.*/
     abstract fun len(): Int
@@ -41,15 +48,35 @@ sealed class SeqRecord(val id: String, val name: String?, val description: Strin
 
 }
 
+
 fun NucSeqRecord(sequence: NucSeq, id: String, name: String? = null, description: String? = null,
-                 annotations: Map<String, String>): NucSeqRecord {
+                 annotations: Map<String, String>, letterAnnotations: ImmutableList<Object>? = null): NucSeqRecord {
     val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
-    return NucSeqRecord(sequence, id, name, description, map)
+    return NucSeqRecord(sequence, id, name, description, map, letterAnnotations)
 }
 
+/**
+A [NucSeqRecord] consists of a [NucSeq] and several optional annotations.
+
+Main attributes:
+- id          - Identifier such as a locus tag (string)
+- seq         - The sequence itself ([NucSeq])
+Additional attributes:
+- name        - Sequence name, e.g. gene name (string)
+- description - Additional text (string)
+- annotations - A map of strings containing key-value pairs of annotations for different features
+- letterAnnotations - Per letter/symbol annotation. This holds an [ImmutableList] whose
+length matches that of the sequence. A typical use would be to hold a list of integers representing
+sequencing quality scores.
+
+>>> from Bio.Seq import Seq
+>>> from Bio.Seq import NucSeqRecord
+>>> val record_1 = NucSeqRecord(NucSeq("ATCG"), "1", "seq1", "the first sequence")
+
+ */
 class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? =
-        null, annotations: ImmutableMap<String, String>? = null) :
-        SeqRecord(id, name, description, annotations), NucSeq by sequence {
+        null, annotations: ImmutableMap<String, String>? = null, letterAnnotations: ImmutableList<Object>? = null) :
+        SeqRecord(sequence, id, name, description, annotations, letterAnnotations), NucSeq by sequence {
 
     /**
      * Return a new SeqRecord with the reverse complement sequence. The sequence will have id [id].
@@ -75,7 +102,7 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
      * [sequence].
      *
      * >>> from Bio.Seq import Seq
-     * >>> from Bio.Seq import SeqRecord
+     * >>> from Bio.Seq import NucSeqRecord
      * >>> val record = NucSeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
      * >>> print(record)
      * ID: 1
@@ -89,15 +116,34 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
 }
 
 fun ProteinSeqRecord(sequence: ProteinSeq, id: String, name: String? = null, description: String? =
-            null, annotations: Map<String, String>): ProteinSeqRecord {
+            null, annotations: Map<String, String>, letterAnnotations: ImmutableList<Object>? = null): ProteinSeqRecord {
     val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
-    return ProteinSeqRecord(sequence, id, name, description, map)
+    return ProteinSeqRecord(sequence, id, name, description, map, letterAnnotations)
 }
 
+/**
+A [ProteinSeqRecord] consists of a [ProteinSeq] and several optional annotations.
+
+Main attributes:
+- id          - Identifier such as a locus tag (string)
+- seq         - The sequence itself ([ProteinSeq])
+Additional attributes:
+- name        - Sequence name, e.g. gene name (string)
+- description - Additional text (string)
+- annotations - A map of strings containing key-value pairs of annotations for different features
+- letterAnnotations - Per letter/symbol annotation. This holds an [ImmutableList] whose
+length matches that of the sequence. A typical use would be to hold a list of integers representing
+sequencing quality scores.
+
+>>> from Bio.Seq import Seq
+>>> from Bio.Seq import ProteinSeqRecord
+>>> val record_1 = ProteinSeqRecord(ProteinSeq("UX"), "1", "seq1", "the first sequence")
+
+ */
 class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = null,
-                       description: String? = null, annotations: ImmutableMap<String, String>? =
-                               null) :
-SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
+                       description: String? = null, annotations: ImmutableMap<String, String>? = null,
+                       letterAnnotations: ImmutableList<Object>? = null) :
+SeqRecord(sequence, id, name, description, annotations, letterAnnotations), ProteinSeq by sequence {
 
     /**
      * Returns a string summary of the [ProteinSeqRecord]. Uses the representational string
@@ -105,7 +151,7 @@ SeqRecord(id, name, description, annotations), ProteinSeq by sequence {
      * [sequence].
      *
      * >>> from Bio.Seq import Seq
-     * >>> from Bio.Seq import SeqRecord
+     * >>> from Bio.Seq import ProteinSeqRecord
      * >>> val record = ProteinSeqRecord(Seq(""), "1", "seq1", "the first sequence")
      * >>> print(record)
      * ID: 1

@@ -25,17 +25,17 @@ You can also create a MultipleSeqAlignment object directly, with argument:
 [seqs] are not all of the same length.
 
 >>> from Bio.Seq import Seq
->>> from Bio.Seq import SeqRecord
+>>> from Bio.Seq import NucSeqRecord
 >>> from Bio.Seq import MultipleSeqAlignment
->>> val record_1 = SeqRecord(Seq("ATCG"), "1")
->>> val record_2 = SeqRecord(Seq("ATCC"), "2")
+>>> val record_1 = NucSeqRecord(Seq("ATCG"), "1")
+>>> val record_2 = NucSeqRecord(Seq("ATCC"), "2")
 >>> val alignment = MultipleSeqAlignment(listOf(record_1, record_2))
 
 
  */
 
 sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
-    private val alignmentLength: Int
+    protected val alignmentLength: Int
     private val size = sequences.size
     init {
         if (sequences.isNullOrEmpty() || sequences.size < 2)
@@ -56,12 +56,45 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     fun get_alignment_length(): Int {
         return alignmentLength
     }
+
 }
 
-class NucMSA(val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences) {
+
+/**
+Immutable multiple sequence alignment object, consisting of two or more [NucSeqRecord]s with equal
+lengths. The data can then be regarded as a matrix of letters, with well defined columns. [NucMSA]
+also supports all read-only collection operations on the list of [NucSeqRecord]s.
+
+Please note while the Kotlin "x..y" range operator is supported, and works very similarly to
+Python's slice "x:y", y is inclusive here in Kotlin, and exclusive in Python.
+
+Creating a [NucMSA] object:
+You will typically use Bio.AlignIO to read in alignments from files as [NucMSA]
+objects. You can also use Bio.Align to align sequences of uneven length and generate a
+MultipleSeqAlignment object.
+
+You can also create a MultipleSeqAlignment object directly, with argument:
+- [seqs] - List of sequence records, required (type: ImmutableList<NucSeqRecord> or
+List<NucSeqRecord>)
+
+@throws [IllegalStateException] if [seqs] has less than two elements, or if the sequence records in
+[seqs] are not all of the same length.
+
+>>> from Bio.Seq import Seq
+>>> from Bio.Seq import NucSeqRecord
+>>> from Bio.Seq import MultipleSeqAlignment
+>>> val record_1 = NucSeqRecord(Seq("ATCG"), "1")
+>>> val record_2 = NucSeqRecord(Seq("ATCC"), "2")
+>>> val alignment = NucMSA(listOf(record_1, record_2))
+
+
+ */
+class NucMSA(val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences),
+        Collection<NucSeqRecord> by sequences{
 
     constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
     }
+
 
     /**Returns the [NucSeqRecord] at the specified index [i] with [i] starting at zero.
      * Negative indices start from the end of the sequence, i.e. -1 is the last base
@@ -75,11 +108,68 @@ class NucMSA(val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(
      * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
-    operator fun get(i: IntRange) = sequences.slice(i)
+    operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
+    /**
+     * Returns a string summary of the [NucMSA].
+     *
+     * >>> from Bio.Seq import Seq
+     * >>> from Bio.Seq import SeqRecord
+     * >>> from Bio.Seq import N
+     * >>> val record = ProteinSeqRecord(Seq(""), "1", "seq1", "the first sequence")
+     * >>> print(record)
+     * ID: 1
+     * Name: seq1
+     * Description: the first sequence
+     * Sequence:
+     */
+    override fun toString(): String {
+        val builder = StringBuilder()
+        builder.append("Alignment with $size rows and $alignmentLength columns.\n")
+        var i = 0
+        for (seq in sequences) {
+            if (i >= 50) {
+                builder.append("...\n")
+                break
+            }
+            builder.append("${seq.id} $seq\n")
+            i++
+        }
+        return builder.toString()
+    }
 }
 
-class ProteinMSA(val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment(sequences) {
+/**
+Immutable multiple sequence alignment object, consisting of two or more [ProteinSeqRecord]s with
+equal lengths. The data can then be regarded as a matrix of letters, with well defined columns.
+[ProteinMSA] also supports all read-only collection operations on the list of [ProteinSeqRecord]s.
+
+Please note while the Kotlin "x..y" range operator is supported, and works very similarly to
+Python's slice "x:y", y is inclusive here in Kotlin, and exclusive in Python.
+
+Creating a [ProteinMSA] object:
+You will typically use Bio.AlignIO to read in alignments from files as [ProteinMSA]
+objects. You can also use Bio.Align to align sequences of uneven length and generate a
+MultipleSeqAlignment object.
+
+You can also create a MultipleSeqAlignment object directly, with argument:
+- [seqs] - List of sequence records, required (type: ImmutableList<ProteinSeqRecord> or
+List<ProteinSeqRecord>)
+
+@throws [IllegalStateException] if [seqs] has less than two elements, or if the sequence records in
+[seqs] are not all of the same length.
+
+>>> from Bio.Seq import Seq
+>>> from Bio.Seq import ProteinSeqRecord
+>>> from Bio.Seq import ProteinMSA
+>>> val record_1 = ProteinSeqRecord(Seq("MHQA"), "1")
+>>> val record_2 = ProteinSeqRecord(Seq("MHQ-"), "2")
+>>> val alignment = ProteinMSA(listOf(record_1, record_2))
+
+
+ */
+class ProteinMSA(val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment(sequences),
+        Collection<ProteinSeqRecord> by sequences {
 
     constructor(sequences: List<ProteinSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
     }
@@ -97,7 +187,21 @@ class ProteinMSA(val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAl
      * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
-    operator fun get(i: IntRange) = sequences.slice(i)
+    operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
+    override fun toString(): String {
+        val builder = StringBuilder()
+        builder.append("Alignment with $size rows and $alignmentLength columns.\n")
+        var i = 0
+        for (seq in sequences) {
+            if (i >= 50) {
+                builder.append("...\n")
+                break
+            }
+            builder.append("${seq.id} $seq\n")
+            i++
+        }
+        return builder.toString()
+    }
 }
 
