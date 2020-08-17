@@ -27,13 +27,14 @@ sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val des
 
     init {
         require (letterAnnotations == null || sequence.len() == letterAnnotations.size)
-        {"The letter annotations must have the same length as the sequence."}
+        {"The letter annotations have length ${letterAnnotations?.size}. They should be of the " +
+                "same length as the sequence, which has length ${sequence.len()}."}
     }
 
     /** Returns the length of the sequence in the record.*/
     abstract fun len(): Int
 
-    protected fun stringHelper(): String {
+    protected fun propertiesString(): String {
         val builder = StringBuilder()
         builder.append("ID: $id\n")
         builder.append(if (name == null) "" else "Name: $name\n")
@@ -119,7 +120,7 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
      * Sequence: ATCG
      */
     override fun toString(): String {
-        return "${stringHelper()}Sequence: $sequence\n"
+        return "${propertiesString()}Sequence: $sequence\n"
     }
 }
 
@@ -168,7 +169,7 @@ SeqRecord(sequence, id, name, description, annotations, letterAnnotations), Prot
      * Sequence: MHQA
      */
     override fun toString(): String {
-        return "${stringHelper()}Sequence: $sequence\n"
+        return "${propertiesString()}Sequence: $sequence\n"
     }
 
 }

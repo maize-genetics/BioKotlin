@@ -43,7 +43,9 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
 
         alignmentLength = sequences[0].len()
         for (seq in sequences) {
-            require(seq.len() == alignmentLength) {"The sequence records are not of equal length."}
+            require(seq.len() == alignmentLength)
+            {"Sequence record ${seq.id} has length ${seq.len()}, instead of the expected " +
+                    "alignment length of $alignmentLength."}
         }
     }
     /** Returns the number of sequences in the alignment.*/
