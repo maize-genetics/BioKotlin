@@ -36,8 +36,8 @@ class SeqRecordTest : StringSpec({
     "Test sequence complement and reverse complement" {
         record1.complement("Sequence 1 Complement").sequence shouldBe record1.sequence.complement()
         record1.reverse_complement("Sequence 1 Reverse Complement").sequence shouldBe record1.sequence.reverse_complement()
-
     }
+
 
 
 })

@@ -26,8 +26,8 @@ sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val des
                        ImmutableList<Any>? = null) {
 
     init {
-        if (letterAnnotations != null && sequence.len() != letterAnnotations.size) throw
-        IllegalStateException("The letter annotations must have the same length as the sequence.")
+        require (letterAnnotations == null || sequence.len() == letterAnnotations.size)
+        {"The letter annotations must have the same length as the sequence."}
     }
 
     /** Returns the length of the sequence in the record.*/

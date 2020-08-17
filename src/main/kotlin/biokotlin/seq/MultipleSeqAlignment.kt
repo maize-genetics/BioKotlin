@@ -38,13 +38,12 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     protected val alignmentLength: Int
     private val size = sequences.size
     init {
-        if (sequences.isNullOrEmpty() || sequences.size < 2)
-            throw IllegalStateException("Too few sequence records given - requires at least 2 " +
-                    "sequences.")
+        require(!sequences.isNullOrEmpty() && sequences.size > 2)
+        {"Too few sequence records given - requires at least 2 sequences."}
+
         alignmentLength = sequences[0].len()
         for (seq in sequences) {
-            if (seq.len() != alignmentLength)
-                throw IllegalStateException("The sequence records are not of equal length.")
+            require(seq.len() == alignmentLength) {"The sequence records are not of equal length."}
         }
     }
     /** Returns the number of sequences in the alignment.*/
