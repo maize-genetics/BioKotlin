@@ -114,6 +114,8 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
+    operator fun get(i: IntRange, j: IntRange): List<NUC> = TODO()
+
     /**
      * Returns a string summary of the [NucMSA].
      *
@@ -198,6 +200,9 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
+
+
+    operator fun get(i: IntRange, j: IntRange): List<AminoAcid> = TODO()
 
     /**
      * Returns a string summary of the [ProteinMSA].

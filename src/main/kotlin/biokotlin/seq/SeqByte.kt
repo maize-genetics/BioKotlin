@@ -166,8 +166,7 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     override fun count_overlap(query: NucSeq): Int = count(query, true)
     override fun indexOf(query: NucSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(),start,end,false)
-    override operator fun contains(element: NucSeq?): Boolean =
-            if (element == null) false else indexOf(element) != -1
+    override operator fun contains(element: NucSeq): Boolean = indexOf(element) != -1
     override fun lastIndexOf(query: NucSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(),start,end,true)
 
@@ -252,8 +251,7 @@ internal class ProteinSeqByte private constructor(seqB: ByteArray) : BioSeqByte(
     override fun count_overlap(query: ProteinSeq): Int = count(query, true)
     override fun indexOf(query: ProteinSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(),start,end,false)
-    override operator fun contains(element: ProteinSeq?): Boolean =
-            if (element == null) false else indexOf(element) != -1
+    override operator fun contains(element: ProteinSeq): Boolean = indexOf(element) != -1
     override fun lastIndexOf(query: ProteinSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(),start,end,true)
 
