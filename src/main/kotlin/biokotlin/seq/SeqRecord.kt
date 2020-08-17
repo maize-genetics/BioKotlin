@@ -23,7 +23,7 @@ sequencing quality scores.
  */
 sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val description: String?,
                        val annotations: ImmutableMap<String, String>?, val letterAnnotations:
-                       ImmutableList<Object>? = null) {
+                       ImmutableList<Any>? = null) {
 
     init {
         if (letterAnnotations != null && sequence.len() != letterAnnotations.size) throw
@@ -57,7 +57,8 @@ sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val des
 
 
 fun NucSeqRecord(sequence: NucSeq, id: String, name: String? = null, description: String? = null,
-                 annotations: Map<String, String>, letterAnnotations: ImmutableList<Object>? = null): NucSeqRecord {
+                 annotations: Map<String, String>, letterAnnotations: ImmutableList<Any>? = null):
+        NucSeqRecord {
     val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
     return NucSeqRecord(sequence, id, name, description, map, letterAnnotations)
 }
@@ -82,7 +83,7 @@ sequencing quality scores.
 
  */
 class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? =
-        null, annotations: ImmutableMap<String, String>? = null, letterAnnotations: ImmutableList<Object>? = null) :
+        null, annotations: ImmutableMap<String, String>? = null, letterAnnotations: ImmutableList<Any>? = null) :
         SeqRecord(sequence, id, name, description, annotations, letterAnnotations), NucSeq by sequence {
 
     /**
@@ -123,7 +124,8 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
 }
 
 fun ProteinSeqRecord(sequence: ProteinSeq, id: String, name: String? = null, description: String? =
-            null, annotations: Map<String, String>, letterAnnotations: ImmutableList<Object>? = null): ProteinSeqRecord {
+            null, annotations: Map<String, String>, letterAnnotations: ImmutableList<Any>? = null):
+        ProteinSeqRecord {
     val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
     return ProteinSeqRecord(sequence, id, name, description, map, letterAnnotations)
 }
@@ -149,7 +151,7 @@ sequencing quality scores.
  */
 class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = null,
                        description: String? = null, annotations: ImmutableMap<String, String>? = null,
-                       letterAnnotations: ImmutableList<Object>? = null) :
+                       letterAnnotations: ImmutableList<Any>? = null) :
 SeqRecord(sequence, id, name, description, annotations, letterAnnotations), ProteinSeq by sequence {
 
     /**
