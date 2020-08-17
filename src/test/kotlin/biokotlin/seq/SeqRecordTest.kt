@@ -16,16 +16,12 @@ class SeqRecordTest : StringSpec({
     val dnaString = "ACGTGGTGA"
     val rnaString = "ACGUGGUGA"
     val proteinString = "TW*"
-    val dnaSeq = NucSeqByteEncode(dnaString)
-    val rnaSeq = NucSeqByteEncode(rnaString, NUC.RNA)
-    val proteinSeq = ProteinSeqByte(proteinString)
+
+    val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description="The first sequence",
+                    annotations= mapOf("key1" to "value1"))
+    val printed1 = "ID: Sequence 1\nDescription: The first sequence\nkey1: value1\nSequence: ACGTGGTGA\n"
 
     "Test printing seq records" {
-        val record1 =
-                NucSeqRecord(NucSeq(dnaString), "Sequence 1", description="The first sequence",
-                        annotations= mapOf("key1" to "value1"))
-        val printed1 = "ID: Sequence 1\nDescription: The first sequence\nkey1: value1\nSequence: ACGTGGTGA\n"
-
         val record2 = ProteinSeqRecord(ProteinSeq(proteinString), "Sequence 2",
                 description="The second sequence")
         val printed2 = "ID: Sequence 2\nDescription: The second sequence\nSequence: TW*\n"
@@ -35,6 +31,12 @@ class SeqRecordTest : StringSpec({
         print(record1)
         print("\n")
         print(record2)
+    }
+
+    "Test sequence complement and reverse complement" {
+        record1.complement("Sequence 1 Complement").sequence shouldBe record1.sequence.complement()
+        record1.reverse_complement("Sequence 1 Reverse Complement").sequence shouldBe record1.sequence.reverse_complement()
+
     }
 
 

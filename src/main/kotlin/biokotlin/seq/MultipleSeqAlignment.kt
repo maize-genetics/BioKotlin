@@ -89,7 +89,7 @@ List<NucSeqRecord>)
 
 
  */
-class NucMSA(val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences),
+class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences),
         Collection<NucSeqRecord> by sequences{
 
     constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
@@ -114,27 +114,27 @@ class NucMSA(val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(
      * Returns a string summary of the [NucMSA].
      *
      * >>> from Bio.Seq import Seq
-     * >>> from Bio.Seq import SeqRecord
-     * >>> from Bio.Seq import N
-     * >>> val record = ProteinSeqRecord(Seq(""), "1", "seq1", "the first sequence")
-     * >>> print(record)
-     * ID: 1
-     * Name: seq1
-     * Description: the first sequence
-     * Sequence:
+     * >>> from Bio.Seq import NucSeqRecord
+     * >>> from Bio.Seq import NucMSA
+     * >>> val dnaAlign = NucMSA(listOf(
+     *      NucSeqRecord(NucSeq("ATCG"), "1"),
+     *      NucSeqRecord(NucSeq("ATCC"), "2")
+     *      )
+     * >>> print(dnaAlign)
+     * Alignment with 2 rows and 4 columns.
+     * 1: ATCG
+     * 2: ATCC
      */
     override fun toString(): String {
         val builder = StringBuilder()
         builder.append("Alignment with $size rows and $alignmentLength columns.\n")
         var i = 0
         for (seq in sequences) {
-            if (i >= 50) {
-                builder.append("...\n")
-                break
-            }
-            builder.append("${seq.id} $seq\n")
+            if (i == 50) break
+            builder.append("${seq.id}: $seq\n")
             i++
         }
+        if (i == 50) builder.append("...\n")
         return builder.toString()
     }
 }
@@ -168,7 +168,8 @@ List<ProteinSeqRecord>)
 
 
  */
-class ProteinMSA(val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment(sequences),
+class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment
+(sequences),
         Collection<ProteinSeqRecord> by sequences {
 
     constructor(sequences: List<ProteinSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
@@ -189,6 +190,21 @@ class ProteinMSA(val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAl
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
+    /**
+     * Returns a string summary of the [ProteinMSA].
+     *
+     * >>> from Bio.Seq import Seq
+     * >>> from Bio.Seq import ProteinSeqRecord
+     * >>> from Bio.Seq import ProteinMSA
+     * >>> val dnaAlign = ProteinMSA(listOf(
+     *      ProteinSeqRecord(ProteinSeq("MHQA"), "1"),
+     *      ProteinSeqRecord(ProteinSeq("MHQ-"), "2")
+     *      )
+     * >>> print(dnaAlign)
+     * Alignment with 2 rows and 4 columns.
+     * 1: MHQA
+     * 2: MHQ-
+     */
     override fun toString(): String {
         val builder = StringBuilder()
         builder.append("Alignment with $size rows and $alignmentLength columns.\n")

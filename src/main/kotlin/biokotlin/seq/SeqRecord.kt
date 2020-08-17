@@ -43,6 +43,13 @@ sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val des
                 builder.append("$key: $value\n")
             }
         }
+        if (letterAnnotations != null) {
+            builder.append("Letter Annotations:\n")
+            for (i in 0..minOf(49, letterAnnotations.size - 1)) {
+                builder.append("$i: ${letterAnnotations[i]}\n")
+            }
+            if (letterAnnotations.size > 50) builder.append("...\n")
+        }
         return builder.toString()
     }
 
@@ -69,7 +76,7 @@ Additional attributes:
 length matches that of the sequence. A typical use would be to hold a list of integers representing
 sequencing quality scores.
 
->>> from Bio.Seq import Seq
+>>> from Bio.Seq import NucSeq
 >>> from Bio.Seq import NucSeqRecord
 >>> val record_1 = NucSeqRecord(NucSeq("ATCG"), "1", "seq1", "the first sequence")
 
@@ -101,7 +108,7 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
      * the
      * [sequence].
      *
-     * >>> from Bio.Seq import Seq
+     * >>> from Bio.Seq import NucSeq
      * >>> from Bio.Seq import NucSeqRecord
      * >>> val record = NucSeqRecord(Seq("ATCG"), "1", "seq1", "the first sequence")
      * >>> print(record)
@@ -135,7 +142,7 @@ Additional attributes:
 length matches that of the sequence. A typical use would be to hold a list of integers representing
 sequencing quality scores.
 
->>> from Bio.Seq import Seq
+>>> from Bio.Seq import ProteinSeq
 >>> from Bio.Seq import ProteinSeqRecord
 >>> val record_1 = ProteinSeqRecord(ProteinSeq("UX"), "1", "seq1", "the first sequence")
 
@@ -147,17 +154,16 @@ SeqRecord(sequence, id, name, description, annotations, letterAnnotations), Prot
 
     /**
      * Returns a string summary of the [ProteinSeqRecord]. Uses the representational string
-     * version of the
-     * [sequence].
+     * version of the [sequence].
      *
      * >>> from Bio.Seq import Seq
      * >>> from Bio.Seq import ProteinSeqRecord
-     * >>> val record = ProteinSeqRecord(Seq(""), "1", "seq1", "the first sequence")
+     * >>> val record = ProteinSeqRecord(ProteinSeq("MHQA"), "1", "seq1", "the first sequence")
      * >>> print(record)
      * ID: 1
      * Name: seq1
      * Description: the first sequence
-     * Sequence:
+     * Sequence: MHQA
      */
     override fun toString(): String {
         return "${stringHelper()}Sequence: $sequence\n"

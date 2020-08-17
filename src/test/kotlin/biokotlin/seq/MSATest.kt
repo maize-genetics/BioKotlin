@@ -41,6 +41,13 @@ class MSATest : StringSpec({
         proteinAlign[-1].id shouldBe "ID003"
     }
 
+    "Test slicing" {
+        dnaAlign[0..2].map{it.id} shouldBe listOf("ID001", "ID002", "ID003")
+        dnaAlign[-3..-1].map{it.id} shouldBe listOf("ID006", "ID007", "ID008")
+        proteinAlign[0..1].map{it.id} shouldBe listOf("ID001", "ID002")
+        proteinAlign[-2..-1].map{it.id} shouldBe listOf("ID002", "ID003")
+    }
+
     "Mutability test" {
         nucRecords[2] = NucSeqRecord(NucSeq("ATCG"), "changed sequence")
         proteinRecords[1] = ProteinSeqRecord(ProteinSeq("MH"), "changed sequence")
