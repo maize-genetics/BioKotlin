@@ -24,7 +24,6 @@ data class GenomePosition(val chromosome: Chromosome, val site: Int): Comparable
     }
     override fun compareTo(other: GenomePosition): Int = compareValuesBy(this,other,
             {preferedChromosomeSort.compare(this.chromosome,other.chromosome)},{it.site})
-
 }
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -107,12 +106,16 @@ fun main() {
     println(grSet)
 
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
-//            .map{it.enlarge(100)}
+//            .map{it.resize(100)}
 //            .toSet()
 //    val coalescentSet: GenomeRangeSet = GenomeRange2.generator()
-//            .map{it.enlarge(100)}
+//            .map{it.resize(100)}
 //            .toCoalescingSet()
+//    val mergeSet: GenomeRangeSet = GenomeRange2.generator()
+//            .toMergeSet(1000)
 //
+
+    UIntRange
 }
 
 private operator fun String.get(rangeTo: IntRange) {
