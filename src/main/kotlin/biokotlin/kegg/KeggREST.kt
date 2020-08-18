@@ -98,12 +98,13 @@ object KeggCache : AutoCloseable {
     
     init {
         loadCache()
+        println(isOrgCode("zma"))
     }
 
     operator fun get(keggEntry: KeggEntry): KeggInfo? {
         var ki = cache[keggEntry]
         if(ki == null) {
-            val textReponse=KeggServer.query(get, keggEntry.dbEntry())
+            val textReponse=KeggServer.query(get, keggEntry.dbEntry()).ifEmpty { return null }
             ki = when(keggEntry.db()) {
                 //organism should all exist
                 genes -> geneParser(textReponse)
@@ -146,16 +147,19 @@ object KeggCache : AutoCloseable {
     internal fun addGenomes() {
         orgWithKeGenome = HashBiMap.create(7000)  //clear and rebuild
         val orgDataFrame= organisms()
-        orgDataFrame.rows.map {
-            val (keOrganism, keGenome) = KeggEntry.orgAndGenome(it["org"].toString(),it["kid"].toString())
+        for(orgRow in orgDataFrame.rows){
+            val (keOrganism, keGenome) = KeggEntry.orgAndGenome(orgRow["org"].toString(),orgRow["kid"].toString())
             orgWithKeGenome.forcePut(keOrganism.kid,keGenome)
-            val ki = KeggInfo.of(organism, keOrganism, it["species"].toString(), org = it["org"].toString())
-            KeggOrg(ki, it["org"].toString(), it["taxonomy"].toString().split(";"), keGenome)
-        }.forEach { cache[it.keggEntry] = it }
+            val ki = KeggInfo.of(organism, keOrganism, orgRow["species"].toString(), org = orgRow["org"].toString())
+            cache[ki.keggEntry] = KeggOrg(ki, orgRow["org"].toString(), orgRow["taxonomy"].toString().split(";"), keGenome)
+        }
         orgWithKeGenome= ImmutableBiMap.copyOf(orgWithKeGenome)
     }
 
-    /**Load the cache from the local file, if missing it creates a new cache.*/
+    /**Load the cache from the local file, if missing it creates a new cache.
+     * If saved or closed - the cache is saved for the next use.  Currently there is no purging of the cache.
+     * This will be changed to a better cache once decided upon.
+     * */
     fun loadCache(fileName: String = cacheFile) {
         println("Loading cache")
         if (File(fileName).exists()) {
@@ -210,8 +214,8 @@ object KeggServer {
         val reponse = khttp.get(queryText)
         when (reponse.statusCode) {
             200 -> println("Query success: $queryText")
-            400 -> System.err.println("Bad request (syntax error, wrong database name, etc.)\n$queryText")
-            404 -> System.err.println("Not found in KEGG\n$queryText")
+            400 -> System.err.println("Bad request (syntax error, wrong database name, etc.): $queryText")
+            404 -> System.err.println("Not found in KEGG: $queryText")
         }
         return reponse.text
     }

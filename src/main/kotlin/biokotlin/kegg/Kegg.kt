@@ -14,6 +14,11 @@ object Kegg {
         return ke.gene()
     }
 
+    fun allGenes(orgCode: String): DataFrame {
+        require(KeggCache.isOrgCode(orgCode)) {"Org code: '$orgCode' is not valid"}
+        return KeggDB.genes.list(orgCode)
+    }
+
     /**
      * Create a [KeggPathway] based on the db and kid.
      * Follows the rules of [KeggEntry.of] for accessing.
@@ -24,6 +29,11 @@ object Kegg {
         return ke.pathway()
     }
 
+    fun allPathways(orgCode: String? = null): DataFrame {
+        require(if(orgCode==null) true else KeggCache.isOrgCode(orgCode)) {"Org code: '$orgCode' is not valid"}
+        return KeggDB.pathway.list(orgCode.orEmpty())
+    }
+
     /**
      * Create a [KeggOrtholog] based on the db and kid.
      * Follows the rules of [KeggEntry.of] for accessing.
@@ -32,6 +42,10 @@ object Kegg {
     fun ortholog(vararg dbKid: String): KeggOrtholog {
         val ke = KeggEntry.of(*dbKid)
         return ke.ortholog()
+    }
+
+    fun allOrthologs(): DataFrame {
+        return KeggDB.orthology.list("")
     }
 }
 
@@ -101,14 +115,21 @@ enum class KeggDB(val abbr: String, val kidPrefix: List<String>) {
         //TODO might want to provide KeggEntry column
     }
 
+    /**Provides basic statistics on the Kegg Database*/
+    fun list(query: String): DataFrame {
+        val adjQuery = when {
+            this == genes -> query
+            query.isEmpty() -> this.name
+            else -> "${this.name}/$query"
+        }
+        return KeggServer.query(KeggOperations.list, adjQuery).lines()
+                .map { it.split("\t") }
+                .filter { it.size == 2 } //there is EOF line
+                .deparseRecords { mapOf("dbKid" to it[0], "name" to it[1]) }
+    }
+
     /**Query the Kegg Database provide the raw string reponse*/
     fun getText(query: String): String = KeggServer.query(KeggOperations.get, query)
-    /**Query the Kegg Database provide the raw string reponse*/
-    operator fun get(query: String): KeggInfo {
-        //query should be processed by KeggEntry
-        val text = KeggServer.query(KeggOperations.get, query)
-        TODO()
-    }
 
     companion object{
         /**Map to look up the [KeggDB] based on the KID prefix*/
