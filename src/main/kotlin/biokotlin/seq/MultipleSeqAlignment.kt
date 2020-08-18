@@ -38,7 +38,7 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     protected val alignmentLength: Int
     private val size = sequences.size
     init {
-        require(!sequences.isNullOrEmpty() && sequences.size > 2)
+        require(sequences.size > 2)
         {"Too few sequence records given - requires at least 2 sequences."}
 
         alignmentLength = sequences[0].len()
