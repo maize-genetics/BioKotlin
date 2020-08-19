@@ -3,6 +3,7 @@ package biokotlin.seq
 
 import biokotlin.data.CodonTable
 import com.google.common.collect.ImmutableSet
+import org.biojava.nbio.core.util.CRC64Checksum
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.random.Random
@@ -171,6 +172,15 @@ interface Seq {
 
     /**TODO - needs to be implemented*/
     fun ungap(): Seq
+
+    /**CRC64 checksum based on the underlying bytes in UTF-8*/
+    //TODO consider changing from String to an Immutable CheckSum class that wraps the long.
+    val crc64: String
+        get() {
+            crc64Checksum.reset()
+            crc64Checksum.update(seq())
+            return crc64Checksum.toString()
+        }
 }
 
 /**Main data structure for working with DNA and RNA sequences*/
@@ -298,3 +308,6 @@ internal fun negativeSlice(x: IntRange, size: Int): IntRange {
     if (first > last) throw StringIndexOutOfBoundsException("IntRange values should be ascending: $x")
     return IntRange(first, last)
 }
+
+internal val crc64Checksum = CRC64Checksum()
+

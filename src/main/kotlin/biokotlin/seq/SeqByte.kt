@@ -3,6 +3,7 @@ package biokotlin.seq
 
 import biokotlin.data.Codon
 import biokotlin.data.CodonTable
+import org.biojava.nbio.core.util.CRC64Checksum
 
 
 internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Seq {
@@ -101,6 +102,7 @@ private fun String.toNucSeqByteArray() = this.toUpperCase().toByteArray().replac
  */
 internal class NucSeqByte private constructor(seqB: ByteArray, override val nucSet: NucSet) : BioSeqByte(seqB), NucSeq {
     constructor(seq: String, preferredNucSet: NucSet): this(seq.toNucSeqByteArray(), preferredNucSet)
+    override val crc64: String by lazy {crc64Checksum.reset(); crc64Checksum.update(seqB); crc64Checksum.toString()}
     /**
      * TODO- Violates Bloch Item 23 - Prefer class hierarchies to tagged classes
      * Should make this abstract with two small class DNASeqByte and RNASeqByte to cover the few specific methods
@@ -225,6 +227,8 @@ private fun ByteArray.replaceUracilAndX(): ByteArray {
 
 internal class ProteinSeqByte private constructor(seqB: ByteArray) : BioSeqByte(seqB), ProteinSeq {
     constructor(seq: String) : this(seq.toUpperCase().toByteArray(Charsets.UTF_8))
+
+    override val crc64: String by lazy {crc64Checksum.reset(); crc64Checksum.update(seqB); crc64Checksum.toString()}
 
     override fun seq(): String = String(seqB)
     override fun get(i: Int): AminoAcid = if (i >= 0) AminoAcid.byteToAA(seqB[i]) else AminoAcid
