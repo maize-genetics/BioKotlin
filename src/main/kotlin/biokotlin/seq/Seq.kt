@@ -3,11 +3,8 @@ package biokotlin.seq
 
 import biokotlin.data.CodonTable
 import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Range
-import com.google.common.collect.RangeSet
-import com.google.common.collect.TreeRangeSet
-import java.io.File
 import java.util.*
+import java.util.stream.Collectors
 import kotlin.random.Random
 
 //import biokotlin.seq.
@@ -126,7 +123,8 @@ internal fun compatibleBioSet(seq: String): List<BioSet> {
                 origCharBits.cardinality() == 0
             }
     if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids. " +
-            "Or they are a mix of RNA and DNA")
+            "Or they are a mix of RNA and DNA.\n" +
+            "${bytePresent.stream().mapToObj{it.toChar()}.collect(Collectors.toList())}")
     return compatibleSets
 }
 
@@ -170,6 +168,7 @@ interface Seq {
 
     operator fun compareTo(other: Seq): Int
 
+
     /**TODO - needs to be implemented*/
     fun ungap(): Seq
 }
@@ -195,7 +194,6 @@ interface NucSeq : Seq {
     fun transcribe(): NucSeq
     /**Transcribes a NucSeq - essentially changes the NucSet from [NUC.RNA] to [NUC.DNA]*/
     fun back_transcribe(): NucSeq
-
     /**Returns the [NUC] of this [NucSeq] at the specified index [i] with i starting at zero
      * Negative index start from the end of the sequence, i.e. -1 is the last base
      * ```kotlin
