@@ -212,36 +212,15 @@ object GenomeRanges {
 
 
 fun main() {
-//    val chr = Chromosome("1")
-//    val gr = chr[0..2]
-//    val gr2= gr.enlarge(20)
-//    val grList = listOf<GRange>(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
-//    println(grList)
-//    println(grList.sortedWith(GenomeRanges.COMPARE_LEFT))
-//    println(grList.sortedWith(GenomeRanges.COMPARE_MIDDLE))
-//    val grSet = setOf(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
-//    println(grSet)
-
-    println() // begin initial Lynn test prior to Kotest creation
-    println("\nLynn begin ...")
-    var range1 = SRange.closed(Int1(48u),Int1(68u))
-    var rangeFlank5 = range1.flank(5, "BOTH", 100)
-    println("rangeFlank5 is: ")
-    println(rangeFlank5.toString())
-
-    println("\n starting rangeFlank15")
-    var rangeFlank15 = range1.flank(20, "BOTH", 100)
-    println("\nrangeFlank15 is: ")
-    println(rangeFlank15.toString())
-
-    println("\ntesting toInt - maybe that worked - I used it in 1 place, not the other!")
-    var lower = 1u
-    var count = 5
-    var subCountFromLower = lower.toInt() - count
-    println("subCountFromLower is : $subCountFromLower")
-
-    var flankingRanges: MutableSet<SRange> = mutableSetOf()
-
+    val chr = Chromosome("1")
+    val gr = chr[0..2]
+    val gr2= gr.enlarge(20)
+    val grList = listOf<GRange>(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
+    println(grList)
+    println(grList.sortedWith(GenomeRanges.COMPARE_LEFT))
+    println(grList.sortedWith(GenomeRanges.COMPARE_MIDDLE))
+    val grSet = setOf(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
+    println(grSet)
 
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
 //            .map{it.enlarge(100)}
