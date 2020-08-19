@@ -2,6 +2,9 @@ package biokotlin.genome
 
 import biokotlin.genome.Chromosome.Companion.preferedChromosomeSort
 import com.google.common.collect.Range
+import java.util.*
+import kotlin.Comparator
+
 
 /**
  * Class to hold definitions and methods for biokotlin ranges.
@@ -12,17 +15,20 @@ import com.google.common.collect.Range
  *             The ranges are physical positions, so non-0 positive numbers.
  *  For each range type, the the functions "flank", "shift", "resize" and "merge" are included.
  *  Those are explained below
- *  flank: (single Range or RangeSet of ranges)
+ *  flank: (single Range or Set of SRange)
  *      - takes a count of sites, plus "LEFT", "RIGHT", or "BOTH, indicating which of the sdies
- *        to flank, or if both are desired.  Retruns a set of hte flanking intervals
- *  shift: (single Range or RangeSet of ranges)
+ *        to flank, or if both are desired.
+ *      - Returns a Set<SRange> of the flanking intervals
+ *  shift: (single Range or Set<SRanges> of ranges)
  *      - takes a number to shift.  Negative implies shift right, positive implies shift left
  *        Shift moves both the lower and upper interval bounds by the requrest number of sites.
- *  merge: (RangeSet of ranges)
+ *      - returns the updated Range or Set<SRange>
+ *  merge: (on a Set<SRange>)
  *      - Takes a set of intervals and merges any intervals where the upper endpoint of one is
- *        distanced from the lower endpoint of the next by "count" bases, where "count" is a
+ *        distanced from the lower endpoint of the next by "count" or less bases, where "count" is a
  *        user supplied input parameter.
- *      - Merge must be run against a RangeSet of ranges, vs an individual range
+ *      - Merge must be run against a Set of SRanges, vs an individual range
+ *      - returns a Set<SRange> containing merged ranges
  *  resize: (single range or RangeSet of ranges)
  *      - ???
  *      - do we resize from lower, upper or half at each?  Do we specify an "anchor" point
@@ -30,10 +36,10 @@ import com.google.common.collect.Range
 
 
 
-@ExperimentalUnsignedTypes
-
+@kotlin.ExperimentalUnsignedTypes
 typealias Int0 = UInt
-data class Int1 (val site: UInt): Comparable<Int1>   {
+@kotlin.ExperimentalUnsignedTypes
+data class Int1 (var site: UInt): Comparable<Int1>   {
     init {
         require(site >= 0u){"All sites must be positive"}
     }
@@ -41,16 +47,11 @@ data class Int1 (val site: UInt): Comparable<Int1>   {
 
 }
 
-data class Int0Range (val lower: Int0, val upper: Int0)  {
-    val range = Range.closed(lower,upper)
-}
-
-
 @OptIn(ExperimentalUnsignedTypes::class)
 typealias SRange = Range<Int1>
 
-fun SRange.shift(count: Int,  direction: String, max: Int): Set<SRange> {
-    var shiftedRange: MutableSet<SRange> = mutableSetOf()
+
+fun SRange.shift(count: Int, max: Int): SRange {
     var lower : Int0 = this.lowerEndpoint().site
     var upper : Int0 = this.upperEndpoint().site
     if (count > 0) {
@@ -62,8 +63,8 @@ fun SRange.shift(count: Int,  direction: String, max: Int): Set<SRange> {
         lower  = (maxOf(1,this.lowerEndpoint().site.toInt() - count )).toUInt()
         upper = (maxOf (1, this.upperEndpoint().site.toInt() - count)).toUInt()
     }
-    shiftedRange.add(SRange.closed(Int1(lower),Int1(upper)))
-    return shiftedRange
+
+    return SRange.closed(Int1(lower),Int1(upper))
 }
 
 fun SRange.flank(count: Int,  direction: String, max: Int): Set<SRange> {
@@ -72,34 +73,80 @@ fun SRange.flank(count: Int,  direction: String, max: Int): Set<SRange> {
     when (direction.toUpperCase()) {
         "LEFT" -> {
             // flank just the lower end of ther ange
-            var lowerF : UInt = maxOf(1u,this.lowerEndpoint().site - count.toUInt())
-            var upperF = this.lowerEndpoint().site - 1u
-
-            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            if (this.lowerEndpoint().site > 1u) {
+                var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
+                var upperF = this.lowerEndpoint().site - 1u
+                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            }
         }
         "RIGHT" -> {
-            var lowerF = this.upperEndpoint().site + 1u
-            var upperF = this.upperEndpoint().site + count.toUInt()
-            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            if (this.upperEndpoint().site < max.toUInt()) {
+                var lowerF = upperEndpoint().site + 1u
+                var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
+                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            }
         }
         "BOTH" -> {
-            // flank the lower end of the range
-
-            // THis fails!  this.lower.site - count.toUint() will be a large number when
-            // we flank the lower end by more than there are bps.  Ex:  lower = 30, flank = 45
-            //var lowerInt: Int = (this.lowerEndpoint().site) - count
-            var lowerF : UInt = maxOf(1u,(this.lowerEndpoint().site - count.toUInt()))
-            println("lowerF in both is : $lowerF")
-            var upperF = this.lowerEndpoint().site - 1u
-            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-
-            // flank the upper end of the range
-            lowerF = upperEndpoint().site + 1u
-            upperF = upperEndpoint().site + count.toUInt()
-            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            // Flank the lower end of the range if it isn't already at 1
+            if (this.lowerEndpoint().site > 1u) {
+                var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
+                var upperF = this.lowerEndpoint().site - 1u
+                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            }
         }
     }
     return flankingRanges
+}
+
+fun flankSRangeSet ( count: Int,  direction: String, max: Int, ranges: Set<SRange>): Set<SRange> {
+    var fRangeSet : MutableSet<SRange> = mutableSetOf()
+    ranges.forEach{range ->
+        fRangeSet.addAll(range.flank(count,direction,max))
+    }
+
+    return fRangeSet
+}
+
+fun shiftSRangeSet ( count: Int,  max: Int, ranges: Set<SRange>): Set<SRange> {
+    var sRangeSet : MutableSet<SRange> = mutableSetOf()
+    ranges.forEach{range ->
+        sRangeSet.add(range.shift(count,max))
+    }
+
+    return sRangeSet
+}
+
+/**
+ * This function takes a Set or SRanges, and merges any ranges that are within "count"
+ * bps of each other.
+ *
+ * It returns a Set<SRange> of the merged ranges.
+ */
+fun mergeSRangeSet ( count: Int, ranges: Set<SRange>): Set<SRange> {
+    var sRangeSet : MutableSet<SRange> = mutableSetOf()
+
+    val sRangeDeque: Deque<SRange> = ArrayDeque()
+    var sortedRanges2 = ranges.toSortedSet(Comparator {s1, s2 -> s1.lowerEndpoint().compareTo(s2.lowerEndpoint())})
+
+    sRangeDeque.add(sortedRanges2.elementAt(0))
+
+    for (index in 1 until sortedRanges2.size) {
+        var top = sRangeDeque.peekLast()
+        var nextRange = sortedRanges2.elementAt(index)
+        if (nextRange.lowerEndpoint().site.toInt() > top.upperEndpoint().site.toInt() + count ) {
+            // not close enough - add to the stack
+            sRangeDeque.add(nextRange)
+        } else if (top.upperEndpoint().site < nextRange.upperEndpoint().site) {
+            // Merge the new range with the last one,
+            // remove the last from the stack, add new range to stack
+            top.upperEndpoint().site = nextRange.upperEndpoint().site
+            sRangeDeque.last
+            sRangeDeque.add(top)
+        }
+    }
+
+    sRangeSet.addAll(sRangeDeque)
+    return sRangeSet
 }
 
 data class Chromosome(val name: String):Comparable<Chromosome>{
@@ -169,7 +216,7 @@ fun main() {
 
     println() // begin initial Lynn test prior to Kotest creation
     println("\nLynn begin ...")
-    var range1 = SRange.closed(Int1(14u),Int1(68u))
+    var range1 = SRange.closed(Int1(48u),Int1(68u))
     var rangeFlank5 = range1.flank(5, "BOTH", 100)
     println("rangeFlank5 is: ")
     println(rangeFlank5.toString())
@@ -178,6 +225,15 @@ fun main() {
     var rangeFlank15 = range1.flank(20, "BOTH", 100)
     println("\nrangeFlank15 is: ")
     println(rangeFlank15.toString())
+
+    println("\ntesting toInt - maybe that worked - I used it in 1 place, not the other!")
+    var lower = 1u
+    var count = 5
+    var subCountFromLower = lower.toInt() - count
+    println("subCountFromLower is : $subCountFromLower")
+
+    var flankingRanges: MutableSet<SRange> = mutableSetOf()
+
 
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
 //            .map{it.enlarge(100)}
