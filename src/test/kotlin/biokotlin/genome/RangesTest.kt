@@ -70,6 +70,42 @@ class RangesTest: StringSpec ({
 
     }
 
+    "Test Shift on Set<SRange> " {
+        var ranges : MutableSet<SRange> = mutableSetOf()
+
+        ranges.add(SRange.closed(Int1(5u), Int1(25u)))
+        ranges.add(SRange.closed(Int1(48u), Int1(65u)))
+        ranges.add(SRange.closed(Int1(75u), Int1(87u)))
+        ranges.add(SRange.closed(Int1(170u), Int1(175u)))
+        ranges.add(SRange.closed(Int1(180u), Int1(210u)))
+        ranges.add(SRange.closed(Int1(300u), Int1(320u)))
+
+        // Test positive shift - shift right
+        var shiftedRangeSet = shiftSRangeSet ( 5,   500, ranges)
+
+        shiftedRangeSet.size shouldBe 6
+
+        println("\nRanges for ShiftedRangeSet ,shift by 5")
+        for (range in shiftedRangeSet) {
+            println(range.toString())
+        }
+        shiftedRangeSet.contains(SRange.closed(Int1(10u), Int1(30u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(53u), Int1(70u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(80u), Int1(92u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(175u), Int1(180u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(185u), Int1(215u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(305u), Int1(325u))) shouldBe true
+
+        // Test negative shift (shift left)
+        shiftedRangeSet = shiftSRangeSet ( -5,   500, ranges)
+        shiftedRangeSet.contains(SRange.closed(Int1(1u), Int1(20u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(43u), Int1(60u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(70u), Int1(82u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(165u), Int1(170u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(175u), Int1(205u))) shouldBe true
+        shiftedRangeSet.contains(SRange.closed(Int1(295u), Int1(315u))) shouldBe true
+    }
+
     "Test Merge Ranges " {
         var ranges : MutableSet<SRange> = mutableSetOf()
 
