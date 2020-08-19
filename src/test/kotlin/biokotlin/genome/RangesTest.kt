@@ -9,26 +9,29 @@ class RangesTest: StringSpec ({
         var range1 = SRange.closed(Int1(48u), Int1(68u))
         var flank5 = range1.flank(5, "BOTH", 100)
         flank5.size shouldBe 2
-        flank5.contains(SRange.closed(Int1(43u), Int1(73u))) shouldBe true
+        flank5.contains(SRange.closed(Int1(43u), Int1(47u))) shouldBe true
 
         // Test right side is cropped
         var flank40 = range1.flank(40, "BOTH", 100)
         flank40.size shouldBe 2
-        flank40.contains(SRange.closed(Int1(8u), Int1(39u))) shouldBe true
         println("\nRanges for flank40 of Range 48,68")
         for (range in flank40) {
             println(range.toString())
         }
+        flank40.contains(SRange.closed(Int1(8u), Int1(47u))) shouldBe true
+
 
         // Test left side gets cropped
         var range2 = SRange.closed(Int1(5u), Int1(58u))
         flank40 = range2.flank(40, "BOTH", 100)
         flank40.size shouldBe 2
-        flank40.contains(SRange.closed(Int1(1u), Int1(4u))) shouldBe true
         println("\nRanges for flank40 of Range 5,58")
         for (range in flank40) {
             println(range.toString())
         }
+        flank40.contains(SRange.closed(Int1(1u), Int1(4u))) shouldBe true
+        flank40.contains(SRange.closed(Int1(59u), Int1(98u))) shouldBe true
+
     }
 
     "Test flank on Set<SRange> " {
@@ -42,27 +45,28 @@ class RangesTest: StringSpec ({
         ranges.add(SRange.closed(Int1(300u), Int1(320u)))
 
         var flankedRangeSet = flankSRangeSet ( 5,  "BOTH", 500, ranges)
+        flankedRangeSet.size shouldBe 12
 
     }
 
     "Test shift range " {
         var range1 = SRange.closed(Int1(48u), Int1(68u))
         var shift5 = range1.shift(5,  100)
-        shift5.lowerEndpoint().site shouldBe 53
-        shift5.upperEndpoint().site shouldBe 73
+        shift5.lowerEndpoint().site shouldBe 53u
+        shift5.upperEndpoint().site shouldBe 73u
 
         var shift50 = range1.shift(50,100) // 100 is max size for range
-        shift50.lowerEndpoint().site shouldBe 98
-        shift50.upperEndpoint().site shouldBe 100
+        shift50.lowerEndpoint().site shouldBe 98u
+        shift50.upperEndpoint().site shouldBe 100u
 
         var shiftNeg10 = range1.shift(-10,100)
-        shiftNeg10.lowerEndpoint().site shouldBe 38
-        shiftNeg10.upperEndpoint().site shouldBe 58
+        shiftNeg10.lowerEndpoint().site shouldBe 38u
+        shiftNeg10.upperEndpoint().site shouldBe 58u
 
         // Shift left beyond 1
         var shiftNeg50 = range1.shift(-50,100)
-        shiftNeg50.lowerEndpoint().site shouldBe 1
-        shiftNeg50.upperEndpoint().site shouldBe 18
+        shiftNeg50.lowerEndpoint().site shouldBe 1u
+        shiftNeg50.upperEndpoint().site shouldBe 18u
 
     }
 

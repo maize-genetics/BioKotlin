@@ -60,8 +60,9 @@ fun SRange.shift(count: Int, max: Int): SRange {
         upper = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
     } else if (count < 0) {
         // shift left, verify we don't drop below 1
-        lower  = (maxOf(1,this.lowerEndpoint().site.toInt() - count )).toUInt()
-        upper = (maxOf (1, this.upperEndpoint().site.toInt() - count)).toUInt()
+        // + count because count is negative, - count would make it positive
+        lower  = (maxOf(1,this.lowerEndpoint().site.toInt() + count )).toUInt()
+        upper = (maxOf (1, this.upperEndpoint().site.toInt() + count)).toUInt()
     }
 
     return SRange.closed(Int1(lower),Int1(upper))
@@ -93,6 +94,13 @@ fun SRange.flank(count: Int,  direction: String, max: Int): Set<SRange> {
                 var upperF = this.lowerEndpoint().site - 1u
                 flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
             }
+            // Flank the upper end of range if it isn't already at max
+            if (this.upperEndpoint().site < max.toUInt()) {
+                var lowerF = upperEndpoint().site + 1u
+                var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
+                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+            }
+
         }
     }
     return flankingRanges
