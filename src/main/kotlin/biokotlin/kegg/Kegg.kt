@@ -14,6 +14,11 @@ object Kegg {
         return ke.gene()
     }
 
+    fun allGenes(orgCode: String): DataFrame {
+        require(KeggCache.isOrgCode(orgCode)) {"Org code: '$orgCode' is not valid"}
+        return KeggDB.genes.list(orgCode)
+    }
+
     /**
      * Create a [KeggPathway] based on the db and kid.
      * Follows the rules of [KeggEntry.of] for accessing.
@@ -22,6 +27,11 @@ object Kegg {
     fun pathway(vararg dbKid: String): KeggPathway {
         val ke = KeggEntry.of(*dbKid)
         return ke.pathway()
+    }
+
+    fun allPathways(orgCode: String? = null): DataFrame {
+        require(if(orgCode==null) true else KeggCache.isOrgCode(orgCode)) {"Org code: '$orgCode' is not valid"}
+        return KeggDB.pathway.list(orgCode.orEmpty())
     }
 
     /**
@@ -33,9 +43,21 @@ object Kegg {
         val ke = KeggEntry.of(*dbKid)
         return ke.ortholog()
     }
+
+    fun allOrthologs(): DataFrame {
+        return KeggDB.orthology.list("")
+    }
 }
 
-enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
+/**
+ * The set of supported Kegg DBs along with their [abbr] and [kidPrefix]
+ * Kegg data is generally accessed through a combination of <abbr:kid>, where
+ * each kid starts with a prefix.
+ *
+ * Organism specific data is prefaced by an <org> codes.
+ *
+ */
+enum class KeggDB(val abbr: String, val kidPrefix: List<String>) {
     /**KEGG pathway maps*/
     pathway("path", listOf("map", "ko", "ec", "rn", "<org>")),
 
@@ -93,19 +115,26 @@ enum class KeggDB(val abbr: String, val kid_prefix: List<String>) {
         //TODO might want to provide KeggEntry column
     }
 
+    /**Provides basic statistics on the Kegg Database*/
+    fun list(query: String): DataFrame {
+        val adjQuery = when {
+            this == genes -> query
+            query.isEmpty() -> this.name
+            else -> "${this.name}/$query"
+        }
+        return KeggServer.query(KeggOperations.list, adjQuery).lines()
+                .map { it.split("\t") }
+                .filter { it.size == 2 } //there is EOF line
+                .deparseRecords { mapOf("dbKid" to it[0], "name" to it[1]) }
+    }
+
     /**Query the Kegg Database provide the raw string reponse*/
     fun getText(query: String): String = KeggServer.query(KeggOperations.get, query)
-    /**Query the Kegg Database provide the raw string reponse*/
-    operator fun get(query: String): KeggInfo {
-        //query should be processed by KeggEntry
-        val text = KeggServer.query(KeggOperations.get, query)
-        TODO()
-    }
 
     companion object{
         /**Map to look up the [KeggDB] based on the KID prefix*/
         internal val prefixToDB: Map<String, KeggDB> = values()
-                .flatMap { db -> db.kid_prefix.map { it to db } }.toMap()
+                .flatMap { db -> db.kidPrefix.map { it to db } }.toMap()
         /**Map to look up the [KeggDB] based on the database abbreviation
          * Does not include the organism DBs
          * */
