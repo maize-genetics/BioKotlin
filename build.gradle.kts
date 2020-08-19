@@ -54,6 +54,7 @@ repositories {
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    maven("http://www.ebi.ac.uk/~maven/m2repo")  //Uniprot JAPI
 }
 
 dependencies {
@@ -87,6 +88,8 @@ dependencies {
     implementation("org.graalvm.sdk:graal-sdk:20.0.0")
     implementation("org.apache.commons:commons-csv:1.8")
     implementation("khttp:khttp:1.0.0")
+
+    implementation("uk.ac.ebi.uniprot:japi:1.0.34")
 
 
     implementation("com.google.guava:guava:29.0-jre")
