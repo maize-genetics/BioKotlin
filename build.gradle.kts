@@ -13,7 +13,7 @@ This build script is need to use the early access
  */
 buildscript {
     val kotlinVersion by extra("1.3.70")
-    // val kotlinVersion by extra ("1.4-M1")
+    //val kotlinVersion by extra ("1.4.0-RC")
 
     repositories {
         mavenCentral()
@@ -23,15 +23,17 @@ buildscript {
 
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        classpath(kotlin("serialization", version = kotlinVersion))
     }
 }
 
 
 plugins {
     val kotlinVersion = "1.3.70"
-    // val kotlinVersion = "1.4-M1"
+    //val kotlinVersion = "1.4.0-RC"
     java
     kotlin("jvm") version kotlinVersion
+    kotlin("plugin.serialization") version kotlinVersion
     // Shadow allows for the creation of fat jars (all dependencies)
     id("com.github.johnrengelman.shadow") version "5.2.0"
 
@@ -39,6 +41,9 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+}
+apply {
+    plugin("kotlinx-serialization")
 }
 
 repositories {
@@ -57,6 +62,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0") // JVM dependency
+    //implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:1.0-M1-1.4.0-rc") // JVM dependency
 
 
     implementation("org.nield:kotlin-statistics:1.2.1")
@@ -86,7 +93,7 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
-    val kotestVersion = "4.1.0.293-SNAPSHOT"
+    val kotestVersion = "4.1.3"
     listOf("runner-junit5", "assertions-core", "runner-console", "property").forEach {
         testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
     }
