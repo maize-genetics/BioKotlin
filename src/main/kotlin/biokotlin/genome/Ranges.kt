@@ -45,71 +45,62 @@ data class Int0Range (val lower: Int0, val upper: Int0)  {
     val range = Range.closed(lower,upper)
 }
 
-data class Int1Range (val lower: Int1, val upper: Int1): Comparable<Int1Range>{
-    val range = Range.closed(lower,upper)
-    override fun compareTo(other: Int1Range): Int = lower.compareTo(other.lower)
 
-    // Creates new ranges of a fixed size either to the left of the lower end, the
-    // right of the upper end, or both flanking ends are created.
-    // ISSUE:  We do not have the size of the sequence here - hwo to know we aren't
-    // extending beyond the sequence length ??  For now, max is a parameter
-    fun flank( count: Int,  direction: String, max: Int): Set<Int1Range> {
-        var flankingRanges : MutableSet<Int1Range> = mutableSetOf()
-        // add to "flankingRanges" based on direction parameter
-         when (direction.toUpperCase()) {
-             "LEFT" -> {
-                 // flank just the lower end of ther ange
-                 var lowerF : UInt = maxOf(1u,this.lower.site - count.toUInt())
-                 var upperF = this.lower.site - 1u
-
-                 flankingRanges.add(Int1Range(Int1(lowerF),Int1(upperF)))
-             }
-             "RIGHT" -> {
-                 var lowerF = this.upper.site + 1u
-                 var upperF = this.upper.site + count.toUInt()
-                 flankingRanges.add(Int1Range(Int1(lowerF),Int1(upperF)))
-             }
-             "BOTH" -> {
-                 // flank the lower end of the range
-
-                 // THis fails!  this.lower.site - count.toUint() will be a large number when
-                 // we flank the lower end by more than there are bps.  Ex:  lower = 30, flank = 45
-                 var lowerF : UInt = maxOf(1u,(this.lower.site - count.toUInt()))
-                 println("lowerF in both is : $lowerF")
-                 var upperF = this.lower.site - 1u
-                 flankingRanges.add(Int1Range(Int1(lowerF),Int1(upperF)))
-
-                 // flank the upper end of the range
-                 lowerF = this.upper.site + 1u
-                 upperF = this.upper.site + count.toUInt()
-                 flankingRanges.add(Int1Range(Int1(lowerF),Int1(upperF)))
-             }
-        }
-        return flankingRanges
-    }
-
-    fun shift( count: Int,  direction: String, max: Int): Set<Int1Range> {
-        var shiftedRange: MutableSet<Int1Range> = mutableSetOf()
-        var lower : Int0 = this.lower.site
-        var upper : Int0 = this.upper.site
-        if (count > 0) {
-            // shift right (increase) verify neither exceeds size of sequence
-            lower  = (minOf(this.lower.site.toInt() + count,max )).toUInt()
-            upper = (minOf (this.upper.site.toInt() + count, max)).toUInt()
-        } else if (count < 0) {
-            // shift left, verify we don't drop below 1
-            lower  = (maxOf(1,this.lower.site.toInt() - count )).toUInt()
-            upper = (maxOf (1, this.upper.site.toInt() - count)).toUInt()
-        }
-        shiftedRange.add(Int1Range(Int1(lower),Int1(upper)))
-        return shiftedRange
-
-    }
-
-
-}
 @OptIn(ExperimentalUnsignedTypes::class)
-typealias SRange = Range<Int1Range>
+typealias SRange = Range<Int1>
+
+fun SRange.shift(count: Int,  direction: String, max: Int): Set<SRange> {
+    var shiftedRange: MutableSet<SRange> = mutableSetOf()
+    var lower : Int0 = this.lowerEndpoint().site
+    var upper : Int0 = this.upperEndpoint().site
+    if (count > 0) {
+        // shift right (increase) verify neither exceeds size of sequence
+        lower  = (minOf(this.lowerEndpoint().site.toInt() + count,max )).toUInt()
+        upper = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
+    } else if (count < 0) {
+        // shift left, verify we don't drop below 1
+        lower  = (maxOf(1,this.lowerEndpoint().site.toInt() - count )).toUInt()
+        upper = (maxOf (1, this.upperEndpoint().site.toInt() - count)).toUInt()
+    }
+    shiftedRange.add(SRange.closed(Int1(lower),Int1(upper)))
+    return shiftedRange
+}
+
+fun SRange.flank(count: Int,  direction: String, max: Int): Set<SRange> {
+    var flankingRanges : MutableSet<SRange> = mutableSetOf()
+    // add to "flankingRanges" based on direction parameter
+    when (direction.toUpperCase()) {
+        "LEFT" -> {
+            // flank just the lower end of ther ange
+            var lowerF : UInt = maxOf(1u,this.lowerEndpoint().site - count.toUInt())
+            var upperF = this.lowerEndpoint().site - 1u
+
+            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+        }
+        "RIGHT" -> {
+            var lowerF = this.upperEndpoint().site + 1u
+            var upperF = this.upperEndpoint().site + count.toUInt()
+            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+        }
+        "BOTH" -> {
+            // flank the lower end of the range
+
+            // THis fails!  this.lower.site - count.toUint() will be a large number when
+            // we flank the lower end by more than there are bps.  Ex:  lower = 30, flank = 45
+            //var lowerInt: Int = (this.lowerEndpoint().site) - count
+            var lowerF : UInt = maxOf(1u,(this.lowerEndpoint().site - count.toUInt()))
+            println("lowerF in both is : $lowerF")
+            var upperF = this.lowerEndpoint().site - 1u
+            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+
+            // flank the upper end of the range
+            lowerF = upperEndpoint().site + 1u
+            upperF = upperEndpoint().site + count.toUInt()
+            flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+        }
+    }
+    return flankingRanges
+}
 
 data class Chromosome(val name: String):Comparable<Chromosome>{
 
@@ -178,13 +169,13 @@ fun main() {
 
     println() // begin initial Lynn test prior to Kotest creation
     println("\nLynn begin ...")
-    var range1 = Int1Range(Int1(14u),Int1(68u))
+    var range1 = SRange.closed(Int1(14u),Int1(68u))
     var rangeFlank5 = range1.flank(5, "BOTH", 100)
     println("rangeFlank5 is: ")
     println(rangeFlank5.toString())
 
     println("\n starting rangeFlank15")
-    var rangeFlank15 = range1.flank(15, "BOTH", 100)
+    var rangeFlank15 = range1.flank(20, "BOTH", 100)
     println("\nrangeFlank15 is: ")
     println(rangeFlank15.toString())
 
