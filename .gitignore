@@ -91,3 +91,4 @@ vignettes/*.pdf
 *.Rproj
 kotlinScripting.xml
 uiDesigner.xml
+/kegg.cache.json
