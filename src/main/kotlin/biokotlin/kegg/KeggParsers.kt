@@ -1,8 +1,12 @@
 package biokotlin.kegg
 
 import biokotlin.kegg.KeggDB.*
-import biokotlin.seq.NucSeq
-import biokotlin.seq.ProteinSeq
+import org.w3c.dom.*
+import org.xml.sax.InputSource
+import java.io.StringReader
+import javax.xml.parsers.DocumentBuilder
+import javax.xml.parsers.DocumentBuilderFactory
+
 
 /**
  * Parses the Kegg Response to a map of KEGG labels to String with the new lines
@@ -108,4 +112,42 @@ internal fun orthologyParser(keggResponseText: String): KeggOrtholog {
             }
     val ki = KeggInfoImpl(orthology, kid, name = name, definition = definition)
     return KeggOrtholog(ki, ec, genes)
+}
+
+internal fun kgmlParser(path: String, kid: String) {
+    val rawXML = KeggServer.query(KeggOperations.get, "$path:$kid/kgml")?: error("Not found in KEGG")
+    val doc = convertStringToXMLDocument(rawXML)
+    val entryList: NodeList = doc!!.getElementsByTagName("entry")
+    val relationList: NodeList = doc.getElementsByTagName("relation")
+    val reactionList: NodeList = doc.getElementsByTagName("reaction")
+
+    println(
+            """
+                Title...... ${doc.documentElement.getAttribute("title")}
+                Organism... ${doc.documentElement.getAttribute("org")}
+                Number..... ${doc.documentElement.getAttribute("number")}
+                Image...... ${doc.documentElement.getAttribute("image")}
+                Link....... ${doc.documentElement.getAttribute("link")}
+                -------------------------------------------------------------
+                Statistics:
+                    ${entryList.length} node(s)
+                    ${relationList.length} edge(s)
+                    ${reactionList.length} reaction(s)
+                -------------------------------------------------------------
+            """.trimIndent()
+    )
+}
+
+internal fun convertStringToXMLDocument(xmlString: String): Document? {
+    //Parser that produces DOM object trees from XML content
+    val factory = DocumentBuilderFactory.newInstance()
+    var builder: DocumentBuilder? = null
+
+    try {
+        builder = factory.newDocumentBuilder()
+        return builder.parse(InputSource(StringReader(xmlString)))
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return null
 }
