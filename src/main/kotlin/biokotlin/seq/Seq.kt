@@ -4,6 +4,7 @@ package biokotlin.seq
 import biokotlin.data.CodonTable
 import com.google.common.collect.ImmutableSet
 import org.biojava.nbio.core.util.CRC64Checksum
+import uk.ac.ebi.kraken.util.Crc64
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.random.Random
@@ -176,11 +177,7 @@ interface Seq {
     /**CRC64 checksum based on the underlying bytes in UTF-8*/
     //TODO consider changing from String to an Immutable CheckSum class that wraps the long.
     val crc64: String
-        get() {
-            crc64Checksum.reset()
-            crc64Checksum.update(seq())
-            return crc64Checksum.toString()
-        }
+        get() = Crc64.getCrc64(seq())
 }
 
 /**Main data structure for working with DNA and RNA sequences*/
