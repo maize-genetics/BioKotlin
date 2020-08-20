@@ -6,51 +6,61 @@ import io.kotest.matchers.shouldBe
 class RangesTest: StringSpec ({
     "Test flank range "{
 
-        var range1 = SRange.closed(Int1(48u), Int1(68u))
-        var flank5 = range1.flank(5, "BOTH", 100)
+        var range1 = (48..68).toSRange()
+        var flank5 = range1.flank(5, Direction.BOTH, 100)
         flank5.size shouldBe 2
-        flank5.contains(SRange.closed(Int1(43u), Int1(47u))) shouldBe true
+        //flank5.contains(SRange.closed(Int1(43u), Int1(47u))) shouldBe true
+        flank5.contains((43..47).toSRange()) shouldBe true
+
+        // run again using other signature
+        var flank5left = range1.flankLeft(5,100)
+        //flank5.contains(SRange.closed(Int1(43u), Int1(47u))) shouldBe true
+        flank5left.contains((43..47).toSRange()) shouldBe true
+
+        var flank5right = range1.flankRight(5)
+        flank5right.contains((69..73).toSRange())
 
         // Test right side is cropped
-        var flank40 = range1.flank(40, "BOTH", 100)
+        var flank40 = range1.flank(40, Direction.BOTH, 100)
         flank40.size shouldBe 2
         println("\nRanges for flank40 of Range 48,68")
         for (range in flank40) {
             println(range.toString())
         }
-        flank40.contains(SRange.closed(Int1(8u), Int1(47u))) shouldBe true
+        flank40.contains((8..47).toSRange()) shouldBe true
+
 
 
         // Test left side gets cropped
-        var range2 = SRange.closed(Int1(5u), Int1(58u))
-        flank40 = range2.flank(40, "BOTH", 100)
+        var range2 = (5..58).toSRange()
+        flank40 = range2.flank(40, Direction.BOTH, 100)
         flank40.size shouldBe 2
         println("\nRanges for flank40 of Range 5,58")
         for (range in flank40) {
             println(range.toString())
         }
-        flank40.contains(SRange.closed(Int1(1u), Int1(4u))) shouldBe true
-        flank40.contains(SRange.closed(Int1(59u), Int1(98u))) shouldBe true
+        flank40.contains((1..4).toSRange()) shouldBe true
+        flank40.contains((59..98).toSRange()) shouldBe true
 
     }
 
     "Test flank on Set<SRange> " {
         var ranges : MutableSet<SRange> = mutableSetOf()
 
-        ranges.add(SRange.closed(Int1(5u), Int1(25u)))
-        ranges.add(SRange.closed(Int1(48u), Int1(65u)))
-        ranges.add(SRange.closed(Int1(75u), Int1(87u)))
-        ranges.add(SRange.closed(Int1(170u), Int1(175u)))
-        ranges.add(SRange.closed(Int1(180u), Int1(210u)))
-        ranges.add(SRange.closed(Int1(300u), Int1(320u)))
+        ranges.add((5..25).toSRange())
+        ranges.add((48..65).toSRange())
+        ranges.add((75..87).toSRange())
+        ranges.add((170..175).toSRange())
+        ranges.add((180..210).toSRange())
+        ranges.add((300..320).toSRange())
 
-        var flankedRangeSet = flankSRangeSet ( 5,  "BOTH", 500, ranges)
+        var flankedRangeSet = flankSRangeSet ( 5,  Direction.BOTH, 500, ranges)
         flankedRangeSet.size shouldBe 12
 
     }
 
     "Test shift range " {
-        var range1 = SRange.closed(Int1(48u), Int1(68u))
+        var range1 = (48..68).toSRange()
         var shift5 = range1.shift(5,  100)
         shift5.lowerEndpoint().site shouldBe 53u
         shift5.upperEndpoint().site shouldBe 73u
@@ -73,12 +83,12 @@ class RangesTest: StringSpec ({
     "Test Shift on Set<SRange> " {
         var ranges : MutableSet<SRange> = mutableSetOf()
 
-        ranges.add(SRange.closed(Int1(5u), Int1(25u)))
-        ranges.add(SRange.closed(Int1(48u), Int1(65u)))
-        ranges.add(SRange.closed(Int1(75u), Int1(87u)))
-        ranges.add(SRange.closed(Int1(170u), Int1(175u)))
-        ranges.add(SRange.closed(Int1(180u), Int1(210u)))
-        ranges.add(SRange.closed(Int1(300u), Int1(320u)))
+        ranges.add((5..25).toSRange())
+        ranges.add((48..65).toSRange())
+        ranges.add((75..87).toSRange())
+        ranges.add((170..175).toSRange())
+        ranges.add((180..210).toSRange())
+        ranges.add((300..320).toSRange())
 
         // Test positive shift - shift right
         var shiftedRangeSet = shiftSRangeSet ( 5,   500, ranges)
@@ -89,33 +99,34 @@ class RangesTest: StringSpec ({
         for (range in shiftedRangeSet) {
             println(range.toString())
         }
-        shiftedRangeSet.contains(SRange.closed(Int1(10u), Int1(30u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(53u), Int1(70u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(80u), Int1(92u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(175u), Int1(180u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(185u), Int1(215u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(305u), Int1(325u))) shouldBe true
+        shiftedRangeSet.contains((10..30).toSRange()) shouldBe true
+        shiftedRangeSet.contains((53..70).toSRange()) shouldBe true
+        shiftedRangeSet.contains((80..92).toSRange()) shouldBe true
+        shiftedRangeSet.contains((175..180).toSRange()) shouldBe true
+        shiftedRangeSet.contains((185..215).toSRange()) shouldBe true
+        shiftedRangeSet.contains((305..325).toSRange()) shouldBe true
 
         // Test negative shift (shift left)
         shiftedRangeSet = shiftSRangeSet ( -5,   500, ranges)
-        shiftedRangeSet.contains(SRange.closed(Int1(1u), Int1(20u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(43u), Int1(60u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(70u), Int1(82u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(165u), Int1(170u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(175u), Int1(205u))) shouldBe true
-        shiftedRangeSet.contains(SRange.closed(Int1(295u), Int1(315u))) shouldBe true
+        shiftedRangeSet.contains((1..20).toSRange()) shouldBe true
+        shiftedRangeSet.contains((43..60).toSRange()) shouldBe true
+        shiftedRangeSet.contains((70..82).toSRange()) shouldBe true
+        shiftedRangeSet.contains((165..170).toSRange()) shouldBe true
+        shiftedRangeSet.contains((175..205).toSRange()) shouldBe true
+        shiftedRangeSet.contains((295..315).toSRange()) shouldBe true
     }
 
     "Test Merge Ranges " {
         var ranges : MutableSet<SRange> = mutableSetOf()
 
-        ranges.add(SRange.closed(Int1(48u), Int1(65u)))
-        ranges.add(SRange.closed(Int1(5u), Int1(25u)))
-        ranges.add(SRange.closed(Int1(27u), Int1(30u)))
-        ranges.add(SRange.closed(Int1(180u), Int1(210u)))
-        ranges.add(SRange.closed(Int1(170u), Int1(175u)))
-        ranges.add(SRange.closed(Int1(300u), Int1(320u)))
-        ranges.add(SRange.closed(Int1(69u), Int1(75u)))
+        ranges.add((48..65).toSRange())
+        ranges.add((5..25).toSRange())
+        ranges.add((27..30).toSRange())
+        ranges.add((180..210).toSRange())
+        ranges.add((170..175).toSRange())
+        ranges.add((300..320).toSRange())
+        ranges.add((69..75).toSRange())
+
         println("Unsorted , ummerged ranges:  ")
         for (range in ranges) {
             println(range.toString())
@@ -129,9 +140,10 @@ class RangesTest: StringSpec ({
             println(range.toString())
         }
 
-        mergedRangeSet.contains(SRange.closed(Int1(5u), Int1(30u))) shouldBe true
-        mergedRangeSet.contains(SRange.closed(Int1(48u), Int1(75u))) shouldBe true
-        mergedRangeSet.contains(SRange.closed(Int1(170u), Int1(210u))) shouldBe true
+        mergedRangeSet.contains((5..30).toSRange()) shouldBe true
+        mergedRangeSet.contains((48..75).toSRange()) shouldBe true
+        mergedRangeSet.contains((170..210).toSRange()) shouldBe true
+
     }
 
 })

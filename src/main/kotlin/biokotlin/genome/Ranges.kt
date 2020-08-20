@@ -34,7 +34,7 @@ import kotlin.Comparator
  *      - do we resize from lower, upper or half at each?  Do we specify an "anchor" point
  */
 
-
+enum class Direction {LEFT, RIGHT, BOTH}
 
 @kotlin.ExperimentalUnsignedTypes
 typealias Int0 = UInt
@@ -50,6 +50,14 @@ data class Int1 (var site: UInt): Comparable<Int1>   {
 @OptIn(ExperimentalUnsignedTypes::class)
 typealias SRange = Range<Int1>
 
+// Function allows user to easily create SRange from a Kotlin range.
+// call via:  (1..6).toSRange()  or IntRange(1,6).toSRange
+fun IntRange.toSRange() : SRange {
+    var lower = Int1(this.first.toUInt())
+    var upper = Int1(this.last.toUInt())
+
+    return SRange.closed(lower,upper)
+}
 
 fun SRange.shift(count: Int, max: Int): SRange {
     var lower : Int0 = this.lowerEndpoint().site
@@ -68,45 +76,68 @@ fun SRange.shift(count: Int, max: Int): SRange {
     return SRange.closed(Int1(lower),Int1(upper))
 }
 
-fun SRange.flank(count: Int,  direction: String, max: Int): Set<SRange> {
+// Flank the lower end of the range if it isn't already at 1
+fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : Set<SRange> {
+    var flankingRanges : MutableSet<SRange> = mutableSetOf()
+    if (this.lowerEndpoint().site > 1u) {
+        var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
+        var upperF = this.lowerEndpoint().site - 1u
+        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+    }
+    return flankingRanges
+}
+
+// Flank the upper end of range if it isn't already at max
+fun SRange.flankRight(count: Int, max: Int = Int.MAX_VALUE) : Set<SRange> {
+    var flankingRanges: MutableSet<SRange> = mutableSetOf()
+    if (this.upperEndpoint().site < max.toUInt()) {
+        var lowerF = upperEndpoint().site + 1u
+        var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
+        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+    }
+    return flankingRanges
+}
+
+fun SRange.flankBoth(count: Int, max: Int = Int.MAX_VALUE) : Set<SRange> {
+    var flankingRanges: MutableSet<SRange> = mutableSetOf()
+    // Flank the lower end of the range if it isn't already at 1
+    if (this.lowerEndpoint().site > 1u) {
+        var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
+        var upperF = this.lowerEndpoint().site - 1u
+        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+    }
+    // Flank the upper end of range if it isn't already at max
+    if (this.upperEndpoint().site < max.toUInt()) {
+        var lowerF = upperEndpoint().site + 1u
+        var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
+        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
+    }
+    return flankingRanges
+}
+
+fun SRange.flank(count: Int,  direction: Direction, max: Int = Int.MAX_VALUE): Set<SRange> {
     var flankingRanges : MutableSet<SRange> = mutableSetOf()
     // add to "flankingRanges" based on direction parameter
-    when (direction.toUpperCase()) {
-        "LEFT" -> {
-            // flank just the lower end of ther ange
-            if (this.lowerEndpoint().site > 1u) {
-                var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
-                var upperF = this.lowerEndpoint().site - 1u
-                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-            }
+    when (direction) {
+        Direction.LEFT -> {
+            // flank just the lower end of ther range
+            flankingRanges.addAll(flankLeft(count,max))
         }
-        "RIGHT" -> {
-            if (this.upperEndpoint().site < max.toUInt()) {
-                var lowerF = upperEndpoint().site + 1u
-                var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
-                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-            }
+        Direction.RIGHT -> {
+            // flank the upper end of the range
+            flankingRanges.addAll(flankRight(count,max))
         }
-        "BOTH" -> {
+        Direction.BOTH -> {
             // Flank the lower end of the range if it isn't already at 1
-            if (this.lowerEndpoint().site > 1u) {
-                var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
-                var upperF = this.lowerEndpoint().site - 1u
-                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-            }
-            // Flank the upper end of range if it isn't already at max
-            if (this.upperEndpoint().site < max.toUInt()) {
-                var lowerF = upperEndpoint().site + 1u
-                var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
-                flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-            }
-
+            flankingRanges.addAll(flankLeft(count,max))
+            // flank the upper end of the range
+            flankingRanges.addAll(flankRight(count,max))
         }
     }
     return flankingRanges
 }
 
-fun flankSRangeSet ( count: Int,  direction: String, max: Int, ranges: Set<SRange>): Set<SRange> {
+fun flankSRangeSet ( count: Int,  direction: Direction, max: Int, ranges: Set<SRange>): Set<SRange> {
     var fRangeSet : MutableSet<SRange> = mutableSetOf()
     ranges.forEach{range ->
         fRangeSet.addAll(range.flank(count,direction,max))
@@ -173,7 +204,7 @@ data class Chromosome(val name: String):Comparable<Chromosome>{
 @ExperimentalUnsignedTypes
 data class GenomePosition(val chromosome: Chromosome, val site: Int): Comparable<GenomePosition> {
     init {
-        require(site>=0){"All sites must be positive"}
+        require(site > 0){"All sites must be positive, greater than 0"}
     }
     override fun compareTo(other: GenomePosition): Int = compareValuesBy(this,other,
             {preferedChromosomeSort.compare(this.chromosome,other.chromosome)},{it.site})
@@ -184,7 +215,7 @@ data class GenomePosition(val chromosome: Chromosome, val site: Int): Comparable
 typealias GRange = com.google.common.collect.Range<GenomePosition>
 
 fun GRange.enlarge(bp: Int): GRange {
-    val first = this.lowerEndpoint().copy(site = maxOf(0,this.lowerEndpoint().site-bp))
+    val first = this.lowerEndpoint().copy(site = maxOf(1,this.lowerEndpoint().site-bp))
     val last = this.lowerEndpoint().copy(site = this.upperEndpoint().site+bp)
     return GenomeRanges.of(first, last)
 }
@@ -213,13 +244,18 @@ object GenomeRanges {
 
 fun main() {
     val chr = Chromosome("1")
-    val gr = chr[0..2]
+    val gr = chr[1..3]
     val gr2= gr.enlarge(20)
-    val grList = listOf<GRange>(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
+    println("LCJ - printin gr, gr2")
+
+    println(gr.toString())
+    println(gr2.toString())
+    println("\nLCJ - done gr gr2\n")
+    val grList = listOf<GRange>(chr[1..2],chr[4..8],chr[2..3],chr[3..12])
     println(grList)
     println(grList.sortedWith(GenomeRanges.COMPARE_LEFT))
     println(grList.sortedWith(GenomeRanges.COMPARE_MIDDLE))
-    val grSet = setOf(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
+    val grSet = setOf(chr[1..2],chr[4..8],chr[2..3],chr[3..12])
     println(grSet)
 
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
@@ -229,8 +265,18 @@ fun main() {
 //            .map{it.enlarge(100)}
 //            .toCoalescingSet()
 //
+
+    // lcj test
+
+    var old = SRange.closed(Int1(43u), Int1(47u))
+    var new = (43..47).toSRange()
+    println(old.toString())
+    println(new.toString())
+
 }
 
 private operator fun String.get(rangeTo: IntRange) {
 
 }
+
+
