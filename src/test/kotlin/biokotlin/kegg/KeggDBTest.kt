@@ -73,33 +73,12 @@ class KeggDBTest : StringSpec({
 
 })
 
-
 //fun main() {
-//parseKEGG(testParse)
-//        println(KeggDB.pathway.info())
-// KeggDB.values().filter { it.name.startsWith("p") }.forEach { println(it.info()) }
-
-// KeggDB.genes.find("shiga").print()
-//KeggDB.genes.find("zma542318").print()  //current this throws an error should be empty
-// KeggDB.genes.find("zma:542318").print()
-
-//        KeggDB.genes.find("Z1464").print()
+//    println("Call KEGG...")
+//    val graph = Kegg.pathway("path:zma00620")
 //
-//        KeggDB.path.find("map00010").print()
-//       KeggDB.path.find("Glycolysis").print()
-//        KeggDB.genome.find("T01001").print()
-//        KeggDB.genes.find("hsa:3643").print()
-//        val keggOrg :DataFrame = organisms()
-//
-//   println(keggOrg)
-
-//    // Get our IP
-//    println(get("http://httpbin.org/ip").jsonObject.getString("origin"))
-//    // Get our IP in a simpler way
-//    println(get("http://icanhazip.com").text)
-//
-//    val r = get("https://api.github.com/events")
-//    println(r)
-
+//    println("--- XML Parse Test ---")
+//    graph.kgmlGraph()
 //}
+
 
