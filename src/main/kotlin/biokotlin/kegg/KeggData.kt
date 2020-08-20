@@ -197,7 +197,9 @@ data class KeggOrtholog(val keggInfo: KeggInfo, val ec: String, val genes: Map<S
  */
 @kotlinx.serialization.Serializable
 data class KeggPathway(val keggInfo: KeggInfo, val genes: List<KeggEntry>, val compounds: List<KeggEntry>) : KeggInfo by keggInfo {
-
+    fun kgmlGraph() {
+        return kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
+    }
 }
 
 
