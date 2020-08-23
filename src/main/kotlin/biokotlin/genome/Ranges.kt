@@ -7,12 +7,12 @@ import kotlin.Comparator
 
 
 /**
- * Class to hold definitions and methods for biokotlin ranges.
+ * Class to hold definitions and methods for biokotlin Genomicranges.
+ * These ranges differ from the SequenceRanges in that they include
+ * a Chromosome
  * Ranges may be one of 2 types:
  *  - GRange:  These are ranges of GenomePositions, which includes a chromosome name as well as
  *             the position
- *  - SRange:  These are ranges of positions within a sequence.  They do not include the chromosome
- *             The ranges are physical positions, so non-0 positive numbers.
  *  For each range type, the the functions "flank", "shift", "resize" and "merge" are included.
  *  Those are explained below
  *  flank: (single Range or Set of SRange)
@@ -34,164 +34,12 @@ import kotlin.Comparator
  *      - do we resize from lower, upper or half at each?  Do we specify an "anchor" point
  */
 
-enum class Direction {LEFT, RIGHT, BOTH}
-
-@kotlin.ExperimentalUnsignedTypes
-typealias Int0 = UInt
-@kotlin.ExperimentalUnsignedTypes
-data class Int1 (var site: UInt): Comparable<Int1>   {
-    init {
-        require(site >= 0u){"All sites must be positive"}
-    }
-    override fun compareTo(other: Int1): Int = site.compareTo(other.site)
-
-}
-
-@OptIn(ExperimentalUnsignedTypes::class)
-typealias SRange = Range<Int1>
-
-// Function allows user to easily create SRange from a Kotlin range.
-// call via:  (1..6).toSRange()  or IntRange(1,6).toSRange
-fun IntRange.toSRange() : SRange {
-    var lower = Int1(this.first.toUInt())
-    var upper = Int1(this.last.toUInt())
-
-    return SRange.closed(lower,upper)
-}
-
-fun SRange.shift(count: Int, max: Int): SRange {
-    var lower : Int0 = this.lowerEndpoint().site
-    var upper : Int0 = this.upperEndpoint().site
-    if (count > 0) {
-        // shift right (increase) verify neither exceeds size of sequence
-        lower  = (minOf(this.lowerEndpoint().site.toInt() + count,max )).toUInt()
-        upper = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
-    } else if (count < 0) {
-        // shift left, verify we don't drop below 1
-        // + count because count is negative, - count would make it positive
-        lower  = (maxOf(1,this.lowerEndpoint().site.toInt() + count )).toUInt()
-        upper = (maxOf (1, this.upperEndpoint().site.toInt() + count)).toUInt()
-    }
-
-    return SRange.closed(Int1(lower),Int1(upper))
-}
-
-// Flank the lower end of the range if it isn't already at 1
-fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : Set<SRange> {
-    var flankingRanges : MutableSet<SRange> = mutableSetOf()
-    if (this.lowerEndpoint().site > 1u) {
-        var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
-        var upperF = this.lowerEndpoint().site - 1u
-        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-    }
-    return flankingRanges
-}
-
-// Flank the upper end of range if it isn't already at max
-fun SRange.flankRight(count: Int, max: Int = Int.MAX_VALUE) : Set<SRange> {
-    var flankingRanges: MutableSet<SRange> = mutableSetOf()
-    if (this.upperEndpoint().site < max.toUInt()) {
-        var lowerF = upperEndpoint().site + 1u
-        var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
-        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-    }
-    return flankingRanges
-}
-
-fun SRange.flankBoth(count: Int, max: Int = Int.MAX_VALUE) : Set<SRange> {
-    var flankingRanges: MutableSet<SRange> = mutableSetOf()
-    // Flank the lower end of the range if it isn't already at 1
-    if (this.lowerEndpoint().site > 1u) {
-        var lowerF : UInt = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toUInt()
-        var upperF = this.lowerEndpoint().site - 1u
-        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-    }
-    // Flank the upper end of range if it isn't already at max
-    if (this.upperEndpoint().site < max.toUInt()) {
-        var lowerF = upperEndpoint().site + 1u
-        var upperF = (minOf (this.upperEndpoint().site.toInt() + count, max)).toUInt()
-        flankingRanges.add(SRange.closed(Int1(lowerF),Int1(upperF)))
-    }
-    return flankingRanges
-}
-
-fun SRange.flank(count: Int,  direction: Direction, max: Int = Int.MAX_VALUE): Set<SRange> {
-    var flankingRanges : MutableSet<SRange> = mutableSetOf()
-    // add to "flankingRanges" based on direction parameter
-    when (direction) {
-        Direction.LEFT -> {
-            // flank just the lower end of ther range
-            flankingRanges.addAll(flankLeft(count,max))
-        }
-        Direction.RIGHT -> {
-            // flank the upper end of the range
-            flankingRanges.addAll(flankRight(count,max))
-        }
-        Direction.BOTH -> {
-            // Flank the lower end of the range if it isn't already at 1
-            flankingRanges.addAll(flankLeft(count,max))
-            // flank the upper end of the range
-            flankingRanges.addAll(flankRight(count,max))
-        }
-    }
-    return flankingRanges
-}
-
-fun flankSRangeSet ( count: Int,  direction: Direction, max: Int, ranges: Set<SRange>): Set<SRange> {
-    var fRangeSet : MutableSet<SRange> = mutableSetOf()
-    ranges.forEach{range ->
-        fRangeSet.addAll(range.flank(count,direction,max))
-    }
-
-    return fRangeSet
-}
-
-fun shiftSRangeSet ( count: Int,  max: Int, ranges: Set<SRange>): Set<SRange> {
-    var sRangeSet : MutableSet<SRange> = mutableSetOf()
-    ranges.forEach{range ->
-        sRangeSet.add(range.shift(count,max))
-    }
-
-    return sRangeSet
-}
-
-/**
- * This function takes a Set or SRanges, and merges any ranges that are within "count"
- * bps of each other.
- *
- * It returns a Set<SRange> of the merged ranges.
- */
-fun mergeSRangeSet ( count: Int, ranges: Set<SRange>): Set<SRange> {
-    var sRangeSet : MutableSet<SRange> = mutableSetOf()
-
-    val sRangeDeque: Deque<SRange> = ArrayDeque()
-    var sortedRanges2 = ranges.toSortedSet(Comparator {s1, s2 -> s1.lowerEndpoint().compareTo(s2.lowerEndpoint())})
-
-    sRangeDeque.add(sortedRanges2.elementAt(0))
-
-    for (index in 1 until sortedRanges2.size) {
-        var top = sRangeDeque.peekLast()
-        var nextRange = sortedRanges2.elementAt(index)
-        if (nextRange.lowerEndpoint().site.toInt() > top.upperEndpoint().site.toInt() + count ) {
-            // not close enough - add to the stack
-            sRangeDeque.add(nextRange)
-        } else if (top.upperEndpoint().site < nextRange.upperEndpoint().site) {
-            // Merge the new range with the last one,
-            // remove the last from the stack, add new range to stack
-            top.upperEndpoint().site = nextRange.upperEndpoint().site
-            sRangeDeque.last
-            sRangeDeque.add(top)
-        }
-    }
-
-    sRangeSet.addAll(sRangeDeque)
-    return sRangeSet
-}
 
 data class Chromosome(val name: String):Comparable<Chromosome>{
 
     //operator fun get(range: IntRange): GenomeRange2 = GenomeRange2(this,range)
-    operator fun get(range: IntRange): GRange = GenomeRanges.of(this,range)
+   // operator fun get(range: IntRange): GRange = GenomeRanges.of(this,range)
+    operator fun get(range: IntRange): GenomePosRange = GenomeRanges.of(this,range)
     override fun compareTo(other: Chromosome): Int = name.compareTo(other.name)
     companion object{
         var preferedChromosomeSort :Comparator<in Chromosome> = compareBy { it.name }
@@ -211,36 +59,202 @@ data class GenomePosition(val chromosome: Chromosome, val site: Int): Comparable
 
 }
 
-@OptIn(ExperimentalUnsignedTypes::class)
-typealias GRange = com.google.common.collect.Range<GenomePosition>
-
-fun GRange.enlarge(bp: Int): GRange {
-    val first = this.lowerEndpoint().copy(site = maxOf(1,this.lowerEndpoint().site-bp))
-    val last = this.lowerEndpoint().copy(site = this.upperEndpoint().site+bp)
-    return GenomeRanges.of(first, last)
-}
-
 //class GRange(aRange: Range<GenomePosition>): Range<GenomePosition>
 ///TODO need to ensure range don't jump chromosomes on creation
+data class GenomePosRange (val chrom: Chromosome, val kRange: IntRange):Comparable<GenomePosRange> {
+    val range = Range.closed(GenomePosition(chrom,kRange.first),GenomePosition(chrom,kRange.last))
+    init {
+        require(kRange.first > 0)
+    }
 
-object GenomeRanges {
-    fun of(chromosome: Chromosome, siteRange: IntRange): GRange =
-            GRange.closed(GenomePosition(chromosome, siteRange.first), GenomePosition(chromosome, siteRange.last))
-    fun of(first: GenomePosition, last: GenomePosition): GRange {
-        require(first.chromosome==last.chromosome)
-        require(first.site<=last.site)
-        return GRange.closed(GenomePosition(first.chromosome, first.site), GenomePosition(last.chromosome, last.site))
+    // THis isn't getting it sorted by chrom, it is still only sorting by position in mergeGEnomePosRangeSet()
+    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,
+            {preferedChromosomeSort.compare(this.range.lowerEndpoint().chromosome,other.range.lowerEndpoint().chromosome)},{it.range.lowerEndpoint().site})
+    // Below, when sorting a list of GenomePosRange, only gives 1 entry with my test file of multiple entries and 2 chroms!
+   // override fun compareTo(other: GenomePosRange): Int = compareValuesBy({ this.range.lowerEndpoint().chromosome }, { this.range.lowerEndpoint().site }, { this.range.upperEndpoint().site })
+
+    fun shift(count: Int, max: Int = Int.MAX_VALUE): GenomePosRange {
+        // negative number is shift left, positive is shift right, in either case, "add" the number
+        var lower  = this.range.lowerEndpoint().copy()
+        var upper  = this.range.upperEndpoint().copy()
+        if (count > 0) {
+            // shift right (increase) verify neither exceeds size of sequence
+            lower  = this.range.lowerEndpoint().copy(site = minOf(this.range.lowerEndpoint().site + count,max ))
+            upper = this.range.upperEndpoint().copy( site = minOf (this.range.upperEndpoint().site + count, max))
+        } else if (count < 0) {
+            // shift left, verify we don't drop below 1
+            // + count because count is negative, - count would make it positive
+            lower = this.range.lowerEndpoint().copy(site = maxOf(1,this.range.lowerEndpoint().site + count ))
+            upper = this.range.upperEndpoint().copy(site = maxOf (1, this.range.upperEndpoint().site + count))
+        }
+        return GenomePosRange(this.range.lowerEndpoint().chromosome, lower.site..upper.site)
     }
-    fun generator(): Sequence<GRange> {
-        TODO("Not yet implemented")
+
+    // Flank the lower end of the range if it isn't already at 1
+    fun flankLeft(count: Int, max: Int = Int.MAX_VALUE) : Set<GenomePosRange> {
+        var flankingRanges : MutableSet<GenomePosRange> = mutableSetOf()
+        if (this.range.lowerEndpoint().site > 1) {
+            var lowerF  = (this.range.lowerEndpoint().site.toLong() - count).toInt().coerceAtLeast(1)
+            var upperF = this.range.lowerEndpoint().site - 1
+            flankingRanges.add(GenomePosRange(this.chrom,lowerF..upperF))
+        }
+        return flankingRanges
     }
-    val COMPARE_LEFT: Comparator<Range<GenomePosition>> = compareBy({ it.lowerEndpoint().chromosome }, { it.lowerEndpoint().site }, { it.upperEndpoint().site })
-    // Becasue wnat sort order at center of peak.
-    val COMPARE_MIDDLE: Comparator<Range<GenomePosition>> = compareBy({ it.lowerEndpoint().chromosome },
-            //toLong prevents issues with going beyond Int MAX
-            { it.lowerEndpoint().site.toLong() + it.upperEndpoint().site.toLong() })
+
+    // Flank the upper end of range if it isn't already at max
+    fun flankRight(count: Int, max: Int = Int.MAX_VALUE) : Set<GenomePosRange> {
+        var flankingRanges: MutableSet<GenomePosRange> = mutableSetOf()
+        if (this.range.upperEndpoint().site < max) {
+            var lowerF = this.range.upperEndpoint().site + 1
+            var upperF = (minOf (this.range.upperEndpoint().site + count, max))
+            flankingRanges.add(GenomePosRange(this.chrom,lowerF..upperF))
+        }
+        return flankingRanges
+    }
+
+    fun flankBoth(count: Int, max: Int = Int.MAX_VALUE) : Set<GenomePosRange> {
+        var flankingRanges: MutableSet<GenomePosRange> = mutableSetOf()
+        // Flank the lower end of the range if it isn't already at 1
+        if (this.range.lowerEndpoint().site > 1) {
+            var lowerF = (this.range.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toInt()
+            var upperF = this.range.lowerEndpoint().site - 1
+            flankingRanges.add(GenomePosRange(this.chrom,lowerF..upperF))
+        }
+        // Flank the upper end of range if it isn't already at max
+        if (this.range.upperEndpoint().site < max) {
+            var lowerF = this.range.upperEndpoint().site + 1
+            var upperF = (minOf (this.range.upperEndpoint().site + count, max))
+            flankingRanges.add(GenomePosRange(this.chrom,lowerF..upperF))
+        }
+        return flankingRanges
+    }
+
+    fun flank(count: Int,  direction: Direction, max: Int = Int.MAX_VALUE): Set<GenomePosRange> {
+        var flankingRanges : MutableSet<GenomePosRange> = mutableSetOf()
+        // add to "flankingRanges" based on direction parameter
+        when (direction) {
+            Direction.LEFT -> {
+                // flank just the lower end of ther range
+                flankingRanges.addAll(flankLeft(count,max))
+            }
+            Direction.RIGHT -> {
+                // flank the upper end of the range
+                flankingRanges.addAll(flankRight(count,max))
+            }
+            Direction.BOTH -> {
+                // Flank the lower end of the range if it isn't already at 1
+                flankingRanges.addAll(flankLeft(count,max))
+                // flank the upper end of the range
+                flankingRanges.addAll(flankRight(count,max))
+            }
+        }
+        return flankingRanges
+    }
+
+    fun enlarge(bp: Int): GenomePosRange {
+        val first = this.range.lowerEndpoint().copy(site = maxOf(1,this.range.lowerEndpoint().site-bp))
+        val last = this.range.lowerEndpoint().copy(site = this.range.upperEndpoint().site+bp)
+        return GenomeRanges.of(first, last)
+    }
 }
 
+object GenomeRanges {
+
+    fun of(chromosome: Chromosome, siteRange: IntRange): GenomePosRange =
+            GenomePosRange(chromosome, siteRange.first..siteRange.last)
+    fun of(first: GenomePosition, last: GenomePosition): GenomePosRange {
+        require(first.chromosome==last.chromosome)
+        require(first.site<=last.site)
+        return GenomePosRange(first.chromosome, first.site..last.site)
+    }
+    fun generator(): Sequence<GenomePosRange> {
+        TODO("Not yet implemented")
+    }
+
+    val COMPARE_LEFT: Comparator<GenomePosRange> = compareBy({ it.range.lowerEndpoint().chromosome }, { it.range.lowerEndpoint().site }, { it.range.upperEndpoint().site })
+    // Becasue wnat sort order at center of peak.
+    val COMPARE_MIDDLE: Comparator<GenomePosRange> = compareBy({ it.range.lowerEndpoint().chromosome },
+            //toLong prevents issues with going beyond Int MAX
+            { it.range.lowerEndpoint().site.toLong() + it.range.upperEndpoint().site.toLong() })
+}
+
+/**
+ * For all ranges in a Set of SeqRange objects, return the set of ranges
+ * created by flanking the range by "count" amount. The returned set does
+ * not include the original ranges.
+ */
+fun flankGenomePosRangeSet ( count: Int,  direction: Direction, max: Int, ranges: Set<GenomePosRange>): Set<GenomePosRange> {
+    var fRangeSet : MutableSet<GenomePosRange> = mutableSetOf()
+    ranges.forEach{range ->
+        fRangeSet.addAll(range.flank(count,direction,max))
+    }
+
+    return fRangeSet
+}
+
+/**
+ * For all ranges in a Set of GenomePosRange objects, return the set of ranges
+ * created by shifting each range by "count" amount. If the "count" parameter
+ * is negative, ranges are shifted left.  If "count" is positive, ranges are
+ * shifted right.
+ * The "max" value is used to ensure ranges do not extend beyond the end of
+ * a chromosome.  It is not required and defaults to Int.MAX_VALUE
+ */
+fun shiftGenomePosRangeSet ( count: Int,  ranges: Set<GenomePosRange>,max: Int=Int.MAX_VALUE): Set<GenomePosRange> {
+    var gpRangeSet : MutableSet<GenomePosRange> = mutableSetOf()
+    ranges.forEach{range ->
+        gpRangeSet.add(range.shift(count,max))
+    }
+
+    return gpRangeSet
+}
+
+/**
+ * This function takes a Set of SeqRanges, and merges any ranges that are within "count"
+ * bps of each other.
+ *
+ * It returns a Set<SeqRange> of the merged ranges.
+ */
+fun mergeGenomePosRangeSet ( count: Int, ranges: Set<GenomePosRange>): Set<GenomePosRange> {
+    var gpRangeSet : MutableSet<GenomePosRange> = mutableSetOf()
+
+    val sRangeDeque: Deque<GenomePosRange> = ArrayDeque()
+    // TODO: THis needs work - LCJ - I can't get the sorting correct, compartor issues?
+    var sortedRanges2 = ranges.toSortedSet() // GenomePosRange has a comparator, but apparently not a good one
+    //var sortedRanges2 = ranges.toSortedSet(Comparator {s1, s2 -> s1.range.lowerEndpoint().compareTo(s2.range.lowerEndpoint())})
+
+    //var sortedRanges3 = ranges.toSortedSet(Comparator {s1, s2 -> compareBy({ it.range.lowerEndpoint().chromosome }, { it.range.lowerEndpoint().site }, { it.range.upperEndpoint().site }))
+
+    println("\nLCJ - mergeGenomePosRangeSet: sortedRanges = ")
+    for (range in sortedRanges2) {
+        println(range.toString())
+    }
+    println("\nLCJ end mergeGenomeosRangeSet:sortedRanges\n")
+    sRangeDeque.add(sortedRanges2.elementAt(0))
+
+    for (index in 1 until sortedRanges2.size) {
+        var top = sRangeDeque.peekLast()
+        var nextRange = sortedRanges2.elementAt(index)
+        // chroms must match, then check positions
+        if (top.chrom.equals(nextRange.chrom)) {
+            if (nextRange.range.lowerEndpoint().site > top.range.upperEndpoint().site + count ) {
+                // not close enough - add to the stack
+                sRangeDeque.add(nextRange)
+            } else if (top.range.upperEndpoint().site < nextRange.range.upperEndpoint().site) {
+                // Merge the new range with the last one,
+                // remove the last from the stack, add new range to stack
+                sRangeDeque.removeLast()
+                sRangeDeque.add(GenomePosRange(top.chrom,top.range.lowerEndpoint().site..nextRange.range.upperEndpoint().site))
+            }
+        } else {
+            // Different chromosome, add the new range
+            sRangeDeque.add(nextRange)
+        }
+    }
+
+    gpRangeSet.addAll(sRangeDeque)
+    return gpRangeSet
+}
 
 fun main() {
     val chr = Chromosome("1")
@@ -251,7 +265,8 @@ fun main() {
     println(gr.toString())
     println(gr2.toString())
     println("\nLCJ - done gr gr2\n")
-    val grList = listOf<GRange>(chr[1..2],chr[4..8],chr[2..3],chr[3..12])
+    //val grList = listOf<GRange>(chr[1..2],chr[4..8],chr[2..3],chr[3..12])
+    val grList = listOf<GenomePosRange>(chr[1..2],chr[4..8],chr[2..3],chr[3..12])
     println(grList)
     println(grList.sortedWith(GenomeRanges.COMPARE_LEFT))
     println(grList.sortedWith(GenomeRanges.COMPARE_MIDDLE))
@@ -265,13 +280,6 @@ fun main() {
 //            .map{it.enlarge(100)}
 //            .toCoalescingSet()
 //
-
-    // lcj test
-
-    var old = SRange.closed(Int1(43u), Int1(47u))
-    var new = (43..47).toSRange()
-    println(old.toString())
-    println(new.toString())
 
 }
 
