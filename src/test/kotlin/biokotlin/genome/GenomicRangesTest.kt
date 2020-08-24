@@ -3,7 +3,7 @@ package biokotlin.genome
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
-class RangesTest: StringSpec ({
+class GenomicRangesTest: StringSpec ({
     "Test GP flank range "{
 
         val chr = Chromosome("1")
