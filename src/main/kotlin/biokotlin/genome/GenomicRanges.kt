@@ -67,11 +67,14 @@ data class GenomePosRange (val chrom: Chromosome, val kRange: IntRange):Comparab
         require(kRange.first > 0)
     }
 
+    // ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+//    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(
+//            {this.range.lowerEndpoint().chromosome.name},{other.range.lowerEndpoint().site})
     // THis isn't getting it sorted by chrom, it is still only sorting by position in mergeGEnomePosRangeSet()
-    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,
-            {preferedChromosomeSort.compare(this.range.lowerEndpoint().chromosome,other.range.lowerEndpoint().chromosome)},{it.range.lowerEndpoint().site})
+//    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,
+//            {preferedChromosomeSort.compare(this.range.lowerEndpoint().chromosome,other.range.lowerEndpoint().chromosome)},{it.range.lowerEndpoint().site})
     // Below, when sorting a list of GenomePosRange, only gives 1 entry with my test file of multiple entries and 2 chroms!
-   // override fun compareTo(other: GenomePosRange): Int = compareValuesBy({ this.range.lowerEndpoint().chromosome }, { this.range.lowerEndpoint().site }, { this.range.upperEndpoint().site })
+    override fun compareTo(other: GenomePosRange): Int = compareValuesBy({ this.range.lowerEndpoint().chromosome.name }, { this.range.lowerEndpoint().site }, { this.range.upperEndpoint().site })
 
     fun shift(count: Int, max: Int = Int.MAX_VALUE): GenomePosRange {
         // negative number is shift left, positive is shift right, in either case, "add" the number
@@ -210,26 +213,20 @@ fun shiftGenomePosRangeSet ( count: Int,  ranges: Set<GenomePosRange>,max: Int=I
 }
 
 /**
- * This function takes a Set of SeqRanges, and merges any ranges that are within "count"
+ * This function takes a Set of GenomicRanges, and merges any ranges that are within "count"
  * bps of each other.
  *
- * It returns a Set<SeqRange> of the merged ranges.
+ * It returns a Set<GenomePosRange> of the merged ranges.
  */
 fun mergeGenomePosRangeSet ( count: Int, ranges: Set<GenomePosRange>): Set<GenomePosRange> {
     var gpRangeSet : MutableSet<GenomePosRange> = mutableSetOf()
 
     val sRangeDeque: Deque<GenomePosRange> = ArrayDeque()
     // TODO: THis needs work - LCJ - I can't get the sorting correct, compartor issues?
-    var sortedRanges2 = ranges.toSortedSet() // GenomePosRange has a comparator, but apparently not a good one
-    //var sortedRanges2 = ranges.toSortedSet(Comparator {s1, s2 -> s1.range.lowerEndpoint().compareTo(s2.range.lowerEndpoint())})
+    // var sortedRanges2 = ranges.toSortedSet() // GenomePosRange has a comparator, but apparently not a good one
 
-    //var sortedRanges3 = ranges.toSortedSet(Comparator {s1, s2 -> compareBy({ it.range.lowerEndpoint().chromosome }, { it.range.lowerEndpoint().site }, { it.range.upperEndpoint().site }))
-
-    println("\nLCJ - mergeGenomePosRangeSet: sortedRanges = ")
-    for (range in sortedRanges2) {
-        println(range.toString())
-    }
-    println("\nLCJ end mergeGenomeosRangeSet:sortedRanges\n")
+    // This one works! It does not work when I default the sorting to GenomePosRange comparator
+    val sortedRanges2 = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
     sRangeDeque.add(sortedRanges2.elementAt(0))
 
     for (index in 1 until sortedRanges2.size) {
