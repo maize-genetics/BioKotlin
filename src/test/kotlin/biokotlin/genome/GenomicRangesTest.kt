@@ -164,15 +164,19 @@ class GenomicRangesTest: StringSpec ({
         // ANd the test only passes because the ranges to merge
         // are next to each other.  If I have chrom 2 interspersed
         // differently I expect this will fail.  Sorting needs work
-        val chr = Chromosome("1")
+        val chr1 = Chromosome("1")
         val chr2 = Chromosome("2")
-        ranges.add(chr[48..65])
-        ranges.add(chr[5..25])
+        val chr3 = Chromosome("3")
+        val chr4 = Chromosome("4")
+
+        ranges.add(chr1[48..65])
+        ranges.add(chr1[5..25])
         ranges.add(chr2[27..30])
-        ranges.add(chr[180..210])
-        ranges.add(chr[170..175])
-        ranges.add(chr[300..320])
-        ranges.add(chr[69..75])
+        ranges.add(chr3[180..210])
+        ranges.add(chr4[300..320])
+        ranges.add(chr3[170..175])
+        ranges.add(chr4[69..75])
+
 
         println("Unsorted , ummerged ranges:  ")
         for (range in ranges) {
@@ -181,12 +185,7 @@ class GenomicRangesTest: StringSpec ({
 
         var mergedRangeSet = mergeGenomePosRangeSet ( 5, ranges)
 
-        println("\nSORTED , MERGED ranges:  ")
-        for (range in mergedRangeSet) {
-            println(range.toString())
-        }
-
-        mergedRangeSet.size shouldBe 5
+        mergedRangeSet.size shouldBe 6
 
         println("\nSorted, merged ranges:")
         for (range in mergedRangeSet) {
@@ -194,10 +193,94 @@ class GenomicRangesTest: StringSpec ({
         }
 
         // 5..25 and 27..30 should NOT merge as they are on different chromosoems
-        mergedRangeSet.contains(chr[5..30]) shouldBe false
-        mergedRangeSet.contains(chr[48..75]) shouldBe true
-        mergedRangeSet.contains(chr[170..210]) shouldBe true
+        mergedRangeSet.contains(chr1[5..30]) shouldBe false
+        mergedRangeSet.contains(chr1[48..75]) shouldBe false
+        mergedRangeSet.contains(chr3[170..210]) shouldBe true
 
+    }
+    "Test Chromosome Sort" {
+        var chromList = mutableListOf<Chromosome>()
+        var chr1 = Chromosome("1")
+        var chr2 = Chromosome("2")
+        var chr3 = Chromosome("3")
+        var chr4 = Chromosome("4")
+
+        chromList.add(chr2)
+        chromList.add(chr1)
+        chromList.add(chr4)
+        chromList.add(chr3)
+
+        println("\nUnsorted chrom list:")
+        for (chrom in chromList) {
+            println(chrom.toString())
+        }
+
+        var sortedChromList = chromList.sorted()
+        println("\nSorted chrom list:")
+        for (chrom in sortedChromList) {
+            println(chrom.toString())
+        }
+
+        var ranges: MutableSet<GenomePosRange> = mutableSetOf()
+
+        ranges.add(chr1[48..65])
+        ranges.add(chr1[5..25])
+        ranges.add(chr2[27..30])
+        ranges.add(chr3[180..210])
+        ranges.add(chr4[300..320])
+        ranges.add(chr3[170..175])
+        ranges.add(chr4[69..75])
+
+        // Try sorting them.  It should merge the 3 chr3 entries,
+        // Nothing else should merge
+        println("\nUnsorted ranges Set:")
+        for (range in ranges) {
+            println(range.toString())
+        }
+
+       // var sortedRanges = ranges.toSortedSet()
+        // override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,
+        //            {this.range.lowerEndpoint().chromosome.name},{it.range.lowerEndpoint().site})
+        // list.OrderBy(person => person.Age).ThenBy(person => person.Name).ToList();
+        // val sortedList = list.sortedWith(compareBy(Person::age, Person::name))
+
+        var sortedRanges = ranges.sorted()
+        // THis one works,
+        //var sortedRanges = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+        println("\nSorted ranges Set:")
+        for (range in sortedRanges) {
+            println(range.toString())
+        }
+
+        // Add this sort to mergeGenomePosRangeSet()
+        val sortedSet2 = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+        println("\nSorted ranges Set 2 !!:")
+        for (range in sortedSet2) {
+            println(range.toString())
+        }
+
+        // Test sorting the list:
+        // THis works
+        var rangeList: MutableList<GenomePosRange> = mutableListOf()
+        rangeList.add(chr1[48..65])
+        rangeList.add(chr1[5..25])
+        rangeList.add(chr2[27..30])
+        rangeList.add(chr3[180..210])
+        rangeList.add(chr4[300..320])
+        rangeList.add(chr3[170..175])
+        rangeList.add(chr4[69..75])
+
+        println("\nUnsorted ranges LIST:")
+        for (range in rangeList) {
+            println(range.toString())
+        }
+
+        val sortedList = rangeList.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+        println("\nSorted ranges LIST:")
+        for (range in sortedList) {
+            println(range.toString())
+        }
     }
 
 })
+
