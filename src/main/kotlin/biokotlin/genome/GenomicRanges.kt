@@ -67,14 +67,11 @@ data class GenomePosRange (val chrom: Chromosome, val kRange: IntRange):Comparab
         require(kRange.first > 0)
     }
 
-    // ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
-//    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(
-//            {this.range.lowerEndpoint().chromosome.name},{other.range.lowerEndpoint().site})
-    // THis isn't getting it sorted by chrom, it is still only sorting by position in mergeGEnomePosRangeSet()
+    // This isn't getting it sorted by chrom, it is still only sorting by position in mergeGEnomePosRangeSet()
 //    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,
 //            {preferedChromosomeSort.compare(this.range.lowerEndpoint().chromosome,other.range.lowerEndpoint().chromosome)},{it.range.lowerEndpoint().site})
-    // Below, when sorting a list of GenomePosRange, only gives 1 entry with my test file of multiple entries and 2 chroms!
-    override fun compareTo(other: GenomePosRange): Int = compareValuesBy({ this.range.lowerEndpoint().chromosome.name }, { this.range.lowerEndpoint().site }, { this.range.upperEndpoint().site })
+    // This works!
+    override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,{ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site }, { it.range.upperEndpoint().site })
 
     fun shift(count: Int, max: Int = Int.MAX_VALUE): GenomePosRange {
         // negative number is shift left, positive is shift right, in either case, "add" the number
@@ -225,8 +222,9 @@ fun mergeGenomePosRangeSet ( count: Int, ranges: Set<GenomePosRange>): Set<Genom
     // TODO: THis needs work - LCJ - I can't get the sorting correct, compartor issues?
     // var sortedRanges2 = ranges.toSortedSet() // GenomePosRange has a comparator, but apparently not a good one
 
-    // This one works! It does not work when I default the sorting to GenomePosRange comparator
-    val sortedRanges2 = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+    // This one works! Used before class comparator worked.
+   // val sortedRanges2 = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+    val sortedRanges2 = ranges.toSortedSet()
     sRangeDeque.add(sortedRanges2.elementAt(0))
 
     for (index in 1 until sortedRanges2.size) {

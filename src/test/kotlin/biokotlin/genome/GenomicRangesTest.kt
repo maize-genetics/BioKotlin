@@ -160,10 +160,7 @@ class GenomicRangesTest: StringSpec ({
     "Test Merge Ranges Multiple Chromosomes" {
         var ranges : MutableSet<GenomePosRange> = mutableSetOf()
 
-        // THis is not sorting the way I would expect.
-        // ANd the test only passes because the ranges to merge
-        // are next to each other.  If I have chrom 2 interspersed
-        // differently I expect this will fail.  Sorting needs work
+        // Sorting now fixed.
         val chr1 = Chromosome("1")
         val chr2 = Chromosome("2")
         val chr3 = Chromosome("3")
@@ -198,7 +195,8 @@ class GenomicRangesTest: StringSpec ({
         mergedRangeSet.contains(chr3[170..210]) shouldBe true
 
     }
-    "Test Chromosome Sort" {
+
+    "Test Chromosome and GenomePosRange Sort" {
         var chromList = mutableListOf<Chromosome>()
         var chr1 = Chromosome("1")
         var chr2 = Chromosome("2")
@@ -216,7 +214,7 @@ class GenomicRangesTest: StringSpec ({
         }
 
         var sortedChromList = chromList.sorted()
-        println("\nSorted chrom list:")
+        println("\nSorted chrom list - it works:")
         for (chrom in sortedChromList) {
             println(chrom.toString())
         }
@@ -241,20 +239,17 @@ class GenomicRangesTest: StringSpec ({
        // var sortedRanges = ranges.toSortedSet()
         // override fun compareTo(other: GenomePosRange): Int = compareValuesBy(this,other,
         //            {this.range.lowerEndpoint().chromosome.name},{it.range.lowerEndpoint().site})
-        // list.OrderBy(person => person.Age).ThenBy(person => person.Name).ToList();
-        // val sortedList = list.sortedWith(compareBy(Person::age, Person::name))
 
         var sortedRanges = ranges.sorted()
-        // THis one works,
-        //var sortedRanges = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
-        println("\nSorted ranges Set:")
+        // THis one fails - it uses the comparator in GenomePosRange
+        println("\nSorted ranges S uses class comparator - fails:")
         for (range in sortedRanges) {
             println(range.toString())
         }
 
         // Add this sort to mergeGenomePosRangeSet()
         val sortedSet2 = ranges.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
-        println("\nSorted ranges Set 2 !!:")
+        println("\nSorted ranges Set 2 !! using explicit compareBy - works!:")
         for (range in sortedSet2) {
             println(range.toString())
         }
@@ -275,9 +270,15 @@ class GenomicRangesTest: StringSpec ({
             println(range.toString())
         }
 
-        val sortedList = rangeList.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
-        println("\nSorted ranges LIST:")
+        val sortedList = rangeList.sorted()
+        println("\nSorted ranges LIST defaulting to class comparator - fails")
         for (range in sortedList) {
+            println(range.toString())
+        }
+
+        val sortedList2 = rangeList.sortedWith(compareBy({ it.range.lowerEndpoint().chromosome.name }, { it.range.lowerEndpoint().site}))
+        println("\nSorted ranges LIST using explicit compareBy:")
+        for (range in sortedList2) {
             println(range.toString())
         }
     }
