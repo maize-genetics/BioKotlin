@@ -54,8 +54,11 @@ data class GenomePosition(val chromosome: Chromosome, val site: Int): Comparable
     init {
         require(site > 0){"All sites must be positive, greater than 0"}
     }
+    // This one fails to order by chromosome
+//    override fun compareTo(other: GenomePosition): Int = compareValuesBy(this,other,
+//            {preferedChromosomeSort.compare(this.chromosome,other.chromosome)},{it.site})
     override fun compareTo(other: GenomePosition): Int = compareValuesBy(this,other,
-            {preferedChromosomeSort.compare(this.chromosome,other.chromosome)},{it.site})
+            {it.chromosome.name},{it.site})
 
 }
 

@@ -283,5 +283,29 @@ class GenomicRangesTest: StringSpec ({
         }
     }
 
+    "Test GenomePosition sorting " {
+        var ranges: MutableSet<GenomePosition> = mutableSetOf()
+        val chr1 = Chromosome("1")
+        val chr2 = Chromosome("2")
+        val gp1 = GenomePosition(chr1, 10)
+
+        ranges.add(GenomePosition(chr2, 10))
+        ranges.add(GenomePosition(chr1, 10))
+        ranges.add(GenomePosition(chr1, 5))
+        ranges.add(GenomePosition(chr2, 5))
+        ranges.add(GenomePosition(chr1, 7))
+
+        println("\nUnsorted GenomePosition Range")
+        for (range in ranges) {
+            println(range.toString())
+        }
+
+        println("\nSorted GenomePosition Ranges")
+        val sortedRanges = ranges.sorted()
+        for (range in sortedRanges) {
+            println(range.toString())
+        }
+    }
+
 })
 
