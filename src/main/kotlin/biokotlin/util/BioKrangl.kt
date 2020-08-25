@@ -1,0 +1,27 @@
+package biokotlin.util
+
+import krangl.*
+
+/**
+ * Krangl works with Iterable because the tables cannot be infinite in size.  However, lots of Java/Kotlin
+ * interactions are with Stream -> Sequence.  This provides simple flow from Sequence to DataFrames
+ *
+ *
+ */
+internal typealias DeparseFormula<T> = T.(T) -> Any?
+fun <T> Sequence<T>.deparseRecords(mapping: (T) -> DataFrameRow) = DataFrame.fromRecords(this.toList(), mapping)
+inline fun <reified T> Sequence<T>.deparseRecords(vararg mapping: Pair<String, DeparseFormula<T>>): DataFrame = this.toList().deparseRecords(*mapping)
+
+/**
+ * Krangl standard filtering uses [it] to reference to ExpressionContext (simplified view of a DataFrame)
+ * This provides clearer English for users not used to [it]
+ *
+ * df.filter { it["age"] eq 23 }
+ * to
+ * df.filter { whenCol("age") isEqualTo 23 }
+ */
+fun ExpressionContext.whenCol(s: String): DataCol = this[s]
+
+infix fun DataCol.isGreaterOrEqual(i: Number) = this.greaterEqualsThan(i)
+
+//infix operator fun DataCol?.equals(i: Any): BooleanArray = eq(i)
