@@ -162,7 +162,7 @@ interface Seq {
     fun repr(): String
 
     /**Returns the length of the sequence*/
-    fun len(): Int
+    fun size(): Int
 
     operator fun compareTo(other: Seq): Int
 

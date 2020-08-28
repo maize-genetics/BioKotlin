@@ -39,5 +39,4 @@ class SeqRecordTest : StringSpec({
     }
 
 
-
 })

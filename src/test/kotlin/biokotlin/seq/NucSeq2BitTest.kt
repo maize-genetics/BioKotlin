@@ -6,10 +6,8 @@ import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.data.blocking.forAll
 import io.kotest.data.row
-import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.nield.kotlinstatistics.median
 import kotlin.system.measureTimeMillis
 
 
@@ -45,10 +43,10 @@ class NucSeq2BitTest : StringSpec({
             val someSeq=bigSeq[0..7].copyOfBytes()
             var big2BitSeq : Nuc2BitArray = Nuc2BitArray(someSeq)
             val time = measureTimeMillis { big2BitSeq=Nuc2BitArray(bigSeq.copyOfBytes()) }
-            println("Encoding of ${bigSeq.len() / 1E6}Mb took $time ms")
+            println("Encoding of ${bigSeq.size() / 1E6}Mb took $time ms")
             encodeTimes+=time
             val time2 = measureTimeMillis { big2BitSeq.utf8All().size }
-            println("Decoding of ${bigSeq.len() / 1E6}Mb took ${time2} ms")
+            println("Decoding of ${bigSeq.size() / 1E6}Mb took ${time2} ms")
             decodeTimes+=time2
         }
         println("Average encoding time of ${seqSize / 1E6}Mb took ${encodeTimes.average()} ms")
@@ -58,7 +56,7 @@ class NucSeq2BitTest : StringSpec({
     "Test Evaluate splitting of sequence" {
         val aNucSeq2Bit = NucSeq2Bit(dnaString)
         aNucSeq2Bit.seq() shouldBe dnaString
-        aNucSeq2Bit.len() shouldBe dnaString.length
+        aNucSeq2Bit.size() shouldBe dnaString.length
         NucSeq2Bit(rnaString, NUC.RNA).toString() shouldBe rnaString
 
     }
@@ -170,7 +168,7 @@ class NucSeq2BitTest : StringSpec({
     }
 
     "Test of length " {
-        dnaSeq.len() shouldBe dnaString.length
+        dnaSeq.size() shouldBe dnaString.length
     }
 
     "compareTo" { }
@@ -221,13 +219,13 @@ class NucSeq2BitTest : StringSpec({
         println("Heap size is ${heapSize / 1E6} Mb")
         val bigSeq = RandomNucSeq(1_000_000)
         val time = measureTimeMillis { bigSeq.complement() }
-        println("Complement of ${bigSeq.len() / 1E6}Mb took $time ms")
+        println("Complement of ${bigSeq.size() / 1E6}Mb took $time ms")
 
         val time2 = measureTimeMillis { bigSeq.reverse_complement() }
-        println("Reverse complement of ${bigSeq.len() / 1E6}Mb took $time2 ms")
+        println("Reverse complement of ${bigSeq.size() / 1E6}Mb took $time2 ms")
 
         val time3 = measureTimeMillis { bigSeq.transcribe().translate() }
-        println("transcribe & translate of ${bigSeq.len() / 1E6}Mb took $time3 ms")
+        println("transcribe & translate of ${bigSeq.size() / 1E6}Mb took $time3 ms")
     }
 
 
@@ -235,7 +233,7 @@ class NucSeq2BitTest : StringSpec({
         (dnaSeq * 2) shouldBe (dnaSeq + dnaSeq)
         (dnaSeq * 3).copyOfBytes() shouldBe (dnaSeq + dnaSeq + dnaSeq).copyOfBytes()
         shouldThrow<IllegalStateException> { dnaSeq + rnaSeq }
-        (dnaSeq * 3).len() shouldBe dnaSeq.len()*3
+        (dnaSeq * 3).size() shouldBe dnaSeq.size()*3
     }
 
     "ungap" {
@@ -254,14 +252,14 @@ class NucSeq2BitTest : StringSpec({
             val bigSeqByte = NucSeq(String(unmissingBigSeq))
             val bigSeq2Bit = NucSeq2Bit(String(unmissingBigSeq))
             val time = measureTimeMillis { bigSeqByte.complement() }
-            println("Complement Byte of ${bigSeqByte.len() / 1E6}Mb took $time ms")
+            println("Complement Byte of ${bigSeqByte.size() / 1E6}Mb took $time ms")
             val timeBit = measureTimeMillis { bigSeq2Bit.complement() }
-            println("Complement 2Bit of ${bigSeq2Bit.len() / 1E6}Mb took $timeBit ms")
+            println("Complement 2Bit of ${bigSeq2Bit.size() / 1E6}Mb took $timeBit ms")
 
             val time2 = measureTimeMillis { bigSeqByte.reverse_complement() }
-            println("Reverse complement Byte of ${bigSeqByte.len() / 1E6}Mb took $time2 ms")
+            println("Reverse complement Byte of ${bigSeqByte.size() / 1E6}Mb took $time2 ms")
             val time2bit = measureTimeMillis { bigSeq2Bit.reverse_complement() }
-            println("Reverse complement 2Bit of ${bigSeq2Bit.len() / 1E6}Mb took $time2bit ms")
+            println("Reverse complement 2Bit of ${bigSeq2Bit.size() / 1E6}Mb took $time2bit ms")
         }
     }
 

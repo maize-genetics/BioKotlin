@@ -41,10 +41,10 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
         require(sequences.size > 2)
         {"Too few sequence records given - requires at least 2 sequences."}
 
-        alignmentLength = sequences[0].len()
+        alignmentLength = sequences[0].size()
         for (seq in sequences) {
-            require(seq.len() == alignmentLength)
-            {"Sequence record ${seq.id} has length ${seq.len()}, instead of the expected " +
+            require(seq.size() == alignmentLength)
+            {"Sequence record ${seq.id} has length ${seq.size()}, instead of the expected " +
                     "alignment length of $alignmentLength."}
         }
     }
@@ -88,7 +88,6 @@ List<NucSeqRecord>)
 >>> val record_2 = NucSeqRecord(Seq("ATCC"), "2")
 >>> val alignment = NucMSA(listOf(record_1, record_2))
 
-
  */
 class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences),
         Collection<NucSeqRecord> by sequences{
@@ -103,6 +102,7 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     operator fun get(i: Int): NucSeqRecord =
             if (i >= 0) sequences[i] else sequences[i+sequences.size]
 
+
     /**Returns the [NUC] at row [i] and column [j], starting at zero.
      * Negative indices start from the end of the sequence, i.e. -1 is the last base.
      */
@@ -116,7 +116,11 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
-    operator fun get(i: IntRange, j: IntRange): List<NUC> = TODO()
+    operator fun get(i: IntRange, j: IntRange): List<NUC> = TODO("implement")
+
+    operator fun get(i: Int, j: IntRange): Nothing = TODO("implement")
+
+    operator fun get(i: IntRange, j: Int): Nothing = TODO("implement")
 
     /**
      * Returns a string summary of the [NucMSA].
@@ -134,16 +138,9 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
      * 2: ATCC
      */
     override fun toString(): String {
-        val builder = StringBuilder()
-        builder.append("Alignment with $size rows and $alignmentLength columns.\n")
-        var i = 0
-        for (seq in sequences) {
-            if (i == 50) break
-            builder.append("${seq.id}: $seq\n")
-            i++
-        }
-        if (i == 50) builder.append("...\n")
-        return builder.toString()
+        return "Alignment with $size rows and $alignmentLength columns.\n" +
+                "${sequences.take(50).map { seq -> "${seq.id}: $seq" }.joinToString("\n")}" +
+                "${if(sequences.size>50) "\n...\n" else "\n"}"
     }
 }
 
@@ -203,8 +200,12 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
+    operator fun get(i: IntRange, j: IntRange): Nothing = TODO("implement")
 
-    operator fun get(i: IntRange, j: IntRange): List<AminoAcid> = TODO()
+    operator fun get(i: Int, j: IntRange): Nothing = TODO("implement")
+
+    operator fun get(i: IntRange, j: Int): Nothing = TODO("implement")
+
 
     /**
      * Returns a string summary of the [ProteinMSA].
@@ -222,18 +223,9 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
      * 2: MHQ-
      */
     override fun toString(): String {
-        val builder = StringBuilder()
-        builder.append("Alignment with $size rows and $alignmentLength columns.\n")
-        var i = 0
-        for (seq in sequences) {
-            if (i >= 50) {
-                builder.append("...\n")
-                break
-            }
-            builder.append("${seq.id} $seq\n")
-            i++
-        }
-        return builder.toString()
+        return "Alignment with $size rows and $alignmentLength columns.\n" +
+                "${sequences.take(50).map { seq -> "${seq.id}: $seq" }.joinToString("\n")}" +
+                "${if(sequences.size>50) "\n...\n" else "\n"}"
     }
 }
 

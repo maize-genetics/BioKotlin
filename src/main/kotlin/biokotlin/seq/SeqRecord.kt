@@ -1,5 +1,3 @@
-@file:JvmName("SeqRecor")
-
 package biokotlin.seq
 
 import com.google.common.collect.ImmutableList
@@ -22,34 +20,31 @@ sequencing quality scores.
 
  */
 sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val description: String?,
-                       val annotations: ImmutableMap<String, String>?, val letterAnnotations:
-                       ImmutableList<Any>? = null) {
+                       val annotations: ImmutableMap<String, String>, val
+                       letterAnnotations: ImmutableMap<String,Array<out Any>>) {
+
+    abstract fun size(): Int
 
     init {
-        require (letterAnnotations == null || sequence.len() == letterAnnotations.size)
-        {"The letter annotations have length ${letterAnnotations?.size}. They should be of the " +
-                "same length as the sequence, which has length ${sequence.len()}."}
+        require (letterAnnotations.values.all { it.size == sequence.size() })
+        {"All letter annotations should be of the same length as the sequence, which has length ${sequence.size()}."}
     }
-
-    /** Returns the length of the sequence in the record.*/
-    abstract fun len(): Int
 
     protected fun propertiesString(): String {
         val builder = StringBuilder()
         builder.append("ID: $id\n")
         builder.append(if (name == null) "" else "Name: $name\n")
         builder.append(if (description == null) "" else "Description: $description\n")
-        if (annotations != null) {
+        if (annotations.size > 0) {
             for ((key, value) in annotations) {
                 builder.append("$key: $value\n")
             }
         }
-        if (letterAnnotations != null) {
+        if (letterAnnotations.size > 0) {
             builder.append("Letter Annotations:\n")
-            for (i in 0..minOf(49, letterAnnotations.size - 1)) {
-                builder.append("$i: ${letterAnnotations[i]}\n")
+            for ((key, value) in letterAnnotations) {
+                builder.append("$key:\n$value\n\n")
             }
-            if (letterAnnotations.size > 50) builder.append("...\n")
         }
         return builder.toString()
     }
@@ -58,9 +53,10 @@ sealed class SeqRecord(sequence: Seq, val id: String, val name: String?, val des
 
 
 fun NucSeqRecord(sequence: NucSeq, id: String, name: String? = null, description: String? = null,
-                 annotations: Map<String, String>, letterAnnotations: ImmutableList<Any>? = null):
+                 annotations: Map<String, String>, letterAnnotations: ImmutableMap<String,
+                Array<out Any>> = ImmutableMap.of()):
         NucSeqRecord {
-    val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
+    val map: ImmutableMap<String, String> = ImmutableMap.copyOf (annotations)
     return NucSeqRecord(sequence, id, name, description, map, letterAnnotations)
 }
 
@@ -84,7 +80,8 @@ sequencing quality scores.
 
  */
 class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? =
-        null, annotations: ImmutableMap<String, String>? = null, letterAnnotations: ImmutableList<Any>? = null) :
+        null, annotations: ImmutableMap<String, String> = ImmutableMap.of(),
+                   letterAnnotations: ImmutableMap<String,Array<out Any>> = ImmutableMap.of()) :
         SeqRecord(sequence, id, name, description, annotations, letterAnnotations), NucSeq by sequence {
 
     /**
@@ -125,9 +122,10 @@ class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, descr
 }
 
 fun ProteinSeqRecord(sequence: ProteinSeq, id: String, name: String? = null, description: String? =
-            null, annotations: Map<String, String>, letterAnnotations: ImmutableList<Any>? = null):
+            null, annotations: Map<String, String>, letterAnnotations: ImmutableMap<String,
+        Array<out Any>> = ImmutableMap.of()):
         ProteinSeqRecord {
-    val map: ImmutableMap<String, String>? = ImmutableMap.copyOf (annotations)
+    val map: ImmutableMap<String, String> = ImmutableMap.copyOf (annotations)
     return ProteinSeqRecord(sequence, id, name, description, map, letterAnnotations)
 }
 
@@ -151,8 +149,8 @@ sequencing quality scores.
 
  */
 class ProteinSeqRecord(val sequence: ProteinSeq, id: String, name: String? = null,
-                       description: String? = null, annotations: ImmutableMap<String, String>? = null,
-                       letterAnnotations: ImmutableList<Any>? = null) :
+                       description: String? = null, annotations: ImmutableMap<String, String> = ImmutableMap.of(),
+                       letterAnnotations: ImmutableMap<String,Array<out Any>> = ImmutableMap.of()) :
 SeqRecord(sequence, id, name, description, annotations, letterAnnotations), ProteinSeq by sequence {
 
     /**

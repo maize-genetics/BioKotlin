@@ -21,18 +21,18 @@ internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Se
  //   override operator fun get(i: Int) = if (i > 0) seqB[i].toChar() else seqB[seqB.size + i].toChar()
 
     /**Returns the length of the sequence*/
-    override fun len() = seqB.size
+    override fun size() = seqB.size
     override operator fun compareTo(other: Seq) = seq().compareTo(other.seq())
     protected fun count(query: Byte) = seqB.count { it == query }
     protected fun count(query: Seq, overlap: Boolean): Int {
         val queryB = query.copyOfBytes()
         var matchCount =0
         var currentOffset = 0
-        var nextIndex= indexOf(queryB, currentOffset, len()-queryB.size, false)
+        var nextIndex= indexOf(queryB, currentOffset, size()-queryB.size, false)
         while(nextIndex!= -1) {
             matchCount++
             currentOffset = if(overlap) (nextIndex+1) else (nextIndex + queryB.size)
-            nextIndex = indexOf(queryB, currentOffset, len()-queryB.size, false) //check if I need +1 on end
+            nextIndex = indexOf(queryB, currentOffset, size()-queryB.size, false) //check if I need +1 on end
         }
         return matchCount
     }
@@ -47,9 +47,9 @@ internal sealed class BioSeqByte constructor(protected val seqB: ByteArray) : Se
 
     protected fun indexOf(queryB: ByteArray, start: Int, end: Int, startAtLast: Boolean): Int {
         val indices = if(!startAtLast)
-            start.coerceAtLeast(0)..end.coerceAtMost(len()-queryB.size)
+            start.coerceAtLeast(0)..end.coerceAtMost(size()-queryB.size)
         else
-            start.coerceAtMost(len()-queryB.size) downTo end.coerceAtLeast(0)
+            start.coerceAtMost(size()-queryB.size) downTo end.coerceAtLeast(0)
         //println(indices)
         seqBloop@ for (thisIndex in indices) {
             for (queryIndex in queryB.indices) {
@@ -174,9 +174,9 @@ internal class NucSeqByte private constructor(seqB: ByteArray, override val nucS
     override fun back_transcribe(): NucSeq = NucSeqByte(seqB, NUC.transcipt_equivalent(nucSet))
 
     override fun translate(table: CodonTable, to_stop: Boolean, cds: Boolean): ProteinSeqByte {
-        if(cds && len()%3!=0) throw IllegalStateException("Sequence not multiple of three")
-        val pB = ByteArray(size = len() / 3)
-        for (i in 0 until (len() - 2) step 3) {
+        if(cds && size()%3!=0) throw IllegalStateException("Sequence not multiple of three")
+        val pB = ByteArray(size = size() / 3)
+        for (i in 0 until (size() - 2) step 3) {
             pB[i / 3] = table.nucBytesToCodonByte(seqB[i], seqB[i + 1], seqB[i + 2])
             if(cds && i==0 && pB[0]!=AminoAcid.M.char.toByte()) {
                 val startCodon = Codon[seqB[i], seqB[i + 1], seqB[i + 2]]
