@@ -4,6 +4,7 @@ package biokotlin.seq
 import biokotlin.data.CodonTable
 import com.google.common.collect.ImmutableSet
 import java.util.*
+import java.util.stream.Collectors
 import kotlin.random.Random
 
 //import biokotlin.seq.
@@ -122,7 +123,8 @@ internal fun compatibleBioSet(seq: String): List<BioSet> {
                 origCharBits.cardinality() == 0
             }
     if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids. " +
-            "Or they are a mix of RNA and DNA")
+            "Or they are a mix of RNA and DNA.\n" +
+            "${bytePresent.stream().mapToObj{it.toChar()}.collect(Collectors.toList())}")
     return compatibleSets
 }
 
