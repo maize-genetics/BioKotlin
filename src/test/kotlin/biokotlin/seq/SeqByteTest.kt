@@ -93,7 +93,7 @@ class SeqByteTest : StringSpec({
         rnaSeq.reverse_complement() shouldBe NucSeqByteEncode("UCACCACGU")
     }
 
-    "indexOf and find subsequences" {
+    "indexOf and find subsequences and contains" {
         dnaSeq.seq() shouldBe "ACGTGGTGA"
         forAll(
                 row("A",0,8),
@@ -109,6 +109,7 @@ class SeqByteTest : StringSpec({
             dnaSeq.find(NucSeq(seqStr)) shouldBe expIndex
             dnaSeq.lastIndexOf(NucSeq(seqStr)) shouldBe expLastIndex
             dnaSeq.rfind(NucSeq(seqStr)) shouldBe expLastIndex
+            (NucSeq(seqStr) in dnaSeq) shouldBe (expLastIndex != -1)
         }
     }
 
@@ -131,8 +132,8 @@ class SeqByteTest : StringSpec({
     }
 
     "Test of length " {
-        dnaSeq.len() shouldBe dnaString.length
-        proteinSeq.len() shouldBe proteinString.length
+        dnaSeq.size() shouldBe dnaString.length
+        proteinSeq.size() shouldBe proteinString.length
     }
 
     "compareTo" { }
@@ -182,22 +183,22 @@ class SeqByteTest : StringSpec({
         println("Heap size is ${heapSize / 1E6} Mb")
         val bigSeq = RandomNucSeq(1_000_000)
         val time = measureTimeMillis { bigSeq.complement() }
-        println("Complement of ${bigSeq.len() / 1E6}Mb took $time ms")
+        println("Complement of ${bigSeq.size() / 1E6}Mb took $time ms")
 
         val time2 = measureTimeMillis { bigSeq.reverse_complement() }
-        println("Reverse complement of ${bigSeq.len() / 1E6}Mb took $time2 ms")
+        println("Reverse complement of ${bigSeq.size() / 1E6}Mb took $time2 ms")
 
         val time3 = measureTimeMillis { bigSeq.transcribe().translate() }
-        println("transcribe & translate of ${bigSeq.len() / 1E6}Mb took $time3 ms")
+        println("transcribe & translate of ${bigSeq.size() / 1E6}Mb took $time3 ms")
     }
 
 
     "Test times * and plus" {
         (dnaSeq * 2) shouldBe (dnaSeq + dnaSeq)
         shouldThrow<IllegalStateException> { dnaSeq + rnaSeq }
-        (dnaSeq * 3).len() shouldBe dnaSeq.len()*3
+        (dnaSeq * 3).size() shouldBe dnaSeq.size()*3
         (proteinSeq * 2) shouldBe (proteinSeq + proteinSeq)
-        (proteinSeq * 3).len() shouldBe proteinSeq.len()*3
+        (proteinSeq * 3).size() shouldBe proteinSeq.size()*3
     }
 
     "Test random sequence generation" {
