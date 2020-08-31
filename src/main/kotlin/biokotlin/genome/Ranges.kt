@@ -1,56 +1,58 @@
 package biokotlin.genome
 
-import biokotlin.genome.Chromosome.Companion.preferedChromosomeSort
-import com.google.common.collect.Range
 
-@ExperimentalUnsignedTypes
-data class Chromosome(val name: String):Comparable<Chromosome>{
+import biokotlin.seq.NucSeq
+import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.SeqRecord
 
-    //operator fun get(range: IntRange): GenomeRange2 = GenomeRange2(this,range)
-    operator fun get(range: IntRange): GRange = GenomeRanges.of(this,range)
-    override fun compareTo(other: Chromosome): Int = name.compareTo(other.name)
-    companion object{
-        var preferedChromosomeSort :Comparator<in Chromosome> = compareBy { it.name }
-        val numberSort:Comparator<in Chromosome> by lazy { TODO() }
-//        val ignoreChrSort:Comparator<in Chromosome> = TODO()
-//        fun createSort(firstList: List<Chromosome>, remainingSort: Comparator<in Chromosome>):Comparator<in Chromosome>  = TODO()
+
+
+object SeqRecordSorts {
+    val alphaSort:Comparator<in SeqRecord> = compareBy { it.id }
+
+    private var defaultSeqRecSortIndex: Map<SeqRecord,Int> = emptyMap()
+    val defaultSeqRecSort:Comparator<in SeqRecord> = compareBy{ defaultSeqRecSortIndex.getOrDefault(it, Int.MAX_VALUE) }
+    fun setDefaultSort(seqRecords: List<SeqRecord>) {
+        defaultSeqRecSortIndex = seqRecords.mapIndexed { index, seqRecord ->  seqRecord to index}.toMap()
     }
 }
 
-@ExperimentalUnsignedTypes
-data class GenomePosition(val chromosome: Chromosome, val site: Int): Comparable<GenomePosition> {
+
+data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
     init {
         require(site>=0){"All sites must be positive"}
     }
-    override fun compareTo(other: GenomePosition): Int = compareValuesBy(this,other,
-            {preferedChromosomeSort.compare(this.chromosome,other.chromosome)},{it.site})
+    operator fun get(range: IntRange): SRange = SeqPositionRanges.of(this,range)
+    override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,
+            {SeqRecordSorts.alphaSort.compare(this.seqRecord,other.seqRecord)},{it.site})
 }
 
-@OptIn(ExperimentalUnsignedTypes::class)
-typealias GRange = com.google.common.collect.Range<GenomePosition>
 
-fun GRange.enlarge(bp: Int): GRange {
+typealias SRange = com.google.common.collect.Range<SeqPosition>
+
+fun SRange.enlarge(bp: Int): SRange {
     val first = this.lowerEndpoint().copy(site = maxOf(0,this.lowerEndpoint().site-bp))
     val last = this.lowerEndpoint().copy(site = this.upperEndpoint().site+bp)
-    return GenomeRanges.of(first, last)
+    return SeqPositionRanges.of(first, last)
 }
 
-//class GRange(aRange: Range<GenomePosition>): Range<GenomePosition>
-///TODO need to ensure range don't jump chromosomes on creation
+fun SeqRecord.range(range: IntRange): SRange = SeqPositionRanges.of(this,range)
 
-object GenomeRanges {
-    fun of(chromosome: Chromosome, siteRange: IntRange): GRange =
-            GRange.closed(GenomePosition(chromosome, siteRange.first), GenomePosition(chromosome, siteRange.last))
-    fun of(first: GenomePosition, last: GenomePosition): GRange {
-        require(first.chromosome==last.chromosome)
+
+object SeqPositionRanges {
+    fun of(seqRecord: SeqRecord, siteRange: IntRange): SRange =
+            SRange.closed(SeqPosition(seqRecord, siteRange.first), SeqPosition(seqRecord, siteRange.last))
+    fun of(first: SeqPosition, last: SeqPosition): SRange {
+        require(first.seqRecord==last.seqRecord)
         require(first.site<=last.site)
-        return GRange.closed(GenomePosition(first.chromosome, first.site), GenomePosition(last.chromosome, last.site))
+        return SRange.closed(SeqPosition(first.seqRecord, first.site), SeqPosition(last.seqRecord, last.site))
     }
-    fun generator(): Sequence<GRange> {
+    fun generator(): Sequence<SRange> {
         TODO("Not yet implemented")
     }
-    val COMPARE_LEFT: Comparator<Range<GenomePosition>> = compareBy({ it.lowerEndpoint().chromosome }, { it.lowerEndpoint().site }, { it.upperEndpoint().site })
-    val COMPARE_MIDDLE: Comparator<Range<GenomePosition>> = compareBy({ it.lowerEndpoint().chromosome },
+
+    val COMPARE_LEFT: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id}, { it.lowerEndpoint().site }, { it.upperEndpoint().site })
+    val COMPARE_MIDDLE: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id },
             //toLong prevents issues with going beyond Int MAX
             { it.lowerEndpoint().site.toLong() + it.upperEndpoint().site.toLong() })
 }
@@ -95,15 +97,19 @@ object GenomeRanges {
 
 
 fun main() {
-    val chr = Chromosome("1")
-    val gr = chr[0..2]
-    val gr2= gr.enlarge(20)
-    val grList = listOf<GRange>(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
-    println(grList)
-    println(grList.sortedWith(GenomeRanges.COMPARE_LEFT))
-    println(grList.sortedWith(GenomeRanges.COMPARE_MIDDLE))
-    val grSet = setOf(chr[0..2],chr[4..8],chr[2..3],chr[3..12])
+    val chr1 = NucSeqRecord(NucSeq("AAAACACAGAGATATA"),"1")
+    val chr2 = NucSeqRecord(NucSeq("GAGA".repeat(5)),"2")
+    val chr3 = NucSeqRecord(NucSeq("TATA".repeat(5)),"3")
+    val gr1 = chr1[0..2]
+    val gr1Rec = chr1[0..2].name("Little1")
+//    val gr2= gr1.enlarge(20)
+//    val grList = listOf<GRange>(chr1[0..2],chr1[4..8],chr1[2..3],chr1[3..12])
+//    println(grList)
+//    println(grList.sortedWith(GenomeRanges.COMPARE_LEFT))
+//    println(grList.sortedWith(GenomeRanges.COMPARE_MIDDLE))
+    val grSet = setOf(chr1[0..2],chr1[4..8],chr1[2..3],chr1[3..12])
     println(grSet)
+
 
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
 //            .map{it.resize(100)}
@@ -115,8 +121,9 @@ fun main() {
 //            .toMergeSet(1000)
 //
 
-    UIntRange
 }
+
+private fun NucSeq.name(id: String): SeqRecord = NucSeqRecord(this, id)
 
 private operator fun String.get(rangeTo: IntRange) {
 
