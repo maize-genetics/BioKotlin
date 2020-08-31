@@ -1,6 +1,6 @@
 package biokotlin.genome
 
-import biokotlin.genome.Chromosome.Companion.preferedChromosomeSort
+import biokotlin.seq.SeqRecord
 import com.google.common.collect.Range
 import java.util.*
 import kotlin.Comparator
@@ -17,7 +17,7 @@ import kotlin.Comparator
  *  Those are explained below
  *  flank: (single Range or Set of SRange)
  *      - takes a count of sites, plus "LEFT", "RIGHT", or "BOTH, indicating which of the sdies
- *        to flank, or if both are desired.
+ *        ton flank, or if both are desired.
  *      - Returns a Set<SRange> of the flanking intervals
  *  shift: (single Range or Set<SRanges> of ranges)
  *      - takes a number to shift.  Negative implies shift right, positive implies shift left
@@ -254,6 +254,96 @@ fun mergeGenomePosRangeSet ( count: Int, ranges: Set<GenomePosRange>): Set<Genom
     return gpRangeSet
 }
 
+// LCJ - still playing - nothing set in stone yet.
+data class SeqPosition(val seqRec: SeqRecord?, val site: Int): Comparable<SeqPosition> {
+    init {
+        require(site > 0){"All sites must be positive, greater than 0"}
+    }
+    // This one fails to order by chromosome
+//    override fun compareTo(other: SeqContig): Int = compareValuesBy(this,other,
+//            {preferedChromosomeSort.compare(this.chrom,other.chrom)},{it.site})
+    // This isn't right.  If one of the contigs is mull and other one isn't,
+    // put the one that is null first.  how will comparator default that?
+    // It shouldn't ignore contig and just use site.  It should pull null ahead of non-null
+    // so non-contig ranges are ordered first.
+    //
+    // TODO: see this for null-safe comparator (java 8)
+    //  https://stackoverflow.com/questions/481813/how-to-simplify-a-null-safe-compareto-implementation
+    override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,
+            { it.seqRec?.name },{it.site})
+
+}
+
+// THe extend/flank/shift/merge happens on this class. Merge actually on a NavigableSet of these
+// THe reason  I want this class is to put the shift/flank/etc methods against it.
+data class SeqPosRange (val seqRec: SeqRecord?, val kRange: IntRange):Comparable<SeqPosRange> {
+
+    // MOre than 1 way to compare, user wants different things,
+    // need to allow for user defined compareTo functions.
+    override fun compareTo(other: SeqPosRange): Int {
+        if (this.seqRec == null) {
+            if (other.seqRec == null) {
+                return this.kRange.first().compareTo(other.kRange.first())
+            }
+            return -1 // choose p0 if only p0.contig is null
+
+        } else if (other.seqRec == null){
+            return 2 // choose p1 if only p1.contig is null
+        } else { // otherwise, compare contig, then first site
+            val contigCompare = this.seqRec.id.compareTo(other.seqRec.id)
+            if (contigCompare != 0) return contigCompare
+            return this.kRange.first().compareTo(other.kRange.first())
+        }
+    }
+    fun shift(count: Int, max: Int = Int.MAX_VALUE): SeqPosRange {
+        // negative number is shift left, positive is shift right, in either case, "add" the number
+
+        var lower = this.kRange.first()
+        var upper = this.kRange.last()
+        if (count > 0) {
+            // shift right (increase) verify neither exceeds size of sequence
+            lower = minOf(lower + count,max)
+            upper = minOf(upper + count, max)
+        } else if (count < 0) {
+            // shift left, verify we don't drop below 1
+            // + count because count is negative, - count would make it positive
+            lower = maxOf(1,lower + count)
+            upper = maxOf(1, upper + count)
+        }
+        return SeqPosRange(seqRec, lower..upper)
+    }
+}
+
+class SeqPositionRangeComparator: Comparator<Range<SeqPosition>>{
+    override fun compare(p0: Range<SeqPosition>?, p1: Range<SeqPosition>?): Int {
+        if(p0 == null || p1 == null){
+            return 0;
+        }
+        // ordering:  Null before other ordering?
+        // AGain - Ed wants user defined because so many ways to compare:
+        //  can be based on start pos, based on seq length, other things.
+        if (p0.lowerEndpoint().seqRec == null) {
+            if (p1.lowerEndpoint().seqRec == null) {
+                return p0.lowerEndpoint().site.compareTo(p1.lowerEndpoint().site)
+            }
+            return -1 // choose p0 if only p0.contig is null
+        } else if (p1.lowerEndpoint().seqRec == null){
+            return 2
+        } else {
+            return p0.lowerEndpoint().compareTo(p1.lowerEndpoint())
+        }
+    }
+}
+
+class RComparator: Comparator<Range<Int>>{
+    override fun compare(p0: Range<Int>, p1: Range<Int>?): Int {
+        if (p0 == null || p1 == null) {
+            return 0
+        } else {
+            return p0.lowerEndpoint().compareTo(p1.lowerEndpoint())
+        }
+    }
+}
 fun main() {
     val chr = Chromosome("1")
     val gr = chr[1..3]
@@ -284,5 +374,8 @@ fun main() {
 private operator fun String.get(rangeTo: IntRange) {
 
 }
+
+
+
 
 

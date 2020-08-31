@@ -33,24 +33,24 @@ import kotlin.Comparator
 enum class Direction {LEFT, RIGHT, BOTH}
 
 data class SeqRange (val kRange: IntRange):Comparable<SeqRange>{
-    val range = Range.closed(kRange.first,kRange.last)
+
     init {
         require(kRange.first > 0)
     }
-    override fun compareTo(other: SeqRange): Int = range.lowerEndpoint().compareTo(other.range.lowerEndpoint())
+    override fun compareTo(other: SeqRange): Int = kRange.first.compareTo(other.kRange.first)
 
     fun shift(count: Int, max: Int = Int.MAX_VALUE, dummy: Int = 20): SeqRange {
-        var lower  = range.lowerEndpoint()
-        var upper = range.upperEndpoint()
+        var lower  = kRange.first()
+        var upper = kRange.last()
         if (count > 0) {
             // shift right (increase) verify neither exceeds size of sequence
-            lower = (minOf(this.range.lowerEndpoint() + count, max))
-            upper = (minOf(this.range.upperEndpoint() + count, max))
+            lower = (minOf(this.kRange.first() + count, max))
+            upper = (minOf(this.kRange.last() + count, max))
         } else if (count < 0) {
             // shift left, verify we don't drop below 1
             // + count because count is negative, - count would make it positive
-            lower = (maxOf(1, this.range.lowerEndpoint() + count))
-            upper = (maxOf(1, this.range.upperEndpoint() + count))
+            lower = (maxOf(1, this.kRange.first() + count))
+            upper = (maxOf(1, this.kRange.last() + count))
         }
 
         return SeqRange(lower..upper)
@@ -59,9 +59,9 @@ data class SeqRange (val kRange: IntRange):Comparable<SeqRange>{
     // Flank the lower end of the range if it isn't already at 1
     fun flankLeft(count: Int, max: Int = Int.MAX_VALUE) : Set<SeqRange> {
         var flankingRanges : MutableSet<SeqRange> = mutableSetOf()
-        if (this.range.lowerEndpoint() > 1) {
-            var lowerF  = (this.range.lowerEndpoint().toLong() - count).toInt().coerceAtLeast(1)
-            var upperF = this.range.lowerEndpoint() - 1
+        if (this.kRange.first() > 1) {
+            var lowerF  = (this.kRange.first().toLong() - count).toInt().coerceAtLeast(1)
+            var upperF = this.kRange.first() - 1
             flankingRanges.add(SeqRange(lowerF..upperF))
         }
         return flankingRanges
@@ -70,9 +70,9 @@ data class SeqRange (val kRange: IntRange):Comparable<SeqRange>{
     // Flank the upper end of range if it isn't already at max
     fun flankRight(count: Int, max: Int = Int.MAX_VALUE) : Set<SeqRange> {
         var flankingRanges: MutableSet<SeqRange> = mutableSetOf()
-        if (this.range.upperEndpoint() < max) {
-            var lowerF = this.range.upperEndpoint()+ 1
-            var upperF = (minOf (this.range.upperEndpoint() + count, max))
+        if (this.kRange.last() < max) {
+            var lowerF = this.kRange.last()+ 1
+            var upperF = (minOf (this.kRange.last() + count, max))
             flankingRanges.add(SeqRange(lowerF..upperF))
         }
         return flankingRanges
@@ -81,15 +81,15 @@ data class SeqRange (val kRange: IntRange):Comparable<SeqRange>{
     fun flankBoth(count: Int, max: Int = Int.MAX_VALUE) : Set<SeqRange> {
         var flankingRanges: MutableSet<SeqRange> = mutableSetOf()
         // Flank the lower end of the range if it isn't already at 1
-        if (this.range.lowerEndpoint() > 1) {
-            var lowerF = (this.range.lowerEndpoint().toLong() - count).coerceAtLeast(1).toInt()
-            var upperF = this.range.lowerEndpoint() - 1
+        if (this.kRange.first() > 1) {
+            var lowerF = (this.kRange.first().toLong() - count).coerceAtLeast(1).toInt()
+            var upperF = this.kRange.first() - 1
             flankingRanges.add(SeqRange(lowerF..upperF))
         }
         // Flank the upper end of range if it isn't already at max
-        if (this.range.upperEndpoint() < max) {
-            var lowerF = this.range.upperEndpoint() + 1
-            var upperF = (minOf (this.range.upperEndpoint() + count, max))
+        if (this.kRange.last() < max) {
+            var lowerF = this.kRange.last() + 1
+            var upperF = (minOf (this.kRange.last() + count, max))
             flankingRanges.add(SeqRange(lowerF..upperF))
         }
         return flankingRanges
@@ -162,29 +162,42 @@ fun shiftSeqRangeSet ( count: Int,  ranges: Set<SeqRange>,max: Int=Int.MAX_VALUE
  * bps of each other.
  *
  * It returns a Set<SeqRange> of the merged ranges.
+ * TODO: LCJ - change to navigableSet
  */
 fun mergeSeqRangeSet ( count: Int, ranges: Set<SeqRange>): Set<SeqRange> {
     var sRangeSet : MutableSet<SeqRange> = mutableSetOf()
 
     val sRangeDeque: Deque<SeqRange> = ArrayDeque()
-    var sortedRanges2 = ranges.toSortedSet(Comparator {s1, s2 -> s1.range.lowerEndpoint().compareTo(s2.range.lowerEndpoint())})
+    var sortedRanges2 = ranges.toSortedSet(Comparator {s1, s2 -> s1.kRange.first().compareTo(s2.kRange.first())})
 
     sRangeDeque.add(sortedRanges2.elementAt(0))
 
     for (index in 1 until sortedRanges2.size) {
         var top = sRangeDeque.peekLast()
         var nextRange = sortedRanges2.elementAt(index)
-        if (nextRange.range.lowerEndpoint() > top.range.upperEndpoint() + count ) {
+        if (nextRange.kRange.first() > top.kRange.last() + count ) {
             // not close enough - add to the stack
             sRangeDeque.add(nextRange)
-        } else if (top.range.upperEndpoint() < nextRange.range.upperEndpoint()) {
+        } else if (top.kRange.last() < nextRange.kRange.last()) {
             // Merge the new range with the last one,
             // remove the last from the stack, add new range to stack
             sRangeDeque.removeLast()
-            sRangeDeque.add(SeqRange(top.range.lowerEndpoint()..nextRange.range.upperEndpoint()))
+            sRangeDeque.add(SeqRange(top.kRange.first()..nextRange.kRange.last()))
         }
     }
 
     sRangeSet.addAll(sRangeDeque)
     return sRangeSet
 }
+
+// Needed for TreeSet of IntRange
+class IRComparator: Comparator<IntRange>{
+    override fun compare(o1: IntRange?, o2: IntRange?): Int {
+        if(o1 == null || o2 == null){
+            return 0;
+        }
+        return o1.first.compareTo(o2.first)
+    }
+}
+
+

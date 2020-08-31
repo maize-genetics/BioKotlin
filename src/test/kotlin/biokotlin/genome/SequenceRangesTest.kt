@@ -62,21 +62,21 @@ class SequenceRangesTest: StringSpec({
     "Test shift range " {
         var range1 = (48..68).toSeqRange()
         var shift5 = range1.shift(5  )
-        shift5.range.lowerEndpoint() shouldBe 53
-        shift5.range.upperEndpoint() shouldBe 73
+        shift5.kRange.first shouldBe 53
+        shift5.kRange.first() shouldBe 73
 
         var shift50 = range1.shift(50,100) // 100 is max size for range
-        shift50.range.lowerEndpoint() shouldBe 98
-        shift50.range.upperEndpoint() shouldBe 100
+        shift50.kRange.first() shouldBe 98
+        shift50.kRange.first() shouldBe 100
 
         var shiftNeg10 = range1.shift(-10,100)
-        shiftNeg10.range.lowerEndpoint() shouldBe 38
-        shiftNeg10.range.upperEndpoint() shouldBe 58
+        shiftNeg10.kRange.first() shouldBe 38
+        shiftNeg10.kRange.first() shouldBe 58
 
         // Shift left beyond 1
         var shiftNeg50 = range1.shift(-50,100)
-        shiftNeg50.range.lowerEndpoint() shouldBe 1
-        shiftNeg50.range.upperEndpoint() shouldBe 18
+        shiftNeg50.kRange.first() shouldBe 1
+        shiftNeg50.kRange.first() shouldBe 18
 
     }
 
