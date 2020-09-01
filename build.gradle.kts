@@ -59,8 +59,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:1.0-M1-1.4.0-rc") // JVM dependency
-
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC") // JVM dependency
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("de.mpicbg.scicomp:krangl:0.13")
