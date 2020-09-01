@@ -6,11 +6,9 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import kotlinx.serialization.ImplicitReflectionSerializer
 import krangl.DataFrame
 import krangl.print
 
-@ImplicitReflectionSerializer
 class KeggDBTest : StringSpec({
 
 

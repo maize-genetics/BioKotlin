@@ -81,12 +81,12 @@ object KeggCache : AutoCloseable {
     }
 
     object KeggSerializer : JsonContentPolymorphicSerializer<KeggInfo>(KeggInfo::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<out KeggInfo> = when {
-            (element as JsonObject).contains("orgCode") -> KeggOrg.serializer()
-            "ntSeq" in element -> KeggGene.serializer()
-            "refSeqID" in element -> KeggGenome.serializer()
-            "ec" in element -> KeggOrtholog.serializer()
-            "genes" in element && "compounds" in element -> KeggPathway.serializer()
+        override fun selectDeserializer(content: JsonElement): DeserializationStrategy<out KeggInfo> = when {
+            (content as JsonObject).contains("orgCode") -> KeggOrg.serializer()
+            "ntSeq" in content -> KeggGene.serializer()
+            "refSeqID" in content -> KeggGenome.serializer()
+            "ec" in content -> KeggOrtholog.serializer()
+            "genes" in content && "compounds" in content -> KeggPathway.serializer()
             else -> KeggInfoImpl.serializer()
         }
     }
