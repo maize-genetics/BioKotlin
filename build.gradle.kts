@@ -12,8 +12,7 @@ version = "0.01"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra("1.3.70")
-    //val kotlinVersion by extra ("1.4.0-RC")
+    val kotlinVersion by extra ("1.4.0")
 
     repositories {
         mavenCentral()
@@ -29,8 +28,7 @@ buildscript {
 
 
 plugins {
-    val kotlinVersion = "1.3.70"
-    //val kotlinVersion = "1.4.0-RC"
+    val kotlinVersion = "1.4.0"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
@@ -61,10 +59,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0") // JVM dependency
-    //implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:1.0-M1-1.4.0-rc") // JVM dependency
-
-
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC") // JVM dependency
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("de.mpicbg.scicomp:krangl:0.13")
@@ -93,8 +88,8 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
-    val kotestVersion = "4.1.3"
-    listOf("runner-junit5", "assertions-core", "runner-console", "property").forEach {
+    val kotestVersion = "4.2.3"
+    listOf("runner-junit5", "assertions-core", "property").forEach {
         testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
     }
     //consider adding Kotlintest
