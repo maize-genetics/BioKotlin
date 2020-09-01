@@ -5,11 +5,8 @@ import biokotlin.kegg.KeggOperations.*
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.ImmutableBiMap
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonConfiguration
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonParametricSerializer
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import krangl.DataFrame
 import krangl.asStrings
@@ -75,23 +72,21 @@ object KeggCache : AutoCloseable {
 
     /**Required for serializing the delegated classes from KeggInfo*/
     private val messageModule = SerializersModule {
-        polymorphic(KeggInfo::class) {
-            KeggOrg::class with KeggOrg.serializer()
-            KeggGene::class with KeggGene.serializer()
-            KeggGenome::class with KeggGenome.serializer()
-            KeggOrtholog::class with KeggOrtholog.serializer()
-            KeggPathway::class with KeggPathway.serializer()
-            KeggInfoImpl::class with KeggInfoImpl.serializer()
-        }
+        polymorphic(KeggInfo::class, KeggOrg::class, KeggOrg.serializer())
+        polymorphic(KeggInfo::class, KeggGene::class, KeggGene.serializer())
+        polymorphic(KeggInfo::class, KeggGenome::class, KeggGenome.serializer())
+        polymorphic(KeggInfo::class, KeggOrtholog::class, KeggOrtholog.serializer())
+        polymorphic(KeggInfo::class, KeggPathway::class, KeggPathway.serializer())
+        polymorphic(KeggInfo::class, KeggInfoImpl::class, KeggInfoImpl.serializer())
     }
 
-    object KeggSerializer : JsonParametricSerializer<KeggInfo>(KeggInfo::class) {
-        override fun selectSerializer(element: JsonElement): KSerializer<out KeggInfo> = when {
-            "orgCode" in element -> KeggOrg.serializer()
-            "ntSeq" in element -> KeggGene.serializer()
-            "refSeqID" in element -> KeggGenome.serializer()
-            "ec" in element -> KeggOrtholog.serializer()
-            "genes" in element && "compounds" in element -> KeggPathway.serializer()
+    object KeggSerializer : JsonContentPolymorphicSerializer<KeggInfo>(KeggInfo::class) {
+        override fun selectDeserializer(content: JsonElement): DeserializationStrategy<out KeggInfo> = when {
+            (content as JsonObject).contains("orgCode") -> KeggOrg.serializer()
+            "ntSeq" in content -> KeggGene.serializer()
+            "refSeqID" in content -> KeggGenome.serializer()
+            "ec" in content -> KeggOrtholog.serializer()
+            "genes" in content && "compounds" in content -> KeggPathway.serializer()
             else -> KeggInfoImpl.serializer()
         }
     }
@@ -163,9 +158,9 @@ object KeggCache : AutoCloseable {
     fun loadCache(fileName: String = cacheFile) {
         println("Loading cache")
         if (File(fileName).exists()) {
-            val json = Json(JsonConfiguration.Stable, context = messageModule)
+            val json = Json { serializersModule = messageModule }
             File(fileName).forEachLine {
-                val ke = json.parse(KeggSerializer, it)
+                val ke = json.decodeFromString(KeggSerializer, it)
                 cache[ke.keggEntry] = ke
             }
             updateOrgToKE()
@@ -177,15 +172,15 @@ object KeggCache : AutoCloseable {
 
     /**Save the cache to the specified file*/
     fun saveCache(fileName: String = cacheFile) {
-        val json = Json(JsonConfiguration.Stable, context = messageModule)
+        val json = Json { serializersModule = messageModule }
         File(fileName).printWriter().use { out ->
             cache.values.distinct().forEach { v ->
                 val jsonStr = when (v) {
-                    is KeggOrg -> json.stringify(KeggOrg.serializer(), v)
-                    is KeggGene -> json.stringify(KeggGene.serializer(), v)
-                    is KeggPathway -> json.stringify(KeggPathway.serializer(), v)
-                    is KeggOrtholog -> json.stringify(KeggOrtholog.serializer(), v)
-                    is KeggInfoImpl -> json.stringify(KeggInfoImpl.serializer(), v)
+                    is KeggOrg -> json.encodeToString(KeggOrg.serializer(), v)
+                    is KeggGene -> json.encodeToString(KeggGene.serializer(), v)
+                    is KeggPathway -> json.encodeToString(KeggPathway.serializer(), v)
+                    is KeggOrtholog -> json.encodeToString(KeggOrtholog.serializer(), v)
+                    is KeggInfoImpl -> json.encodeToString(KeggInfoImpl.serializer(), v)
                     //TODO may need to serialize null
                     else -> ""
                 }
