@@ -254,26 +254,6 @@ fun mergeGenomePosRangeSet ( count: Int, ranges: Set<GenomePosRange>): Set<Genom
     return gpRangeSet
 }
 
-// LCJ - still playing - nothing set in stone yet.
-data class SeqPosition(val seqRec: SeqRecord?, val site: Int): Comparable<SeqPosition> {
-    init {
-        require(site > 0){"All sites must be positive, greater than 0"}
-    }
-    // This one fails to order by chromosome
-//    override fun compareTo(other: SeqContig): Int = compareValuesBy(this,other,
-//            {preferedChromosomeSort.compare(this.chrom,other.chrom)},{it.site})
-    // This isn't right.  If one of the contigs is mull and other one isn't,
-    // put the one that is null first.  how will comparator default that?
-    // It shouldn't ignore contig and just use site.  It should pull null ahead of non-null
-    // so non-contig ranges are ordered first.
-    //
-    // TODO: see this for null-safe comparator (java 8)
-    //  https://stackoverflow.com/questions/481813/how-to-simplify-a-null-safe-compareto-implementation
-    override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,
-            { it.seqRec?.name },{it.site})
-
-}
-
 // THe extend/flank/shift/merge happens on this class. Merge actually on a NavigableSet of these
 // THe reason  I want this class is to put the shift/flank/etc methods against it.
 data class SeqPosRange (val seqRec: SeqRecord?, val kRange: IntRange):Comparable<SeqPosRange> {
@@ -311,27 +291,6 @@ data class SeqPosRange (val seqRec: SeqRecord?, val kRange: IntRange):Comparable
             upper = maxOf(1, upper + count)
         }
         return SeqPosRange(seqRec, lower..upper)
-    }
-}
-
-class SeqPositionRangeComparator: Comparator<Range<SeqPosition>>{
-    override fun compare(p0: Range<SeqPosition>?, p1: Range<SeqPosition>?): Int {
-        if(p0 == null || p1 == null){
-            return 0;
-        }
-        // ordering:  Null before other ordering?
-        // AGain - Ed wants user defined because so many ways to compare:
-        //  can be based on start pos, based on seq length, other things.
-        if (p0.lowerEndpoint().seqRec == null) {
-            if (p1.lowerEndpoint().seqRec == null) {
-                return p0.lowerEndpoint().site.compareTo(p1.lowerEndpoint().site)
-            }
-            return -1 // choose p0 if only p0.contig is null
-        } else if (p1.lowerEndpoint().seqRec == null){
-            return 2
-        } else {
-            return p0.lowerEndpoint().compareTo(p1.lowerEndpoint())
-        }
     }
 }
 
