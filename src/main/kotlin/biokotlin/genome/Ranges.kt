@@ -4,10 +4,6 @@ package biokotlin.genome
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
-import com.google.common.collect.Range
-import com.google.common.collect.TreeRangeSet
-import org.checkerframework.checker.fenum.qual.AwtAlphaCompositingRule
-import java.awt.AWTError
 import java.util.*
 import kotlin.Comparator
 
@@ -19,10 +15,13 @@ import kotlin.Comparator
  * own defined comparators
  */
 object SeqRecordSorts {
+    // The alphaSort works when used as the comparator in "toSortedSet" (see RangesTest -
+    //  "Test SeqRecordSorgs.alphasort " test case) but it isn't executed properly as
+    // part of SeqPosition compareTo()
     val alphaSort:Comparator<in SeqRecord> = compareBy { it.id }
 
     // looking at https://kotlinlang.org/docs/reference/collection-ordering.html - lengthComparator
-    // trying to find something to put into SeqPosition compareTo
+    // trying to find something to put into SeqPosition compareTo that work
     fun alphaSortFun(sr1: SeqRecord, sr2: SeqRecord) = Comparator{sr1: SeqRecord, sr2: SeqRecord ->
         if (sr1.id == sr2.id) 0 else if (sr1.id < sr2.id) -1 else 1
     }
@@ -56,6 +55,7 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<Seq
     val alphaCompare = SeqRecordAlphaComparator()
    // override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,{SeqRecordSorts.alphaSort()},{it.site})
 
+    // This works, keeping it active for test cases that test ordering lists of SeqPosition
     override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,
             { it.seqRecord?.id },{it.site})
 }
@@ -197,17 +197,18 @@ typealias SRangeSet = NavigableSet<SRange>
 
 // User may supply own comparator.  Output is a java NavigableSet<SRange> (SRangeSet)
 fun setOf(ranges: List<SRange>, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
-    val set : SRangeSet = TreeSet(comparator)
-    set.addAll(ranges)
-    return set
+    val sRangeSet : SRangeSet = TreeSet(comparator)
+    sRangeSet.addAll(ranges)
+    return sRangeSet
 }
 fun setOf(vararg ranges: SRange, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
-    val set : SRangeSet = TreeSet(comparator)
-    set.addAll(ranges.asIterable())
-    return set
+    val sRangeSet : SRangeSet = TreeSet(comparator)
+    sRangeSet.addAll(ranges.asIterable())
+    return sRangeSet
 }
 
 fun main() {
+    // See additional test cases in test/kotlin/biokotlin/genome/RangesTest.kt
     val chr1 = NucSeqRecord(NucSeq("AAAACACAGAGATATA"),"1")
     val chr2 = NucSeqRecord(NucSeq("GAGA".repeat(5)),"2")
     val chr3 = NucSeqRecord(NucSeq("TATA".repeat(5)),"3")
