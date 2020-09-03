@@ -36,7 +36,6 @@ class RangesTest: StringSpec({
         val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2", description = "The second rec, second seq",
                 annotations = mapOf("key1" to "value1"))
 
-        //val mySet = TreeSet<NucSeqRecord>(SeqRecordSorts.alphaSort)
         val myComparator = NucSeqComparator()
 //        val mySet: NavigableSet<NucSeqRecord> = TreeSet(myComparator)
         val mySet = mutableSetOf<NucSeqRecord>()
@@ -118,7 +117,7 @@ class RangesTest: StringSpec({
             println(range.toString())
         }
     }
-    "Test SeqPosition sorting " {
+    "Test SeqPosition default sorting " {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
         val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
@@ -133,16 +132,33 @@ class RangesTest: StringSpec({
         sR.add(SeqPosition(record1,40))
         sR.add(SeqPosition(record2,19))
 
-        println("\nLCJ - SeqPositions in unsorted Set:")
+        println("\nLCJ - SeqPositions in TreeSet using default SeqPosition Ordering:")
         for (sp in sR) {
             println(sp.toString())
         }
 
-        var sRsorted = sR.toSortedSet()
-        println("\nLCJ - SeqPositions in SORTED Set:")
-        for (sp in sRsorted) {
+    }
+
+    "Test SeqPosition User Supplied sorting " {
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
+                annotations = mapOf("key1" to "value1"))
+
+        //  test sorting - with a set of SeqPositions - not ranges:
+        val sR: NavigableSet<SeqPosition> = TreeSet()
+        sR.add(SeqPosition(record1,8, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+        sR.add(SeqPosition(record2,3, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+        sR.add(SeqPosition(record1,40, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+        sR.add(SeqPosition(record2,19, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+
+        println("\nLCJ - SeqPositions in TreeSet using user-supplied Reverse SeqPosition Ordering:")
+        for (sp in sR) {
             println(sp.toString())
         }
+
     }
 
     "Test setOf for SRange" {

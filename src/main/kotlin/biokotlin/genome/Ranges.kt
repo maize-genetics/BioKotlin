@@ -11,20 +11,12 @@ import kotlin.Comparator
  * This class defines  Biokotlin ranges as well as functions that may be run against
  * these ranges.
  *
- * Comparators are the big concern right now - how to allow users to run with their
- * own defined comparators
  */
 object SeqRecordSorts {
     // The alphaSort works when used as the comparator in "toSortedSet" (see RangesTest -
     //  "Test SeqRecordSorgs.alphasort " test case) but it isn't executed properly as
-    // part of SeqPosition compareTo()
+    // part of SeqPosition compareTo().
     val alphaSort:Comparator<in SeqRecord> = compareBy { it.id }
-
-    // looking at https://kotlinlang.org/docs/reference/collection-ordering.html - lengthComparator
-    // trying to find something to put into SeqPosition compareTo that work
-    fun alphaSortFun(sr1: SeqRecord, sr2: SeqRecord) = Comparator{sr1: SeqRecord, sr2: SeqRecord ->
-        if (sr1.id == sr2.id) 0 else if (sr1.id < sr2.id) -1 else 1
-    }
 
     private var defaultSeqRecSortIndex: Map<SeqRecord,Int> = emptyMap()
     val defaultSeqRecSort:Comparator<in SeqRecord> = compareBy{ defaultSeqRecSortIndex.getOrDefault(it, Int.MAX_VALUE) }
@@ -33,31 +25,62 @@ object SeqRecordSorts {
     }
 }
 
-// LCJ - This is a test - trying to determine how to successfully pass
-// a comparator to a class compareTo function
-class SeqRecordAlphaComparator: Comparator<SeqRecord>{
-    override fun compare(p0: SeqRecord, p1:SeqRecord): Int {
-        if (p0 == null || p1 == null) {
-            return 0
-        } else {
-            return p0.id.compareTo(p1.id)
+// Default comparator for the SeqPosition class.
+// It sorts based first on seqRecord.id, then site.
+// SeqPositions without a SeqRecord are ordered first.
+class SeqPositionAlphaComparator: Comparator<SeqPosition>{
+    companion object{
+        var spAlphaComparator  = SeqPositionAlphaComparator()
+    }
+    override fun compare(p0: SeqPosition, p1:SeqPosition): Int {
+        // If both p0.seqRecord and p1.seqRecord are null, or just p0.seqRecord is null, return p0
+        // if only p1.seqRecord is null, return p1 (sorting so that null comes first)
+        // if neither is null, compare the sites and return accordingly.
+        if (p0.seqRecord == null ) {
+            if (p1.seqRecord == null) {
+                return p0.site.compareTo(p1.site)
+            } // they are equal
+            return -1 // null comes before non-null
         }
+        if (p1.seqRecord == null) return 1 // null before non-null
+        val seqRecordCompare = p0.seqRecord.id.compareTo(p1.seqRecord.id)
+        return if (seqRecordCompare != 0) seqRecordCompare else return  p0.site.compareTo(p1.site)
     }
 }
 
-data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
-    init {
-        require(site>=0){"All sites must be positive"}
+// Comparator for SeqPosition class.  This sorts the SeqRecords ids in
+// reverse order, achieved by multiplying the compareTo result by -1
+// Currently used in RangesTest to verify a user supplied comparator
+// is executed when passed as a parameter.
+class SeqPositionReverseAlphaComparator: Comparator<SeqPosition>{
+    companion object{
+        var spReverseAlphaComparator  = SeqPositionReverseAlphaComparator()
     }
-    //operator fun get(range: IntRange): SRange = SeqPositionRanges.of(this,range)
-//    override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,
-//            {SeqRecordSorts.alphaSort.compare(this.seqRecord,other.seqRecord)},{it.site})
-    val alphaCompare = SeqRecordAlphaComparator()
-   // override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,{SeqRecordSorts.alphaSort()},{it.site})
+    override fun compare(p0: SeqPosition, p1:SeqPosition): Int {
+        // SeqPositions with null SeqRecord are still returned before SeqPositions
+        // containing a SeqRecord.  But in this comparator, the SeqPositions
+        // are returned in descending order by multiplying the compareTo results by -1
+        if (p0.seqRecord == null ) {
+            if (p1.seqRecord == null) {
+                return p0.site.compareTo(p1.site) * -1
+            } // they are equal
+            return -1 // null comes before non-null
+        }
+        if (p1.seqRecord == null) return 1 // null before non-null
+        val seqRecordCompare = p0.seqRecord.id.compareTo(p1.seqRecord.id)
+        return if (seqRecordCompare != 0) seqRecordCompare * -1 else return  p0.site.compareTo(p1.site)
+    }
+}
 
-    // This works, keeping it active for test cases that test ordering lists of SeqPosition
-    override fun compareTo(other: SeqPosition): Int = compareValuesBy(this,other,
-            { it.seqRecord?.id },{it.site})
+data class SeqPosition(val seqRecord: SeqRecord?, val site: Int, val comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): Comparable<SeqPosition> {
+    init {
+        require(site >= 0) { "All sites must be positive" }
+    }
+
+    // allows for a user defined comparator.
+    override fun compareTo(other: SeqPosition): Int {
+            return comparator.compare(this, other)
+    }
 }
 
 
@@ -70,18 +93,20 @@ fun SRange.enlarge(bp: Int): SRange {
 }
 
 
-
+// This will not shift into an adjacent contig of the genome
 fun SRange.shift(count: Int): SRange {
     // negative number is shift left, positive is shift right, in either case, "add" the number
 
     var lower  = this.lowerEndpoint().copy()
     var upper  = this.upperEndpoint().copy()
-    // This assumes we have the same seqRecord in both upper and lower endpoints of the range
-    val seqRecord = lower.seqRecord
-    var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
+    // This allows for seqRecord to be different in upper and lower endpoints of the range
     if (count > 0) {
         // shift right (increase) verify neither exceeds size of sequence
+        var seqRecord = lower.seqRecord
+        var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
         lower  = this.lowerEndpoint().copy(site = minOf(this.lowerEndpoint().site + count,max ))
+        seqRecord = upper.seqRecord
+        max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
         upper = this.upperEndpoint().copy( site = minOf (this.upperEndpoint().site + count, max))
     } else if (count < 0) {
         // shift left, verify we don't drop below 1
@@ -89,29 +114,31 @@ fun SRange.shift(count: Int): SRange {
         lower = this.lowerEndpoint().copy(site = maxOf(1,this.lowerEndpoint().site + count ))
         upper = this.upperEndpoint().copy(site = maxOf (1, this.upperEndpoint().site + count))
     }
-    return SeqPositionRanges.of(SeqPosition(seqRecord,lower.site),SeqPosition(seqRecord, upper.site))
+
+    return SeqPositionRanges.of(SeqPosition(lower.seqRecord,lower.site, comparator=lower.comparator),SeqPosition(upper.seqRecord, upper.site, comparator=upper.comparator))
 
 }
 
 // Flank the lower end of the range if it isn't already at 1
 fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
-    val seqRecord = this.lowerEndpoint().seqRecord
     if (this.lowerEndpoint().site > 1) {
         var lowerF  = (this.lowerEndpoint().site.toLong() - count).toInt().coerceAtLeast(1)
         var upperF = this.lowerEndpoint().site - 1
-        return SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),SeqPosition(seqRecord,upperF))
+        return SeqPositionRanges.of(SeqPosition(this.lowerEndpoint().seqRecord,lowerF, comparator=this.lowerEndpoint().comparator),
+                SeqPosition(this.upperEndpoint().seqRecord,upperF, comparator=this.upperEndpoint().comparator))
     }
     return null
 }
 
 // Flank the upper end of range if it isn't already at max
 fun SRange.flankRight(count: Int) : SRange? {
-    val seqRecord = this.lowerEndpoint().seqRecord
+    val seqRecord = this.upperEndpoint().seqRecord
     var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
     if (this.upperEndpoint().site < max) {
         var lowerF = this.upperEndpoint().site + 1
         var upperF = (minOf (this.upperEndpoint().site + count, max))
-        return SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),SeqPosition(seqRecord,upperF))
+        return SeqPositionRanges.of(SeqPosition(seqRecord,lowerF, this.upperEndpoint().comparator),
+                SeqPosition(seqRecord,upperF, this.upperEndpoint().comparator))
     }
     return null
 }
@@ -124,7 +151,8 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
         var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
         var lowerF = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toInt()
         var upperF = this.lowerEndpoint().site - 1
-        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),SeqPosition(seqRecord,upperF)))
+        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF, this.lowerEndpoint().comparator),
+                SeqPosition(seqRecord,upperF, this.lowerEndpoint().comparator)))
     }
 
     // Flank the upper end of range if it isn't already at max
@@ -133,7 +161,8 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
     if (this.upperEndpoint().site < max) {
         var lowerF = this.upperEndpoint().site + 1
         var upperF = (minOf (this.upperEndpoint().site + count, max))
-        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),SeqPosition(seqRecord,upperF)))
+        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF, this.upperEndpoint().comparator),
+                SeqPosition(seqRecord,upperF, this.upperEndpoint().comparator)))
     }
     return flankingRanges
 }
@@ -145,6 +174,7 @@ fun SeqRecord.range(range: IntRange): SRange = SeqPositionRanges.of(this,range)
 object SeqPositionRanges {
     fun of(seqRecord: SeqRecord, siteRange: IntRange): SRange =
             SRange.closed(SeqPosition(seqRecord, siteRange.first), SeqPosition(seqRecord, siteRange.last))
+    // The "requires" below do not allow ranges to cross contigs - should be changed?
     fun of(first: SeqPosition, last: SeqPosition): SRange {
         require(first.seqRecord==last.seqRecord)
         require(first.site<=last.site)
@@ -161,14 +191,9 @@ object SeqPositionRanges {
 
 }
 
-
 class NucSeqComparator: Comparator<NucSeqRecord>{
-    override fun compare(p0: NucSeqRecord, p1: NucSeqRecord?): Int {
-        if (p0 == null || p1 == null) {
-            return 0
-        } else {
-            return p0.id.compareTo(p1.id)
-        }
+    override fun compare(p0: NucSeqRecord, p1: NucSeqRecord): Int {
+        return p0.id.compareTo(p1.id)
     }
 }
 
@@ -221,6 +246,9 @@ fun main() {
     val grSet = setOf(chr1[0..2],chr1[4..8],chr1[2..3],chr1[3..12])
     println(grSet)
 
+    val sRange = chr1.range(8..12)
+
+    println("sRange from chr.range is:]\n ${sRange.toString()}")
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
 //            .map{it.resize(100)}
 //            .toSet()
