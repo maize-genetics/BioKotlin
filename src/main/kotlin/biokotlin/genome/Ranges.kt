@@ -9,7 +9,7 @@ import kotlin.Comparator
 
 /**
  * This class defines  Biokotlin ranges as well as functions that may be run against
- * these ranges.
+ * those ranges.
  *
  */
 object SeqRecordSorts {
@@ -72,6 +72,7 @@ class SeqPositionReverseAlphaComparator: Comparator<SeqPosition>{
     }
 }
 
+// This class allows the user to pass a custom comparator, or to use the default
 data class SeqPosition(val seqRecord: SeqRecord?, val site: Int, val comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): Comparable<SeqPosition> {
     init {
         require(site >= 0) { "All sites must be positive" }
@@ -83,8 +84,30 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int, val comparator:
     }
 }
 
+// "Object" is a single static instance.
+object SeqPositionRanges {
+    fun of(seqRecord: SeqRecord, siteRange: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange =
+            SRange.closed(SeqPosition(seqRecord, siteRange.first, comparator), SeqPosition(seqRecord, siteRange.last, comparator))
+    // The "requires" below do not allow ranges to cross contigs - should be changed?
+    fun of(first: SeqPosition, last: SeqPosition, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange {
+        require(first.seqRecord==last.seqRecord)
+        require(first.site<=last.site)
+        return SRange.closed(SeqPosition(first.seqRecord, first.site, comparator), SeqPosition(last.seqRecord, last.site, comparator))
+    }
+    fun generator(): Sequence<SRange> {
+        TODO("Not yet implemented")
+    }
+
+    val COMPARE_LEFT: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id}, { it.lowerEndpoint().site }, { it.upperEndpoint().site })
+    val COMPARE_MIDDLE: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id },
+            //toLong prevents issues with going beyond Int MAX
+            { it.lowerEndpoint().site.toLong() + it.upperEndpoint().site.toLong() })
+
+}
 
 typealias SRange = com.google.common.collect.Range<SeqPosition>
+
+fun SeqRecord.range(range: IntRange): SRange = SeqPositionRanges.of(this,range)
 
 fun SRange.enlarge(bp: Int): SRange {
     val first = this.lowerEndpoint().copy(site = maxOf(0,this.lowerEndpoint().site-bp))
@@ -167,29 +190,6 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
     return flankingRanges
 }
 
-fun SeqRecord.range(range: IntRange): SRange = SeqPositionRanges.of(this,range)
-
-
-// "Object" is a single static instance.
-object SeqPositionRanges {
-    fun of(seqRecord: SeqRecord, siteRange: IntRange): SRange =
-            SRange.closed(SeqPosition(seqRecord, siteRange.first), SeqPosition(seqRecord, siteRange.last))
-    // The "requires" below do not allow ranges to cross contigs - should be changed?
-    fun of(first: SeqPosition, last: SeqPosition): SRange {
-        require(first.seqRecord==last.seqRecord)
-        require(first.site<=last.site)
-        return SRange.closed(SeqPosition(first.seqRecord, first.site), SeqPosition(last.seqRecord, last.site))
-    }
-    fun generator(): Sequence<SRange> {
-        TODO("Not yet implemented")
-    }
-
-    val COMPARE_LEFT: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id}, { it.lowerEndpoint().site }, { it.upperEndpoint().site })
-    val COMPARE_MIDDLE: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id },
-            //toLong prevents issues with going beyond Int MAX
-            { it.lowerEndpoint().site.toLong() + it.upperEndpoint().site.toLong() })
-
-}
 
 class NucSeqComparator: Comparator<NucSeqRecord>{
     override fun compare(p0: NucSeqRecord, p1: NucSeqRecord): Int {
@@ -197,6 +197,8 @@ class NucSeqComparator: Comparator<NucSeqRecord>{
     }
 }
 
+//Default comparator for SeqPositionRanges
+// It is used in setOf below
 class SeqPositionRangeComparator: Comparator<SRange> {
 
     companion object{
@@ -204,15 +206,19 @@ class SeqPositionRangeComparator: Comparator<SRange> {
     }
     override fun compare(p0: SRange, p1: SRange): Int {
         // ordering:  Null before other ordering
-        if (p0.lowerEndpoint().seqRecord == null) {
-            if (p1.lowerEndpoint().seqRecord == null) {
+        val seqRec1= p0.lowerEndpoint().seqRecord
+        val seqRec2 = p1.lowerEndpoint().seqRecord
+        if (seqRec1 == null) {
+            if (seqRec2 == null) {
                 return p0.lowerEndpoint().site.compareTo(p1.lowerEndpoint().site)
             }
-            return -1 // choose p0 if only p0.contig is null
-        } else if (p1.lowerEndpoint().seqRecord == null) {
-            return 2
+            return -1 // choose p0 if only p0.seqRecord is null
+        } else if (seqRec2 == null) {
+            return 1
         } else {
-            return p0.lowerEndpoint().compareTo(p1.lowerEndpoint())
+
+            val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
+            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.lowerEndpoint().site.compareTo(p1.lowerEndpoint().site)
         }
     }
 
@@ -223,13 +229,62 @@ typealias SRangeSet = NavigableSet<SRange>
 // User may supply own comparator.  Output is a java NavigableSet<SRange> (SRangeSet)
 fun setOf(ranges: List<SRange>, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
     val sRangeSet : SRangeSet = TreeSet(comparator)
-    sRangeSet.addAll(ranges)
+    sRangeSet.addAll(ranges.asIterable())
     return sRangeSet
 }
 fun setOf(vararg ranges: SRange, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
     val sRangeSet : SRangeSet = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     return sRangeSet
+}
+
+// Does Merge also get overlapping?  can this be both merge and coalesce, based on value of count?
+// This will default to using the default constructor - should there be a comparator parameter ??
+fun SRangeSet.merge(count: Int): SRangeSet {
+
+    val sRangeSet : SRangeSet = TreeSet()
+    val sRangeDeque: Deque<SRange> = ArrayDeque()
+
+    // do i need to make a copy?
+    val sortedRanges = TreeSet<SRange>() // tree set is already sorted
+    sortedRanges.addAll(this)
+    sRangeDeque.add(sortedRanges.elementAt(0))
+    for (index in 1 until sortedRanges.size) {
+        var prevRange = sRangeDeque.peekLast()
+        var nextRange = sortedRanges.elementAt(index)
+        // chroms must match, then check positions
+        var prevSeqRecord = prevRange.upperEndpoint().seqRecord
+        var nextRangeSeqRecord = nextRange.lowerEndpoint().seqRecord
+        var merge = false
+        if (prevSeqRecord == null) {
+            if (nextRangeSeqRecord == null) {
+                merge = if (nextRange.lowerEndpoint().site > prevRange.upperEndpoint().site + count) false else true
+            }
+        } else if (nextRangeSeqRecord == null) merge = false
+        else if (prevSeqRecord.equals(nextRangeSeqRecord)) merge = true
+
+        // "merge" is only true at this point if either both seqRecords are null, or they are equal
+        if (merge) {
+            if (nextRange.lowerEndpoint().site > prevRange.upperEndpoint().site + count ) {
+                // not close enough - add to the stack
+                sRangeDeque.add(nextRange)
+            } else if (prevRange.upperEndpoint().site < nextRange.upperEndpoint().site) {
+                // Merge the new range with the last one,
+                // remove the last from the stack, add new range to stack
+                sRangeDeque.removeLast()
+                val first = prevRange.lowerEndpoint().copy()
+                val last = nextRange.upperEndpoint().copy()
+                sRangeDeque.add(SeqPositionRanges.of(first,last))
+            }
+        } else {
+            // Different seqRecord, add the new range
+            sRangeDeque.add(nextRange)
+        }
+    }
+
+    sRangeSet.addAll(sRangeDeque)
+    return sRangeSet
+
 }
 
 fun main() {
@@ -247,8 +302,8 @@ fun main() {
     println(grSet)
 
     val sRange = chr1.range(8..12)
-
     println("sRange from chr.range is:]\n ${sRange.toString()}")
+
 //    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
 //            .map{it.resize(100)}
 //            .toSet()
