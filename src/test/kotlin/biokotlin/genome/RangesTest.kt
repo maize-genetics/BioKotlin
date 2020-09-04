@@ -68,25 +68,26 @@ class RangesTest: StringSpec({
                 annotations = mapOf("key1" to "value1"))
 
         // This takes double the memory - it stores the sequence twice.
-        // I think a set of SeqPositionRanges for cross-contig boundaries may be better
         var range1 = SeqPositionRanges.of(record1,8..28)
         var range2 = SeqPositionRanges.of(record2,3..19)
         var range3 = SeqPositionRanges.of(SeqPosition(record1, 32),SeqPosition(record1,40))
+        var range4 = record2.range(25..40)
 
-        var setRanges = setOf(range1, range2, range3)
-        println("\nlcj: setRanges before sorting - does it use my:")
+        // THis is calling setOf from Ranges.  How is it defaulting to that?
+        // In jupyter notebook I have to explicitly do biokotlin.genome.setOf(...)
+        var setRanges = setOf(range1, range4, range3, range2)
+        println("\nlcj: setRanges before sorting ")
         for (range in setRanges) {
             println(range.toString())
+            println()
         }
 
-        println("\nsetRanges after sorting:")
+        println("\n\nsetRanges after sorting:")
         var setRangesSorted = setRanges.toSortedSet(SeqPositionRangeComparator.sprComparator)
         for (range in setRangesSorted) {
             println(range.toString())
+            println()
         }
-
-        // Example of doing SeqPositionRanges.of
-        val gr = SeqPositionRanges.of(record1,0..14)
     }
 
     "List SeqPositionRanges to sorted set" {
@@ -97,8 +98,8 @@ class RangesTest: StringSpec({
         val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
                 annotations = mapOf("key1" to "value1"))
 
-        var range1 = SeqPositionRanges.of(record1,8..28)
-        var range2 = SeqPositionRanges.of(record2,3..19)
+        var range1 = record1.range(8..28)
+        var range2 = record2.range(3..19)
         var range3 = SeqPositionRanges.of(SeqPosition(record1, 32),SeqPosition(record1,40))
 
         var rangeList = mutableListOf<SRange>()
@@ -132,11 +133,10 @@ class RangesTest: StringSpec({
         sR.add(SeqPosition(record1,40))
         sR.add(SeqPosition(record2,19))
 
-        println("\nLCJ - SeqPositions in TreeSet using default SeqPosition Ordering:")
+        println("\n SeqPositions in TreeSet using default SeqPosition Ordering:")
         for (sp in sR) {
             println(sp.toString())
         }
-
     }
 
     "Test SeqPosition User Supplied sorting " {
@@ -174,10 +174,10 @@ class RangesTest: StringSpec({
         val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2", description = "The second rec, second seq",
                 annotations = mapOf("key1" to "value1"))
 
-        val sr1 = SeqPositionRanges.of(record1,27..44)
-        val sr2 = SeqPositionRanges.of(record1,1..15)
-        val sr3 = SeqPositionRanges.of(record3,18..33)
-        val sr4 = SeqPositionRanges.of(record2,25..35)
+        val sr1 = record1.range(27..44)
+        val sr2 = record1.range(1..15)
+        val sr3 = record3.range(18..33)
+        val sr4 = record2.range(25..35)
 
         // Should create a NavigableSet - sorted set
         val srSet = setOf(sr1,sr2,sr3,sr4)
@@ -190,5 +190,32 @@ class RangesTest: StringSpec({
         srSet.elementAt(1).lowerEndpoint().site shouldBe 27
         srSet.elementAt(2).lowerEndpoint().site shouldBe 25
         srSet.elementAt(3).lowerEndpoint().site shouldBe 18
+    }
+    "Test coalescing ranges" {
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
+                annotations = mapOf("key1" to "value1"))
+
+        val sr1 = record1.range(25..44)
+        val sr2 = record1.range(5..10)
+        val sr3 = record1.range(15..27)
+        val sr4 = record1.range(45..50)
+
+        var srSet = setOf(sr1,sr2,sr3,sr4)
+        println("\nLCJ - ranges NON-coalesced set:")
+        for (sp in srSet) {
+            println(sp.toString())
+        }
+        srSet.size shouldBe 4
+
+        var coalescedSet = coalescingsetOf(sr1,sr2,sr3,sr4)
+        println("\nLCJ - ranges coalesced set:")
+        for (sp in coalescedSet) {
+            println(sp.toString())
+        }
+        coalescedSet.size shouldBe 3
     }
 })
