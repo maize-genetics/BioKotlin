@@ -1,3 +1,4 @@
+@file:JvmName("Ranges")
 package biokotlin.genome
 
 
@@ -107,7 +108,7 @@ object SeqPositionRanges {
 
 typealias SRange = com.google.common.collect.Range<SeqPosition>
 
-fun SeqRecord.range(range: IntRange): SRange = SeqPositionRanges.of(this,range)
+fun SeqRecord.range(range: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange = SeqPositionRanges.of(this,range)
 
 fun SRange.enlarge(bp: Int): SRange {
     val first = this.lowerEndpoint().copy(site = maxOf(0,this.lowerEndpoint().site-bp))
@@ -238,21 +239,41 @@ fun setOf(vararg ranges: SRange, comparator: Comparator<SRange> = SeqPositionRan
     return sRangeSet
 }
 
-// Does Merge also get overlapping?  can this be both merge and coalesce, based on value of count?
+// Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
+// THis does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
+fun coalescingSetOf(ranges: List<SRange>, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
+    val sRangeSet : SRangeSet = TreeSet(comparator)
+    sRangeSet.addAll(ranges.asIterable())
+    // Have a range set, now call merge with "0" for bp distance.
+    // This will not merge adjacent ranges, but will merge embedded or overlapping ranges
+    val sRangeSetCoalesced = sRangeSet.merge(0)
+    return sRangeSetCoalesced
+}
+fun coalescingsetOf(vararg ranges: SRange, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
+    val sRangeSet : SRangeSet = TreeSet(comparator)
+    sRangeSet.addAll(ranges.asIterable())
+    val sRangeSetCoalesced = sRangeSet.merge(0)
+    return sRangeSetCoalesced
+}
+
+// Merge will merge overlapping and embedded ranges, and other ranges where distance between them
+// is "count" or less bps.  It will not merge adjacent/non-overlapping ranges
 // This will default to using the default constructor - should there be a comparator parameter ??
+// Merging of ranges requires that the upper endpoint SeqRecord of the first range matches
+// the lower endpoint SeqRecord of the next range.
 fun SRangeSet.merge(count: Int): SRangeSet {
 
-    val sRangeSet : SRangeSet = TreeSet()
+    val sRangeSet : SRangeSet = TreeSet(this.comparator())
     val sRangeDeque: Deque<SRange> = ArrayDeque()
 
-    // do i need to make a copy?
-    val sortedRanges = TreeSet<SRange>() // tree set is already sorted
+    // do i need this  copy?
+    val sortedRanges = TreeSet<SRange>(this.comparator()) // tree set is already sorted
     sortedRanges.addAll(this)
     sRangeDeque.add(sortedRanges.elementAt(0))
     for (index in 1 until sortedRanges.size) {
         var prevRange = sRangeDeque.peekLast()
         var nextRange = sortedRanges.elementAt(index)
-        // chroms must match, then check positions
+        // SeqRecord must match, then check positions
         var prevSeqRecord = prevRange.upperEndpoint().seqRecord
         var nextRangeSeqRecord = nextRange.lowerEndpoint().seqRecord
         var merge = false
@@ -271,6 +292,9 @@ fun SRangeSet.merge(count: Int): SRangeSet {
             } else if (prevRange.upperEndpoint().site < nextRange.upperEndpoint().site) {
                 // Merge the new range with the last one,
                 // remove the last from the stack, add new range to stack
+                // If the new range upper endpoint is less than old range upper endpoint, (ie range
+                // is embedded), we do nothing. Leave the previous range on the stack, don't
+                // add the new one.  This tosses the embedded range.
                 sRangeDeque.removeLast()
                 val first = prevRange.lowerEndpoint().copy()
                 val last = nextRange.upperEndpoint().copy()
@@ -294,8 +318,8 @@ fun main() {
     val chr3 = NucSeqRecord(NucSeq("TATA".repeat(5)),"3")
     // This invokes the "get" from SeqByte.kt:NucSeqByte class
     // It slices the array, returns the sequence at the specified positions
-    val gr1 = chr1[0..2]
-    println(gr1.toString())
+    val gr1 = chr1[1..5]
+    println("gr1 is: ${gr1.toString()}")
     val gr1Rec = chr1[0..2].id("Little1")
     println("gr1Rec is:\n $gr1Rec")
     val grSet = setOf(chr1[0..2],chr1[4..8],chr1[2..3],chr1[3..12])
