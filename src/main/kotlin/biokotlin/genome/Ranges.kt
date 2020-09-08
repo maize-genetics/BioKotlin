@@ -2,10 +2,12 @@
 package biokotlin.genome
 
 
+import biokotlin.genome.SeqPositionAlphaComparator.Companion.spAlphaComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
 import java.util.*
+import java.util.Comparator.comparing
 import kotlin.Comparator
 
 /**
@@ -65,54 +67,64 @@ class SeqPositionReverseAlphaComparator: Comparator<SeqPosition>{
             if (p1.seqRecord == null) {
                 return p0.site.compareTo(p1.site) * -1
             } // they are equal
-            return -1 // null comes before non-null
+            return 1 // non-null before null
         }
-        if (p1.seqRecord == null) return 1 // null before non-null
+        if (p1.seqRecord == null) return -1 // non-null before null
         val seqRecordCompare = p0.seqRecord.id.compareTo(p1.seqRecord.id)
         return if (seqRecordCompare != 0) seqRecordCompare * -1 else return  p0.site.compareTo(p1.site)
     }
 }
 
-// This class allows the user to pass a custom comparator, or to use the default
-data class SeqPosition(val seqRecord: SeqRecord?, val site: Int, val comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): Comparable<SeqPosition> {
+// This class users a default comparator
+data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
     init {
         require(site >= 0) { "All sites must be positive" }
     }
 
-    // allows for a user defined comparator.
+    // Uses defined comparator of SeqPositionAlphaComparator
     override fun compareTo(other: SeqPosition): Int {
-            return comparator.compare(this, other)
+            return spAlphaComparator.compare(this, other)
     }
+    // THis only returns id an string.  SEqRecord also has an optional name - should it be included?
+    override fun toString(): String {
+            return "id=${seqRecord?.id},name=${seqRecord?.name},site=[$site]"
+    }
+
+    fun plus(count: Int): SeqPosition {
+        return this.copy(site = this.site + count)
+    }
+
 }
 
 // "Object" is a single static instance.
 object SeqPositionRanges {
     fun of(seqRecord: SeqRecord, siteRange: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange =
-            SRange.closed(SeqPosition(seqRecord, siteRange.first, comparator), SeqPosition(seqRecord, siteRange.last, comparator))
+            SeqPosition(seqRecord, siteRange.first)..SeqPosition(seqRecord, siteRange.last)
     // The "requires" below do not allow ranges to cross contigs - should be changed?
     fun of(first: SeqPosition, last: SeqPosition, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange {
         require(first.seqRecord==last.seqRecord)
         require(first.site<=last.site)
-        return SRange.closed(SeqPosition(first.seqRecord, first.site, comparator), SeqPosition(last.seqRecord, last.site, comparator))
+        return SeqPosition(first.seqRecord, first.site)..SeqPosition(last.seqRecord, last.site)
     }
     fun generator(): Sequence<SRange> {
         TODO("Not yet implemented")
     }
 
-    val COMPARE_LEFT: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id}, { it.lowerEndpoint().site }, { it.upperEndpoint().site })
-    val COMPARE_MIDDLE: Comparator<SRange> = compareBy({ it.lowerEndpoint().seqRecord?.id },
+    val COMPARE_LEFT: Comparator<SRange> = compareBy({ it.start.seqRecord?.id}, { it.start.site }, { it.endInclusive.site })
+    val COMPARE_MIDDLE: Comparator<SRange> = compareBy({ it.start.seqRecord?.id },
             //toLong prevents issues with going beyond Int MAX
-            { it.lowerEndpoint().site.toLong() + it.upperEndpoint().site.toLong() })
+            { it.start.site.toLong() + it.endInclusive.site.toLong() })
 
 }
-
-typealias SRange = com.google.common.collect.Range<SeqPosition>
+//typealias SRange = com.google.common.collect.Range<SeqPosition>
+typealias SRange = ClosedRange<SeqPosition>
 
 fun SeqRecord.range(range: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange = SeqPositionRanges.of(this,range)
+fun SeqRecord.position(site: Int) : SeqPosition = SeqPosition(this, site)
 
 fun SRange.enlarge(bp: Int): SRange {
-    val first = this.lowerEndpoint().copy(site = maxOf(0,this.lowerEndpoint().site-bp))
-    val last = this.lowerEndpoint().copy(site = this.upperEndpoint().site+bp)
+    val first = this.start.copy(site = maxOf(0,this.start.site-bp))
+    val last = this.start.copy(site = this.endInclusive.site + bp)
     return SeqPositionRanges.of(first, last)
 }
 
@@ -121,48 +133,48 @@ fun SRange.enlarge(bp: Int): SRange {
 fun SRange.shift(count: Int): SRange {
     // negative number is shift left, positive is shift right, in either case, "add" the number
 
-    var lower  = this.lowerEndpoint().copy()
-    var upper  = this.upperEndpoint().copy()
+    var lower  = this.start.copy()
+    var upper  = this.endInclusive.copy()
     // This allows for seqRecord to be different in upper and lower endpoints of the range
     if (count > 0) {
         // shift right (increase) verify neither exceeds size of sequence
         var seqRecord = lower.seqRecord
         var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
-        lower  = this.lowerEndpoint().copy(site = minOf(this.lowerEndpoint().site + count,max ))
+        lower  = this.start.copy(site = minOf(this.endInclusive.site + count,max ))
         seqRecord = upper.seqRecord
         max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
-        upper = this.upperEndpoint().copy( site = minOf (this.upperEndpoint().site + count, max))
+        upper = this.endInclusive.copy( site = minOf (this.endInclusive.site + count, max))
     } else if (count < 0) {
         // shift left, verify we don't drop below 1
         // + count because if count is negative, - count would make it positive
-        lower = this.lowerEndpoint().copy(site = maxOf(1,this.lowerEndpoint().site + count ))
-        upper = this.upperEndpoint().copy(site = maxOf (1, this.upperEndpoint().site + count))
+        lower = this.start.copy(site = maxOf(1,this.endInclusive.site + count ))
+        upper = this.endInclusive.copy(site = maxOf (1, this.endInclusive.site + count))
     }
 
-    return SeqPositionRanges.of(SeqPosition(lower.seqRecord,lower.site, comparator=lower.comparator),SeqPosition(upper.seqRecord, upper.site, comparator=upper.comparator))
+    return SeqPositionRanges.of(SeqPosition(lower.seqRecord,lower.site),SeqPosition(upper.seqRecord, upper.site))
 
 }
 
 // Flank the lower end of the range if it isn't already at 1
 fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
-    if (this.lowerEndpoint().site > 1) {
-        var lowerF  = (this.lowerEndpoint().site.toLong() - count).toInt().coerceAtLeast(1)
-        var upperF = this.lowerEndpoint().site - 1
-        return SeqPositionRanges.of(SeqPosition(this.lowerEndpoint().seqRecord,lowerF, comparator=this.lowerEndpoint().comparator),
-                SeqPosition(this.upperEndpoint().seqRecord,upperF, comparator=this.upperEndpoint().comparator))
+    if (this.start.site > 1) {
+        var lowerF  = (this.start.site.toLong() - count).toInt().coerceAtLeast(1)
+        var upperF = this.start.site - 1
+        return SeqPositionRanges.of(SeqPosition(this.start.seqRecord,lowerF),
+                SeqPosition(this.endInclusive.seqRecord,upperF))
     }
     return null
 }
 
 // Flank the upper end of range if it isn't already at max
 fun SRange.flankRight(count: Int) : SRange? {
-    val seqRecord = this.upperEndpoint().seqRecord
+    val seqRecord = this.endInclusive.seqRecord
     var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
-    if (this.upperEndpoint().site < max) {
-        var lowerF = this.upperEndpoint().site + 1
-        var upperF = (minOf (this.upperEndpoint().site + count, max))
-        return SeqPositionRanges.of(SeqPosition(seqRecord,lowerF, this.upperEndpoint().comparator),
-                SeqPosition(seqRecord,upperF, this.upperEndpoint().comparator))
+    if (this.endInclusive.site < max) {
+        var lowerF = this.endInclusive.site + 1
+        var upperF = (minOf (this.endInclusive.site + count, max))
+        return SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),
+                SeqPosition(seqRecord,upperF))
     }
     return null
 }
@@ -170,23 +182,22 @@ fun SRange.flankRight(count: Int) : SRange? {
 fun SRange.flankBoth(count: Int) : Set<SRange> {
     var flankingRanges: MutableSet<SRange> = mutableSetOf()
     // Flank the lower end of the range if it isn't already at 1
-    if (this.lowerEndpoint().site > 1) {
-        val seqRecord = this.lowerEndpoint().seqRecord
-        var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
-        var lowerF = (this.lowerEndpoint().site.toLong() - count).coerceAtLeast(1).toInt()
-        var upperF = this.lowerEndpoint().site - 1
-        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF, this.lowerEndpoint().comparator),
-                SeqPosition(seqRecord,upperF, this.lowerEndpoint().comparator)))
+    if (this.start.site > 1) {
+        val seqRecord = this.start.seqRecord
+        var lowerF = (this.start.site.toLong() - count).coerceAtLeast(1).toInt()
+        var upperF = this.start.site - 1
+        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),
+                SeqPosition(seqRecord,upperF)))
     }
 
     // Flank the upper end of range if it isn't already at max
-    val seqRecord = this.upperEndpoint().seqRecord
+    val seqRecord = this.endInclusive.seqRecord
     var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
-    if (this.upperEndpoint().site < max) {
-        var lowerF = this.upperEndpoint().site + 1
-        var upperF = (minOf (this.upperEndpoint().site + count, max))
-        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF, this.upperEndpoint().comparator),
-                SeqPosition(seqRecord,upperF, this.upperEndpoint().comparator)))
+    if (this.endInclusive.site < max) {
+        var lowerF = this.endInclusive.site + 1
+        var upperF = (minOf (this.endInclusive.site + count, max))
+        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),
+                SeqPosition(seqRecord,upperF)))
     }
     return flankingRanges
 }
@@ -201,17 +212,16 @@ class NucSeqComparator: Comparator<NucSeqRecord>{
 //Default comparator for SeqPositionRanges
 // It is used in setOf below
 class SeqPositionRangeComparator: Comparator<SRange> {
-
     companion object{
         var sprComparator  = SeqPositionRangeComparator()
     }
     override fun compare(p0: SRange, p1: SRange): Int {
         // ordering:  Null before other ordering
-        val seqRec1= p0.lowerEndpoint().seqRecord
-        val seqRec2 = p1.lowerEndpoint().seqRecord
+        val seqRec1= p0.start.seqRecord
+        val seqRec2 = p1.start.seqRecord
         if (seqRec1 == null) {
             if (seqRec2 == null) {
-                return p0.lowerEndpoint().site.compareTo(p1.lowerEndpoint().site)
+                return p0.start.site.compareTo(p1.start.site)
             }
             return -1 // choose p0 if only p0.seqRecord is null
         } else if (seqRec2 == null) {
@@ -219,85 +229,87 @@ class SeqPositionRangeComparator: Comparator<SRange> {
         } else {
 
             val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
-            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.lowerEndpoint().site.compareTo(p1.lowerEndpoint().site)
+            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.start.site.compareTo(p1.start.site)
         }
     }
-
 }
 
-typealias SRangeSet = NavigableSet<SRange>
+typealias SRangeSet = Set<SRange> // Kotlin immutable Set
 
-// User may supply own comparator.  Output is a java NavigableSet<SRange> (SRangeSet)
-fun setOf(ranges: List<SRange>, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
-    val sRangeSet : SRangeSet = TreeSet(comparator)
+// User may supply own comparator.  Output is a Kotlin Immutable Set
+fun overlappingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
+    val sRangeSet  = TreeSet(comparator)
+
     sRangeSet.addAll(ranges.asIterable())
-    return sRangeSet
+    return sRangeSet.toSet()
 }
-fun setOf(vararg ranges: SRange, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
-    val sRangeSet : SRangeSet = TreeSet(comparator)
+
+fun overlappingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
+    val sRangeSet = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
-    return sRangeSet
+    return sRangeSet.toSet()
 }
 
 // Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
 // THis does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
-fun coalescingSetOf(ranges: List<SRange>, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
-    val sRangeSet : SRangeSet = TreeSet(comparator)
+// When comparator is first, it is then required.
+fun coalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
+    val sRangeSet  = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     // Have a range set, now call merge with "0" for bp distance.
     // This will not merge adjacent ranges, but will merge embedded or overlapping ranges
     val sRangeSetCoalesced = sRangeSet.merge(0)
-    return sRangeSetCoalesced
+    return sRangeSetCoalesced.toSet()
 }
-fun coalescingsetOf(vararg ranges: SRange, comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator): SRangeSet {
-    val sRangeSet : SRangeSet = TreeSet(comparator)
+fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
+    val sRangeSet  = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     val sRangeSetCoalesced = sRangeSet.merge(0)
-    return sRangeSetCoalesced
+    return sRangeSetCoalesced.toSet()
 }
 
 // Merge will merge overlapping and embedded ranges, and other ranges where distance between them
 // is "count" or less bps.  It will not merge adjacent/non-overlapping ranges
-// This will default to using the default constructor - should there be a comparator parameter ??
+// A comparator is necessary as we can't merge until the ranges are sorted.  SRange is Kotlin Set
+// which is immutable, but not necessarily sorted.
 // Merging of ranges requires that the upper endpoint SeqRecord of the first range matches
 // the lower endpoint SeqRecord of the next range.
-fun SRangeSet.merge(count: Int): SRangeSet {
+fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqPositionRangeComparator.sprComparator ): SRangeSet {
 
-    val sRangeSet : SRangeSet = TreeSet(this.comparator())
+    val sRangeSet  = TreeSet(comparator) // will be returned
     val sRangeDeque: Deque<SRange> = ArrayDeque()
 
-    // do i need this  copy?
-    val sortedRanges = TreeSet<SRange>(this.comparator()) // tree set is already sorted
+    val sortedRanges = TreeSet<SRange>(comparator) // tree set is sorted
     sortedRanges.addAll(this)
     sRangeDeque.add(sortedRanges.elementAt(0))
     for (index in 1 until sortedRanges.size) {
         var prevRange = sRangeDeque.peekLast()
         var nextRange = sortedRanges.elementAt(index)
         // SeqRecord must match, then check positions
-        var prevSeqRecord = prevRange.upperEndpoint().seqRecord
-        var nextRangeSeqRecord = nextRange.lowerEndpoint().seqRecord
+        var prevSeqRecord = prevRange.endInclusive.seqRecord
+        var nextRangeSeqRecord = nextRange.start.seqRecord
         var merge = false
         if (prevSeqRecord == null) {
             if (nextRangeSeqRecord == null) {
-                merge = if (nextRange.lowerEndpoint().site > prevRange.upperEndpoint().site + count) false else true
+                merge = if (nextRange.start.site > prevRange.endInclusive.site + count) false else true
             }
         } else if (nextRangeSeqRecord == null) merge = false
         else if (prevSeqRecord.equals(nextRangeSeqRecord)) merge = true
 
         // "merge" is only true at this point if either both seqRecords are null, or they are equal
         if (merge) {
-            if (nextRange.lowerEndpoint().site > prevRange.upperEndpoint().site + count ) {
+            if (nextRange.start.site > prevRange.endInclusive.site + count ) {
                 // not close enough - add to the stack
                 sRangeDeque.add(nextRange)
-            } else if (prevRange.upperEndpoint().site < nextRange.upperEndpoint().site) {
+            } else if (prevRange.endInclusive.site < nextRange.endInclusive.site) {
                 // Merge the new range with the last one,
                 // remove the last from the stack, add new range to stack
                 // If the new range upper endpoint is less than old range upper endpoint, (ie range
                 // is embedded), we do nothing. Leave the previous range on the stack, don't
                 // add the new one.  This tosses the embedded range.
                 sRangeDeque.removeLast()
-                val first = prevRange.lowerEndpoint().copy()
-                val last = nextRange.upperEndpoint().copy()
+                val first = prevRange.start.copy()
+                val last = nextRange.endInclusive.copy()
                 sRangeDeque.add(SeqPositionRanges.of(first,last))
             }
         } else {
@@ -309,6 +321,39 @@ fun SRangeSet.merge(count: Int): SRangeSet {
     sRangeSet.addAll(sRangeDeque)
     return sRangeSet
 
+}
+
+// Add "count" bps to the right (upper) end of each range
+fun SRangeSet.flankRight(count: Int): SRangeSet {
+    var frRangeSet: MutableSet<SRange> = mutableSetOf()
+    this.forEach { range ->
+        var fRange = range.flankRight(count)
+        if (fRange != null) frRangeSet.add(fRange)
+    }
+
+    return frRangeSet.toSet()
+}
+
+// subtract "count" bps from the left (lower) end of each range
+fun SRangeSet.flankLeft(count: Int): SRangeSet {
+    var flRangeSet : MutableSet<SRange> = mutableSetOf()
+    this.forEach{range ->
+        var fRange = range.flankLeft(count)
+        if (fRange != null) flRangeSet.add(fRange)
+    }
+
+    return flRangeSet.toSet()
+}
+
+// Shift each range in the set by "count" bps.  Can be positive or negative number
+fun SRangeSet.shift(count: Int): SRangeSet {
+    var sRangeSet : MutableSet<SRange> = mutableSetOf()
+    this.forEach{range ->
+        var sRange = range.shift(count)
+        if (sRange != null) sRangeSet.add(sRange)
+    }
+
+    return sRangeSet.toSet()
 }
 
 fun main() {
@@ -326,17 +371,11 @@ fun main() {
     println(grSet)
 
     val sRange = chr1.range(8..12)
-    println("sRange from chr.range is:]\n ${sRange.toString()}")
+    println("sRange from chr.range is:\n ${sRange.toString()}")
 
-//    val overlappingSet: GenomeRangeSet = GenomeRange2.generator()
-//            .map{it.resize(100)}
-//            .toSet()
-//    val coalescentSet: GenomeRangeSet = GenomeRange2.generator()
-//            .map{it.resize(100)}
-//            .toCoalescingSet()
-//    val mergeSet: GenomeRangeSet = GenomeRange2.generator()
-//            .toMergeSet(1000)
-//
+    // Creates a SeqPosition from a NucSeqRecord and position
+    val sPos = chr1.position(26)
+    println("\nsPos from chr.position is:\n${sPos.toString()}")
 
 }
 

@@ -16,12 +16,31 @@ class RangesTest: StringSpec({
                 annotations = mapOf("key1" to "value1"))
         val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
                 annotations = mapOf("key1" to "value1"))
-        val gr1 = SeqPositionRanges.of(record1,27..40)
+        val gr1 = record1.range(27..40)
 
-        val gr2 = SeqPositionRanges.of(record2,5..10)
+        val gr2 = record2.range(5..10)
         println("gr1: $gr1")
         println("gr2: $gr2")
 
+        // create a SeqPosition from a NucSeqRecord
+        val seqPos1 = record1.position(28)
+        println("seqPos1: $seqPos1")
+
+
+    }
+    "Test SeqPosition Range functions " {
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
+                annotations = mapOf("key1" to "value1"))
+        val seqPos1 = SeqPosition(record1, 89)
+        val sRange1: SRange = seqPos1..seqPos1
+        println("sRange1: $sRange1")
+
+        val sRange2: SRange = seqPos1..seqPos1.plus(1)
+        println("\nsRange2: $sRange2")
 
     }
     "Test SeqRecordSorgs.alphasort " {
@@ -88,6 +107,9 @@ class RangesTest: StringSpec({
             println(range.toString())
             println()
         }
+
+        println("\nSeqPosition using over written toString() for range3 is:")
+        println(range3.start.toString())
     }
 
     "List SeqPositionRanges to sorted set" {
@@ -138,28 +160,29 @@ class RangesTest: StringSpec({
             println(sp.toString())
         }
     }
+// THis test cases not needed if SeqPosition doesn't have user definabel comparator
 
-    "Test SeqPosition User Supplied sorting " {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
-                annotations = mapOf("key1" to "value1"))
-
-        //  test sorting - with a set of SeqPositions - not ranges:
-        val sR: NavigableSet<SeqPosition> = TreeSet()
-        sR.add(SeqPosition(record1,8, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-        sR.add(SeqPosition(record2,3, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-        sR.add(SeqPosition(record1,40, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-        sR.add(SeqPosition(record2,19, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-
-        println("\nLCJ - SeqPositions in TreeSet using user-supplied Reverse SeqPosition Ordering:")
-        for (sp in sR) {
-            println(sp.toString())
-        }
-
-    }
+//    "Test SeqPosition User Supplied sorting " {
+//        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+//        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+//        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
+//                annotations = mapOf("key1" to "value1"))
+//        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
+//                annotations = mapOf("key1" to "value1"))
+//
+//        //  test sorting - with a set of SeqPositions - not ranges:
+//        val sR: NavigableSet<SeqPosition> = TreeSet()
+//        sR.add(SeqPosition(record1,8, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+//        sR.add(SeqPosition(record2,3, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+//        sR.add(SeqPosition(record1,40, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+//        sR.add(SeqPosition(record2,19, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
+//
+//        println("\nLCJ - SeqPositions in TreeSet using user-supplied Reverse SeqPosition Ordering:")
+//        for (sp in sR) {
+//            println(sp.toString())
+//        }
+//
+//    }
 
     "Test setOf for SRange" {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
@@ -180,16 +203,16 @@ class RangesTest: StringSpec({
         val sr4 = record2.range(25..35)
 
         // Should create a NavigableSet - sorted set
-        val srSet = setOf(sr1,sr2,sr3,sr4)
+        val srSet = overlappingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
         println("\nLCJ - SeqPositions in Tree Set:")
         for (sp in srSet) {
             println(sp.toString())
         }
 
-        srSet.elementAt(0).lowerEndpoint().site shouldBe 1
-        srSet.elementAt(1).lowerEndpoint().site shouldBe 27
-        srSet.elementAt(2).lowerEndpoint().site shouldBe 25
-        srSet.elementAt(3).lowerEndpoint().site shouldBe 18
+        srSet.elementAt(0).start.site shouldBe 1
+        srSet.elementAt(1).start.site shouldBe 27
+        srSet.elementAt(2).start.site shouldBe 25
+        srSet.elementAt(3).start.site shouldBe 18
     }
     "Test coalescing ranges" {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
@@ -204,14 +227,14 @@ class RangesTest: StringSpec({
         val sr3 = record1.range(15..27)
         val sr4 = record1.range(45..50)
 
-        var srSet = setOf(sr1,sr2,sr3,sr4)
+        var srSet = overlappingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr4)
         println("\nLCJ - ranges NON-coalesced set:")
         for (sp in srSet) {
             println(sp.toString())
         }
         srSet.size shouldBe 4
 
-        var coalescedSet = coalescingsetOf(sr1,sr2,sr3,sr4)
+        var coalescedSet = coalescingsetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
         println("\nLCJ - ranges coalesced set:")
         for (sp in coalescedSet) {
             println(sp.toString())
