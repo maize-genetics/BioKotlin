@@ -92,7 +92,8 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<Seq
 
     // This  returns id, name and site from seqRecord
     override fun toString(): String {
-            return "id=${seqRecord?.id},name=${seqRecord?.name},site=[$site]"
+        val siteString:String = "%,d".format(site)
+        return "${seqRecord?.id}:$siteString"
     }
 
     operator fun plus(count: Int): SeqPosition {
@@ -105,6 +106,32 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<Seq
         return this.copy(site = (this.site - count).coerceAtLeast(1))
     }
 
+}
+
+// separate the SeqRecord:id from the site.
+// This returns a site value minus the commas.  This is necessary for .toInt()
+// We could instead return 2 Strings, leaving the commas in place, and let
+// the conversion to Int take place elsewhere.
+fun parseIdSite(idSite: String): Pair<String,Int>  {
+    val colonIdx = idSite.indexOf(":")
+    val id = idSite.substring(0,colonIdx)
+    // Replace commas in the number.  toInt() doesn't parse with commas!
+    val site = idSite.substring(colonIdx+1).replace(",", "").toInt()
+
+    return Pair<String,Int>(id,site)
+}
+
+// LCJ - example - to be flushed out
+// To create a SeqPosition with a SeqRecord, we need a sequence !!
+// If we are searching for an existing SeqRecord - where are these stored ??
+fun findSeqPosition(idSite: String): SeqPosition {
+    val idSitePair = parseIdSite(idSite)
+    // Find a SeqRecord - how/where will they be stored?
+    //val sr = lookOrCreateSeqRecord(id)
+    //return SeqPosition(sr,idSitePair.second)
+
+    // this is junk sequence
+    return SeqPosition(NucSeqRecord(NucSeq("ATATATATATA"),idSitePair.first), idSitePair.second)
 }
 
 // "Object" is a single static instance.

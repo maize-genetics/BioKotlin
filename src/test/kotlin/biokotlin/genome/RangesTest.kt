@@ -12,9 +12,9 @@ class RangesTest: StringSpec({
         // Create a Range set of range
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence1", description = "The first sequence",
                 annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence2", description = "The second sequence",
                 annotations = mapOf("key1" to "value1"))
         val gr1 = record1.range(27..40)
 
@@ -23,9 +23,18 @@ class RangesTest: StringSpec({
         println("gr2: $gr2")
 
         // create a SeqPosition from a NucSeqRecord
-        val seqPos1 = record1.position(28)
+        val seqPos1 = record1.position(97378459)
         println("seqPos1: $seqPos1")
+        println("seqPos1 to string is: ${seqPos1.toString()}")
 
+        val parsedIdSite = parseIdSite(seqPos1.toString())
+        println("parseIdSite: $parsedIdSite")
+        parsedIdSite.second shouldBe 97378459
+
+        // findSeqPosition isn't real yet - it creates a dummy sequence
+        val seqPos_fromSeqPos1String = findSeqPosition(seqPos1.toString())
+
+        seqPos_fromSeqPos1String.site shouldBe 97378459
 
     }
     "Test SeqPosition Range functions " {
