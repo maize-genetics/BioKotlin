@@ -39,8 +39,33 @@ class RangesTest: StringSpec({
         val sRange1: SRange = seqPos1..seqPos1
         println("sRange1: $sRange1")
 
-        val sRange2: SRange = seqPos1..seqPos1.plus(1)
+        // test Plus
+        var sRange2: SRange = seqPos1..seqPos1.plus(1)
         println("\nsRange2: $sRange2")
+        sRange2.endInclusive.site shouldBe 90
+
+        // THis fails with "unexpected tokens (use ";" to separate expressions on the same line_
+        // sRange2: SRange = seqPos1..seqPos1+1
+        //println("\nsRange2 using +: $sRange2")
+
+        var intRange = 1..10
+        intRange = 1..10+1
+        println("intRange: $intRange")
+        intRange.last shouldBe 11
+
+        // this works, but doesn't work as part of a range (see above)
+        var seqPos3 = seqPos1+1
+        println("\nseqPos3 using +: $seqPos3")
+        seqPos3.site shouldBe 90
+
+        // test minus
+        sRange2 = seqPos1.minus(2)..seqPos1
+        println("\nsRange2 after minus: $sRange2")
+        sRange2.start.site shouldBe 87
+
+        seqPos3 = seqPos1-4
+        println("\nseqPos3 using -: $seqPos3")
+        seqPos3.site shouldBe 85
 
     }
     "Test SeqRecordSorgs.alphasort " {

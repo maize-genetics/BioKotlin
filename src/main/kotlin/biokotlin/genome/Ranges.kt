@@ -85,13 +85,19 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<Seq
     override fun compareTo(other: SeqPosition): Int {
             return spAlphaComparator.compare(this, other)
     }
-    // THis only returns id an string.  SEqRecord also has an optional name - should it be included?
+    // This  returns id, name and site from seqRecord
     override fun toString(): String {
             return "id=${seqRecord?.id},name=${seqRecord?.name},site=[$site]"
     }
 
-    fun plus(count: Int): SeqPosition {
+    operator fun plus(count: Int): SeqPosition {
         return this.copy(site = this.site + count)
+    }
+
+    // Will not return 0 or a negative number
+    // Should this return an error instead of coerceAtLeast ??
+    operator fun minus(count: Int): SeqPosition {
+        return this.copy(site = (this.site - count).coerceAtLeast(1))
     }
 
 }
