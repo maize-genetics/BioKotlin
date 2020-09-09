@@ -81,10 +81,15 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<Seq
         require(site >= 0) { "All sites must be positive" }
     }
 
-    // Uses defined comparator of SeqPositionAlphaComparator
+    val alphaSortSP = compareBy<SeqPosition> { it.seqRecord?.id }
+    val siteSortSP = compareBy<SeqPosition> {it.site}
+
+    val alphaAndSiteSort: Comparator<SeqPosition> = alphaSortSP.then(siteSortSP)
+    // Could also use SeqPositionAlphaComparator
     override fun compareTo(other: SeqPosition): Int {
-            return spAlphaComparator.compare(this, other)
+            return alphaAndSiteSort.compare(this, other)
     }
+
     // This  returns id, name and site from seqRecord
     override fun toString(): String {
             return "id=${seqRecord?.id},name=${seqRecord?.name},site=[$site]"
