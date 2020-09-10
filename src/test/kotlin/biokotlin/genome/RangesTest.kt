@@ -275,4 +275,39 @@ class RangesTest: StringSpec({
         }
         coalescedSet.size shouldBe 3
     }
+    "Test SeqPosRangeSortFactory" {
+
+        var sortType:GenomeSortType = GenomeSortType.IDALPHA_THENRANGE
+        var myComparator = SeqPosRangeSortFactory.createComparator(sortType).getSeqPosRangeSort()
+
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
+                annotations = mapOf("key1" to "value1"))
+
+        val sr1 = record1.range(25..44)
+        val sr2 = record1.range(5..10)
+        val sr3 = record2.range(15..27)
+        val sr4 = record1.range(45..50)
+
+        var srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
+        println("\nLCJ - ranges IDALPHA_THENRANGE:")
+        for (sp in srSet) {
+            println(sp.toString())
+        }
+        srSet.size shouldBe 4
+
+        // use different comparator - sort by IDREVERSE_THENRANGE
+        sortType = GenomeSortType.RANGE_NATURALORDER
+        myComparator = SeqPosRangeSortFactory.createComparator(sortType).getSeqPosRangeSort()
+
+        srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
+        println("\nLCJ - ranges with RANGE_NATURALORDER comparator")
+        for (sp in srSet) {
+            println(sp.toString())
+        }
+        srSet.size shouldBe 4
+    }
 })
