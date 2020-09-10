@@ -1,5 +1,6 @@
 package biokotlin.genome
 
+import biokotlin.genome.SeqRangeSortFactory.Companion.createComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import com.google.common.collect.Range
@@ -278,7 +279,7 @@ class RangesTest: StringSpec({
     "Test SeqPosRangeSortFactory" {
 
         var sortType:GenomeSortType = GenomeSortType.IDALPHA_THENRANGE
-        var myComparator = SeqPosRangeSortFactory.createComparator(sortType).getSeqPosRangeSort()
+        var myComparator = SeqRangeSortFactory.createComparator(sortType).getSeqRangeSort()
 
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
@@ -301,7 +302,7 @@ class RangesTest: StringSpec({
 
         // use different comparator - sort by IDREVERSE_THENRANGE
         sortType = GenomeSortType.RANGE_NATURALORDER
-        myComparator = SeqPosRangeSortFactory.createComparator(sortType).getSeqPosRangeSort()
+        myComparator = SeqRangeSortFactory.createComparator(sortType).getSeqRangeSort()
 
         srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
         println("\nLCJ - ranges with RANGE_NATURALORDER comparator")

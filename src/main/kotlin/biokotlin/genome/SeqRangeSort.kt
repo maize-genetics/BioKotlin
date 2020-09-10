@@ -14,33 +14,33 @@ import java.util.Comparator.comparing
  *  Determine where the interface should go.  What are we returning - can I return a Comparator?
  */
 
-interface SeqPosRangeSort {
+interface SeqRangeSort {
 
-    fun getSeqPosRangeSort(): Comparator<SRange>
+    fun getSeqRangeSort(): Comparator<SRange>
 }
 enum class GenomeSortType {
     IDALPHA_THENRANGE, IDREVERSE_THENRANGE, RANGE_NATURALORDER, RANGE_LENGTH
 }
 
-class SeqPosRangeSortFactory {
+class SeqRangeSortFactory {
 
     companion object {
-        fun createComparator(sortType: GenomeSortType): SeqPosRangeSort = when (sortType) {
-            GenomeSortType.IDALPHA_THENRANGE -> object: SeqPosRangeSort {
+        fun createComparator(sortType: GenomeSortType): SeqRangeSort = when (sortType) {
+            GenomeSortType.IDALPHA_THENRANGE -> object: SeqRangeSort {
 
-                override fun getSeqPosRangeSort() = compareBy<SRange> { it.start.seqRecord?.id }.then(compareBy<SRange>{it.start.site})
+                override fun getSeqRangeSort() = compareBy<SRange> { it.start.seqRecord?.id }.then(compareBy<SRange>{it.start.site})
             }
-            GenomeSortType.IDREVERSE_THENRANGE -> object: SeqPosRangeSort {
+            GenomeSortType.IDREVERSE_THENRANGE -> object: SeqRangeSort {
                 // THis one isn't sorting correctly  ... needs work
-                override fun getSeqPosRangeSort() = compareBy<SRange> { it.start.seqRecord?.id?.reversed() }.then(compareBy<SRange>{it.start.site})
+                override fun getSeqRangeSort() = compareBy<SRange> { it.start.seqRecord?.id?.reversed() }.then(compareBy<SRange>{it.start.site})
 
             }
-            GenomeSortType.RANGE_NATURALORDER -> object: SeqPosRangeSort {
+            GenomeSortType.RANGE_NATURALORDER -> object: SeqRangeSort {
 
-                override fun getSeqPosRangeSort() = compareBy<SRange> {it.start.site}
+                override fun getSeqRangeSort() = compareBy<SRange> {it.start.site}
             }
-            GenomeSortType.RANGE_LENGTH -> object: SeqPosRangeSort {
-                override fun getSeqPosRangeSort() = compareBy<SRange> {
+            GenomeSortType.RANGE_LENGTH -> object: SeqRangeSort {
+                override fun getSeqRangeSort() = compareBy<SRange> {
                     it.endInclusive.site.toLong() - it.start.site.toLong()
                 }
             }
