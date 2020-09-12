@@ -2,9 +2,6 @@ package biokotlin.ncbi
 
 import biokotlin.seq.ProteinSeq
 import biokotlin.util.deparseRecords
-import biokotlin.util.greaterEqualsThan
-import biokotlin.util.isGreaterOrEqual
-import biokotlin.util.whenCol
 import krangl.*
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry
 import uk.ac.ebi.uniprot.dataservice.client.Client
@@ -16,7 +13,6 @@ import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtService
 import uk.ac.ebi.uniprot.dataservice.client.uniref.UniRefService
 import uk.ac.ebi.uniprot.dataservice.query.Query
 
-import io.kotest.matchers.*
 import kotlin.reflect.KProperty
 
 object UniProt: AutoCloseable{
@@ -67,7 +63,6 @@ object UniProt: AutoCloseable{
                 .map { entry ->
                     entry.databaseCrossReferences.map{entry to it } }
                 .flatten()
-           //     .toList()
                 .deparseRecords { (entry, dcr) -> mapOf(
                         "uniProtAccession" to entry.primaryUniProtAccession,
                         "crc64" to entry.sequence.crC64,
@@ -78,8 +73,6 @@ object UniProt: AutoCloseable{
                         "uni_service" to "UniProt",
                         "query" to query
                 ) }
-        val uniWrap = UniProtDFWrapper(protDF)
-        uniWrap.filter { uniWrap.uniProtId eq "KEGG" }
         val parcDF= uniparcService.getEntries(query).asSequence()
                 .map { entry ->
                     entry.databaseCrossReferences.map{entry to it } }
@@ -96,8 +89,6 @@ object UniProt: AutoCloseable{
                         "uni_service" to "UniParc",
                         "query" to query
                 ) }
-        data class Person(val age: Int, val mean_weight: Double, val num_persons: Int)
-        val records = parcDF.rowsAs<Person>()
         //allProt.print(maxWidth = 200, maxRows = 1000)
         require(protDF.nrow>0 || parcDF.nrow>0) {"No results found for UniProt and UniParc found ${query}"}
 //        println("activeDatabaseCrossReferences : \n$x")
@@ -153,46 +144,17 @@ data class SeqDBReference(val query: String, val crc64: String, val uniProtId:St
     val vc: VectorizedRowPredicate = { it["database"] eq "KEGG" }
     val keggAcc1 = uniProtDF.filter(vc)
 
-    val keggDF0 = uniProtDF.filter {database ==  "KEGG"}  //no possible in kotlin
-    val keggDF1 = uniProtDF.filter {score >=0}  //no possible in kotlin
-    val keggDF2 = uniProtDF.filter {whenCol("score") >=0}  //no possible in kotlin
-    val keggDF3=  uniProtDF.filter { it["database"] eq "KEGG" }
-    val keggDF4 = uniProtDF.filter {whenCol("database") isEqualTo  "KEGG"}
-    val keggDF5 = uniProtDF.filter {whenCol("score") ge 25}
-    val keggDF6 = uniProtDF.filter {whenCol("score") isGreaterOrEqual 25}
-    val keggDF7 = uniProtDF.filterByStrCol("database") {it == "ASDF" || it.startsWith("BIB")}
-    val keggDF8 = uniProtDF.filterByNumCol("score") {it == 0}
-    val keggDF9 = uniProtDF.filter("database" column_Equals "KEGG")
-    val keggDF10 = uniProtDF.filter("database" shouldBe "KEGG")
-
-    infix fun String.shouldBe(s: String): VectorizedRowPredicate {
-
-    }
-
-    val xvc = listOf<Number>(1,2,3).filter { it > 0 }
-
-
-    fun Any.help():String {
-        ///Logic to go to Kotlin help StdLib, perhaps a few key imports Guava, Krangl, etc.
-        //This is over
-        //By reflection we should be able to get lots of packages and paths.
-        return """
-            To learn more about ${this::class} go to:
-            https://javadoc.io/static/com.google.guava/guava/29.0-jre/com/google/common/collect/Range.html
-        """.trimIndent()
-    }
-
-    fun Any.javadoc():String {
-        ///Logic to go to Kotlin help StdLib, perhaps a few key imports Guava, Krangl, etc.
-        //This is over
-        //By reflection we should be able to get lots of packages and paths.
-
-    }
-
-    fun Any.example():String {
-        //Provide example code for using this class
-
-    }
+//    val keggDF0 = uniProtDF.filter {database ==  "KEGG"}  //no possible in kotlin
+//    val keggDF1 = uniProtDF.filter {score >=0}  //no possible in kotlin
+//    val keggDF2 = uniProtDF.filter {whenCol("score") >=0}  //no possible in kotlin
+//    val keggDF3=  uniProtDF.filter { it["database"] eq "KEGG" }
+//    val keggDF4 = uniProtDF.filter {whenCol("database") isEqualTo  "KEGG"}
+//    val keggDF5 = uniProtDF.filter {whenCol("score") ge 25}
+//    val keggDF6 = uniProtDF.filter {whenCol("score") isGreaterOrEqual 25}
+//    val keggDF7 = uniProtDF.filterByStrCol("database") {it == "ASDF" || it.startsWith("BIB")}
+//    val keggDF8 = uniProtDF.filterByNumCol("score") {it == 0}
+//    val keggDF9 = uniProtDF.filter("database" column_Equals "KEGG")
+//    val keggDF10 = uniProtDF.filter("database" shouldBe "KEGG")
 
     //operator fun get(db: String): DatabaseCrossReference? = dbToID[db]
 
