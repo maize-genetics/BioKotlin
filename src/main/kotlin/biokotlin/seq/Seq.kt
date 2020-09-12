@@ -166,7 +166,7 @@ interface Seq {
     fun repr(): String
 
     /**Returns the length of the sequence*/
-    fun len(): Int
+    fun size(): Int
 
     operator fun compareTo(other: Seq): Int
 
@@ -229,6 +229,7 @@ interface NucSeq : Seq {
     operator fun plus(seq2: NucSeq): NucSeq
     operator fun times(n: Int): NucSeq
     fun indexOf(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    operator fun contains(element: NucSeq): Boolean
     fun lastIndexOf(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int
     /*Same as [indexOf] but provides compatibility with BioPython*/
     fun find(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
@@ -283,6 +284,7 @@ interface ProteinSeq : Seq {
     operator fun plus(seq2: ProteinSeq): ProteinSeq
     operator fun times(n: Int): ProteinSeq
     fun indexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    operator fun contains(element: ProteinSeq): Boolean
     fun lastIndexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
     /*Same as [indexOf] but provides compatibility with BioPython*/
     fun find(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)

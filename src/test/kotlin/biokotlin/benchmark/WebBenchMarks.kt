@@ -21,14 +21,14 @@ fun main() {
 fun palindrome(seq: NucSeq): Double {
         val startTime = System.currentTimeMillis()
         var count = 0
-        for (i in 0..(seq.len() - 7)) {
+        for (i in 0..(seq.size() - 7)) {
             val site = seq[i..(i + 5)]
             // println("$site rev ${site.reverse_complement()}")
             if (site == site.reverse_complement()) count++
         }
         println(count)
         //6 is to reflect the sequence length is reverse complemented 6X
-        val rateMbPerSec = 6.0*seq.len() / (1_000.0 * (System.currentTimeMillis() - startTime))
+        val rateMbPerSec = 6.0*seq.size() / (1_000.0 * (System.currentTimeMillis() - startTime))
         println("Palindrome Rate ${rateMbPerSec.format(3)}Mb per sec")
         return rateMbPerSec
 }
@@ -37,7 +37,7 @@ fun translate(seq: NucSeq): Double {
     val startTime = System.currentTimeMillis()
     val pro = seq.translate()
     println(pro[0..3])
-    val rateMbPerSec = seq.len() / (1_000.0 * (System.currentTimeMillis() - startTime))
+    val rateMbPerSec = seq.size() / (1_000.0 * (System.currentTimeMillis() - startTime))
     println("Translate Rate ${rateMbPerSec.format(3)}Mb per sec")
     return rateMbPerSec
 }
@@ -53,7 +53,7 @@ fun complements(seq: NucSeq): Double {
     }
     if(seq != comp.complement()) println("Complementing did not work")
     //4*10 is to reflect repeat 10 times and 4 conversions
-    val rateMbPerSec = 4.0*10.0*seq.len() / (1_000.0 * (System.currentTimeMillis() - startTime))
+    val rateMbPerSec = 4.0*10.0*seq.size() / (1_000.0 * (System.currentTimeMillis() - startTime))
     println("Complement Rate ${rateMbPerSec.format(3)}Mb per sec")
     return rateMbPerSec
 }

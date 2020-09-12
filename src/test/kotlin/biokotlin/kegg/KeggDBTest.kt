@@ -6,11 +6,9 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import kotlinx.serialization.ImplicitReflectionSerializer
 import krangl.DataFrame
 import krangl.print
 
-@ImplicitReflectionSerializer
 class KeggDBTest : StringSpec({
 
 
@@ -62,8 +60,8 @@ class KeggDBTest : StringSpec({
         val gene = Kegg.gene("zma:542318")
         gene.name shouldContain "isoamylase 1"
         gene.org shouldBe "zma"
-        gene.nucSeq.len() shouldBe 2370
-        gene.proteinSeq.len() shouldBe 789
+        gene.nucSeq.size() shouldBe 2370
+        gene.proteinSeq.size() shouldBe 789
         gene.orthology shouldBe KeggEntry.of("ko:K01214")
         //println(gene)
         shouldThrow<IllegalStateException> {Kegg.gene("zma:5423x18")}
