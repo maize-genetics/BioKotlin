@@ -75,10 +75,20 @@ class KeggDBTest : StringSpec({
 
 //fun main() {
 //    println("Call KEGG...")
-//    val graph = Kegg.pathway("path:zma00620")
+//    val graph = Kegg.pathway("path:")
 //
 //    println("--- XML Parse Test ---")
 //    graph.kgmlGraph()
+//
+//// Joe examples
+//    val path = "path:zma00500"
+//    val pathGenes = Kegg.pathway(path).genes
+//    val aaList = mutableListOf<String>()
+//    pathGenes.slice(0..4).forEach{
+//        aaList += it.gene().aaSeq
+//    }
+//    println(aaList.size)
+//
 //}
 
 
