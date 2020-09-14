@@ -3,6 +3,7 @@ package biokotlin.kegg
 import biokotlin.seq.NucSeq
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.Seq
+import com.google.common.collect.Multimap
 import kotlinx.serialization.*
 
 /**
@@ -181,6 +182,14 @@ data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val positi
     val proteinSeq: ProteinSeq by lazy{ ProteinSeq(aaSeq) }
 }
 
+fun KeggGene.pathways() : Multimap<String, String> {
+    // perhaps grab from KeggEntry, given the gene, return the pathways?
+    TODO()
+}
+fun KeggGene.orthologs() : Multimap<String, String> {
+    // perhaps grab from KeggEntry, given the gene, return the orthlogs?
+    TODO()
+}
 
 /**
  * KEGG Orthology group (related genes that have similar gene functions)
