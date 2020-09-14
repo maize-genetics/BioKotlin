@@ -112,14 +112,6 @@ object UniProt: AutoCloseable{
 
 }
 
-data class UniProtDC(val uniProtAccession: String, val crc64: String,
-    val uniProtId: String,
-    val database: String,
-    val externalAccession: String,
-    val description: String,
-    val uni_service: String,
-    val query: String
-)
 
 class UniProtDFWrapper(val uniProtDF: DataFrame): DataFrame by uniProtDF {
     val uniProtId:StringCol by uniProtDF["uniProtId"] as StringCol
