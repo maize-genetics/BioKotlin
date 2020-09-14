@@ -1,6 +1,6 @@
 package biokotlin.genome
 
-import biokotlin.genome.SeqRangeSort.Companion.createComparator
+//import biokotlin.genome.SeqRangeSort.Companion.createComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import com.google.common.collect.Range
@@ -276,39 +276,55 @@ class RangesTest: StringSpec({
         }
         coalescedSet.size shouldBe 3
     }
-    "Test SeqPosRangeSortFactory" {
-
-        var sortType:GenomeSortType = GenomeSortType.IDALPHA_THENRANGE
-        var myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
-
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
-
-        val sr1 = record1.range(25..44)
-        val sr2 = record1.range(5..10)
-        val sr3 = record2.range(15..27)
-        val sr4 = record1.range(45..50)
-
-        var srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
-        println("\nLCJ - ranges IDALPHA_THENRANGE:")
-        for (sp in srSet) {
-            println(sp.toString())
-        }
-        srSet.size shouldBe 4
-
-        // use different comparator - sort by IDREVERSE_THENRANGE
-        sortType = GenomeSortType.RANGE_NATURALORDER
-        myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
-
-        srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
-        println("\nLCJ - ranges with RANGE_NATURALORDER comparator")
-        for (sp in srSet) {
-            println(sp.toString())
-        }
-        srSet.size shouldBe 4
-    }
+    // replace this test case with new version of SeqRangeSort
+//    "Test SeqPosRangeSortFactory" {
+//
+//        var sortType:GenomeSortType = GenomeSortType.IDALPHA_THENRANGE
+//        var myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
+//
+//        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+//        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+//        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
+//                annotations = mapOf("key1" to "value1"))
+//        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
+//                annotations = mapOf("key1" to "value1"))
+//
+//        val sr1 = record1.range(25..44)
+//        val sr2 = record1.range(5..10)
+//        val sr3 = record2.range(15..27)
+//        val sr4 = record1.range(45..50)
+//
+//        var srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
+//        println("\nLCJ - ranges IDALPHA_THENRANGE:")
+//        for (sp in srSet) {
+//            println(sp.toString())
+//        }
+//        srSet.size shouldBe 4
+//        srSet.elementAt(3).start.seqRecord?.id  shouldBe "Seq2-id1"
+//
+//        // use different comparator - sort by RANGE_NATURALORDER
+//        sortType = GenomeSortType.RANGE_NATURALORDER
+//        myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
+//
+//        srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
+//        println("\nLCJ - ranges with RANGE_NATURALORDER comparator")
+//        for (sp in srSet) {
+//            println(sp.toString())
+//        }
+//        srSet.size shouldBe 4
+//        srSet.elementAt(1).start.seqRecord?.id shouldBe "Seq2-id1"
+//
+//        // try - sort by IDREVERSE_THENRANGE
+//        sortType = GenomeSortType.IDREVERSE_THENRANGE
+//        myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
+//
+//        srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
+//        println("\nLCJ - ranges with IDREVERSE_THENRANGE comparator")
+//        for (sp in srSet) {
+//            println(sp.toString())
+//        }
+//        srSet.size shouldBe 4
+//        // THis one fails
+//        //srSet.elementAt(0).start.seqRecord?.id shouldBe "Seq2-id1"
+//    }
 })
