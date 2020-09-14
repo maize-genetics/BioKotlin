@@ -1,11 +1,16 @@
 package biokotlin.kegg
 
 import biokotlin.kegg.KeggDB.*
-import org.w3c.dom.*
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.w3c.dom.Document
+import org.w3c.dom.Node
+import org.w3c.dom.NodeList
 import org.xml.sax.InputSource
 import java.io.StringReader
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
+
 
 /**
  * Parses the Kegg Response to a map of KEGG labels to String with the new lines
@@ -17,7 +22,7 @@ private fun parseKEGG(str: String): Map<String, String> {
             .withDefault{ throw NoSuchElementException("KEGG response is missing the $it field") }
     var lastKeyword = ""
     for (line in str.lines()) {
-        if (line.startsWith( "///")) break
+        if (line.startsWith("///")) break
         if (line.substring(0..11).isNotBlank()) lastKeyword = line.substring(0..11).trim()
         val data = line.substring(12).trim()
         keggKeyToValue.merge(lastKeyword, data) { old, new -> old + "\n" + new }
@@ -113,28 +118,60 @@ internal fun orthologyParser(keggResponseText: String): KeggOrtholog {
     return KeggOrtholog(ki, ec, genes)
 }
 
-internal fun kgmlParser(path: String, kid: String) {
+internal fun kgmlParser(path: String, kid: String): DefaultDirectedGraph<Any, DefaultEdge> {
     val rawXML = KeggServer.query(KeggOperations.get, "$path:$kid/kgml")?: error("Not found in KEGG")
     val doc = convertStringToXMLDocument(rawXML)
     val entryList: NodeList = doc!!.getElementsByTagName("entry")
     val relationList: NodeList = doc.getElementsByTagName("relation")
     val reactionList: NodeList = doc.getElementsByTagName("reaction")
 
-    println(
-            """
-                Title...... ${doc.documentElement.getAttribute("title")}
-                Organism... ${doc.documentElement.getAttribute("org")}
-                Number..... ${doc.documentElement.getAttribute("number")}
-                Image...... ${doc.documentElement.getAttribute("image")}
-                Link....... ${doc.documentElement.getAttribute("link")}
-                -------------------------------------------------------------
-                Statistics:
-                    ${entryList.length} node(s)
-                    ${relationList.length} edge(s)
-                    ${reactionList.length} reaction(s)
-                -------------------------------------------------------------
-            """.trimIndent()
-    )
+//    return entryList
+
+    data class KGMLEntry(var id: String = "", var name: String = "", var type: String = "", var link: String = "", var reaction: String = "")
+
+    val g: DefaultDirectedGraph<Any, DefaultEdge> = DefaultDirectedGraph<Any, DefaultEdge>(DefaultEdge::class.java)
+
+    for (i in 0 until entryList.length) {
+        val baseChild = entryList.item(i).attributes
+        val entry = KGMLEntry()
+        entry.id = baseChild.getNamedItem("id").nodeValue
+        entry.name = baseChild.getNamedItem("name").nodeValue
+
+        if (baseChild.getNamedItem("type") == null) {
+            entry.type = "null"
+        } else {
+            entry.type = baseChild.getNamedItem("type").nodeValue
+        }
+        if (baseChild.getNamedItem("link") == null) {
+            entry.link = "null"
+        } else {
+            entry.link = baseChild.getNamedItem("link").nodeValue
+        }
+        if (baseChild.getNamedItem("reaction") == null) {
+            entry.reaction = "null"
+        } else {
+            entry.reaction = baseChild.getNamedItem("reaction").nodeValue
+        }
+
+        g.addVertex(entry)
+    }
+    return g
+
+//    println(
+//            """
+//                Title...... ${doc.documentElement.getAttribute("title")}
+//                Organism... ${doc.documentElement.getAttribute("org")}
+//                Number..... ${doc.documentElement.getAttribute("number")}
+//                Image...... ${doc.documentElement.getAttribute("image")}
+//                Link....... ${doc.documentElement.getAttribute("link")}
+//                -------------------------------------------------------------
+//                Statistics:
+//                    ${entryList.length} node(s)
+//                    ${relationList.length} edge(s)
+//                    ${reactionList.length} reaction(s)
+//                -------------------------------------------------------------
+//            """.trimIndent()
+//    )
 }
 
 internal fun convertStringToXMLDocument(xmlString: String): Document? {
