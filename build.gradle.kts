@@ -85,6 +85,8 @@ dependencies {
 
 
     implementation("com.google.guava:guava:29.0-jre")
+    implementation("org.apache.tinkerpop:gremlin-core:3.4.8")
+    implementation("org.jgrapht:jgrapht-core:1.5.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
