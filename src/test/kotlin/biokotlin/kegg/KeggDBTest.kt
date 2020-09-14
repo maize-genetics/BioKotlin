@@ -6,6 +6,7 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+//import io.mockk.InternalPlatformDsl.toArray
 import krangl.DataFrame
 import krangl.print
 
@@ -96,22 +97,17 @@ class KeggDBTest : StringSpec({
 
 })
 
-//fun main() {
-//    println("Call KEGG...")
-//    val graph = Kegg.pathway("path:")
-//
-//    println("--- XML Parse Test ---")
-//    graph.kgmlGraph()
-//
-//// Joe examples
-//    val path = "path:zma00500"
-//    val pathGenes = Kegg.pathway(path).genes
-//    val aaList = mutableListOf<String>()
-//    pathGenes.slice(0..4).forEach{
-//        aaList += it.gene().aaSeq
-//    }
-//    println(aaList.size)
-//
-//}
+fun main() {
+    println("Call KEGG...")
+    val pathTest = Kegg.pathway("path:zma00072")
+
+    println("--- XML Parse Test ---")
+    val graphProto = pathTest.kgmlGraph()
+    val vertexes = graphProto.vertexSet().toList()
+
+    for (i in 0 until graphProto.vertexSet().size) {
+        println("Vertex entry $i... ${vertexes[i]}}")
+    }
+}
 
 
