@@ -4,6 +4,9 @@ import biokotlin.seq.NucSeq
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.Seq
 import kotlinx.serialization.*
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.w3c.dom.NodeList
 
 /**
  * Fundamental key for a KEGG entities.  A combination of DB abbreviation combined with a KEGG ID (kid)
@@ -197,7 +200,7 @@ data class KeggOrtholog(val keggInfo: KeggInfo, val ec: String, val genes: Map<S
  */
 @kotlinx.serialization.Serializable
 data class KeggPathway(val keggInfo: KeggInfo, val genes: List<KeggEntry>, val compounds: List<KeggEntry>) : KeggInfo by keggInfo {
-    fun kgmlGraph() {
+    fun kgmlGraph(): DefaultDirectedGraph<Any, DefaultEdge> {
         return kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
     }
 }
