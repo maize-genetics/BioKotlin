@@ -201,20 +201,20 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
         val queryB = query.copyOfBytes()
         var matchCount = 0
         var currentOffset = 0
-        var nextIndex = indexOf(queryB, currentOffset, len() - queryB.size, false)
+        var nextIndex = indexOf(queryB, currentOffset, size() - queryB.size, false)
         while (nextIndex != -1) {
             matchCount++
             currentOffset = if (overlap) (nextIndex + 1) else (nextIndex + queryB.size)
-            nextIndex = indexOf(queryB, currentOffset, len() - queryB.size, false) //check if I need +1 on end
+            nextIndex = indexOf(queryB, currentOffset, size() - queryB.size, false) //check if I need +1 on end
         }
         return matchCount
     }
 
     private fun indexOf(queryB: ByteArray, start: Int, end: Int, startAtLast: Boolean): Int {
         val indices = if (!startAtLast)
-            start.coerceAtLeast(0)..end.coerceAtMost(len() - queryB.size)
+            start.coerceAtLeast(0)..end.coerceAtMost(size() - queryB.size)
         else
-            start.coerceAtMost(len() - queryB.size) downTo end.coerceAtLeast(0)
+            start.coerceAtMost(size() - queryB.size) downTo end.coerceAtLeast(0)
         seqBloop@ for (thisIndex in indices) {
             for (queryIndex in queryB.indices) {
                 if (getUTF8(thisIndex + queryIndex) != queryB[queryIndex])
@@ -235,14 +235,14 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
     override fun count_overlap(query: NucSeq): Int = count(query, true)
     override fun indexOf(query: NucSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(), start, end, false)
-
+    override operator fun contains(element: NucSeq): Boolean = indexOf(element) != -1
     override fun lastIndexOf(query: NucSeq, start: Int, end: Int): Int =
             indexOf(query.copyOfBytes(), start, end, true)
 
     override fun translate(table: CodonTable, to_stop: Boolean, cds: Boolean): ProteinSeqByte {
-        if (cds && len() % 3 != 0) throw IllegalStateException("Sequence not multiple of three")
-        val pB = ByteArray(size = len() / 3)
-        for (i in 0 until (len() - 2) step 3) {
+        if (cds && size() % 3 != 0) throw IllegalStateException("Sequence not multiple of three")
+        val pB = ByteArray(size = size() / 3)
+        for (i in 0 until (size() - 2) step 3) {
             pB[i / 3] = table.nucBytesToCodonByte(getUTF8(i), getUTF8(i + 1), getUTF8(i + 2))
             if (cds && i == 0 && pB[0] != AminoAcid.M.char.toByte()) {
                 val startCodon = Codon[getUTF8(i), getUTF8(i + 1), getUTF8(i + 2)]
@@ -277,7 +277,7 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
                 else "${String(getUTF8Bytes(0..54))}...${String(getUTF8Bytes((size - 3) until size))}"
             }',${nucSet})"
 
-    override fun len(): Int = size
+    override fun size(): Int = size
 
     override fun compareTo(other: Seq): Int {
         TODO("Not yet implemented")

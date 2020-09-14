@@ -52,7 +52,7 @@ data class KeggEntry private constructor(val dbAbbrev: String, val kid: String) 
          */
         fun of(vararg dbKid: String): KeggEntry {
             var (dbAbbr: String?, kid: String) = when {
-                dbKid.size == 1 && dbKid[0].contains(":") -> dbKid[0].split(":").let { it[0] to it[1] }
+                dbKid.size == 1 && dbKid[0].indexOf(":") in 0 until dbKid[0].lastIndex -> dbKid[0].split(":").let { it[0] to it[1] }
                 dbKid.size == 1 -> dbKid[0].keggPrefix().let { KeggDB.prefixToDB[it]?.abbr } to dbKid[0]
                 dbKid.size == 2 -> dbKid[0] to dbKid[1]
                 dbKid.size == 3 -> dbKid[0] to dbKid[1] + dbKid[2]

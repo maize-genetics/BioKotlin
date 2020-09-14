@@ -7,7 +7,6 @@ import java.io.StringReader
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 
-
 /**
  * Parses the Kegg Response to a map of KEGG labels to String with the new lines
  * retained in the value.  e.g. "ENTRY" -> "542318            CDS       T01088"
@@ -18,7 +17,7 @@ private fun parseKEGG(str: String): Map<String, String> {
             .withDefault{ throw NoSuchElementException("KEGG response is missing the $it field") }
     var lastKeyword = ""
     for (line in str.lines()) {
-        if (line.substring(0..2) == "///") break
+        if (line.startsWith( "///")) break
         if (line.substring(0..11).isNotBlank()) lastKeyword = line.substring(0..11).trim()
         val data = line.substring(12).trim()
         keggKeyToValue.merge(lastKeyword, data) { old, new -> old + "\n" + new }
