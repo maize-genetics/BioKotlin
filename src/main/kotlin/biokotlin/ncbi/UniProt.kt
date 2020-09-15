@@ -33,6 +33,8 @@ object UniProt: AutoCloseable{
         unirefService = serviceFactoryInstance.uniRefQueryService
         services = listOf<Service>(uniprotService, uniparcService, unirefService)
         services.forEach { it.start() }
+
+
     }
     private fun makeQuery(id: String): Query {
         //query for accession, UPI, or CRC32
@@ -44,11 +46,23 @@ object UniProt: AutoCloseable{
     }
 
     fun protein(id: String): ProteinSeq {
-        val entry: UniProtEntry = uniProtEntry(id)
+        val entry: UniProtEntry = uniProtEntry(id)?:throw IllegalArgumentException("Id $id is not found")
         return ProteinSeq(entry.sequence.value)
     }
 
-    fun uniProtEntry(id: String): UniProtEntry = uniprotService.getEntries(makeQuery(id)).firstResult
+    fun uniProtEntry(id: String): UniProtEntry? {
+        var upe = uniprotService.getEntries(makeQuery(id)).firstResult
+        if(upe==null) {
+            println("Using xrefs")
+            upe= uniprotService.getXrefs(UniProtQueryBuilder.xref(id))
+                    ?.firstResult?.accession
+                    .let { val query = UniProtQueryBuilder.accession(it.toString())
+                        uniprotService.getEntries(query).firstResult
+                    }
+        }
+        return upe
+    }
+
 
     fun dbReferences(id: String): SeqDBReference = dbReferences(makeQuery(id))
 
@@ -58,6 +72,8 @@ object UniProt: AutoCloseable{
 //        var protDBs: List<uk.ac.ebi.kraken.interfaces.uniprot.DatabaseCrossReference> = uniprotService.getEntries(query)
 //                .firstResult.databaseCrossReferences.toList()
 //        print("uniprot.DatabaseCrossReference="+protDBs)
+
+
 
         val protDF= uniprotService.getEntries(query).asSequence()
                 .map { entry ->
