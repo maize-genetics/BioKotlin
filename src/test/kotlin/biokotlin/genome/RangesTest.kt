@@ -278,7 +278,8 @@ class RangesTest: StringSpec({
     }
     "Test bedfileToSRANGEset" {
         val bedfile = "/Users/lcj34/git/biokotlin/src/test/kotlin/biokotlin/genome/testSmallBedFile.txt"
-        val sRangeSet = bedfileToSRangeSet(bedfile)
+        val seq = "" // this can have value or be empty
+        val sRangeSet = bedfileToSRangeSet(bedfile, seq)
         println("size of sRangeSet from bedfile: ${sRangeSet.size}")
         sRangeSet.elementAt(0).start.site shouldBe 253156
         sRangeSet.elementAt(0).endInclusive.site shouldBe 260643

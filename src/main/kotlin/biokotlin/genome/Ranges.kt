@@ -312,16 +312,30 @@ fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator
 // Read bed file into an SRange set.  The chromosome becomes the seqRecord id and the sequence is
 // an empty string.
 // NOTE: while bedfiles are 0-based inclusive/exclusive, SRanges are 1-based inclusive/inclusive
-fun bedfileToSRangeSet (bedfile: String): SRangeSet {
+fun bedfileToSRangeSet (bedfile: String, seq: String): SRangeSet {
     var rangeSet : MutableSet<SRange> = mutableSetOf()
     File(bedfile).readLines().forEach{
         val data = it.split("\t")
-        require (data.size >= 3) {"bad line in befile: $it"}
-        val seqRec = NucSeqRecord(NucSeq(""),data[0])
+        require (data.size >= 3) {"bad line in bedfile: $it"}
+        val seqRec = NucSeqRecord(NucSeq(seq),data[0])
         val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
         val upperSite = data[2].toInt()
         val srange = SeqPosition(seqRec,lowerSite)..SeqPosition(seqRec,upperSite)
         rangeSet.add(srange)
+    }
+
+    return rangeSet.toSet()
+}
+
+fun bedfileToIntRangeSet (bedfile: String): Set<IntRange> {
+    var rangeSet : MutableSet<IntRange> = mutableSetOf()
+    File(bedfile).readLines().forEach{
+        val data = it.split("\t")
+        require (data.size >= 3) {"bad line in bedfile: $it"}
+
+        val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
+        val upperSite = data[2].toInt()
+        rangeSet.add(lowerSite..upperSite)
     }
 
     return rangeSet.toSet()
