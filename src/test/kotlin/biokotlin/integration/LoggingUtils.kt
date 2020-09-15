@@ -13,8 +13,8 @@ fun setUniProtLogging(level: Level = Level.INFO) {
 
     loggers.forEach { name ->
         val logger = LoggerFactory.getLogger(name) as Logger
-        logger.setLevel(level)
-        logger.setAdditive(false)
+        logger.level = level
+        logger.isAdditive = false
     }
 
 }
