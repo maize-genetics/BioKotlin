@@ -276,17 +276,37 @@ class SeqPositionRangeComparator: Comparator<SRange> {
 typealias SRangeSet = Set<SRange> // Kotlin immutable Set
 
 // User may supply own comparator.  Output is a Kotlin Immutable Set
-fun overlappingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
+fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
 
     sRangeSet.addAll(ranges.asIterable())
     return sRangeSet.toSet()
 }
 
-fun overlappingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
+fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
     val sRangeSet = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     return sRangeSet.toSet()
+}
+
+
+// Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
+// THis does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
+// When comparator is first, it is then required.
+fun coalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
+    val sRangeSet  = TreeSet(comparator)
+    sRangeSet.addAll(ranges.asIterable())
+    // Have a range set, now call merge with "0" for bp distance.
+    // This will not merge adjacent ranges, but will merge embedded or overlapping ranges
+    val sRangeSetCoalesced = sRangeSet.merge(0)
+    return sRangeSetCoalesced.toSet()
+}
+
+fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
+    val sRangeSet  = TreeSet(comparator)
+    sRangeSet.addAll(ranges.asIterable())
+    val sRangeSetCoalesced = sRangeSet.merge(0)
+    return sRangeSetCoalesced.toSet()
 }
 
 // Read bed file into an SRange set.  The chromosome becomes the seqRecord id and the sequence is
@@ -305,24 +325,6 @@ fun bedfileToSRangeSet (bedfile: String): SRangeSet {
     }
 
     return rangeSet.toSet()
-}
-
-// Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
-// THis does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
-// When comparator is first, it is then required.
-fun coalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
-    val sRangeSet  = TreeSet(comparator)
-    sRangeSet.addAll(ranges.asIterable())
-    // Have a range set, now call merge with "0" for bp distance.
-    // This will not merge adjacent ranges, but will merge embedded or overlapping ranges
-    val sRangeSetCoalesced = sRangeSet.merge(0)
-    return sRangeSetCoalesced.toSet()
-}
-fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
-    val sRangeSet  = TreeSet(comparator)
-    sRangeSet.addAll(ranges.asIterable())
-    val sRangeSetCoalesced = sRangeSet.merge(0)
-    return sRangeSetCoalesced.toSet()
 }
 
 // Merge will merge overlapping and embedded ranges, and other ranges where distance between them

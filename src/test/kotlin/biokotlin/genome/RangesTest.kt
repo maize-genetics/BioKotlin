@@ -238,7 +238,7 @@ class RangesTest: StringSpec({
         val sr4 = record2.range(25..35)
 
         // Should create a NavigableSet - sorted set
-        val srSet = overlappingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
+        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
         println("\nLCJ - SeqPositions in Tree Set:")
         for (sp in srSet) {
             println(sp.toString())
@@ -262,7 +262,7 @@ class RangesTest: StringSpec({
         val sr3 = record1.range(15..27)
         val sr4 = record1.range(45..50)
 
-        var srSet = overlappingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr4)
+        var srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr4)
         println("\nLCJ - ranges NON-coalesced set:")
         for (sp in srSet) {
             println(sp.toString())
@@ -278,7 +278,7 @@ class RangesTest: StringSpec({
     }
     "Test bedfileToSRANGEset" {
         val bedfile = "/Users/lcj34/git/biokotlin/src/test/kotlin/biokotlin/genome/testSmallBedFile.txt"
-        val sRangeSet = bedfileToSRangeSet((bedfile))
+        val sRangeSet = bedfileToSRangeSet(bedfile)
         println("size of sRangeSet from bedfile: ${sRangeSet.size}")
         sRangeSet.elementAt(0).start.site shouldBe 253156
         sRangeSet.elementAt(0).endInclusive.site shouldBe 260643
