@@ -1,28 +1,30 @@
 package biokotlin.integration
 
 import biokotlin.kegg.Kegg
-import biokotlin.ncbi.NCBI
+import biokotlin.kegg.KeggServer
 import biokotlin.ncbi.UniProt
 import krangl.print
-import org.biojava.nbio.core.sequence.compound.AminoAcidCompoundSet
-import org.biojava.nbio.core.sequence.loader.GenbankProxySequenceReader
-import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType
-import uk.ac.ebi.uniprot.dataservice.client.uniparc.UniParcField
-import uk.ac.ebi.uniprot.dataservice.client.uniparc.UniParcQueryBuilder
-import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtField
-import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtQueryBuilder
-import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtQueryBuilder.xref
-import uk.ac.ebi.uniprot.dataservice.query.Query
 
 fun main() {
     setUniProtLogging()
     println("We are going from gene name to pathway")
 
     val testIDs = listOf("O22637","Zm00001d000095","GRMZM2G059037")
-    for (testID in testIDs){
-        val uniEntry=UniProt.uniProtEntry(testID)
-        println("testID[$testID] = uniProtId[${uniEntry?.uniProtId?:"not found"}]")
+    val primaryAcc = testIDs.map { UniProt.uniProtEntry(it)}
+            .filterNotNull()
+            .map { it.primaryUniProtAccession }
+    for (i in 0..primaryAcc.size-1){
+        println("testID[${testIDs[i]}] = primaryAcc[${primaryAcc[i]}]")
     }
+    val c = primaryAcc[0].toString()
+    val dbRef = UniProt.dbReferences(c)
+    dbRef.uniProtDF.print(maxWidth = 200, maxRows = 50)
+    println(dbRef.keggAcc)
+
+    val kg = Kegg.gene(dbRef.keggAcc?:throw IllegalArgumentException("KEGG gene not found"))
+    println(kg)
+    println(kg.pathways.toString())
+    println(kg.pathways[0].pathway())
 
 //    val gene1Name = "GZM123234234"
 //    //ENSEMBL-GENE	Zm00001d000095

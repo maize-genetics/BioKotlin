@@ -47,13 +47,17 @@ internal fun geneParser(keggResponseText: String): KeggGene {
     val orthologyKID = KeggEntry.of(orthology.abbr, (attributes["ORTHOLOGY"]
             ?: error("ORTHOLOGY missing")).split(whiteSpace)[0])
     val nameAndDefinition = attributes["DEFINITION"].orEmpty()
+    val p=attributes["PATHWAY"].orEmpty()
+    val pathways: List<KeggEntry> = (attributes["PATHWAY"].orEmpty()).lines()
+            .map { it.split(whiteSpace, 2)[0] }
+            .map {KeggEntry.of(pathway.abbr, it) }
 
     val aaSeq = attributes["AASEQ"]?.let { cleanSeqWithLength(it) }?:""
     val ntSeq = attributes["NTSEQ"]?.let { cleanSeqWithLength(it) }?:""
 
     val ke = KeggInfo.of(genes, KeggEntry.of(orgCode, geneEntry), name = nameAndDefinition,
             org = orgCode, definition = nameAndDefinition)
-    return KeggGene(ke, orthology = orthologyKID, position = attributes["POSITION"] ?: error("Position missing"),
+    return KeggGene(ke, orthology = orthologyKID, pathways=pathways, position = attributes["POSITION"] ?: error("Position missing"),
             ntSeq = ntSeq, aaSeq = aaSeq)
 }
 

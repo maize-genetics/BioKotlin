@@ -176,16 +176,17 @@ data class KeggGenome(val keggInfo: KeggInfo, override val org: String, val line
  * TODO add gene parsing
  */
 @kotlinx.serialization.Serializable
-data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val position: String="", val ntSeq: String="",
+data class KeggGene(val keggInfo: KeggInfo, val orthology: KeggEntry, val pathways: List<KeggEntry>, val position: String="", val ntSeq: String="",
                     val aaSeq: String="") : KeggInfo by keggInfo {
     val nucSeq: NucSeq by lazy{ Seq(ntSeq) }
     val proteinSeq: ProteinSeq by lazy{ ProteinSeq(aaSeq) }
 }
 
-fun KeggGene.pathways() : Multimap<String, String> {
-    // perhaps grab from KeggEntry, given the gene, return the pathways?
-    TODO()
-}
+//fun KeggGene.pathways() : Multimap<String, String> {
+//    // perhaps grab from KeggEntry, given the gene, return the pathways?
+//    TODO()
+//}
+
 fun KeggGene.orthologs() : Multimap<String, String> {
     // perhaps grab from KeggEntry, given the gene, return the orthlogs?
     TODO()
