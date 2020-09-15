@@ -6,7 +6,6 @@ import biokotlin.seq.Seq
 import kotlinx.serialization.*
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
-import org.w3c.dom.NodeList
 
 /**
  * Fundamental key for a KEGG entities.  A combination of DB abbreviation combined with a KEGG ID (kid)
@@ -201,8 +200,38 @@ data class KeggOrtholog(val keggInfo: KeggInfo, val ec: String, val genes: Map<S
 @kotlinx.serialization.Serializable
 data class KeggPathway(val keggInfo: KeggInfo, val genes: List<KeggEntry>, val compounds: List<KeggEntry>) : KeggInfo by keggInfo {
     fun kgmlGraph(): DefaultDirectedGraph<Any, DefaultEdge> {
-        return kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
+        val parsedData = kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
+        return kgmlGraphConstructor(parsedData)
     }
 }
 
+/**
+ * KGML Entry data class - for holding parsed XML entry data in graph
+ */
+data class KGMLEntry(
+        var id: String = "",
+        var name: List<String> = emptyList(),
+        var type: String = "",
+        var link: String = "",
+        var reaction: String = ""
+)
 
+/**
+ * KGML Reaction data class - for holding parsed XML reaction data in graph
+ */
+data class KGMLReaction(
+        var id: String = "",
+        var name: String = "",
+        var type: String = "",
+        var substrate: List<String> = emptyList(),
+        var product: List<String> = emptyList()
+)
+
+/**
+ * KGML Relation data class - for holding parsed XML relation data in graph
+ */
+data class KGMLRelation(
+        var entry1: String = "",
+        var entry2: String = "",
+        var type: String = ""
+)
