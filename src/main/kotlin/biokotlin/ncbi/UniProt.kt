@@ -9,6 +9,7 @@ import uk.ac.ebi.uniprot.dataservice.client.Service
 import uk.ac.ebi.uniprot.dataservice.client.ServiceFactory
 import uk.ac.ebi.uniprot.dataservice.client.uniparc.UniParcQueryBuilder
 import uk.ac.ebi.uniprot.dataservice.client.uniparc.UniParcService
+import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtQueryBuilder
 import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtService
 import uk.ac.ebi.uniprot.dataservice.client.uniref.UniRefService
 import uk.ac.ebi.uniprot.dataservice.query.Query
