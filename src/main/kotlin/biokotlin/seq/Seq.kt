@@ -304,26 +304,31 @@ internal fun negativeSlice(x: IntRange, size: Int): IntRange {
     return IntRange(first, last)
 }
 
-// ed's version - intrange not SRange. ANd it is a Single range to compare - I think
-// we need the full
+// ed's original version - If NucSeq is the full chromosome, we need subranges within it to compare for
+// the pairingFunc !!  So ... change to the one below
 fun NucSeq.pairedInterval(targetInterval: IntRange, pairingFunc: (NucSeq, NucSeq) -> Boolean): IntRange {
     TODO()
 }
 
+// THis function takes the sequence coordinates (IntRange) of the positive peak, and a list
+// of coordinates on the contig which should be searched for "compatibility" based on the
+// pairing function.  It will return a set of "count" number of coordinates.
 fun NucSeq.pairedInterval(positivePeak: IntRange, searchSpace: Set<IntRange>,
-                          pairingFunc: (String, String) -> Boolean, count: Int = 1): Set<IntRange> {
+                          pairingFunc: (ByteArray, ByteArray) -> Boolean, count: Int = 1): Set<IntRange> {
     var rangeSet : MutableSet<IntRange> = mutableSetOf()
     // hmmm ... I need the full sequence to pull sub-sequence based on ranges.  ANd the original sequence.  We
-    // get both from NucSeq - which is the full chromosome?
+    // get both from NucSeq - which I assume is the full chromosome.
 
     // create list of positions
     var targetLen = positivePeak.endInclusive - positivePeak.start + 1
-    var targetSeq = this.seq().substring(positivePeak)
+    //println("NucSeq.pairedInterval: value of targetLen: $targetLen")
+
+    // Kotlin ranges are closed/inclusive - 1-based here.  Or should they have been made
+    // to be 0-based like the bed file? (bedfileToIntRange() defined in Ranges.kt )
+    var targetSeq = this.seq().substring(positivePeak.start-1,positivePeak.endInclusive).toByteArray()
     var tempRangeList : MutableList<IntRange> = mutableListOf()
     // this assumes the searchSpace has already been filtered for ranges that are too short
 //    for (range in searchSpace) {
-//        // can I make a list of SRange - so the range is there as well as the coordinates?
-//        // then shuffle them in the list, then pull?
 //        val start = range.first
 //        val end = range.endInclusive
 //        for (idx in start until end - targetLen - 1) {
@@ -337,6 +342,7 @@ fun NucSeq.pairedInterval(positivePeak: IntRange, searchSpace: Set<IntRange>,
 //        }
 //    }
 
+    // parallel version
     val tempRangeListParallel = searchSpace.parallelStream().map {
         var tRangeList : MutableList<IntRange> = mutableListOf()
         val start = it.first
@@ -348,16 +354,19 @@ fun NucSeq.pairedInterval(positivePeak: IntRange, searchSpace: Set<IntRange>,
         tRangeList
     }.collect(Collectors.toList())
 
-    // the List of Lists must not be broken into single lists
+
+    // the List of Lists must now be made into a single list
     for (rlist in tempRangeListParallel) {
         tempRangeList.addAll(rlist)
     }
 
+    println("NucSeq.pairedInterval: size of tempRangeList: ${tempRangeList.size}")
     tempRangeList.shuffle() // mix em up!
     // Go through the ranges, pick out the first "count" number that match
     var found = 0
     for (range in tempRangeList)  {
-        var testSeq = this.seq().substring(range)
+        // ranges are 1-based, inclusive/inclusive.  seq.substring will be 0-based, inclusive/exclusive
+        var testSeq = this.seq().substring(range.start-1,range.endInclusive).toByteArray()
         if (pairingFunc(targetSeq,testSeq)) {
             rangeSet.add(range)
             found++
