@@ -6,6 +6,7 @@ import biokotlin.genome.SeqPositionAlphaComparator.Companion.spAlphaComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
+import java.io.File
 import java.util.*
 import java.util.Comparator.comparing
 import kotlin.Comparator
@@ -286,6 +287,24 @@ fun overlappingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator
     val sRangeSet = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     return sRangeSet.toSet()
+}
+
+// Read bed file into an SRange set.  The chromosome becomes the seqRecord id and the sequence is
+// an empty string.
+// NOTE: while bedfiles are 0-based inclusive/exclusive, SRanges are 1-based inclusive/inclusive
+fun bedfileToSRangeSet (bedfile: String): SRangeSet {
+    var rangeSet : MutableSet<SRange> = mutableSetOf()
+    File(bedfile).readLines().forEach{
+        val data = it.split("\t")
+        require (data.size >= 3) {"bad line in befile: $it"}
+        val seqRec = NucSeqRecord(NucSeq(""),data[0])
+        val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
+        val upperSite = data[2].toInt()
+        val srange = SeqPosition(seqRec,lowerSite)..SeqPosition(seqRec,upperSite)
+        rangeSet.add(srange)
+    }
+
+    return rangeSet.toSet()
 }
 
 // Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.

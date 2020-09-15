@@ -276,6 +276,15 @@ class RangesTest: StringSpec({
         }
         coalescedSet.size shouldBe 3
     }
+    "Test bedfileToSRANGEset" {
+        val bedfile = "/Users/lcj34/git/biokotlin/src/test/kotlin/biokotlin/genome/testSmallBedFile.txt"
+        val sRangeSet = bedfileToSRangeSet((bedfile))
+        println("size of sRangeSet from bedfile: ${sRangeSet.size}")
+        sRangeSet.elementAt(0).start.site shouldBe 253156
+        sRangeSet.elementAt(0).endInclusive.site shouldBe 260643
+        sRangeSet.elementAt(29).start.site shouldBe 2017706
+        sRangeSet.elementAt(29).endInclusive.site shouldBe 2024879
+    }
     // replace this test case with new version of SeqRangeSort
 //    "Test SeqPosRangeSortFactory" {
 //
