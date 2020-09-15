@@ -6,8 +6,8 @@ class SeqPairedIntervalTest: StringSpec( {
 
     "Test Paired Interval" {
 
-        val gcSame:(ByteArray, ByteArray) -> Boolean = { a, b -> (a.count {it.equals(NUC.G.utf8) || it.equals(NUC.C.utf8)}
-                == b.count{it.equals(NUC.G.utf8) || it.equals(NUC.C.utf8)})}
+        val gcSame:(String, String) -> Boolean = { a, b -> (a.toByteArray().count {it.equals(NUC.G.utf8) || it.equals(NUC.C.utf8)}
+                == b.toByteArray().count{it.equals(NUC.G.utf8) || it.equals(NUC.C.utf8)})}
         // This should be 116 bps
 
         val nucSeq1 = NucSeq("CCGAATGCGCGGGGGACAAACAATCAGCCGGCGAAAGGCAGGGAAGAACCACAGCCACCAAGACAAACGGAAAGCACAGAGGGAGGGGACCGACCAACCAGGGCCGGCCAGAACAA")
