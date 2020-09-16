@@ -4,8 +4,6 @@ import biokotlin.seq.NucSeq
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.Seq
 import kotlinx.serialization.*
-import org.jgrapht.graph.DefaultDirectedGraph
-import org.jgrapht.graph.DefaultEdge
 
 /**
  * Fundamental key for a KEGG entities.  A combination of DB abbreviation combined with a KEGG ID (kid)
@@ -199,17 +197,14 @@ data class KeggOrtholog(val keggInfo: KeggInfo, val ec: String, val genes: Map<S
  */
 @kotlinx.serialization.Serializable
 data class KeggPathway(val keggInfo: KeggInfo, val genes: List<KeggEntry>, val compounds: List<KeggEntry>) : KeggInfo by keggInfo {
-    fun kgmlGraph(): DefaultDirectedGraph<Any, DefaultEdge> {
-        val parsedData = kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
-        return kgmlGraphConstructor(parsedData)
-    }
+
 }
 
 /**
  * KGML Entry data class - for holding parsed XML entry data in graph
  */
 data class KGMLEntry(
-        var id: String = "",
+        var id: Int = -1,
         var name: List<String> = emptyList(),
         var type: String = "",
         var link: String = "",
@@ -217,21 +212,21 @@ data class KGMLEntry(
 )
 
 /**
- * KGML Reaction data class - for holding parsed XML reaction data in graph
+ * KGML Reaction data class - for delegating relationships (substrate, product, entry) in graph object
  */
 data class KGMLReaction(
-        var id: String = "",
+        var id: Int = -1,
         var name: String = "",
         var type: String = "",
-        var substrate: List<String> = emptyList(),
-        var product: List<String> = emptyList()
+        var substrate: Map<Int, String> = emptyMap<Int, String>(), // ID and substrate name
+        var product: Map<Int, String> = emptyMap<Int, String>() // ID and product name
 )
 
 /**
- * KGML Relation data class - for holding parsed XML relation data in graph
+ * KGML Relation data class - for delegating relationships in graph object
  */
 data class KGMLRelation(
-        var entry1: String = "",
-        var entry2: String = "",
+        var entry1: Int = -1,
+        var entry2: Int = -1,
         var type: String = ""
 )
