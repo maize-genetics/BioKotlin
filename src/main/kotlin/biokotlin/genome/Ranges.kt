@@ -242,6 +242,100 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
 }
 
 
+
+fun SRange.pairedInterval(searchSpace: Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int=1): Set<SRange> {
+
+    var targetLen = this.endInclusive.site - this.start.site + 1
+
+    // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
+    var seqRecordStart = this.start.seqRecord as NucSeqRecord
+
+
+
+    // this assumes the searchSpace has already been filtered for ranges that are too short
+    var tempRangeList = createShuffledSubRangeList(targetLen, searchSpace)
+
+    var targetSeq = seqRecordStart.sequence.toString().substring(this.start.site-1,this.endInclusive.site)
+    var rangeSet = findNegativePeaks(NucSeq(targetSeq),tempRangeList, pairingFunc, count)
+
+    return rangeSet // return immutable Kotlin Set
+}
+
+fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
+
+    // this assumes the searchSpace has already been filtered for ranges that are too short
+    var targetLen = positive.size()
+    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
+    var rangeSet = findNegativePeaks(positive, tempRangeList, pairingFunc, count)
+
+    return rangeSet
+}
+
+fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
+
+    var targetLen = positive.endInclusive.site - positive.start.site + 1
+
+    // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
+    var seqRecord = positive.start.seqRecord as NucSeqRecord
+    //val seqRec:NucSeqRecord = sRange.start.seqRecord as NucSeqRecord
+    var targetSeq = seqRecord.sequence.toString().substring(positive.start.site-1,positive.endInclusive.site)
+    // this assumes the searchSpace has already been filtered for ranges that are too short
+
+    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
+    var rangeSet = findNegativePeaks(NucSeq(targetSeq), tempRangeList, pairingFunc, count)
+
+    return rangeSet // findNegativePeaks returns an immutable set
+}
+
+// Method to take a set or SRanges, create subsets, windowed by 1, length=targetLen
+// This method does NOT change the sequence in the record. It assumes the ranges represent
+// an interval on the sequence
+fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRange> {
+    var subRangeList : MutableList<SRange> = mutableListOf()
+
+    for (range in ranges) {
+        var origRange = range.start.seqRecord as NucSeqRecord
+        var origSeq = origRange.sequence
+        val start = range.start.site
+        val end = range.endInclusive.site
+        for (idx in start .. end - targetLen) {
+            // Do we subset the sequence here, or leave as original?
+//            var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
+//            var seqPos1 = range.start.copy(seqRecord = NucSeqRecord(NucSeq(seq),origRange.id), site = idx)
+//            var seqPos2 = range.endInclusive.copy(seqRecord = NucSeqRecord(NucSeq(seq),origRange.id), site = idx+targetLen-1)
+
+            // Leave sequence alone - no changes
+            var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
+            var seqPos1 = range.start.copy( site = idx)
+            var seqPos2 = range.endInclusive.copy(site = idx+targetLen-1)
+
+            val sRange = seqPos1..seqPos2
+            subRangeList.add(sRange)
+        }
+    }
+    subRangeList.shuffle()
+    return subRangeList
+}
+
+// Find peaks with criteria matching that specified by the user supplied pairing function.
+// This method assumes the sequence in the NucSeqRecord hasn't changed from the original,
+// and the ranges indicate which subsection of the sequence to pull.
+fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int): Set<SRange> {
+    var rangeSet : MutableSet<SRange> = mutableSetOf()
+    var found = 0
+    for (range in rangeList)  { // Traverse the ranges, select the first "count" number that match
+        // ranges are 1-based, inclusive/inclusive.  seq.substring will be 0-based, inclusive/exclusive
+        var testSeqRec = range.start.seqRecord as NucSeqRecord
+        var testSeq = testSeqRec.sequence.toString().substring(range.start.site-1,range.endInclusive.site)
+        if (pairingFunc(positive,NucSeq(testSeq))) {
+            rangeSet.add(range)
+            found++
+        }
+        if (found == count) break
+    }
+    return rangeSet.toSet()
+}
+
 class NucSeqComparator: Comparator<NucSeqRecord>{
     override fun compare(p0: NucSeqRecord, p1: NucSeqRecord): Int {
         return p0.id.compareTo(p1.id)
@@ -339,6 +433,23 @@ fun bedfileToIntRangeSet (bedfile: String): Set<IntRange> {
     }
 
     return rangeSet.toSet()
+}
+
+// Sometimes we just want a range - Travis's stuff
+fun IntRange.flankBoth(count: Int): Set<IntRange> {
+    var flankingRanges: MutableSet<IntRange> = mutableSetOf()
+    // Flank the lower end of the range if it isn't already at 1
+    if (this.first > 1) {
+        var lowerF = (this.first.toLong() - count).coerceAtLeast(1).toInt()
+        var upperF = this.first - 1
+        flankingRanges.add(lowerF..upperF)
+    }
+
+    // Flank the upper end of range
+    var lowerF = this.endInclusive + 1
+    var upperF =  this.endInclusive + count
+    flankingRanges.add(lowerF..upperF)
+    return flankingRanges.toSet()
 }
 
 // Merge will merge overlapping and embedded ranges, and other ranges where distance between them

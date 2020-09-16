@@ -1,6 +1,7 @@
 package biokotlin.genome
 
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
+import biokotlin.seq.NUC
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import com.google.common.collect.Range
@@ -286,6 +287,113 @@ class RangesTest: StringSpec({
         sRangeSet.elementAt(29).start.site shouldBe 2017706
         sRangeSet.elementAt(29).endInclusive.site shouldBe 2024879
     }
+
+    "Test createShuffledSubRangeList and findPair" {
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
+        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1-id1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+
+        var targetLen = 10
+        var sRange = seqRec1.range(1..23)
+        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        sRangeSet.add(sRange)
+        var subRanges = createShuffledSubRangeList(targetLen, sRangeSet)
+        println("dnaString2 length: ${dnaString2.length}")
+        println("dnaString1 length: ${dnaString1.length}")
+        println("\nthe values in subRanges with seqlength of 23, targetLen of 10:")
+        for (range in subRanges) {
+            val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
+            val sequence = seqRec.sequence
+            println("$sequence: $range")
+        }
+        subRanges.size shouldBe 13
+
+        // test findNegativePeaks - it needs the range list from above
+        var positive = NucSeq("ACGTGGTGAA")
+        val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
+        val negativePeaks = findNegativePeaks(positive, subRanges, gcSame,3)
+
+        println("\nnumber of negative peaks returns: ${negativePeaks.size}")
+        println("Negative peak ranges matching gc count in ACGTGGTGAA:")
+        for (range in negativePeaks) {
+            val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
+            val sequence = seqRec.sequence
+            println("$sequence: $range")
+        }
+
+    }
+    "test findPair comparing to a NucSeq " {
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
+        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1")
+        var seqRec2 = NucSeqRecord(NucSeq(dnaString2), id = "Seq2")
+
+        var sRange = seqRec1.range(1..23)
+        var sRange2 = seqRec2.range(25..61)
+        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        sRangeSet.add(sRange)
+        sRangeSet.add(sRange2)
+
+        var positive = NucSeq("ACGTGGTGAA")
+        val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
+
+        var negativePeaks = findPair(positive, sRangeSet, gcSame, 3)
+        println("number of nuegativePeaks: ${negativePeaks.size}")
+        for (range in negativePeaks) {
+            val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
+            val sequence = seqRec.sequence
+            println("$sequence: $range")
+        }
+    }
+    "test findPair comparing to an SRange " {
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
+        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1")
+        var seqRec2 = NucSeqRecord(NucSeq(dnaString2), id = "Seq2")
+
+        var positivePeakSRange = seqRec1.range(1..10)
+        var sRange = seqRec1.range(1..23)
+        var sRange2 = seqRec2.range(25..61)
+        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        sRangeSet.add(sRange)
+        sRangeSet.add(sRange2)
+
+        val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
+
+        var negativePeaks = findPair(positivePeakSRange, sRangeSet, gcSame, 3)
+        println("number of negativePeaks: ${negativePeaks.size}")
+        for (range in negativePeaks) {
+            val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
+            val sequence = seqRec.sequence
+            println("$sequence: $range")
+        }
+    }
+    "test findPair from an SRange " {
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
+        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1")
+        var seqRec2 = NucSeqRecord(NucSeq(dnaString2), id = "Seq2")
+
+        var positivePeakSRange = seqRec1.range(1..10)
+        var sRange = seqRec1.range(1..23)
+        var sRange2 = seqRec2.range(25..61)
+        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        sRangeSet.add(sRange)
+        sRangeSet.add(sRange2)
+        val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
+
+        var negativePeaks = positivePeakSRange.pairedInterval(sRangeSet,gcSame, 3)
+
+        println("number of negativePeaks: ${negativePeaks.size}")
+        for (range in negativePeaks) {
+            val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
+            val sequence = seqRec.sequence
+            println("$sequence: $range")
+        }
+    }
+
+
     // replace this test case with new version of SeqRangeSort
 //    "Test SeqPosRangeSortFactory" {
 //
