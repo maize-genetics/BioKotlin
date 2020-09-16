@@ -89,6 +89,8 @@ dependencies {
 
     implementation("com.google.guava:guava:29.0-jre")
 
+    implementation("org.ehcache:ehcache:3.8.1")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
     val kotestVersion = "4.2.3"
