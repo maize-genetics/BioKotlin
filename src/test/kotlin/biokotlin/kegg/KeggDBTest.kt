@@ -105,20 +105,18 @@ fun main() {
     val pathTest = Kegg.pathway(pathID)
     val graphProto = pathTest.kgmlGraph()
 
+    println("--- --- --- --- ---")
     println("""
         --- XML Parse to Graph ---
-        Path ID........... ${pathID}
+        Path ID........... $pathID
         Object class...... ${graphProto.javaClass}
         Number of edges... ${graphProto.edgeSet().size}
         Number of nodes... ${graphProto.vertexSet().size}
     """.trimIndent())
-
-//    println(graphProto["Relationships"])
-//    val vertexes = graphProto.vertexSet().toList()
-//
-//    for (i in 0 until graphProto.vertexSet().size) {
-//        println("Vertex entry $i... ${vertexes[i]}")
-//    }
+    println("--- --- --- --- ---")
+    for (i in 0 until graphProto.edgeSet().size) {
+        println("Edge value $i... ${graphProto.edgeSet().toList()[i]}")
+    }
 }
 
 
