@@ -3,28 +3,43 @@ package biokotlin.integration
 import biokotlin.kegg.Kegg
 import biokotlin.kegg.KeggServer
 import biokotlin.ncbi.UniProt
+import biokotlin.util.getOrNull
+
+import krangl.eq
 import krangl.print
+import uk.ac.ebi.kraken.interfaces.uniprot.UniProtAccession
 
 fun main() {
     setUniProtLogging()
     println("We are going from gene name to pathway")
 
     val testIDs = listOf("O22637","Zm00001d000095","GRMZM2G059037")
-    val primaryAcc = testIDs.map { UniProt.uniProtEntry(it)}
-            .filterNotNull()
-            .map { it.primaryUniProtAccession }
-    for (i in 0..primaryAcc.size-1){
-        println("testID[${testIDs[i]}] = primaryAcc[${primaryAcc[i]}]")
-    }
-    val c = primaryAcc[0].toString()
+//    val primaryAcc = testIDs.map { UniProt.uniProtEntry(it)}
+//            .filterNotNull()
+//            .map { it.primaryUniProtAccession }
+//    for (i in 0..primaryAcc.size-1){
+//        println("testID[${testIDs[i]}] = primaryAcc[${primaryAcc[i]}]")
+//    }
+    val e = UniProt.uniProtEntry("O22637")
+    val d = UniProt.uniProtEntry("O22637")?.getFeatures()
+    val c = "A0A1D6I936"
+
     val dbRef = UniProt.dbReferences(c)
+ //   val a1 = dbRef.uniProtDF.filter { it["database"] eq "REFSEQ" }.getOrNull("externalAccession")?.get(0)?.toString()
+ //   println(a1)
+
     dbRef.uniProtDF.print(maxWidth = 200, maxRows = 50)
+    //dbRef.uniProtDF.wri
     println(dbRef.keggAcc)
+    val gene = "zma:541657"
+    println(Kegg.gene(gene))
 
     val kg = Kegg.gene(dbRef.keggAcc?:throw IllegalArgumentException("KEGG gene not found"))
     println(kg)
     println(kg.pathways.toString())
     println(kg.pathways[0].pathway())
+
+    //http://plantreactome.gramene.org/content/query?cluster=true&q=O22637
 
 //    val gene1Name = "GZM123234234"
 //    //ENSEMBL-GENE	Zm00001d000095
@@ -73,3 +88,6 @@ fun main() {
 
 
 }
+
+
+

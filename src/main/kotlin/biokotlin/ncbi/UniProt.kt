@@ -2,6 +2,7 @@ package biokotlin.ncbi
 
 import biokotlin.seq.ProteinSeq
 import biokotlin.util.deparseRecords
+import biokotlin.util.getOrNull
 import krangl.*
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry
 import uk.ac.ebi.uniprot.dataservice.client.Client
@@ -144,9 +145,12 @@ private operator fun <T:DataCol> T.getValue(dfWrapper: UniProtDFWrapper, kProper
 
 data class SeqDBReference(val query: String, val crc64: String, val uniProtId:String, val uniProtDF: DataFrame, val uniFracDF: DataFrame) {
     //todo consider consolidating to two dataframes one for prot and one for parc
-    val refSeqAcc = uniProtDF.filter { it["database"] eq "REFSEQ" }["externalAccession"][0].toString()
-    val emblAcc: String? = uniProtDF.filter { it["database"] eq "EMBL" }["externalAccession"][0].toString()
-    val keggAcc: String? = uniProtDF.filter { it["database"] eq "KEGG" }["externalAccession"][0].toString()
+    val refSeqAcc: String? = uniProtDF.filter { it["database"] eq "REFSEQ" }
+            .getOrNull("externalAccession")?.get(0)?.toString()
+    val emblAcc: String? = uniProtDF.filter { it["database"] eq "EMBL" }
+            .getOrNull("externalAccession")?.get(0)?.toString()
+    val keggAcc: String? = uniProtDF.filter { it["database"] eq "KEGG" }
+            .getOrNull("externalAccession")?.get(0)?.toString()
 
     fun DataFrame.col(s: String) = this[s]
 

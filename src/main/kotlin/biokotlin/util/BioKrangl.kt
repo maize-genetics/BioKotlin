@@ -33,5 +33,6 @@ fun <T> Sequence<T>.deparseRecords(mapping: (T) -> DataFrameRow) : DataFrame = D
 
     infix fun DataCol.isGreaterOrEqual(i: Number) = this.greaterEqualsThan(i)
 
+fun DataFrame.getOrNull(s: String): DataCol? = if(this.nrow == 0) null else this.get(s)
 
 //infix operator fun DataCol?.equals(i: Any): BooleanArray = eq(i)
