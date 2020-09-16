@@ -121,10 +121,10 @@ internal fun orthologyParser(keggResponseText: String): KeggOrtholog {
 
 
 // === KGML functions ===============================================
-// TODO: 9/16/2020 - finalize method "placement" in source code
 
 /**
  * Return graph from KEGG pathway using parsed KGML data
+ * TODO - verify if this pathway extension is usable for deployment
  */
 fun KeggPathway.kgmlGraph(): DefaultDirectedGraph<Any, DefaultEdge> {
     val parsedData = kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
@@ -241,6 +241,7 @@ internal fun kgmlGraphConstructor(parsedKGML: Map<String, MutableList<out Any>>)
         g.addVertex(entries[i])
     }
 
+    // Add all edges for each entry ID from KGML relationship information
     val tmpGL = g.vertexSet().toList() as List<KGMLEntry>
     for (i in relationships.indices) {
         val tmpG1 = tmpGL.find {it.id == relationships[i].entry1}
