@@ -57,7 +57,7 @@ internal fun geneParser(keggResponseText: String): KeggGene {
 
     val ke = KeggInfo.of(genes, KeggEntry.of(orgCode, geneEntry), name = nameAndDefinition,
             org = orgCode, definition = nameAndDefinition)
-    return KeggGene(ke, orthology = orthologyKID, pathways=pathways, position = attributes["POSITION"] ?: error("Position missing"),
+    return KeggGene(ke, orthology = orthologyKID, pathways=pathways, position = attributes["POSITION"] ?: "",
             ntSeq = ntSeq, aaSeq = aaSeq)
 }
 
