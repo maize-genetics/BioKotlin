@@ -44,12 +44,12 @@ internal fun geneParser(keggResponseText: String): KeggGene {
     val keGenome = KeggEntry.of(genome.abbr, entryHeader[2])
     val orgCode = KeggCache.orgCode(keGenome) ?: throw IllegalStateException("Genome $keGenome not in org set")
     //TODO add pathway parsing
-    val orthologyKID = KeggEntry.of(orthology.abbr, (attributes["ORTHOLOGY"]
-            ?: error("ORTHOLOGY missing")).split(whiteSpace)[0])
+    val orthologyKID = attributes["ORTHOLOGY"]?.let {KeggEntry.of(orthology.abbr, it.split(whiteSpace)[0])}
     val nameAndDefinition = attributes["DEFINITION"].orEmpty()
     val p=attributes["PATHWAY"].orEmpty()
     val pathways: List<KeggEntry> = (attributes["PATHWAY"].orEmpty()).lines()
-            .map { it.split(whiteSpace, 2)[0] }
+            .filter { it.isNotEmpty() }
+            .map { println("Pathway:[$it] [${it.length}]");it.split(whiteSpace, 2)[0] }
             .map {KeggEntry.of(pathway.abbr, it) }
 
     val aaSeq = attributes["AASEQ"]?.let { cleanSeqWithLength(it) }?:""

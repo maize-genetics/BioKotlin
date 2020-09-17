@@ -22,7 +22,7 @@ fun main() {
 //    }
     val e = UniProt.uniProtEntry("O22637")
     val d = UniProt.uniProtEntry("O22637")?.getFeatures()
-    val c = "A0A1D6I936"
+    val c = "B6SID7"
 
     val dbRef = UniProt.dbReferences(c)
  //   val a1 = dbRef.uniProtDF.filter { it["database"] eq "REFSEQ" }.getOrNull("externalAccession")?.get(0)?.toString()
@@ -31,13 +31,13 @@ fun main() {
     dbRef.uniProtDF.print(maxWidth = 200, maxRows = 50)
     //dbRef.uniProtDF.wri
     println(dbRef.keggAcc)
-    val gene = "zma:541657"
+    val gene = "zma:542216"
     println(Kegg.gene(gene))
 
     val kg = Kegg.gene(dbRef.keggAcc?:throw IllegalArgumentException("KEGG gene not found"))
     println(kg)
     println(kg.pathways.toString())
-    println(kg.pathways[0].pathway())
+    kg.pathways.forEach{println(it.pathway())}
 
     //http://plantreactome.gramene.org/content/query?cluster=true&q=O22637
 
