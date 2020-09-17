@@ -1,6 +1,7 @@
 package biokotlin.integration
 
 import biokotlin.ncbi.UniProt
+import biokotlin.seq.ProteinSeq
 import biokotlin.seq.ProteinSeqRecord
 import khttp.get
 import khttp.post
@@ -30,8 +31,20 @@ private val proteinCache: Cache<String, ProteinSeqRecord> by lazy {
  * @param alignedSeq alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
  * @param score prediction score for domain
  * @param taxid PFAM taxid
+ * @param desc description of pfam domain
  */
-data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int, val alignedSeq: String, val score: Double, val taxid: String)
+data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int, val alignedSeq: String,
+                      val score: Double, val taxid: String, val desc: String)
+
+/**
+ * Return list of protein sequence records corresponding
+ * to the given accessions.
+ */
+fun protein(accessions: List<String>): List<ProteinSeqRecord> {
+    return accessions
+            .map { protein(it) }
+            .toList()
+}
 
 /**
  * Return protein sequence record for given protein accession
@@ -49,6 +62,18 @@ private fun loadProtein(proteinAcc: String): ProteinSeqRecord {
 
 fun domainsForSeq(record: ProteinSeqRecord): List<PFAMDomain> {
     return domainsForSeq(record.seq())
+}
+
+fun domainsForSeqs(seqs: List<String>): List<Pair<ProteinSeq, List<PFAMDomain>>> {
+    return seqs
+            .map { Pair(ProteinSeq(it), domainsForSeq(it)) }
+            .toList()
+}
+
+fun domainsForProteinSeqs(seqs: List<ProteinSeq>): List<Pair<ProteinSeq, List<PFAMDomain>>> {
+    return seqs
+            .map { Pair(it, domainsForSeq(it.seq())) }
+            .toList()
 }
 
 fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
@@ -103,12 +128,13 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
                 val name = hit["name"].toString().removeSurrounding("\"")
                 val score = hit["score"].toString().removeSurrounding("\"").toDouble()
                 val taxid = hit["taxid"].toString().removeSurrounding("\"").substringBeforeLast(".")
+                val desc = hit["desc"].toString().removeSurrounding("\"")
                 val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
                 val firstDomain = domains[0].jsonObject
                 val start = firstDomain["ienv"].toString().removeSurrounding("\"").toInt()
                 val end = firstDomain["jenv"].toString().removeSurrounding("\"").toInt()
                 val alignedSeq = firstDomain["aliaseq"].toString().removeSurrounding("\"")
-                PFAMDomain(domainAcc, name, start, end, alignedSeq, score, taxid)
+                PFAMDomain(domainAcc, name, start, end, alignedSeq, score, taxid, desc)
             }
             .toList()
 
