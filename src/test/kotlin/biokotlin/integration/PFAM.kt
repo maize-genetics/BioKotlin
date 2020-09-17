@@ -8,6 +8,7 @@ import khttp.post
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import krangl.dataFrameOf
 import org.ehcache.Cache
 import org.ehcache.config.builders.CacheConfigurationBuilder
 import org.ehcache.config.builders.CacheManagerBuilder
@@ -33,8 +34,16 @@ private val proteinCache: Cache<String, ProteinSeqRecord> by lazy {
  * @param taxid PFAM taxid
  * @param desc description of pfam domain
  */
-data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int, val alignedSeq: String,
-                      val score: Double, val taxid: String, val desc: String)
+data class PFAMDomain(val attributes: Map<String, String>) {
+    val accession by lazy { attributes["acc"]?.substringBeforeLast(".") }
+    val name by lazy { attributes["name"] }
+    val start by lazy { attributes["ienv"]?.toInt() }
+    val end by lazy { attributes["jenv"]?.toInt() }
+    val taxid by lazy { attributes["taxid"]?.substringBeforeLast(".") }
+    val alignedSeq by lazy { attributes["aliaseq"] }
+    val score by lazy { attributes["score"]?.toDouble() }
+    val desc by lazy { attributes["desc"] }
+}
 
 /**
  * Return list of protein sequence records corresponding
@@ -124,17 +133,21 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
     val domains = hits
             .map { it.jsonObject }
             .map { hit ->
-                val domainAcc = hit["acc"].toString().removeSurrounding("\"").substringBeforeLast(".")
-                val name = hit["name"].toString().removeSurrounding("\"")
-                val score = hit["score"].toString().removeSurrounding("\"").toDouble()
-                val taxid = hit["taxid"].toString().removeSurrounding("\"").substringBeforeLast(".")
-                val desc = hit["desc"].toString().removeSurrounding("\"")
+                val allHitsAttributes = hit.entries
+                        .filter { it.key != "domains" }
+                        .map { it.key to it.value.toString().removeSurrounding("\"") }
+                        .toMap()
+
                 val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
                 val firstDomain = domains[0].jsonObject
-                val start = firstDomain["ienv"].toString().removeSurrounding("\"").toInt()
-                val end = firstDomain["jenv"].toString().removeSurrounding("\"").toInt()
-                val alignedSeq = firstDomain["aliaseq"].toString().removeSurrounding("\"")
-                PFAMDomain(domainAcc, name, start, end, alignedSeq, score, taxid, desc)
+
+                val attributes = mutableMapOf<String, String>()
+                attributes.putAll(allHitsAttributes)
+
+                firstDomain.entries
+                        .forEach { attributes.put(it.key, it.value.toString().removeSurrounding("\"")) }
+
+                PFAMDomain(attributes)
             }
             .toList()
 
@@ -143,6 +156,8 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
 }
 
 fun main() {
+
+    dataFrameOf()
 
     val protein = protein("O22637")
     println(protein)
