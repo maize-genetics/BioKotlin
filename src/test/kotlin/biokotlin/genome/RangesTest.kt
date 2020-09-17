@@ -220,7 +220,7 @@ class RangesTest: StringSpec({
 //
 //    }
 
-    "Test setOf for SRange" {
+    "Test nonCoalescingSetof for SRange" {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
         val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
@@ -250,6 +250,7 @@ class RangesTest: StringSpec({
         srSet.elementAt(2).start.site shouldBe 25
         srSet.elementAt(3).start.site shouldBe 18
     }
+
     "Test coalescing ranges" {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
@@ -276,16 +277,6 @@ class RangesTest: StringSpec({
             println(sp.toString())
         }
         coalescedSet.size shouldBe 3
-    }
-    "Test bedfileToSRANGEset" {
-        val bedfile = "/Users/lcj34/git/biokotlin/src/test/kotlin/biokotlin/genome/testSmallBedFile.txt"
-        val seq = "" // this can have value or be empty
-        val sRangeSet = bedfileToSRangeSet(bedfile, seq)
-        println("size of sRangeSet from bedfile: ${sRangeSet.size}")
-        sRangeSet.elementAt(0).start.site shouldBe 253156
-        sRangeSet.elementAt(0).endInclusive.site shouldBe 260643
-        sRangeSet.elementAt(29).start.site shouldBe 2017706
-        sRangeSet.elementAt(29).endInclusive.site shouldBe 2024879
     }
 
     "Test createShuffledSubRangeList and findPair" {
@@ -393,6 +384,88 @@ class RangesTest: StringSpec({
         }
     }
 
+    "Test bedfileToSRangeSet " {
+        var fasta = "/Users/lcj34/notes_files/biokotlin/ranges/paired_intervals/chr9chr10.fa"
+        // THis bedfile has 10 chr9 and 10 chr10 entries
+        var bedFile = "/Users/lcj34/notes_files/biokotlin/ranges/paired_intervals/travis_peaks_chr9chr10_SHORT.bed"
+        var srangeSet = bedfileToSRangeSet(bedFile,fasta)
+        println("Size of srangeSet: ${srangeSet.size}")
+        srangeSet.size shouldBe 20
+        println("\nnon-shuffled set:")
+        for (range in srangeSet) {
+            println(range)
+        }
+
+        // now shuffle, sort them, then find intersections
+        var shuffledSet = srangeSet.shuffled()
+        println("\nshuffledSet")
+        for (range in shuffledSet) {
+            println(range)
+        }
+
+        var srangeList: List<SRange> = shuffledSet.toList()
+        // test sorting - well, our SeqRangeSort isn't done yet - use this default for now
+        var sortedSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,srangeList)
+
+        // At this point, I want to test some intersect code on a large set - see small intersect case below
+
+    }
+
+    "test findIntersectingSRanges " {
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a", description = "The second rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3", description = "The first rec, second seq",
+                annotations = mapOf("key1" to "value1"))
+
+        val sr1 = record1.range(27..44)
+        val sr2 = record1.range(1..15)
+        val sr3 = record3.range(18..33)
+        val sr4 = record2.range(25..35)
+        val sr5 = record2.range(3..13)
+
+        val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
+        val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
+
+        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
+
+        println("\nRanges from sorted set:")
+        for (range in srSet) {
+            println(range)
+        }
+
+        // Verified the ranges sorted correctly, now define a peak, then
+        // lookg for intersectins
+
+        var peak = SeqPosition(null, 45)..SeqPosition(null,75)
+        var intersectingRanges = findIntersectingSRanges(peak, srSet)
+
+        println("\nintersectin ranges for peak ${peak}:")
+        for (range in intersectingRanges) {
+            println(range)
+        }
+
+        peak = record2.range(10..18)
+        intersectingRanges = findIntersectingSRanges(peak, srSet)
+
+        println("\nintersectin ranges - round 2 for peak ${peak}:")
+        for (range in intersectingRanges) {
+            println(range)
+        }
+
+        // Test the SRange function:  SRange.intersections()
+        var intersectionsFromSRange = peak.intersections(srSet)
+        println("\nintersection from SRanges - round 2 for peak ${peak}:")
+        for (range in intersectionsFromSRange) {
+            println(range)
+        }
+
+
+    }
 
     // replace this test case with new version of SeqRangeSort
 //    "Test SeqPosRangeSortFactory" {

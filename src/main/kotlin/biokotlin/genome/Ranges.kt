@@ -6,6 +6,7 @@ import biokotlin.genome.SeqPositionAlphaComparator.Companion.spAlphaComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 import java.util.Comparator.comparing
@@ -241,16 +242,135 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
     return flankingRanges
 }
 
+// FInds all ranges in a set that intersect with the given SRange.  If "intersecting" is true,
+// it returns those that intersect.  If "intersecting" is false, it returns a set of SRanges that
+// do NOT intersect the given SRange
+// THis code sorts the ranges.  They may already be sorted - should srted ranges be required?
+fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
+    val intersectingRanges: MutableSet<SRange> = mutableSetOf()
 
+    val comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator
+    // This is fastest if the ranges are sorted.  It doesn't matter how the user
+    // would sort them for his purposes.  Here we use a natural ordering.  ALl
+    // that matters is when the seqRecord.id's match, do their ranges overlap?
+    val sortedSet = nonCoalescingSetOf(comparator, searchSpace.toList())
 
+    // Now that they are sorted, we only want to process while the peak-id is
+    // less than or equal to the search-id.  Once search-id is > than peak id,
+    // or the search.start.site > peak.endInclusive.site, we can stop
+    val thisSeqRec = this.start.seqRecord
+    val thisSeqRecID = if (thisSeqRec == null) null else thisSeqRec.id
+    var stop = false
+    for (search in searchSpace) {
+        val thatSeqRec = search.start.seqRecord
+
+        if (thisSeqRec == null)  {
+            if (thatSeqRec == null) {
+                val intersects = srangeSiteIntersection(this, search)
+                if (intersects) intersectingRanges.add(search)
+            } else {
+                // SOrted set - nulls come before non-nulls, so nothing beyond will overlap/intersect
+                stop = true
+            }
+        } else if (thatSeqRec == null){
+            continue // nul before non-null, keep going through SearchSpace
+        } else {
+            if (thisSeqRecID == thatSeqRec.id) {
+                val intersects = srangeSiteIntersection(this, search)
+                if (intersects) intersectingRanges.add(search)
+                else if (this.endInclusive.site < search.start.site) {
+                    // Sorted set - the start of the search site is greater than our peak's end site,
+                    // so there will be no more intersecting ranges
+                    stop = true
+                }
+            } else if (thisSeqRecID!! > thatSeqRec.id) {
+                continue // not far enough in sorted list to find ranges with matching id
+            } else { // the positive peak id is < the search peak Id, nothing left on the sorted list will match now
+                stop = true
+            }
+        }
+        if (stop) break
+    }
+    // Search ended - return the intersectin ranges
+    return intersectingRanges.toSet()
+}
+
+// Given a single SRange, find peaks that overlap
+// For intersecting ranges, you can stop after a while if you
+// have a sorted set and only want those that are intersecting.
+// Too much overlap wih above - need to break into callable functions
+fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
+
+    TODO() // duplicate code from above - refactor, create common functions!
+    val intersectingRanges: MutableSet<SRange> = mutableSetOf()
+
+    val comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator
+    // THis is fastest if the ranges are sorted.  It doesn't matter how the user
+    // would sort them for his purposes.  Here we use a natural ordering.  ALl
+    // that matters is when the seqRecord.id's match, do their ranges overlap?
+    val sortedSet = nonCoalescingSetOf(comparator, searchSpace.toList())
+
+    // Now that they are sorted, we only want to process while the peak-id is
+    // less than or equal to the search-id.  Once search-id is > than peak id,
+    // or the search.start.site > peak.endInclusive.site, we can stop
+    val thisSeqRec = peak.start.seqRecord
+    val thisSeqRecID = if (thisSeqRec == null) null else thisSeqRec.id
+    var stop = false
+    for (search in searchSpace) {
+        val thatSeqRec = search.start.seqRecord
+
+        if (thisSeqRec == null)  {
+            if (thatSeqRec == null) {
+                val intersects = srangeSiteIntersection(peak, search)
+                if (intersects) intersectingRanges.add(search)
+            } else {
+                // SOrted set - nulls come before non-nulls, so nothing beyond will overlap/intersect
+                stop = true
+            }
+        } else if (thatSeqRec == null){
+            continue // nul before non-null, keep going through SearchSpace
+        } else {
+            if (thisSeqRecID == thatSeqRec.id) {
+                val intersects = srangeSiteIntersection(peak, search)
+                if (intersects) intersectingRanges.add(search)
+                else if (peak.endInclusive.site < search.start.site) {
+                    // Sorted set - the start of the search site is greater than our peak's end site,
+                    // so there will be no more intersecting ranges
+                    stop = true
+                }
+            } else if (thisSeqRecID!! > thatSeqRec.id) {
+                continue // not far enough in sorted list to find ranges with matching id
+            } else { // the positive peak id is < the search peak Id, nothing left on the sorted list will match now
+                stop = true
+            }
+        }
+        if (stop) break
+    }
+    // Search ended - return the intersectin ranges
+    return intersectingRanges.toSet()
+}
+
+// Use DeMorgan's law to determine overlapping ranges
+fun srangeSiteIntersection(peak: SRange, search: SRange): Boolean {
+    val peakRange = peak.start.site..peak.endInclusive.site
+    val searchRange = search.start.site..search.endInclusive.site
+    if ((peak.start.site < search.endInclusive.site) && (peak.endInclusive.site >= search.start.site)) {
+        return true
+    }
+    return false
+}
+
+fun srangeIDMatch(peak: SRange, searchSpace: Set<SRange>) {
+
+}
+// This is named "pairedInterval" instead of "findPair" as otherwise it has conflict
+// with fund findPair() with the same signature
 fun SRange.pairedInterval(searchSpace: Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int=1): Set<SRange> {
 
     var targetLen = this.endInclusive.site - this.start.site + 1
 
     // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
     var seqRecordStart = this.start.seqRecord as NucSeqRecord
-
-
 
     // this assumes the searchSpace has already been filtered for ranges that are too short
     var tempRangeList = createShuffledSubRangeList(targetLen, searchSpace)
@@ -403,24 +523,75 @@ fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator
     return sRangeSetCoalesced.toSet()
 }
 
-// Read bed file into an SRange set.  The chromosome becomes the seqRecord id and the sequence is
-// an empty string.
-// NOTE: while bedfiles are 0-based inclusive/exclusive, SRanges are 1-based inclusive/inclusive
-fun bedfileToSRangeSet (bedfile: String, seq: String): SRangeSet {
+fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
+    var chromNucSeqMap  = HashMap<String,NucSeq>()
+    try {
+        val file = File(fasta)
+        file.bufferedReader().use { br ->
+            var currChrom: String = "-1"
+            var prevChrom = "-1"
+            var currSeq = ByteArrayOutputStream()
+            var line = br.readLine()
+            while (line != null) {
+
+                line = line.trim()
+                if (line.startsWith(">")) {
+                    if (currChrom != "-1") {
+                        // finished with this chromosome's sequence
+                        println("fastaToNucSeq: finished chrom $currChrom")
+                        chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
+                    }
+                    // reset chromosome name and sequence, begin processing next chrom
+                    currChrom = line.replace(">","")
+                    currSeq = ByteArrayOutputStream()
+                } else {
+                    currSeq.write(line.toByteArray())
+                }
+                line = br.readLine()
+            }
+            if (currSeq.size() > 0) {
+                println("fastaToNucSeq: finished chrom $currChrom")
+                chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
+            }
+        }
+    } catch (exc: Exception) {
+        throw IllegalArgumentException("error reading fasta file: $fasta: ${exc.message}")
+    }
+
+    return chromNucSeqMap
+}
+
+fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
     var rangeSet : MutableSet<SRange> = mutableSetOf()
+    // read and store fasta sequences into map keyed by idLine chrom
+    // then do bedfile a line at a time, use the chr column to get sequence from map
+    // Can I hold all of this in memory?
+
+    println("bedfileToSRangeSet: calling fastaToNucSeq")
+    var chrToNucSeq = fastaToNucSeq (fasta)
+    println("bedfileToSRangeSet: start bedfile processing")
     File(bedfile).readLines().forEach{
         val data = it.split("\t")
         require (data.size >= 3) {"bad line in bedfile: $it"}
-        val seqRec = NucSeqRecord(NucSeq(seq),data[0])
+        var seq = chrToNucSeq.get(data[0])
+        require (seq != null) {"chrom ${data[0]} not found in fasta file"}
+        // Used data[0] as the ID instead of the "name" from the bedfile.
+        // Because the sequence is the full chromosome, so the id's need to be
+        // the same.  If we instead only included the partial sequence, then
+        // we would not be able to grab sequence for comparison - we'd have the
+        // coordinates, but couldn't go up/down 30kb from that peak.
+        // And the SeqRecord Id's must match so we know the coordinates are
+        // relative to the same chromosome.
+        val seqRec = NucSeqRecord(seq,data[0])
         val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
         val upperSite = data[2].toInt()
         val srange = SeqPosition(seqRec,lowerSite)..SeqPosition(seqRec,upperSite)
         rangeSet.add(srange)
     }
-
     return rangeSet.toSet()
 }
 
+// Create a set of IntRanges instead of SRanges - will this be needed?
 fun bedfileToIntRangeSet (bedfile: String): Set<IntRange> {
     var rangeSet : MutableSet<IntRange> = mutableSetOf()
     File(bedfile).readLines().forEach{
