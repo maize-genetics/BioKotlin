@@ -1,5 +1,7 @@
 package biokotlin.integration
 
+import biokotlin.ncbi.UniProt
+import biokotlin.seq.ProteinSeqRecord
 import khttp.get
 import khttp.post
 import kotlinx.serialization.json.Json
@@ -14,13 +16,11 @@ private val cacheManager by lazy {
     CacheManagerBuilder.newCacheManagerBuilder().build(true)
 }
 
-private val proteinCache: Cache<String, PFAMProtein> by lazy {
+private val proteinCache: Cache<String, ProteinSeqRecord> by lazy {
     cacheManager.createCache("proteinCache",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(String::class.java, PFAMProtein::class.java, ResourcePoolsBuilder.heap(10)))
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(String::class.java, ProteinSeqRecord::class.java, ResourcePoolsBuilder.heap(10)))
 
 }
-
-data class PFAMProtein(val accession: String, val sequence: String, val domains: List<PFAMDomain>)
 
 /**
  * @param accession PFAM accession
@@ -33,8 +33,22 @@ data class PFAMProtein(val accession: String, val sequence: String, val domains:
  */
 data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int, val alignedSeq: String, val score: Double, val taxid: String)
 
-fun protein(accession: String): PFAMProtein {
+/**
+ * Return protein sequence record for given protein accession
+ */
+fun protein(accession: String): ProteinSeqRecord {
     return proteinCache[accession] ?: loadProtein(accession)
+}
+
+private fun loadProtein(proteinAcc: String): ProteinSeqRecord {
+    val protein = UniProt.protein(proteinAcc)
+    val result = ProteinSeqRecord(protein, proteinAcc)
+    proteinCache.put(proteinAcc, result)
+    return result
+}
+
+fun domainsForSeq(record: ProteinSeqRecord): List<PFAMDomain> {
+    return domainsForSeq(record.seq())
 }
 
 fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
@@ -47,7 +61,13 @@ fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
 
     return loadDomains(resultsUrl)
 
-} fun domainsForAcc(proteinAcc: String): List<PFAMDomain> {
+}
+
+fun domainsForAcc(record: ProteinSeqRecord): List<PFAMDomain> {
+    return domainsForAcc(record.id)
+}
+
+fun domainsForAcc(proteinAcc: String): List<PFAMDomain> {
 
     // Use hmmer to search a sequence and get pfam domain information back from it:
     // https://hmmer-web-docs.readthedocs.io/en/latest/searches.html
@@ -60,24 +80,6 @@ fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
     val resultsUrl = post.plus(outputType)
 
     return loadDomains(resultsUrl)
-
-}
-
-private fun loadProtein(proteinAcc: String): PFAMProtein {
-
-    // Use hmmer to search a sequence and get pfam domain information back from it:
-    // https://hmmer-web-docs.readthedocs.io/en/latest/searches.html
-    // Can take either sequence or accession info. It's possible to explicitly set
-    // search parameters, but these have default values that are typically used
-
-    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
-    val post = post(baseUrl, data = mapOf("acc" to proteinAcc, "hmmdb" to "pfam")).url
-    val outputType = "?output=json"
-    val resultsUrl = post.plus(outputType)
-
-    val result = PFAMProtein(proteinAcc, "aaaaa", loadDomains(resultsUrl))
-    proteinCache.put(proteinAcc, result)
-    return result
 
 }
 
@@ -115,11 +117,9 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
 }
 
 fun main() {
+
     val protein = protein("O22637")
-    println(protein.accession)
-    protein.domains.forEach {
-        println("domain: $it")
-    }
+    println(protein)
     val proteinDuplicate = protein("O22637")
     println(proteinDuplicate)
 
