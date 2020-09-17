@@ -71,7 +71,7 @@ fun loadProtein(accession: String): PFAMProtein {
                 val firstDomain = domains[0].jsonObject
                 val start = firstDomain["ienv"].toString().removeSurrounding("\"").toInt()
                 val end = firstDomain["jenv"].toString().removeSurrounding("\"").toInt()
-                val alignedSeq = firstDomain["aliaseq"].toString()
+                val alignedSeq = firstDomain["aliaseq"].toString().removeSurrounding("\"")
                 PFAMDomain(domainAcc, name, start, end, alignedSeq, score, taxid)
             }
             .toList()
