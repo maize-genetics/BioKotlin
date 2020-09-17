@@ -1,10 +1,13 @@
 package biokotlin.ncbi
 
+import biokotlin.integration.setUniProtLogging
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import krangl.print
 
 class UniProtTest : StringSpec({
+
+    setUniProtLogging()
 
  "Test query protein" {
      val entry = UniProt.uniProtEntry("O22637")

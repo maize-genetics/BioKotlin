@@ -40,7 +40,16 @@ object UniProt: AutoCloseable{
 
 
     }
-    private fun makeQuery(id: String): Query {
+
+    private fun makeProtQuery(id: String): Query {
+        //query for accession, UPI, or CRC32
+        return when {
+            //TODO do we need other ones
+            else -> UniProtQueryBuilder.id(id)
+        }
+    }
+
+    private fun makeParcQuery(id: String): Query {
         //query for accession, UPI, or CRC32
         return when {
             id.startsWith("UPI") -> UniParcQueryBuilder.upid(id)
@@ -55,7 +64,10 @@ object UniProt: AutoCloseable{
     }
 
     fun uniProtEntry(id: String): UniProtEntry? {
-        var upe = uniprotService.getEntries(makeQuery(id)).firstResult
+        var upe = uniprotService.getEntries(makeParcQuery(id)).firstResult
+        if(upe==null ){
+            upe = uniprotService.getEntries(makeProtQuery(id)).firstResult
+        }
         if(upe==null) {
             println("Using xrefs")
             upe= uniprotService.getXrefs(UniProtQueryBuilder.xref(id))
@@ -68,66 +80,79 @@ object UniProt: AutoCloseable{
     }
 
 
-    fun dbReferences(id: String): SeqDBReference = dbReferences(makeQuery(id))
+    fun dbReferences(id: String): SeqDBReference = dbReferences(makeParcQuery(id))
 
-    fun dbReferences(proteinSeq: ProteinSeq): SeqDBReference = dbReferences(UniParcQueryBuilder.checksum(proteinSeq.crc64))
+    fun dbReferences(proteinSeq: ProteinSeq): SeqDBReference? {
+        val accession= accession(proteinSeq)
+        return if(accession!= null) dbReferences(accession) else null
+    }
 
-    private fun dbReferences(query: Query): SeqDBReference {
+        private fun dbReferences(query: Query): SeqDBReference {
 //        var protDBs: List<uk.ac.ebi.kraken.interfaces.uniprot.DatabaseCrossReference> = uniprotService.getEntries(query)
 //                .firstResult.databaseCrossReferences.toList()
 //        print("uniprot.DatabaseCrossReference="+protDBs)
 
 
 
-        val protDF= uniprotService.getEntries(query).asSequence()
-                .map { entry ->
-                    entry.databaseCrossReferences.map{entry to it } }
-                .flatten()
-                .deparseRecords { (entry, dcr) -> mapOf(
-                        "uniProtAccession" to entry.primaryUniProtAccession,
-                        "crc64" to entry.sequence.crC64,
-                        "uniProtId" to entry.uniProtId,
-                        "database" to dcr.database.name,
-                        "externalAccession" to dcr.primaryId,
-                        "description" to dcr.description,
-                        "uni_service" to "UniProt",
-                        "query" to query
-                ) }
-        val parcDF= uniparcService.getEntries(query).asSequence()
-                .map { entry ->
-                    entry.databaseCrossReferences.map{entry to it } }
-                .flatten()
-            //    .toList()
-                .deparseRecords { (entry, dcr) -> mapOf(
-                        "crc64" to entry.sequence.crC64,
-                        "uniParcId" to entry.uniParcId,
-                        "database" to dcr.database.name,
-                        "externalAccession" to dcr.accession,
-                        "proteinName" to dcr.proteinName,
-                        "geneName" to dcr.geneName,
-                        "active" to dcr.isActive,
-                        "uni_service" to "UniParc",
-                        "query" to query
-                ) }
-        //allProt.print(maxWidth = 200, maxRows = 1000)
-        require(protDF.nrow>0 || parcDF.nrow>0) {"No results found for UniProt and UniParc found ${query}"}
+            val protDF= uniprotService.getEntries(query).asSequence()
+                    .map { entry ->
+                        entry.databaseCrossReferences.map{entry to it } }
+                    .flatten()
+                    .deparseRecords { (entry, dcr) -> mapOf(
+                            "uniProtAccession" to entry.primaryUniProtAccession,
+                            "crc64" to entry.sequence.crC64,
+                            "uniProtId" to entry.uniProtId,
+                            "database" to dcr.database.name,
+                            "externalAccession" to dcr.primaryId,
+                            "description" to dcr.description,
+                            "uni_service" to "UniProt",
+                            "query" to query
+                    ) }
+            val parcDF= uniparcService.getEntries(query).asSequence()
+                    .map { entry ->
+                        entry.databaseCrossReferences.map{entry to it } }
+                    .flatten()
+                    //    .toList()
+                    .deparseRecords { (entry, dcr) -> mapOf(
+                            "crc64" to entry.sequence.crC64,
+                            "uniParcId" to entry.uniParcId,
+                            "database" to dcr.database.name,
+                            "externalAccession" to dcr.accession,
+                            "proteinName" to dcr.proteinName,
+                            "geneName" to dcr.geneName,
+                            "active" to dcr.isActive,
+                            "uni_service" to "UniParc",
+                            "query" to query
+                    ) }
+            //allProt.print(maxWidth = 200, maxRows = 1000)
+            require(protDF.nrow>0 || parcDF.nrow>0) {"No results found for UniProt and UniParc found ${query}"}
 //        println("activeDatabaseCrossReferences : \n$x")
 //        uniparcEntry.activeDatabaseCrossReferences.forEach { it.toString() }
-        val crc64 = protDF["crc64"][0].toString()
-        val upi = protDF["uniProtId"][0].toString()
-        return SeqDBReference(query.toString(), crc64, upi, protDF,parcDF)
-    }
+            val crc64 = protDF["crc64"][0].toString()
+            val uniProtAccession = protDF["uniProtAccession"][0].toString()
+            val upi = protDF["uniProtId"][0].toString()
+            return SeqDBReference(query.toString(), crc64, uniProtAccession, upi, protDF,parcDF)
+        }
 
-    override fun close() {
-        services.forEach { it.stop() }
-    }
+        override fun close() {
+            services.forEach { it.stop() }
+        }
 
-    fun xref(accession: String): String? {
-        val query = UniProtQueryBuilder.accession(accession)
-        val dcr: DatabaseCrossReference? = uniprotService.getXrefs(query).firstResult.component
-                .find { it.database == DatabaseType.STRINGXREF }
-        return dcr?.primaryId.toString()
-    }
+        fun xref(accession: String): String? {
+            val query = UniProtQueryBuilder.accession(accession)
+            val dcr: DatabaseCrossReference? = uniprotService.getXrefs(query).firstResult.component
+                    .find { it.database == DatabaseType.STRINGXREF }
+            return dcr?.primaryId.toString()
+        }
+
+        fun accession(proteinSeq: ProteinSeq): String? {
+            val query = UniParcQueryBuilder.checksum(proteinSeq.crc64)
+            val dcr = uniparcService.getEntries(query).firstResult.databaseCrossReferences
+                    //UniProt and UniParc DataCrossReference to do not work the name only able to get name NOT type - crazy
+                    //May need to add this "UniProtKB/Swiss-Prot"
+                    .find { it.database.name == "UniProtKB/TrEMBL"}
+            return dcr?.accession
+        }
 
 //    fun gene(accessionID: String): DNASequence {
 //        val reader = UniprotProxySequenceReader(
@@ -136,6 +161,7 @@ object UniProt: AutoCloseable{
 //        println(UniprotProxySequenceReader.getUniprotDirectoryCache())
 //        return DNASequence(reader)
 //    }
+ //   }
 
 }
 
@@ -152,7 +178,7 @@ private operator fun <T:DataCol> T.getValue(dfWrapper: UniProtDFWrapper, kProper
     return dfWrapper.uniProtDF[kProperty.name] as T
 }
 
-data class SeqDBReference(val query: String, val crc64: String, val uniProtId:String, val uniProtDF: DataFrame, val uniFracDF: DataFrame) {
+data class SeqDBReference(val query: String, val crc64: String, val uniProtAccession: String, val uniProtId:String, val uniProtDF: DataFrame, val uniFracDF: DataFrame) {
     //todo consider consolidating to two dataframes one for prot and one for parc
     val refSeqAcc: String? = uniProtDF.filter { it["database"] eq "REFSEQ" }
             .getOrNull("externalAccession")?.get(0)?.toString()
