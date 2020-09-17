@@ -22,7 +22,16 @@ private val proteinCache: Cache<String, PFAMProtein> by lazy {
 
 data class PFAMProtein(val accession: String, val sequence: String, val domains: List<PFAMDomain>)
 
-data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int)
+/**
+ * @param accession PFAM accession
+ * @param name domain name
+ * @param start start position for pfam domain within protein
+ * @param end end position for pfam domain within protein
+ * @param alignedSeq alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
+ * @param score prediction score for domain
+ * @param taxid PFAM taxid
+ */
+data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int, val alignedSeq: String, val score: Double, val taxid: String)
 
 fun protein(accession: String): PFAMProtein {
     return proteinCache[accession] ?: loadProtein(accession)
@@ -40,6 +49,8 @@ fun loadProtein(accession: String): PFAMProtein {
     val outputType = "?output=json"
     val resultsUrl = post.plus(outputType)
 
+    println("query: $resultsUrl")
+
     val json = Json.parseToJsonElement(get(resultsUrl).text)
 
     assert(json.jsonObject.entries.size == 1)
@@ -52,17 +63,22 @@ fun loadProtein(accession: String): PFAMProtein {
     val domains = hits
             .map { it.jsonObject }
             .map { hit ->
-                val domainAcc = hit["acc"].toString()
-                val name = hit["name"].toString()
+                val domainAcc = hit["acc"].toString().removeSurrounding("\"").substringBeforeLast(".")
+                val name = hit["name"].toString().removeSurrounding("\"")
+                val score = hit["score"].toString().removeSurrounding("\"").toDouble()
+                val taxid = hit["taxid"].toString().removeSurrounding("\"").substringBeforeLast(".")
                 val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
                 val firstDomain = domains[0].jsonObject
                 val start = firstDomain["ienv"].toString().removeSurrounding("\"").toInt()
                 val end = firstDomain["jenv"].toString().removeSurrounding("\"").toInt()
-                PFAMDomain(domainAcc, name, start, end)
+                val alignedSeq = firstDomain["aliaseq"].toString()
+                PFAMDomain(domainAcc, name, start, end, alignedSeq, score, taxid)
             }
             .toList()
 
-    return PFAMProtein(accession, "aaaaa", domains)
+    val result = PFAMProtein(accession, "aaaaa", domains)
+    proteinCache.put(accession, result)
+    return result
 
 }
 
