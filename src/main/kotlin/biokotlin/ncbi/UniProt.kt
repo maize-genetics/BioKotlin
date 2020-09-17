@@ -4,6 +4,8 @@ import biokotlin.seq.ProteinSeq
 import biokotlin.util.deparseRecords
 import biokotlin.util.getOrNull
 import krangl.*
+import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseCrossReference
+import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry
 import uk.ac.ebi.uniprot.dataservice.client.Client
 import uk.ac.ebi.uniprot.dataservice.client.Service
@@ -118,6 +120,13 @@ object UniProt: AutoCloseable{
 
     override fun close() {
         services.forEach { it.stop() }
+    }
+
+    fun xref(accession: String): String? {
+        val query = UniProtQueryBuilder.accession(accession)
+        val dcr: DatabaseCrossReference? = uniprotService.getXrefs(query).firstResult.component
+                .find { it.database == DatabaseType.STRINGXREF }
+        return dcr?.primaryId.toString()
     }
 
 //    fun gene(accessionID: String): DNASequence {

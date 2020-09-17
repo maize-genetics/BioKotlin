@@ -18,14 +18,4 @@ fun mapStringXRefToOG(memberDF: DataFrame): Map<String,String> {
 }
 
 
-fun main() {
-    val x = readEggNogMemberFile("/Users/edbuckler/Downloads/38820_members 2.tsv")
-    x.print(maxWidth = 1000)
-    //x["OG_ID"].asStrings().forEach { println(it) }
-    val lookupXREF = mapStringXRefToOG(x)
-    println(lookupXREF.size)
-    println(lookupXREF["4558.Sb03g027270.1"])
-
-}
-
 
