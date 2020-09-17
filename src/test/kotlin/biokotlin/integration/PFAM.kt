@@ -8,7 +8,6 @@ import khttp.post
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import krangl.dataFrameOf
 import org.ehcache.Cache
 import org.ehcache.config.builders.CacheConfigurationBuilder
 import org.ehcache.config.builders.CacheManagerBuilder
@@ -156,8 +155,6 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
 }
 
 fun main() {
-
-    dataFrameOf()
 
     val protein = protein("O22637")
     println(protein)
