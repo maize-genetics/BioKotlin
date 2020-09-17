@@ -2,13 +2,10 @@
 package biokotlin.seq
 
 import biokotlin.data.CodonTable
-import biokotlin.genome.SRange
-import biokotlin.genome.SeqPositionRanges.of
 import com.google.common.collect.ImmutableSet
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.random.Random
-
 
 //import biokotlin.seq.
 /*
@@ -102,7 +99,7 @@ fun RandomNucSeq(length: Int, nucSet: NucSet = NUC.DNA, seed: Int = 0): NucSeq {
     for (i in baseBytes.indices) {
         baseBytes[i]=nucBytes[random.nextInt(nucBytes.size)]
     }
-    return NucSeq(String(baseBytes), nucSet)
+    return NucSeq(String(baseBytes),nucSet)
 }
 
 /**Creates a random [ProteinSeq] of the specified length*/
@@ -127,7 +124,7 @@ internal fun compatibleBioSet(seq: String): List<BioSet> {
             }
     if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids. " +
             "Or they are a mix of RNA and DNA.\n" +
-            "${bytePresent.stream().mapToObj { it.toChar() }.collect(Collectors.toList())}")
+            "${bytePresent.stream().mapToObj{it.toChar()}.collect(Collectors.toList())}")
     return compatibleSets
 }
 
@@ -228,8 +225,8 @@ interface NucSeq : Seq {
     operator fun contains(element: NucSeq): Boolean
     fun lastIndexOf(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int
     /*Same as [indexOf] but provides compatibility with BioPython*/
-    fun find(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query, start, end)
-    fun rfind(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int = lastIndexOf(query, start, end)
+    fun find(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
+    fun rfind(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int = lastIndexOf(query,start,end)
     /*Counts the number of a specified nucleotide.  T and U are treated the same*/
     fun count(query: NUC): Int
     /*Counts the number of a specified nucleotide sequence.  T and U are treated the same*/
@@ -283,8 +280,8 @@ interface ProteinSeq : Seq {
     operator fun contains(element: ProteinSeq): Boolean
     fun lastIndexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
     /*Same as [indexOf] but provides compatibility with BioPython*/
-    fun find(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query, start, end)
-    fun rfind(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = lastIndexOf(query, start, end)
+    fun find(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
+    fun rfind(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = lastIndexOf(query,start,end)
     fun count(query: AminoAcid): Int
     fun count(query: ProteinSeq): Int
     fun count_overlap(query: ProteinSeq): Int
@@ -302,55 +299,4 @@ internal fun negativeSlice(x: IntRange, size: Int): IntRange {
     if (first < 0 || last < 0 || last > size) throw StringIndexOutOfBoundsException("IntRange values not within range of string: $x")
     if (first > last) throw StringIndexOutOfBoundsException("IntRange values should be ascending: $x")
     return IntRange(first, last)
-}
-
-// ed's original version - If NucSeq is the full chromosome, we need subranges within it to compare for
-// the pairingFunc !!  So ... change to the one below
-fun NucSeq.pairedInterval(targetInterval: IntRange, pairingFunc: (NucSeq, NucSeq) -> Boolean): IntRange {
-    TODO()
-}
-
-// THis function takes the sequence coordinates (IntRange) of the positive peak, and a list
-// of coordinates on the contig which should be searched for "compatibility" based on the
-// pairing function.  It will return a set of "count" number of coordinates.
-// hmmm ... I need the full sequence to pull sub-sequence based on ranges, and the original sequence.
-// We get both from NucSeq - which I assume is the full chromosome.
-fun NucSeq.pairedInterval(positivePeak: IntRange, searchSpace: Set<IntRange>,
-                          pairingFunc: (String, String) -> Boolean, count: Int = 1): Set<IntRange> {
-    var rangeSet : MutableSet<IntRange> = mutableSetOf()
-    var targetLen = positivePeak.endInclusive - positivePeak.start + 1
-
-    // Kotlin ranges are closed/inclusive - 1-based here.  Or should they have been made
-    // to be 0-based like the bed file? (bedfileToIntRange() defined in Ranges.kt )
-    var targetSeq = this.seq().substring(positivePeak.start-1,positivePeak.endInclusive)
-    var tempRangeList : MutableList<IntRange> = mutableListOf()
-    // this assumes the searchSpace has already been filtered for ranges that are too short
-
-    val tempRangeListParallel = searchSpace.parallelStream().map {
-        var tRangeList : MutableList<IntRange> = mutableListOf()
-        val start = it.first
-        val end = it.endInclusive
-        for (idx in start until end - targetLen - 1) {
-            var irange = idx..idx+targetLen-1
-            tRangeList.add(irange)
-        }
-        tRangeList
-    }.collect(Collectors.toList())
-    // the List of Lists must now be made into a single list
-    for (rlist in tempRangeListParallel) {
-        tempRangeList.addAll(rlist)
-    }
-    tempRangeList.shuffle() // mix em up!
-
-    var found = 0
-    for (range in tempRangeList)  { // Traverse the ranges, select the first "count" number that match
-        // ranges are 1-based, inclusive/inclusive.  seq.substring will be 0-based, inclusive/exclusive
-        var testSeq = this.seq().substring(range.start-1,range.endInclusive)
-        if (pairingFunc(targetSeq,testSeq)) {
-            rangeSet.add(range)
-            found++
-        }
-        if (found == count) break
-    }
-    return rangeSet.toSet() // return immutable Kotlin Set
 }
