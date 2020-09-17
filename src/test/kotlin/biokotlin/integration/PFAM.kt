@@ -37,17 +37,51 @@ fun protein(accession: String): PFAMProtein {
     return proteinCache[accession] ?: loadProtein(accession)
 }
 
-fun loadProtein(accession: String): PFAMProtein {
+fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
+
+    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
+
+    val post = post(baseUrl, data = mapOf("seq" to proteinSeq, "hmmdb" to "pfam")).url
+    val outputType = "?output=json"
+    val resultsUrl = post.plus(outputType)
+
+    return loadDomains(resultsUrl)
+
+} fun domainsForAcc(proteinAcc: String): List<PFAMDomain> {
 
     // Use hmmer to search a sequence and get pfam domain information back from it:
     // https://hmmer-web-docs.readthedocs.io/en/latest/searches.html
     // Can take either sequence or accession info. It's possible to explicitly set
     // search parameters, but these have default values that are typically used
-    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
 
-    val post = post(baseUrl, data = mapOf("acc" to accession, "hmmdb" to "pfam")).url
+    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
+    val post = post(baseUrl, data = mapOf("acc" to proteinAcc, "hmmdb" to "pfam")).url
     val outputType = "?output=json"
     val resultsUrl = post.plus(outputType)
+
+    return loadDomains(resultsUrl)
+
+}
+
+private fun loadProtein(proteinAcc: String): PFAMProtein {
+
+    // Use hmmer to search a sequence and get pfam domain information back from it:
+    // https://hmmer-web-docs.readthedocs.io/en/latest/searches.html
+    // Can take either sequence or accession info. It's possible to explicitly set
+    // search parameters, but these have default values that are typically used
+
+    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
+    val post = post(baseUrl, data = mapOf("acc" to proteinAcc, "hmmdb" to "pfam")).url
+    val outputType = "?output=json"
+    val resultsUrl = post.plus(outputType)
+
+    val result = PFAMProtein(proteinAcc, "aaaaa", loadDomains(resultsUrl))
+    proteinCache.put(proteinAcc, result)
+    return result
+
+}
+
+private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
 
     println("query: $resultsUrl")
 
@@ -76,9 +110,7 @@ fun loadProtein(accession: String): PFAMProtein {
             }
             .toList()
 
-    val result = PFAMProtein(accession, "aaaaa", domains)
-    proteinCache.put(accession, result)
-    return result
+    return domains
 
 }
 
@@ -90,4 +122,8 @@ fun main() {
     }
     val proteinDuplicate = protein("O22637")
     println(proteinDuplicate)
+
+    val sequenceStr = "MIKNLMHEGKLVPSDIIVRLLLTAMLQSGNDRFLVDGFPRNEENRRAYESVIGIEPELVL"
+    println(domainsForSeq(sequenceStr))
+
 }
