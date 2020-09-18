@@ -37,4 +37,6 @@ fun DataFrame.getOrNull(s: String): DataCol? = if(this.nrow == 0) null else this
 
 fun Sequence<DataFrame>.bindRows() : DataFrame =  (this.toList()).bindRows()
 
+fun <K,V> Map<K,V>.asDataFrame(keyName:String = "key", valueName:String = "value") = this.entries.asDataFrame().setNames(keyName,valueName)
+
 //infix operator fun DataCol?.equals(i: Any): BooleanArray = eq(i)
