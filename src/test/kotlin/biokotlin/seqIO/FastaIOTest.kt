@@ -1,5 +1,6 @@
 package biokotlin.seqIO
 
+import biokotlin.seq.NucSeqRecord
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
@@ -21,7 +22,7 @@ class FastaIOTest : StringSpec({
         var numSeqs = 0
         fasta.forEachIndexed { index, record ->
             numSeqs++
-            (record as NucSeqRecord).sequence.len() shouldBe seqLengths[record.id]
+            (record as NucSeqRecord).sequence.size() shouldBe seqLengths[record.id]
         }
         numSeqs shouldBe 6
 
