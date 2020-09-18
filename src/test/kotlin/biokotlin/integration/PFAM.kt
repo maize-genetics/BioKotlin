@@ -156,6 +156,8 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
 
 fun main() {
 
+    setUniProtLogging()
+
     val protein = protein("O22637")
     println(protein)
     val proteinDuplicate = protein("O22637")
