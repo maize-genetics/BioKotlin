@@ -1,5 +1,9 @@
 package biokotlin.ncbi
 
+import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.ProteinSeqRecord
+import biokotlin.seq.SeqRecord
+import biokotlin.seqIO.SeqIO
 import krangl.*
 import java.io.File
 
@@ -20,11 +24,18 @@ fun mapStringXRefToOG(memberDF: DataFrame): Map<String,String> {
 
 
 fun createCRC64Map(fileOrDir: String): Map<String,String> {
-    val alignments = File(fileOrDir).walk()
+    return File(fileOrDir).walk()
             .filter { it.isFile }
             .filter { !it.isHidden }
-
-
+            .flatMap { f ->
+                val fasta: Map<String, SeqRecord> = try{SeqIO(f.absolutePath).readAll()} catch (e: IllegalStateException) {
+                    println("${f.absoluteFile} skipped as it had ambiguous residues")
+                    emptyMap()
+                }
+                val idToCRC64 = fasta.entries
+                        .map { (id, sr:SeqRecord) -> id to (sr as ProteinSeqRecord).crc64 }
+                idToCRC64
+            }.toMap()
 }
 
 
