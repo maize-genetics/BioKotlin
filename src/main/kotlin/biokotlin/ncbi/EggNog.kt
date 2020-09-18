@@ -1,6 +1,7 @@
 package biokotlin.ncbi
 
 import krangl.*
+import java.io.File
 
 fun readEggNogMemberFile(fileOrUrl: String): DataFrame {
     return DataFrame.readTSV(fileOrUrl)
@@ -15,6 +16,15 @@ fun mapStringXRefToOG(memberDF: DataFrame): Map<String,String> {
         proteins.map { it to og }
     }.flatten().toMap()
     return x
+}
+
+
+fun createCRC64Map(fileOrDir: String): Map<String,String> {
+    val alignments = File(fileOrDir).walk()
+            .filter { it.isFile }
+            .filter { !it.isHidden }
+
+
 }
 
 

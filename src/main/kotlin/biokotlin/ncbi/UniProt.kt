@@ -208,9 +208,9 @@ data class SeqDBReference(val query: String, val crc64: String, val uniProtAcces
 
     override fun toString(): String {
         return """
-            UniProt:\t$uniProtId
-            CRC64:\t$crc64
-            Query:\t$query
+            UniProt:$uniProtId
+            CRC64:  $crc64
+            Query:  $query
             ${uniProtDF.print(maxRows =30, maxWidth = 200)}
             ${uniFracDF.print(maxRows =30, maxWidth = 200)}
         """.trimIndent()
