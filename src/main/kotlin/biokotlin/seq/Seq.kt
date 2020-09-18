@@ -136,7 +136,7 @@ internal fun compatibleNucSet(seq: String): List<NucSet> {
             .map { it.set as NucSet }
 }
 
-internal enum class BioSet(val set: ImmutableSet<*>, val bitSets: BitSet, val creator: (String) -> Seq) {
+enum class BioSet(val set: ImmutableSet<*>, internal val bitSets: BitSet, internal val creator: (String) -> Seq) {
     DNA(NUC.DNA, bitSetOfChars(NUC.DNA), { s: String -> NucSeq(s, NUC.DNA) }),
     RNA(NUC.RNA, bitSetOfChars(NUC.RNA), { s: String -> NucSeq(s, NUC.RNA) }),
     AmbiguousDNA(NUC.AmbiguousDNA, bitSetOfChars(NUC.AmbiguousDNA), { s: String -> NucSeq(s, NUC.AmbiguousDNA) }),
