@@ -6,8 +6,7 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import krangl.DataFrame
-import krangl.print
+import krangl.*
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
@@ -97,26 +96,14 @@ class KeggDBTest : StringSpec({
         KeggCache.close()
     }
 
+    "Test pathway graph creation" {
+        val pathway = Kegg.pathway("path:zma00072")
+        val graph = pathway.kgmlGraph()
+        graph.vertexSet().size shouldBe 17
+        graph.edgeSet().size shouldBe 19
+        graph.javaClass.toString() shouldBe "class org.jgrapht.graph.DefaultDirectedGraph"
+    }
 
 })
-
-fun main() {
-    val pathID = "path:zma00072"
-    val pathTest = Kegg.pathway(pathID)
-    val graphProto = pathTest.kgmlGraph()
-
-    println("--- --- --- --- ---")
-    println("""
-        --- XML Parse to Graph ---
-        Path ID........... $pathID
-        Object class...... ${graphProto.javaClass}
-        Number of edges... ${graphProto.edgeSet().size}
-        Number of nodes... ${graphProto.vertexSet().size}
-    """.trimIndent())
-    println("--- --- --- --- ---")
-    for (i in 0 until graphProto.edgeSet().size) {
-        println("Edge value $i... ${graphProto.edgeSet().toList()[i]}")
-    }
-}
 
 
