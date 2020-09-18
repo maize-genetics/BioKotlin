@@ -283,3 +283,11 @@ internal fun convertStringToXMLDocument(xmlString: String): Document? {
     }
     return null
 }
+
+/**
+ * Get reaction components from graph object
+ */
+private fun <V, E> DefaultDirectedGraph<V, E>.getReactions() {
+    val nodes = this.vertexSet()
+//    nodes =
+}
