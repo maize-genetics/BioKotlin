@@ -19,7 +19,7 @@ fun <T> Sequence<T>.deparseRecords(mapping: (T) -> DataFrameRow) : DataFrame = D
 //        return DataFrame.builder("Bob","sdf").
 //    } else return DataFrame.fromRecords(list, mapping)
 //}
-    inline fun <reified T> Sequence<T>.deparseRecords(vararg mapping: Pair<String, DeparseFormula<T>>): DataFrame = this.toList().deparseRecords(*mapping)
+inline fun <reified T> Sequence<T>.deparseRecords(vararg mapping: Pair<String, DeparseFormula<T>>): DataFrame = this.toList().deparseRecords(*mapping)
 
     /**
      * Krangl standard filtering uses [it] to reference to ExpressionContext (simplified view of a DataFrame)
@@ -34,5 +34,7 @@ fun <T> Sequence<T>.deparseRecords(mapping: (T) -> DataFrameRow) : DataFrame = D
     infix fun DataCol.isGreaterOrEqual(i: Number) = this.greaterEqualsThan(i)
 
 fun DataFrame.getOrNull(s: String): DataCol? = if(this.nrow == 0) null else this.get(s)
+
+fun Sequence<DataFrame>.bindRows() : DataFrame =  (this.toList()).bindRows()
 
 //infix operator fun DataCol?.equals(i: Any): BooleanArray = eq(i)
