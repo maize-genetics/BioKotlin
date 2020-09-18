@@ -1,7 +1,9 @@
 package biokotlin.seqIO
 
 import biokotlin.seq.NucSeq
+import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.Seq
+import biokotlin.seq.SeqRecord
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -128,7 +130,7 @@ fun main() {
     val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa")
     val time = measureNanoTime {
         seqio.forEachIndexed { index, record ->
-            println("$index: ${(record as NucSeqRecord).id}: ${(record as NucSeqRecord).sequence.len()}")
+            println("$index: ${(record as NucSeqRecord).id}: ${(record as NucSeqRecord).sequence.size()}")
         }
     }
     println("time: ${time / 1e9} secs.")

@@ -1,8 +1,8 @@
 package biokotlin.seqIO
 
 import biokotlin.seq.BioSet
-import biokotlin.seq.NucSeq
 import biokotlin.seq.Seq
+import biokotlin.seq.SeqRecord
 import java.io.File
 import java.nio.file.Path
 
@@ -25,7 +25,7 @@ interface SequenceIterator : Iterator<SeqRecord> {
 
 interface SequenceWriter {
     /**Says [Seq] will be converted to SeqRecord when finished*/
-    fun write(file: File, records: List<TempSeqRecord>): Boolean
+    fun write(file: File, records: List<SeqRecord>): Boolean
     fun writeHeader(): Boolean
     fun writeRecord(): Boolean
     fun writeFooter(): Boolean
@@ -39,16 +39,6 @@ private fun seqIterator(format: SeqFormat, filename: String): SequenceIterator {
     }
 
 }
-
-@Deprecated("Temporary SeqRecord is being written")
-sealed class SeqRecord(val id: String, val name: String?, val description: String?)
-
-@Deprecated("Temporary SeqRecord is being written")
-class NucSeqRecord(val sequence: NucSeq, id: String, name: String? = null, description: String? = null) : SeqRecord(id, name, description)
-
-@Deprecated("Temporary SeqRecord is being written")
-data class TempSeqRecord(val id: String, val name: String? = null, val description: String? = null, val seq: Seq)
-
 
 class SeqIO(filename: String, format: SeqFormat? = null) : Iterable<SeqRecord> {
 
@@ -90,11 +80,11 @@ class SeqIO(filename: String, format: SeqFormat? = null) : Iterable<SeqRecord> {
         TODO("Not yet implemented")
     }
 
-    fun to_dict(sequences: SequenceIterator, keyFunction: (Seq) -> String): Map<String, TempSeqRecord> {
+    fun to_dict(sequences: SequenceIterator, keyFunction: (Seq) -> String): Map<String, SeqRecord> {
         TODO("Not yet implemented")
     }
 
-    fun to_dict(sequences: List<Seq>, keyFunction: (Seq) -> String): Map<String, TempSeqRecord> {
+    fun to_dict(sequences: List<Seq>, keyFunction: (Seq) -> String): Map<String, SeqRecord> {
         TODO("Not yet implemented")
     }
 
