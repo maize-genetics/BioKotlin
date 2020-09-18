@@ -52,22 +52,16 @@ fun main(){
     var i = 1
     for(seq in aaSeqs){
         println("Starting "+i.toString()+" of "+aaSeqs.size.toString())
-        // Start stringbuilder that will hold UniProt accessions
-        var accessions = StringJoiner(",")
 
-        // Get CRC64 for the sequence
-        var crc = ProteinSeq(seq).crc64
-        crcs.add(crc)
+        val uniprotAcc = try{
+            UniProt.accession(ProteinSeq(seq.toString()))
+        } catch(e: java.lang.NullPointerException){
+            null
+        }
 
-        // Search the CRC64 on UniParc and then cross reference to UniProt to get accession(s)
-        // It is possible there may be multiple accessions for each CRC64 in UniParc. If so, when
-        //  we cross reference UniProt, the accessions will be concatenated, separated by ','
-        var query = UniParcQueryBuilder.checksum(crc)
-        var result = UniProt.uniparcService.getEntries(query)
-        result.forEach{ it.uniProtDatabaseCrossReferences.forEach { accessions.add(it.accession) } }
-
-        // Add accessions to the list of UniProtIDs
-        uniprotIDs.add(accessions.toString())
+        if(uniprotAcc != null) {
+            uniprotIDs.add(uniprotAcc.toString())
+        }
         i++
     }
 
