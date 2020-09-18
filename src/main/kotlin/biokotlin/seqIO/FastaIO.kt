@@ -1,15 +1,13 @@
 package biokotlin.seqIO
 
-import biokotlin.seq.NucSeq
-import biokotlin.seq.NucSeqRecord
-import biokotlin.seq.Seq
-import biokotlin.seq.SeqRecord
+import biokotlin.seq.*
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.receiveOrNull
 import java.io.File
 import java.util.*
+import java.util.zip.GZIPInputStream
 import kotlin.system.measureNanoTime
 
 class FastaIO(val filename: String) : SequenceIterator {
@@ -68,8 +66,8 @@ class FastaIO(val filename: String) : SequenceIterator {
 
             try {
 
-                File(filename).bufferedReader().use { reader ->
-
+                val  x = if(filename.endsWith(".gz")) GZIPInputStream(File(filename).inputStream()).bufferedReader() else File(filename).bufferedReader()
+                x.use { reader ->
                     var line = reader.readLine()
                     while (line != null) {
                         line = line.trim()
@@ -114,8 +112,8 @@ class FastaIO(val filename: String) : SequenceIterator {
                 val deffered = async {
                     val builder = StringBuilder()
                     entry.second.forEach { builder.append(it.trim()) }
-                    val seq = Seq(builder.toString())
-                    NucSeqRecord(seq as NucSeq, entry.first)
+                    val seq = ProteinSeq(builder.toString())
+                    ProteinSeqRecord(seq, entry.first)
                 }
                 outputChannel.send(deffered)
             }

@@ -9,7 +9,7 @@ import java.nio.file.Path
 
 // TODO this doesn't seem right.  I should just be passing the class, not an instance.
 enum class SeqFormat(val suffixes: List<String>) {
-    fasta(listOf("fa", "fasta")),
+    fasta(listOf("fa", "fasta", "faa","gz")),
     fastq(listOf("fq", "fastq")),
     // clustal(),
     // phylip()
