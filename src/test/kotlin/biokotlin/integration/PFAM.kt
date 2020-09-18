@@ -1,5 +1,8 @@
 package biokotlin.integration
 
+import biokotlin.ncbi.UniProt
+import biokotlin.seq.ProteinSeq
+import biokotlin.seq.ProteinSeqRecord
 import khttp.get
 import khttp.post
 import kotlinx.serialization.json.Json
@@ -14,13 +17,11 @@ private val cacheManager by lazy {
     CacheManagerBuilder.newCacheManagerBuilder().build(true)
 }
 
-private val proteinCache: Cache<String, PFAMProtein> by lazy {
+private val proteinCache: Cache<String, ProteinSeqRecord> by lazy {
     cacheManager.createCache("proteinCache",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(String::class.java, PFAMProtein::class.java, ResourcePoolsBuilder.heap(10)))
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(String::class.java, ProteinSeqRecord::class.java, ResourcePoolsBuilder.heap(10)))
 
 }
-
-data class PFAMProtein(val accession: String, val sequence: String, val domains: List<PFAMDomain>)
 
 /**
  * @param accession PFAM accession
@@ -30,24 +31,92 @@ data class PFAMProtein(val accession: String, val sequence: String, val domains:
  * @param alignedSeq alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
  * @param score prediction score for domain
  * @param taxid PFAM taxid
+ * @param desc description of pfam domain
  */
-data class PFAMDomain(val accession: String, val name: String, val start: Int, val end: Int, val alignedSeq: String, val score: Double, val taxid: String)
+data class PFAMDomain(val attributes: Map<String, String>) {
+    val accession by lazy { attributes["acc"]?.substringBeforeLast(".") }
+    val name by lazy { attributes["name"] }
+    val start by lazy { attributes["ienv"]?.toInt() }
+    val end by lazy { attributes["jenv"]?.toInt() }
+    val taxid by lazy { attributes["taxid"]?.substringBeforeLast(".") }
+    val alignedSeq by lazy { attributes["aliaseq"] }
+    val score by lazy { attributes["score"]?.toDouble() }
+    val desc by lazy { attributes["desc"] }
+}
 
-fun protein(accession: String): PFAMProtein {
+/**
+ * Return list of protein sequence records corresponding
+ * to the given accessions.
+ */
+fun protein(accessions: List<String>): List<ProteinSeqRecord> {
+    return accessions
+            .map { protein(it) }
+            .toList()
+}
+
+/**
+ * Return protein sequence record for given protein accession
+ */
+fun protein(accession: String): ProteinSeqRecord {
     return proteinCache[accession] ?: loadProtein(accession)
 }
 
-fun loadProtein(accession: String): PFAMProtein {
+private fun loadProtein(proteinAcc: String): ProteinSeqRecord {
+    val protein = UniProt.protein(proteinAcc)
+    val result = ProteinSeqRecord(protein, proteinAcc)
+    proteinCache.put(proteinAcc, result)
+    return result
+}
+
+fun domainsForSeq(record: ProteinSeqRecord): List<PFAMDomain> {
+    return domainsForSeq(record.seq())
+}
+
+fun domainsForSeqs(seqs: List<String>): List<Pair<ProteinSeq, List<PFAMDomain>>> {
+    return seqs
+            .map { Pair(ProteinSeq(it), domainsForSeq(it)) }
+            .toList()
+}
+
+fun domainsForProteinSeqs(seqs: List<ProteinSeq>): List<Pair<ProteinSeq, List<PFAMDomain>>> {
+    return seqs
+            .map { Pair(it, domainsForSeq(it.seq())) }
+            .toList()
+}
+
+fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
+
+    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
+
+    val post = post(baseUrl, data = mapOf("seq" to proteinSeq, "hmmdb" to "pfam")).url
+    val outputType = "?output=json"
+    val resultsUrl = post.plus(outputType)
+
+    return loadDomains(resultsUrl)
+
+}
+
+fun domainsForAcc(record: ProteinSeqRecord): List<PFAMDomain> {
+    return domainsForAcc(record.id)
+}
+
+fun domainsForAcc(proteinAcc: String): List<PFAMDomain> {
 
     // Use hmmer to search a sequence and get pfam domain information back from it:
     // https://hmmer-web-docs.readthedocs.io/en/latest/searches.html
     // Can take either sequence or accession info. It's possible to explicitly set
     // search parameters, but these have default values that are typically used
-    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
 
-    val post = post(baseUrl, data = mapOf("acc" to accession, "hmmdb" to "pfam")).url
+    val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
+    val post = post(baseUrl, data = mapOf("acc" to proteinAcc, "hmmdb" to "pfam")).url
     val outputType = "?output=json"
     val resultsUrl = post.plus(outputType)
+
+    return loadDomains(resultsUrl)
+
+}
+
+private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
 
     println("query: $resultsUrl")
 
@@ -63,31 +132,38 @@ fun loadProtein(accession: String): PFAMProtein {
     val domains = hits
             .map { it.jsonObject }
             .map { hit ->
-                val domainAcc = hit["acc"].toString().removeSurrounding("\"").substringBeforeLast(".")
-                val name = hit["name"].toString().removeSurrounding("\"")
-                val score = hit["score"].toString().removeSurrounding("\"").toDouble()
-                val taxid = hit["taxid"].toString().removeSurrounding("\"").substringBeforeLast(".")
+                val allHitsAttributes = hit.entries
+                        .filter { it.key != "domains" }
+                        .map { it.key to it.value.toString().removeSurrounding("\"") }
+                        .toMap()
+
                 val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
                 val firstDomain = domains[0].jsonObject
-                val start = firstDomain["ienv"].toString().removeSurrounding("\"").toInt()
-                val end = firstDomain["jenv"].toString().removeSurrounding("\"").toInt()
-                val alignedSeq = firstDomain["aliaseq"].toString().removeSurrounding("\"")
-                PFAMDomain(domainAcc, name, start, end, alignedSeq, score, taxid)
+
+                val attributes = mutableMapOf<String, String>()
+                attributes.putAll(allHitsAttributes)
+
+                firstDomain.entries
+                        .forEach { attributes.put(it.key, it.value.toString().removeSurrounding("\"")) }
+
+                PFAMDomain(attributes)
             }
             .toList()
 
-    val result = PFAMProtein(accession, "aaaaa", domains)
-    proteinCache.put(accession, result)
-    return result
+    return domains
 
 }
 
 fun main() {
+
+    setUniProtLogging()
+
     val protein = protein("O22637")
-    println(protein.accession)
-    protein.domains.forEach {
-        println("domain: $it")
-    }
+    println(protein)
     val proteinDuplicate = protein("O22637")
     println(proteinDuplicate)
+
+    val sequenceStr = "MIKNLMHEGKLVPSDIIVRLLLTAMLQSGNDRFLVDGFPRNEENRRAYESVIGIEPELVL"
+    println(domainsForSeq(sequenceStr))
+
 }
