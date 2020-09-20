@@ -5,6 +5,8 @@ import biokotlin.seq.NUC
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import com.google.common.collect.Range
+import com.google.common.collect.RangeMap
+import com.google.common.collect.TreeRangeMap
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import java.util.*
@@ -406,8 +408,34 @@ class RangesTest: StringSpec({
         var srangeList: List<SRange> = shuffledSet.toList()
         // test sorting - well, our SeqRangeSort isn't done yet - use this default for now
         var sortedSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,srangeList)
+        println("\nsortedSet from onCoalescingSetOf:")
+        for (range in sortedSet) {
+            println(range)
+        }
 
         // At this point, I want to test some intersect code on a large set - see small intersect case below
+
+        var positivePeak = sortedSet.elementAt(16) // picking an arbitrary element as my peak
+        println("\nPeak for testing: $positivePeak")
+
+        val flankedSet = positivePeak.flankBoth(30000)
+        println("flankedSet - 30000:")
+        for (range in flankedSet) {
+            println(range)
+        }
+
+        // find ranges that intersect with lower flank
+        var lowerFlankIntersections = flankedSet.elementAt(0).intersections(sortedSet)
+        var upperFlankIntersections = flankedSet.elementAt(1).intersections(sortedSet)
+        println("\nlower flanking intersecting ranges:")
+        for (range in lowerFlankIntersections) {
+            println(range)
+        }
+        println("\nupper flanking ranges:")
+        for (range in upperFlankIntersections) {
+            println(range)
+        }
+        // find ranges that intersect with upper flank
 
     }
 
@@ -465,6 +493,82 @@ class RangesTest: StringSpec({
         }
 
 
+    }
+    " test SRange.intersectAndRemove" {
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a", description = "The second rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3", description = "The first rec, second seq",
+                annotations = mapOf("key1" to "value1"))
+
+        val sr1 = record1.range(27..44)
+        val sr2 = record1.range(1..15)
+        val sr3 = record3.range(18..33)
+        val sr4 = record2.range(25..35)
+        val sr5 = record2.range(3..13)
+
+        val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
+        val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
+
+        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
+
+        var peak = SeqPosition(null, 45)..SeqPosition(null,75)
+
+        var flankedPeak = peak.flankBoth(30000)
+        var searchSpace1 = flankedPeak.elementAt(0).intersectAndRemove(srSet)
+        var searchSpace2 = flankedPeak.elementAt(1).intersectAndRemove(srSet)
+
+
+        var intersectingRanges = findIntersectingSRanges(peak, srSet)
+
+    }
+    "Test kotlin set union,subtract,intersect " {
+
+        // try with SRanges now
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a", description = "The second rec first seq",
+                annotations = mapOf("key1" to "value1"))
+        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3", description = "The first rec, second seq",
+                annotations = mapOf("key1" to "value1"))
+
+        val sr1 = record1.range(27..44)
+        val sr2 = record1.range(1..15)
+        val sr3 = record3.range(18..33)
+        val sr4 = record2.range(25..35)
+        val sr5 = record2.range(3..13)
+
+        val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
+        val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
+
+        val srSet1 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
+        var srSet2 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2)
+        var srSet3 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
+
+        var set1set2Intersect = srSet1 intersect srSet2
+        println("\nintersect of SRANGE set1/set2:  should be 3 elements")
+        for (range in set1set2Intersect) {
+            println(range)
+        }
+
+        var set2Set3Union = srSet2 union srSet3
+        println("\nunion of SRANGE set2/set3:  should be 5 elements")
+        for (range in set2Set3Union) {
+            println(range)
+        }
+
+        var set1SubtractSet2 = srSet1 subtract srSet2
+        println("\nsubtract  SRANGE set2 from set1:  should be 4 elements")
+        for (range in set1SubtractSet2) {
+            println(range)
+        }
     }
 
     // replace this test case with new version of SeqRangeSort

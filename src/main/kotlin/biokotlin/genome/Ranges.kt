@@ -6,6 +6,7 @@ import biokotlin.genome.SeqPositionAlphaComparator.Companion.spAlphaComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
+import com.google.common.collect.*
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
@@ -242,10 +243,60 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
     return flankingRanges
 }
 
-// FInds all ranges in a set that intersect with the given SRange.  If "intersecting" is true,
-// it returns those that intersect.  If "intersecting" is false, it returns a set of SRanges that
-// do NOT intersect the given SRange
-// THis code sorts the ranges.  They may already be sorted - should srted ranges be required?
+/**
+ * For a given range, create new ranges based on removing any portion
+ * of the old range which overlaps with any of the ranges in the "removeRanges"
+ * set.  Return a new set of ranges
+ */
+fun SRange.intersectAndRemove(removeRanges: Set<SRange>) : SRangeSet {
+    //var newRanges: MutableSet<SRange> = mutableSetOf()
+
+    val intersectingRanges = findIntersectingSRanges(this, removeRanges)
+    val newRanges = removeIntersections(this, intersectingRanges)
+
+    return newRanges
+}
+
+fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSet {
+    var newRanges : MutableSet<SRange> = mutableSetOf()
+
+    var peakStart = peak.start.site
+    var peakEnd = peak.endInclusive.site
+
+
+    // Create Guava coalescing map from the intersetingRanges
+    var rangeMap: RangeMap<Int,String> = TreeRangeMap.create()
+    for (srange in intersectingRanges) {
+         var range = Range.closed(srange.start.site, srange.endInclusive.site)
+        rangeMap.putCoalescing(range,"srange")
+    }
+
+    // move into a RangeSet
+    val srangeRangeSet: RangeSet<Int> = TreeRangeSet.create()
+    rangeMap.asMapOfRanges().entries.forEach { range ->
+        srangeRangeSet.add(range.key)
+    }
+
+    val complementRanges = srangeRangeSet.complement()
+    //This call changes the "infinite" on either end to a specific start/end
+    // In this case, start and end are bounded by the peak's start and end positions
+    val fixedComplementRanges = complementRanges.subRangeSet(Range.closed(peakStart, peakEnd))
+
+    // these now must be made back into SRanges - the seqRecord is the same SeqRecord
+    // as "peak" (otherwise, the input would not be intersecting ranges)
+
+    var peakSeqRec = peak.start.seqRecord
+    for (range in fixedComplementRanges.asRanges()) {
+        var srange = SeqPosition(peakSeqRec, range.lowerEndpoint())..SeqPosition(peakSeqRec, range.upperEndpoint())
+        newRanges.add(srange)
+    }
+
+    return newRanges
+}
+
+// Finds all ranges in a set that intersect with the given SRange.
+// THis code sorts the ranges in a manner that works to make this code
+// more efficient.
 fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
     val intersectingRanges: MutableSet<SRange> = mutableSetOf()
 
@@ -301,7 +352,7 @@ fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
 // Too much overlap wih above - need to break into callable functions
 fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
 
-    TODO() // duplicate code from above - refactor, create common functions!
+    //TODO() // duplicate code from above - refactor, create common functions!
     val intersectingRanges: MutableSet<SRange> = mutableSetOf()
 
     val comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator
