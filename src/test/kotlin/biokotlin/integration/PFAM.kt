@@ -3,6 +3,7 @@ package biokotlin.integration
 import biokotlin.ncbi.UniProt
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.ProteinSeqRecord
+import biokotlin.util.setUniProtLogging
 import khttp.get
 import khttp.post
 import kotlinx.serialization.json.Json
@@ -23,25 +24,88 @@ private val proteinCache: Cache<String, ProteinSeqRecord> by lazy {
 
 }
 
-/**
- * @param accession PFAM accession
- * @param name domain name
- * @param start start position for pfam domain within protein
- * @param end end position for pfam domain within protein
- * @param alignedSeq alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
- * @param score prediction score for domain
- * @param taxid PFAM taxid
- * @param desc description of pfam domain
- */
 data class PFAMDomain(val attributes: Map<String, String>) {
+
+    /**
+     * PFAM accession
+     */
     val accession by lazy { attributes["acc"]?.substringBeforeLast(".") }
+
+    /**
+     * domain name
+     */
     val name by lazy { attributes["name"] }
+
+    /**
+     * start position for pfam domain within protein
+     */
     val start by lazy { attributes["ienv"]?.toInt() }
+
+    /**
+     * end position for pfam domain within protein
+     */
     val end by lazy { attributes["jenv"]?.toInt() }
+
+    /**
+     * PFAM taxid
+     */
     val taxid by lazy { attributes["taxid"]?.substringBeforeLast(".") }
+
+    /**
+     * alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
+     */
     val alignedSeq by lazy { attributes["aliaseq"] }
+
+    /**
+     * prediction score for domain
+     */
     val score by lazy { attributes["score"]?.toDouble() }
+
+    /**
+     * description of pfam domain
+     */
     val desc by lazy { attributes["desc"] }
+
+    /**
+     * evalue for prediction
+     */
+    val evalue by lazy { attributes["evalue"] }
+
+    /**
+     * pvalue for prediction
+     */
+    val pvalue by lazy { attributes["pvalue"] }
+
+    /**
+     * pfam domain clan
+     */
+    val clan by lazy { attributes["clan"] }
+
+    /**
+     * alignment match line: residues that match hmm profile. Residue letters indicate exact match, '+' indicate similar residues but not exact match
+     */
+    val alimline by lazy { attributes["alimline"] }
+
+    /**
+     * alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
+     */
+    val aliaseq by lazy { attributes["aliaseq"] }
+
+    /**
+     * alignment posterior probabilities: degree of confidence in each aligned residue (* is highest, 0-9 goes low to high)
+     */
+    val alippline by lazy { attributes["alippline"] }
+
+    /**
+     * hmm model used to find pfam domain
+     */
+    val alimodel by lazy { attributes["alimodel"] }
+
+    /**
+     * alignment conserved structure: conserved structures identified within domain
+     */
+    val alicsline by lazy { attributes["alicsline"] }
+
 }
 
 /**
@@ -164,6 +228,9 @@ fun main() {
     println(proteinDuplicate)
 
     val sequenceStr = "MIKNLMHEGKLVPSDIIVRLLLTAMLQSGNDRFLVDGFPRNEENRRAYESVIGIEPELVL"
-    println(domainsForSeq(sequenceStr))
+    val domain = domainsForSeq(sequenceStr)
+    println(domain)
+    println("clan: ${domain[0].clan}")
+    println("alimline: ${domain[0].alimline}")
 
 }
