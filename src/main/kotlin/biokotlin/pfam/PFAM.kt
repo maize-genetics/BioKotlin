@@ -1,4 +1,4 @@
-package biokotlin.integration
+package biokotlin.pfam
 
 import biokotlin.ncbi.UniProt
 import biokotlin.seq.ProteinSeq
