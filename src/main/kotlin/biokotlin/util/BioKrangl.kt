@@ -1,6 +1,7 @@
 package biokotlin.util
 
 import krangl.*
+import java.io.File
 
 /**
  * Krangl works with Iterable because the tables cannot be infinite in size.  However, lots of Java/Kotlin
@@ -19,7 +20,7 @@ fun <T> Sequence<T>.deparseRecords(mapping: (T) -> DataFrameRow) : DataFrame = D
 //        return DataFrame.builder("Bob","sdf").
 //    } else return DataFrame.fromRecords(list, mapping)
 //}
-    inline fun <reified T> Sequence<T>.deparseRecords(vararg mapping: Pair<String, DeparseFormula<T>>): DataFrame = this.toList().deparseRecords(*mapping)
+inline fun <reified T> Sequence<T>.deparseRecords(vararg mapping: Pair<String, DeparseFormula<T>>): DataFrame = this.toList().deparseRecords(*mapping)
 
     /**
      * Krangl standard filtering uses [it] to reference to ExpressionContext (simplified view of a DataFrame)
@@ -34,5 +35,13 @@ fun <T> Sequence<T>.deparseRecords(mapping: (T) -> DataFrameRow) : DataFrame = D
     infix fun DataCol.isGreaterOrEqual(i: Number) = this.greaterEqualsThan(i)
 
 fun DataFrame.getOrNull(s: String): DataCol? = if(this.nrow == 0) null else this.get(s)
+
+fun Sequence<DataFrame>.bindRows() : DataFrame =  (this.toList()).bindRows()
+
+fun <K,V> Map<K,V>.asDataFrame(keyName:String = "key", valueName:String = "value") = this.entries.asDataFrame().setNames(keyName,valueName)
+
+fun DataFrame.writeCSV(file: String):Unit = this.writeCSV(File(file))
+
+fun DataFrame.writeTSV(file: String):Unit = this.writeTSV(File(file))
 
 //infix operator fun DataCol?.equals(i: Any): BooleanArray = eq(i)

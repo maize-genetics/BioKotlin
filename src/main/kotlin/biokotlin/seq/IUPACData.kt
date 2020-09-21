@@ -66,6 +66,8 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
     W("Trp", 'W', 204.2252),
     /**Tyrosine*/
     Y("Tyr", 'Y', 181.1885),
+    /**Ambiguous*/
+    X("Xxx", 'X', Double.NaN),
     /**Stop*/
     STOP("Stp",'*', Double.NaN),
     /**Gap*/

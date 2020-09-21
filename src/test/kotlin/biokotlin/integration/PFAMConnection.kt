@@ -11,6 +11,11 @@ import uk.ac.ebi.uniprot.dataservice.client.uniprot.UniProtService
 
 fun main() {
 
+    setUniProtLogging()
+
+    val protein = UniProt.protein("O22637")
+    println(protein)
+
     val proteinRefs = UniProt.dbReferences("O22637")
 
     val uniProt = proteinRefs.uniProtDF
@@ -23,19 +28,40 @@ fun main() {
 
     val uniProtService: UniProtService = Client.getServiceFactoryInstance().getUniProtQueryService()
     uniProtService.start()
+    //listOfPFAMAcc.forEach {
+    //val query = UniProtQueryBuilder.xref(DatabaseType.PFAM).and(UniProtQueryBuilder.accession("O22637"))
+    val query = UniProtQueryBuilder.accession("O22637")
+    //val query = UniProtQueryBuilder.xref(DatabaseType.UNIPATHWAY,"GRMZM2G064371")
 
-    listOfPFAMAcc.forEach {
-        val query = UniProtQueryBuilder.xref(DatabaseType.PFAM, it)
-        //val results: QueryResult<UniProtData> = uniProtService.getResults(query, UniProtData.ComponentType.GENES)
-        val entries: QueryResult<UniProtEntry> = uniProtService.getEntries(query)
-        println(entries.numberOfHits)
-        entries.forEach {
-            println(it.organism)
-        }
-        //results.forEach {
-        //    println(it.accession)
-        //}
+    //val results: QueryResult<UniProtData> = uniProtService.getResults(query, UniProtData.ComponentType.GENES)
+    val entries: QueryResult<UniProtEntry> = uniProtService.getEntries(query)
+    println(entries.numberOfHits)
+    println(entries.firstResult.sequence)
+    println(entries.firstResult.genes[0].geneName)
+    println("evidences")
+    println(entries.firstResult.evidences[0])
+    println(entries.firstResult.entryAudit.sequenceVersion)
+    println(entries.firstResult.goTerms[0].goTerm)
+    println(entries.firstResult.internalSection.sourceLines)
+    println(entries.firstResult.keywords[0].value)
+    println("databaseCrossReferences")
+    println(entries.firstResult.databaseCrossReferences)
+    entries.firstResult.databaseCrossReferences
+            .filter { it.database == DatabaseType.PFAM }
+            .forEach {
+                println(it.toString())
+            }
+    println("features")
+    entries.firstResult.features.forEach { feature ->
+        println(feature.featureLocation)
+        println(feature.type)
+        println(feature.evidenceIds)
+        println(feature.featureStatus)
     }
+    //results.forEach {
+    //    println(it.accession)
+    //}
+    //}
 
     uniProtService.stop()
 

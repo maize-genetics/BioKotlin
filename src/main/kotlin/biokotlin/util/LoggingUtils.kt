@@ -1,4 +1,6 @@
-package biokotlin.integration
+@file:JvmName("LoggingUtils")
+
+package biokotlin.util
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger

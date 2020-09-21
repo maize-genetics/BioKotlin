@@ -60,6 +60,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC") // JVM dependency
 
     implementation("org.nield:kotlin-statistics:1.2.1")
