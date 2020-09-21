@@ -257,12 +257,16 @@ fun SRange.intersectAndRemove(removeRanges: Set<SRange>) : SRangeSet {
     return newRanges
 }
 
+/**
+ * THis method takes an SRange and a set of ranges that intersect it.
+ * It splits the "peak" range into a set of ranges, none of which contain
+ * positions that overlap positions from the "intersectingRanges" list.
+ */
 fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSet {
     var newRanges : MutableSet<SRange> = mutableSetOf()
 
     var peakStart = peak.start.site
     var peakEnd = peak.endInclusive.site
-
 
     // Create Guava coalescing map from the intersetingRanges
     var rangeMap: RangeMap<Int,String> = TreeRangeMap.create()
@@ -271,23 +275,37 @@ fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSe
         rangeMap.putCoalescing(range,"srange")
     }
 
-    // move into a RangeSet
+    // move into a RangeSet so we can get the "complement"
     val srangeRangeSet: RangeSet<Int> = TreeRangeSet.create()
     rangeMap.asMapOfRanges().entries.forEach { range ->
         srangeRangeSet.add(range.key)
     }
 
+    // Get the complement of the above .
+    // This treats the ranges as if they were inclusive/exclusive regardless of how
+    // they were defined when created.  it is adjusted for below when the SRangeSet is
+    // returned to the caller.
     val complementRanges = srangeRangeSet.complement()
+
     //This call changes the "infinite" on either end to a specific start/end
     // In this case, start and end are bounded by the peak's start and end positions
     val fixedComplementRanges = complementRanges.subRangeSet(Range.closed(peakStart, peakEnd))
 
     // these now must be made back into SRanges - the seqRecord is the same SeqRecord
     // as "peak" (otherwise, the input would not be intersecting ranges)
+    // AS noted above: The complemented ranges were calculated as if the original ranges were inclusive/exclusive.
+    // (closedOpen) These are adjusted to closed/closed ranges before they are returned in an SRangeSet
 
     var peakSeqRec = peak.start.seqRecord
     for (range in fixedComplementRanges.asRanges()) {
-        var srange = SeqPosition(peakSeqRec, range.lowerEndpoint())..SeqPosition(peakSeqRec, range.upperEndpoint())
+        // lowerBoundType() fails on range, but works if I set a new variable
+        var crange = range
+        var lbtype = crange.lowerBoundType()
+        var ubtype = crange.upperBoundType()
+        var lowerEndpoint = if (lbtype == BoundType.OPEN) crange.lowerEndpoint() + 1 else crange.lowerEndpoint()
+        var upperEndpoint = if (ubtype == BoundType.OPEN) crange.upperEndpoint() - 1 else crange.upperEndpoint()
+
+        var srange = SeqPosition(peakSeqRec, lowerEndpoint)..SeqPosition(peakSeqRec, upperEndpoint)
         newRanges.add(srange)
     }
 
@@ -295,7 +313,7 @@ fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSe
 }
 
 // Finds all ranges in a set that intersect with the given SRange.
-// THis code sorts the ranges in a manner that works to make this code
+// This code sorts the ranges in a manner that works to make this code
 // more efficient.
 fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
     val intersectingRanges: MutableSet<SRange> = mutableSetOf()
@@ -346,10 +364,13 @@ fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
     return intersectingRanges.toSet()
 }
 
-// Given a single SRange, find peaks that overlap
-// For intersecting ranges, you can stop after a while if you
-// have a sorted set and only want those that are intersecting.
-// Too much overlap wih above - need to break into callable functions
+/**
+ * Given a single SRange, find peaks that overlap
+ * For intersecting ranges, you can stop after a while if you
+ * have a sorted set and only want those that are intersecting.
+ *
+ * returns a Set of Ranges from the searchSpace that overlap the "peak" range
+ */
 fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
 
     //TODO() // duplicate code from above - refactor, create common functions!

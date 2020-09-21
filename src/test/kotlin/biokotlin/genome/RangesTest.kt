@@ -495,36 +495,54 @@ class RangesTest: StringSpec({
 
     }
     " test SRange.intersectAndRemove" {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGAC"
+
         val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
                 annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3", description = "The first rec, second seq",
-                annotations = mapOf("key1" to "value1"))
 
+        // These must be on the same record to truly be intersecting ranges.
         val sr1 = record1.range(27..44)
-        val sr2 = record1.range(1..15)
-        val sr3 = record3.range(18..33)
-        val sr4 = record2.range(25..35)
-        val sr5 = record2.range(3..13)
+        val sr2 = record1.range(119..122)
+        val sr3 = record1.range(25..35)
+        val sr4 = record1.range(3..13)
+        val sr5 = record1.range(80..87)
+        val sr6 = record1.range(40..45)
 
-        val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
-        val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
+        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr6,sr3,sr5,sr4)
 
-        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
+        var peak = SeqPosition(record1, 45)..SeqPosition(record1,75)
 
-        var peak = SeqPosition(null, 45)..SeqPosition(null,75)
+        // The negative peak is picked from the reagions flanking the peak.  here we'll
+        // make that be 30 bps up and down, so positions 35..44 and 76..105
+        var flankedPeaks = peak.flankBoth(30)
 
-        var flankedPeak = peak.flankBoth(30000)
-        var searchSpace1 = flankedPeak.elementAt(0).intersectAndRemove(srSet)
-        var searchSpace2 = flankedPeak.elementAt(1).intersectAndRemove(srSet)
+        println("length of dnaString: ${dnaString.length}")
 
+        println("\nFlanking ranges for the peak are these:")
+        for (range in flankedPeaks) {
+            println(range)
+        }
 
-        var intersectingRanges = findIntersectingSRanges(peak, srSet)
+        // THis  returns the areas that can still be used.  It removes
+        // the peak spaces that are identified in srSet from the upper and lower
+        // flanking peaks that were created above from the flankBoth call
+        var searchSpace1 = flankedPeaks.elementAt(0).intersectAndRemove(srSet)
+        var searchSpace2 = flankedPeaks.elementAt(1).intersectAndRemove(srSet)
 
+        println("\nranges left after peak removal from lower flank:")
+        for (range in searchSpace1) {
+            println(range)
+        }
+        searchSpace1.contains(SeqPosition(record1,15)..SeqPosition(record1,24)) shouldBe true
+        searchSpace1.size shouldBe 1
+
+        println("\nranges left after peak removal from upper flank:")
+        for (range in searchSpace2) {
+            println(range)
+        }
+        searchSpace2.size shouldBe 2
+        searchSpace2.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
+        searchSpace2.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
     }
     "Test kotlin set union,subtract,intersect " {
 
