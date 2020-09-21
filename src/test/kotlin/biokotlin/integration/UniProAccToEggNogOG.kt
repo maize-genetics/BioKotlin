@@ -13,9 +13,10 @@ fun main() {
     setUniProtLogging()
     val ps= ProteinSeq("----------MAPSASSTGAVLLFAIAAVLLLAVRDGHCAQLCMDSTFPRTVNGSLTFCGYNGTACCNS--------TDDAAVQRQFA-------------AMNISGTPCGELVK--------SILCARCNPYAGELFTVTTSPRTVPRLCNSTGV-ASRLSGGKA------------------AAAAATDYCTTVWDTCKAVRIPGSPFQPPRG-GA-AAPTLTDVWQSSGDFCTALGX------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
+   // val t = UniProt.
     println(ps)
 
-//    TODO()
+    TODO()
 
     val eggNogIDToCRC64: Map<String, String> = createCRC64Map("/Users/edbuckler/Downloads/38820")
     println(eggNogIDToCRC64.size)
@@ -23,6 +24,8 @@ fun main() {
     val df2=eggNogIDToCRC64.asDataFrame("EggNogID","CRC64")
     df2.print()
     df2.writeCSV(File("/Users/edbuckler/Downloads/poalesCRC64.csv"))
+
+
 
 //    val df = dataFrameOf(listOf("EggNogID","CRC64"))(listOf(eggNogIDToCRC64.keys.toList(),eggNogIDToCRC64.values.toList()))
 //    df.print()

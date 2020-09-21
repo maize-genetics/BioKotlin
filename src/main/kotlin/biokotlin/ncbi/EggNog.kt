@@ -33,7 +33,9 @@ fun createCRC64Map(fileOrDir: String): Map<String,String> {
                     emptyMap()
                 }
                 val idToCRC64 = fasta.entries
-                        .map { (id, sr:SeqRecord) -> id to (sr as ProteinSeqRecord).crc64 }
+                        .map { (id, sr:SeqRecord) ->
+                            val psNoGaps = (sr as ProteinSeqRecord).sequence.ungap().crc64
+                            id to (sr as ProteinSeqRecord).crc64 }
                 idToCRC64
             }.toMap()
 }
