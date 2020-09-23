@@ -81,7 +81,7 @@ class RangesTest: StringSpec({
         seqPos3.site shouldBe 85
 
     }
-    "Test SeqRecordSorgs.alphasort " {
+    "Test SeqRecordSorts.alphasort " {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
         val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
