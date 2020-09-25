@@ -4,6 +4,7 @@ import biokotlin.ncbi.UniProt
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.ProteinSeqRecord
 import biokotlin.util.setUniProtLogging
+import com.google.common.collect.Range
 import khttp.get
 import khttp.post
 import kotlinx.serialization.json.Json
@@ -215,6 +216,44 @@ private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
             .toList()
 
     return domains
+
+}
+
+/**
+ * This returns a set of non-overlapping domains given
+ * a list of domains. Domains with the highest
+ * PFAMDomain.score will be kept when there are overlaps.
+ */
+fun findNonOverlappingDomains(domains: List<PFAMDomain>): Set<PFAMDomain> {
+
+    // Running set of candidate domains.
+    // All ranges are closed / closed,
+    // so that isConnected() will not return true for empty range
+    val candidateSet = mutableSetOf<Pair<PFAMDomain, Range<Int>>>()
+
+    domains.forEach { candidate ->
+
+        // Range for current candidate domain
+        val candidateRange = Range.closed(candidate.start!!, candidate.end!!)
+
+        // domains to remove if candidate accepted
+        val replace = candidateSet
+                .filter { (domain, range) -> range.isConnected(candidateRange) }
+                .toSet()
+
+        // If no overlapping domain has a higher score, then
+        // keep candidate domain and remove overlapping domains
+        if (replace.filter { (domain, range) -> domain.score >= candidate.score }.isEmpty()) {
+            candidateSet.removeAll(replace)
+            candidateSet.add(Pair(candidate, candidateRange))
+        }
+
+    }
+
+    // Convert pairs to list of PFAMDomains
+    return candidateSet
+            .map { it.first }
+            .toSet()
 
 }
 
