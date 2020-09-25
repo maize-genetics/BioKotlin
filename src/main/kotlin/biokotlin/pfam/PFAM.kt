@@ -59,7 +59,7 @@ data class PFAMDomain(val attributes: Map<String, String>) {
     /**
      * prediction score for domain
      */
-    val score by lazy { attributes["score"]?.toDouble() }
+    val score by lazy { attributes["score"]?.toDouble() ?: 0.0 }
 
     /**
      * description of pfam domain
@@ -224,8 +224,6 @@ fun main() {
 
     val protein = protein("O22637")
     println(protein)
-    val proteinDuplicate = protein("O22637")
-    println(proteinDuplicate)
 
     val sequenceStr = "MIKNLMHEGKLVPSDIIVRLLLTAMLQSGNDRFLVDGFPRNEENRRAYESVIGIEPELVL"
     val domain = domainsForSeq(sequenceStr)
