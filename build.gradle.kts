@@ -12,7 +12,7 @@ version = "0.01"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.4.0")
+    val kotlinVersion by extra("1.4.0")
 
     repositories {
         mavenCentral()
@@ -78,8 +78,8 @@ dependencies {
     // implementation("net.maizegenetics:tassel:5.2.60")
 
     // Wide range of sequence tools in Java - API is dated
-     implementation("org.biojava:biojava:5.3.0")
-     implementation("org.biojava:biojava-genome:5.3.0")
+    implementation("org.biojava:biojava:5.3.0")
+    implementation("org.biojava:biojava-genome:5.3.0")
 
     implementation("org.graalvm.sdk:graal-sdk:20.0.0")
     implementation("org.apache.commons:commons-csv:1.8")
