@@ -52,7 +52,7 @@ repositories {
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
-    maven("http://www.ebi.ac.uk/~maven/m2repo")  //Uniprot JAPI
+    maven("http://www.ebi.ac.uk/~maven/m2repo")  // Uniprot JAPI
 }
 
 dependencies {
@@ -131,7 +131,7 @@ val dokkaJavadoc = tasks.register<DokkaTask>("dokkaJavadoc") {
 
 val dokkaJar by tasks.creating(Jar::class) {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
-    description = "BioKotlin: ${property("version")}"
+    description = "BioKotlin: ${property("archiveVersion")}"
     archiveClassifier.set("javadoc")
     from(dokkaJavadoc)
 }
