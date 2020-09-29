@@ -408,7 +408,7 @@ class RangesTest: StringSpec({
         var srangeList: List<SRange> = shuffledSet.toList()
         // test sorting - well, our SeqRangeSort isn't done yet - use this default for now
         var sortedSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,srangeList)
-        println("\nsortedSet from onCoalescingSetOf:")
+        println("\nsortedSet from nonCoalescingSetOf:")
         for (range in sortedSet) {
             println(range)
         }
@@ -426,6 +426,7 @@ class RangesTest: StringSpec({
 
         // find ranges that intersect with lower flank
         var lowerFlankIntersections = flankedSet.elementAt(0).intersections(sortedSet)
+        // find ranges that intersect with upper flank
         var upperFlankIntersections = flankedSet.elementAt(1).intersections(sortedSet)
         println("\nlower flanking intersecting ranges:")
         for (range in lowerFlankIntersections) {
@@ -435,7 +436,7 @@ class RangesTest: StringSpec({
         for (range in upperFlankIntersections) {
             println(range)
         }
-        // find ranges that intersect with upper flank
+
 
     }
 
@@ -512,7 +513,7 @@ class RangesTest: StringSpec({
 
         var peak = SeqPosition(record1, 45)..SeqPosition(record1,75)
 
-        // The negative peak is picked from the reagions flanking the peak.  here we'll
+        // The negative peak is picked from the regions flanking the peak.  here we'll
         // make that be 30 bps up and down, so positions 35..44 and 76..105
         var flankedPeaks = peak.flankBoth(30)
 
@@ -523,7 +524,7 @@ class RangesTest: StringSpec({
             println(range)
         }
 
-        // THis  returns the areas that can still be used.  It removes
+        // This  returns the areas that can still be used.  It removes
         // the peak spaces that are identified in srSet from the upper and lower
         // flanking peaks that were created above from the flankBoth call
         var searchSpace1 = flankedPeaks.elementAt(0).intersectAndRemove(srSet)
@@ -589,55 +590,4 @@ class RangesTest: StringSpec({
         }
     }
 
-    // replace this test case with new version of SeqRangeSort
-//    "Test SeqPosRangeSortFactory" {
-//
-//        var sortType:GenomeSortType = GenomeSortType.IDALPHA_THENRANGE
-//        var myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
-//
-//        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-//        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-//        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
-//                annotations = mapOf("key1" to "value1"))
-//        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
-//                annotations = mapOf("key1" to "value1"))
-//
-//        val sr1 = record1.range(25..44)
-//        val sr2 = record1.range(5..10)
-//        val sr3 = record2.range(15..27)
-//        val sr4 = record1.range(45..50)
-//
-//        var srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
-//        println("\nLCJ - ranges IDALPHA_THENRANGE:")
-//        for (sp in srSet) {
-//            println(sp.toString())
-//        }
-//        srSet.size shouldBe 4
-//        srSet.elementAt(3).start.seqRecord?.id  shouldBe "Seq2-id1"
-//
-//        // use different comparator - sort by RANGE_NATURALORDER
-//        sortType = GenomeSortType.RANGE_NATURALORDER
-//        myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
-//
-//        srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
-//        println("\nLCJ - ranges with RANGE_NATURALORDER comparator")
-//        for (sp in srSet) {
-//            println(sp.toString())
-//        }
-//        srSet.size shouldBe 4
-//        srSet.elementAt(1).start.seqRecord?.id shouldBe "Seq2-id1"
-//
-//        // try - sort by IDREVERSE_THENRANGE
-//        sortType = GenomeSortType.IDREVERSE_THENRANGE
-//        myComparator = SeqRangeSort.createComparator(sortType).getSeqRangeSort()
-//
-//        srSet = overlappingSetOf(myComparator,  sr1,sr2,sr3,sr4)
-//        println("\nLCJ - ranges with IDREVERSE_THENRANGE comparator")
-//        for (sp in srSet) {
-//            println(sp.toString())
-//        }
-//        srSet.size shouldBe 4
-//        // THis one fails
-//        //srSet.elementAt(0).start.seqRecord?.id shouldBe "Seq2-id1"
-//    }
 })

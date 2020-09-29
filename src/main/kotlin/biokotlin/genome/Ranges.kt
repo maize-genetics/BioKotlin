@@ -54,30 +54,6 @@ class SeqPositionAlphaComparator: Comparator<SeqPosition>{
     }
 }
 
-// Comparator for SeqPosition class.  This sorts the SeqRecords ids in
-// reverse order, achieved by multiplying the compareTo result by -1
-// Currently used in RangesTest to verify a user supplied comparator
-// is executed when passed as a parameter.
-class SeqPositionReverseAlphaComparator: Comparator<SeqPosition>{
-    companion object{
-        var spReverseAlphaComparator  = SeqPositionReverseAlphaComparator()
-    }
-    override fun compare(p0: SeqPosition, p1:SeqPosition): Int {
-        // SeqPositions with null SeqRecord are still returned before SeqPositions
-        // containing a SeqRecord.  But in this comparator, the SeqPositions
-        // are returned in descending order by multiplying the compareTo results by -1
-        if (p0.seqRecord == null ) {
-            if (p1.seqRecord == null) {
-                return p0.site.compareTo(p1.site) * -1
-            } // they are equal
-            return 1 // non-null before null
-        }
-        if (p1.seqRecord == null) return -1 // non-null before null
-        val seqRecordCompare = p0.seqRecord.id.compareTo(p1.seqRecord.id)
-        return if (seqRecordCompare != 0) seqRecordCompare * -1 else return  p0.site.compareTo(p1.site)
-    }
-}
-
 // This class users a default comparator
 data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
     init {
@@ -157,7 +133,7 @@ object SeqPositionRanges {
             { it.start.site.toLong() + it.endInclusive.site.toLong() })
 
 }
-//typealias SRange = com.google.common.collect.Range<SeqPosition>
+
 typealias SRange = ClosedRange<SeqPosition>
 
 fun SeqRecord.range(range: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange = SeqPositionRanges.of(this,range)
@@ -313,55 +289,9 @@ fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSe
 }
 
 // Finds all ranges in a set that intersect with the given SRange.
-// This code sorts the ranges in a manner that works to make this code
-// more efficient.
+// This merely calls findIntersectingSRanges below.
 fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
-    val intersectingRanges: MutableSet<SRange> = mutableSetOf()
-
-    val comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator
-    // This is fastest if the ranges are sorted.  It doesn't matter how the user
-    // would sort them for his purposes.  Here we use a natural ordering.  ALl
-    // that matters is when the seqRecord.id's match, do their ranges overlap?
-    val sortedSet = nonCoalescingSetOf(comparator, searchSpace.toList())
-
-    // Now that they are sorted, we only want to process while the peak-id is
-    // less than or equal to the search-id.  Once search-id is > than peak id,
-    // or the search.start.site > peak.endInclusive.site, we can stop
-    val thisSeqRec = this.start.seqRecord
-    val thisSeqRecID = if (thisSeqRec == null) null else thisSeqRec.id
-    var stop = false
-    for (search in searchSpace) {
-        val thatSeqRec = search.start.seqRecord
-
-        if (thisSeqRec == null)  {
-            if (thatSeqRec == null) {
-                val intersects = srangeSiteIntersection(this, search)
-                if (intersects) intersectingRanges.add(search)
-            } else {
-                // SOrted set - nulls come before non-nulls, so nothing beyond will overlap/intersect
-                stop = true
-            }
-        } else if (thatSeqRec == null){
-            continue // nul before non-null, keep going through SearchSpace
-        } else {
-            if (thisSeqRecID == thatSeqRec.id) {
-                val intersects = srangeSiteIntersection(this, search)
-                if (intersects) intersectingRanges.add(search)
-                else if (this.endInclusive.site < search.start.site) {
-                    // Sorted set - the start of the search site is greater than our peak's end site,
-                    // so there will be no more intersecting ranges
-                    stop = true
-                }
-            } else if (thisSeqRecID!! > thatSeqRec.id) {
-                continue // not far enough in sorted list to find ranges with matching id
-            } else { // the positive peak id is < the search peak Id, nothing left on the sorted list will match now
-                stop = true
-            }
-        }
-        if (stop) break
-    }
-    // Search ended - return the intersectin ranges
-    return intersectingRanges.toSet()
+    return findIntersectingSRanges(this,searchSpace)
 }
 
 /**
@@ -372,12 +302,10 @@ fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
  * returns a Set of Ranges from the searchSpace that overlap the "peak" range
  */
 fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
-
-    //TODO() // duplicate code from above - refactor, create common functions!
     val intersectingRanges: MutableSet<SRange> = mutableSetOf()
 
     val comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator
-    // THis is fastest if the ranges are sorted.  It doesn't matter how the user
+    // This is fastest if the ranges are sorted.  It doesn't matter how the user
     // would sort them for his purposes.  Here we use a natural ordering.  ALl
     // that matters is when the seqRecord.id's match, do their ranges overlap?
     val sortedSet = nonCoalescingSetOf(comparator, searchSpace.toList())
@@ -418,7 +346,7 @@ fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
         }
         if (stop) break
     }
-    // Search ended - return the intersectin ranges
+    // Search ended - return the intersecting ranges
     return intersectingRanges.toSet()
 }
 
