@@ -376,7 +376,7 @@ class RangesTest: StringSpec({
         sRangeSet.add(sRange2)
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
 
-        var negativePeaks = positivePeakSRange.pairedInterval(sRangeSet,gcSame, 3)
+        var negativePeaks = positivePeakSRange.pairedInterval(sRangeSet, gcSame, 3)
 
         println("number of negativePeaks: ${negativePeaks.size}")
         for (range in negativePeaks) {
@@ -545,7 +545,37 @@ class RangesTest: StringSpec({
         searchSpace2.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
         searchSpace2.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
     }
-    "Test kotlin set union,subtract,intersect " {
+    " test SRange.complement" {
+        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGACTATATATATATATGCGCGCATGCATGCATGCATGACTGACCCCGGGGCCAAAATATA"
+
+        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
+                annotations = mapOf("key1" to "value1"))
+
+        println("lenght of dnaString: ${dnaString.length}")
+        // These must be on the same record to truly be intersecting ranges.
+        val sr1 = record1.range(147..175)
+        val sr2 = record1.range(119..122)
+        val sr3 = record1.range(25..35)
+        val sr4 = record1.range(3..13)
+        val sr5 = record1.range(80..87)
+        val sr6 = record1.range(50..60)
+
+        val srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort, SeqRangeSort.leftEdge), sr1, sr2, sr6, sr3, sr5, sr4)
+        val boundSRange = record1.range(1..183)
+        val complementRanges = srSet.complement(boundSRange)
+
+        println("\noriginal ranges set:")
+        for (range in srSet) {
+            println(range)
+        }
+
+        println("\ncomplement ranges set:")
+        for (range in complementRanges) {
+            println(range)
+        }
+
+    }
+        "Test kotlin set union,subtract,intersect " {
 
         // try with SRanges now
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"

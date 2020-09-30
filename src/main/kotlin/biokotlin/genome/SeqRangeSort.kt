@@ -78,7 +78,7 @@ fun compareId (first:String, second:String, numFirst: Boolean): Int {
                     while (pos1 < len1 && Character.isDigit(ch1)) {
                         currDigits1 = currDigits1 + ch1
                         pos1++
-                        ch1 = aChars.elementAt(pos1)
+                        if (pos1 < len1) ch1 = aChars.elementAt(pos1)
                     }
                     pos1-- // because pos1 is incremented at end of while loop
 
@@ -86,7 +86,7 @@ fun compareId (first:String, second:String, numFirst: Boolean): Int {
                         while (pos2 < len2 && Character.isDigit(ch2)) {
                             currDigits2 = currDigits2 + ch2
                             pos2++
-                            ch2 = bChars.elementAt(pos2)
+                            if (pos2 < len2) ch2 = bChars.elementAt(pos2)
                         }
                         pos2--
                         compareVal = currDigits1.toInt().compareTo(currDigits2.toInt())

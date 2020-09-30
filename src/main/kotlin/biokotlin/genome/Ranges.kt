@@ -2,7 +2,6 @@
 package biokotlin.genome
 
 
-import biokotlin.genome.SeqPositionAlphaComparator.Companion.spAlphaComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
@@ -10,7 +9,6 @@ import com.google.common.collect.*
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
-import java.util.Comparator.comparing
 import kotlin.Comparator
 
 /**
@@ -228,21 +226,26 @@ fun SRange.intersectAndRemove(removeRanges: Set<SRange>) : SRangeSet {
     //var newRanges: MutableSet<SRange> = mutableSetOf()
 
     val intersectingRanges = findIntersectingSRanges(this, removeRanges)
-    val newRanges = removeIntersections(this, intersectingRanges)
+    val newRanges = complement(this, intersectingRanges)
 
     return newRanges
 }
 
+
 /**
- * THis method takes an SRange and a set of ranges that intersect it.
- * It splits the "peak" range into a set of ranges, none of which contain
+ * This method takes an SRange and a set of ranges that intersect it.
+ * It splits the "boundaryRange" into a set of ranges, none of which contain
  * positions that overlap positions from the "intersectingRanges" list.
+ *
+ * When complementing the SRanges for a full chromosome/contig, the "boundaryRange"
+ * should be an SRange where boundaryRange.start.site = 1 and boundaryRange.endInclusive.site = <chromosome length>
+ * When complementing for a specific "peak", the boundaries are the start/end of the peak.
  */
-fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSet {
+fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSet {
     var newRanges : MutableSet<SRange> = mutableSetOf()
 
-    var peakStart = peak.start.site
-    var peakEnd = peak.endInclusive.site
+    var boundaryStart = boundaryRange.start.site
+    var boundaryEnd = boundaryRange.endInclusive.site
 
     // Create Guava coalescing map from the intersetingRanges
     var rangeMap: RangeMap<Int,String> = TreeRangeMap.create()
@@ -265,14 +268,14 @@ fun removeIntersections(peak: SRange, intersectingRanges: Set<SRange>): SRangeSe
 
     //This call changes the "infinite" on either end to a specific start/end
     // In this case, start and end are bounded by the peak's start and end positions
-    val fixedComplementRanges = complementRanges.subRangeSet(Range.closed(peakStart, peakEnd))
+    val fixedComplementRanges = complementRanges.subRangeSet(Range.closed(boundaryStart, boundaryEnd))
 
     // these now must be made back into SRanges - the seqRecord is the same SeqRecord
     // as "peak" (otherwise, the input would not be intersecting ranges)
     // AS noted above: The complemented ranges were calculated as if the original ranges were inclusive/exclusive.
     // (closedOpen) These are adjusted to closed/closed ranges before they are returned in an SRangeSet
 
-    var peakSeqRec = peak.start.seqRecord
+    var peakSeqRec = boundaryRange.start.seqRecord
     for (range in fixedComplementRanges.asRanges()) {
         // lowerBoundType() fails on range, but works if I set a new variable
         var crange = range
@@ -299,6 +302,10 @@ fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
  * For intersecting ranges, you can stop after a while if you
  * have a sorted set and only want those that are intersecting.
  *
+ * This is not finding the actual intersecting positions.  It is
+ * identifying any ranges that have an overlap of any kind with the
+ * given "peak".
+ *
  * returns a Set of Ranges from the searchSpace that overlap the "peak" range
  */
 fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
@@ -321,17 +328,17 @@ fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
 
         if (thisSeqRec == null)  {
             if (thatSeqRec == null) {
-                val intersects = srangeSiteIntersection(peak, search)
+                val intersects = overlaps(peak, search)
                 if (intersects) intersectingRanges.add(search)
             } else {
-                // SOrted set - nulls come before non-nulls, so nothing beyond will overlap/intersect
+                // Sorted set - nulls come before non-nulls, so nothing beyond will overlap/intersect
                 stop = true
             }
         } else if (thatSeqRec == null){
             continue // nul before non-null, keep going through SearchSpace
         } else {
             if (thisSeqRecID == thatSeqRec.id) {
-                val intersects = srangeSiteIntersection(peak, search)
+                val intersects = overlaps(peak, search)
                 if (intersects) intersectingRanges.add(search)
                 else if (peak.endInclusive.site < search.start.site) {
                     // Sorted set - the start of the search site is greater than our peak's end site,
@@ -350,8 +357,19 @@ fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
     return intersectingRanges.toSet()
 }
 
-// Use DeMorgan's law to determine overlapping ranges
-fun srangeSiteIntersection(peak: SRange, search: SRange): Boolean {
+// Find intersection between 2 SRanges.  Returns null if they don't intersect, returns
+// the intersecting values if there is an overlap.
+fun srangeSiteIntersection(peak: SRange, search: SRange): SRange? {
+    val overlapStart = Math.max(peak.start.site,search.start.site);
+    val overlapEnd = Math.min(peak.endInclusive.site, search.endInclusive.site)
+    if (overlapStart <= overlapEnd) {
+        return SeqPosition(peak.start.seqRecord,overlapStart)..SeqPosition(peak.start.seqRecord,overlapEnd)
+    }
+    return null
+}
+
+// Use DeMorgan's law to determine if ranges overlap
+fun overlaps(peak: SRange, search: SRange): Boolean {
     val peakRange = peak.start.site..peak.endInclusive.site
     val searchRange = search.start.site..search.endInclusive.site
     if ((peak.start.site < search.endInclusive.site) && (peak.endInclusive.site >= search.start.site)) {
@@ -364,7 +382,7 @@ fun srangeIDMatch(peak: SRange, searchSpace: Set<SRange>) {
 
 }
 // This is named "pairedInterval" instead of "findPair" as otherwise it has conflict
-// with fund findPair() with the same signature
+// with fun findPair() with the same signature
 fun SRange.pairedInterval(searchSpace: Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int=1): Set<SRange> {
 
     var targetLen = this.endInclusive.site - this.start.site + 1
@@ -523,6 +541,10 @@ fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator
     return sRangeSetCoalesced.toSet()
 }
 
+/**
+ * Takes an input fasta, returns a Map of <contig-id,NucSeq> where
+ * NucSeq is the Biokotlin data structure for DNA and RNA sequences.
+ */
 fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
     var chromNucSeqMap  = HashMap<String,NucSeq>()
     try {
@@ -561,10 +583,14 @@ fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
     return chromNucSeqMap
 }
 
+/**
+ * Takes a genome fasta and a bedFile of ranges,
+ * creates a set of SRanges
+ */
 fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
     var rangeSet : MutableSet<SRange> = mutableSetOf()
-    // read and store fasta sequences into map keyed by idLine chrom
-    // then do bedfile a line at a time, use the chr column to get sequence from map
+    // read and store fasta sequences into map keyed by idLine chrom.
+    // Then do bedfile a line at a time, use the chr column to get sequence from map
     // Can I hold all of this in memory?
 
     println("bedfileToSRangeSet: calling fastaToNucSeq")
@@ -709,6 +735,13 @@ fun SRangeSet.shift(count: Int): SRangeSet {
     }
 
     return sRangeSet.toSet()
+}
+
+// Find the complement for a set of ranges.  The boundaryRange sets
+// the upper and lower limits for the complemented ranges.
+fun SRangeSet.complement(boundaryRange:SRange): SRangeSet {
+    val complementRanges = complement(boundaryRange,this)
+    return complementRanges
 }
 
 fun main() {
