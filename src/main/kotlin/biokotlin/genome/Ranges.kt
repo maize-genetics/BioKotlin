@@ -2,6 +2,7 @@
 package biokotlin.genome
 
 
+import biokotlin.genome.SeqRangeSort.leftEdge
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.SeqRecord
@@ -10,10 +11,17 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 import kotlin.Comparator
+import kotlin.collections.HashMap
 
 /**
  * This class defines  Biokotlin ranges as well as functions that may be run against
  * those ranges.
+ *
+ * An SRange has 2 parts:  An optional SeqRecord and a range.  The range is a kotlin closed range,
+ * inclusive/inclusive and represents the physical position on a sequence.
+ *
+ * Many of the functions, e.g. flank, shift, complement, are based on bedFile functions, but altered
+ * to be appropriate for SRange objects.
  *
  */
 object SeqRecordSorts {
@@ -84,11 +92,12 @@ data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<Seq
     }
 
 }
-
-// separate the SeqRecord:id from the site.
-// This returns a site value minus the commas.  This is necessary for .toInt()
-// We could instead return 2 Strings, leaving the commas in place, and let
-// the conversion to Int take place elsewhere.
+/**
+ * separate the SeqRecord:id from the site.
+ * This returns a site value minus the commas.  This is necessary for .toInt()
+ * We could instead return 2 Strings, leaving the commas in place, and let
+ * the conversion to Int take place elsewhere.
+ */
 fun parseIdSite(idSite: String): Pair<String,Int>  {
     val colonIdx = idSite.indexOf(":")
     val id = idSite.substring(0,colonIdx)
@@ -143,8 +152,11 @@ fun SRange.enlarge(bp: Int): SRange {
     return SeqPositionRanges.of(first, last)
 }
 
-
-// This will not shift into an adjacent contig of the genome
+/**
+ * Shift the given range by "count" positions.  If the number
+ * is negative, it is a left shift.  If the number is positive, shift righ
+ * This will not shift into an adjacent contig of the genome
+ */
 fun SRange.shift(count: Int): SRange {
     // negative number is shift left, positive is shift right, in either case, "add" the number
 
@@ -170,7 +182,9 @@ fun SRange.shift(count: Int): SRange {
 
 }
 
-// Flank the lower end of the range if it isn't already at 1
+/**
+ * Flank the lower end of the range if it isn't already a 1
+ */
 fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
     if (this.start.site > 1) {
         var lowerF  = (this.start.site.toLong() - count).toInt().coerceAtLeast(1)
@@ -181,7 +195,9 @@ fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
     return null
 }
 
-// Flank the upper end of range if it isn't already at max
+/**
+ * Flank the upper end of the range if it isn't already a max
+ */
 fun SRange.flankRight(count: Int) : SRange? {
     val seqRecord = this.endInclusive.seqRecord
     var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
@@ -194,6 +210,11 @@ fun SRange.flankRight(count: Int) : SRange? {
     return null
 }
 
+/**
+ * Flank both ends of the range by the specified amount
+ * THe lower end (left edge) will not drop below 1.
+ * The upper end (right edge) will not exceed max size of sequence in the SeqRecord
+ */
 fun SRange.flankBoth(count: Int) : Set<SRange> {
     var flankingRanges: MutableSet<SRange> = mutableSetOf()
     // Flank the lower end of the range if it isn't already at 1
@@ -291,9 +312,11 @@ fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSe
     return newRanges
 }
 
-// Finds all ranges in a set that intersect with the given SRange.
-// This merely calls findIntersectingSRanges below.
-fun SRange.intersections(searchSpace: Set<SRange>) : SRangeSet {
+/**
+ * Finds all ranges in a set that intersect with the given SRange.
+ * This function identifies the intersecting SRanges, not specific positions on these ranges.
+ */
+fun SRange.intersectingRanges(searchSpace: Set<SRange>) : SRangeSet {
     return findIntersectingSRanges(this,searchSpace)
 }
 
@@ -357,8 +380,10 @@ fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
     return intersectingRanges.toSet()
 }
 
-// Find intersection between 2 SRanges.  Returns null if they don't intersect, returns
-// the intersecting values if there is an overlap.
+/**
+ * Find intersections between 2 SRanges.  Returns null if they don't intersect, returns
+ * the intersecting values if there is an overlap.
+ */
 fun srangeSiteIntersection(peak: SRange, search: SRange): SRange? {
     val overlapStart = Math.max(peak.start.site,search.start.site);
     val overlapEnd = Math.min(peak.endInclusive.site, search.endInclusive.site)
@@ -368,7 +393,10 @@ fun srangeSiteIntersection(peak: SRange, search: SRange): SRange? {
     return null
 }
 
-// Use DeMorgan's law to determine if ranges overlap
+/**
+ * This function uses DeMorgan's law to determine if ranges overlap.
+ * Return:  boolean indicating if the ranges overlapped.
+ */
 fun overlaps(peak: SRange, search: SRange): Boolean {
     val peakRange = peak.start.site..peak.endInclusive.site
     val searchRange = search.start.site..search.endInclusive.site
@@ -376,6 +404,81 @@ fun overlaps(peak: SRange, search: SRange): Boolean {
         return true
     }
     return false
+}
+
+/**
+ * Given 2 sets of SRanges, return an SRangeSet of the intersecting positions
+ * from the 2 input SRange Sets.
+ */
+fun findIntersectingPositions(set1: SRangeSet, set2: SRangeSet): SRangeSet {
+
+    val intersections : MutableSet<SRange> = mutableSetOf()
+
+    // create mappings of SeqRecordID to ranges for each set
+    // These will be used
+    val set1Map: Multimap<SeqRecord,IntRange> = HashMultimap.create()
+    val set2Map: Multimap<SeqRecord,IntRange> = HashMultimap.create()
+
+    set1.forEach{range ->
+        val seqRec = if (range.start.seqRecord != null) range.start.seqRecord else NucSeqRecord(NucSeq("ATAT"), "NONE")
+        set1Map.put(seqRec,range.start.site..range.endInclusive.site)
+    }
+
+    set2.forEach{range ->
+        val seqRec = if (range.start.seqRecord != null) range.start.seqRecord else NucSeqRecord(NucSeq("ATAT"), "NONE")
+        set2Map.put(seqRec,range.start.site..range.endInclusive.site)
+    }
+
+    // Loop through the key of set1Map, finding any range sets overlapping with
+    // a set2Map range for the same SeqRecord.  Add to the "intersection" map for return
+    for (id in set1Map.keySet()) {
+        val ranges1 = set1Map.get(id)
+        val ranges2 = set2Map.get(id)
+        if (ranges2 == null) continue // this id not found both maps, no overlaps
+
+        val ranges1set = ranges1.toSortedSet(leftEdge)
+        val ranges2set = ranges2.toSortedSet(leftEdge)
+        val idIntersections = getOverlappingIntervals(ranges1set, ranges2set)
+        for (item in idIntersections) {
+            // create the SRanges for the intersections
+            intersections.add(SeqPosition(id,item.first())..SeqPosition(id,item.last()))
+        }
+    }
+
+    return intersections.toSortedSet(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort,leftEdge))
+}
+
+/**
+ * This function takes 2 sorted sets of Kotlin IntRange and returns
+ * a Set<IntRange> of overlapping positions.
+ */
+fun getOverlappingIntervals(set1: Set<IntRange>, set2: Set<IntRange>): Set<IntRange> {
+    val intersections : MutableSet<IntRange> = mutableSetOf()
+    var idx1 = 0
+    var idx2 = 0
+    var len1 = set1.size
+    var len2 = set2.size
+    while (idx1 < len1 && idx2 < len2) {
+        // left bound for intersecting segment
+        val left = Math.max(set1.elementAt(idx1).start, set2.elementAt(idx2).start)
+
+        // right bound for intersecting segment
+        val right = Math.min(set1.elementAt(idx1).endInclusive, set2.elementAt(idx2).endInclusive)
+
+        // if segment has intersection, add it to list
+        if (left <= right) {
+            intersections.add(left..right)
+        }
+
+        // increment set1's index if its right-side boundary is smaller than set2's right-side boundary.
+        // Else increment set2's index
+        if (set1.elementAt(idx1).endInclusive < set2.elementAt(idx2).endInclusive) {
+            idx1++
+        } else {
+            idx2++
+        }
+    }
+    return intersections
 }
 
 fun srangeIDMatch(peak: SRange, searchSpace: Set<SRange>) {
@@ -425,9 +528,18 @@ fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,Nu
     return rangeSet // findNegativePeaks returns an immutable set
 }
 
-// Method to take a set or SRanges, create subsets, windowed by 1, length=targetLen
-// This method does NOT change the sequence in the record. It assumes the ranges represent
-// an interval on the sequence
+/**
+ * The function creates a list of sub-ranges from a given set of SRanges.
+ * It takes a set or SRanges, creates  subsets of length "targetLen".  These are created
+ * using a window of 1.
+ * This method does NOT change the sequence in the record. It assumes the ranges represent
+ * an interval on the sequence.
+ * It then shuffles the list prior to returning.  This method is used by applications
+ * (e.g. pairedInterval() to find negative peaks) which want a list that doesn't prioritize
+ * a specific section of a range.
+ *
+ * return:  A List<SRange> of subranges
+ */
 fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRange> {
     var subRangeList : MutableList<SRange> = mutableListOf()
 
@@ -437,11 +549,6 @@ fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRang
         val start = range.start.site
         val end = range.endInclusive.site
         for (idx in start .. end - targetLen) {
-            // Do we subset the sequence here, or leave as original?
-//            var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
-//            var seqPos1 = range.start.copy(seqRecord = NucSeqRecord(NucSeq(seq),origRange.id), site = idx)
-//            var seqPos2 = range.endInclusive.copy(seqRecord = NucSeqRecord(NucSeq(seq),origRange.id), site = idx+targetLen-1)
-
             // Leave sequence alone - no changes
             var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
             var seqPos1 = range.start.copy( site = idx)
@@ -455,9 +562,11 @@ fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRang
     return subRangeList
 }
 
-// Find peaks with criteria matching that specified by the user supplied pairing function.
-// This method assumes the sequence in the NucSeqRecord hasn't changed from the original,
-// and the ranges indicate which subsection of the sequence to pull.
+/**
+ * Find peaks with criteria matching that specified by the user-supplied pairing function.
+ * This method assumes the sequence in the NucSeqRecord hasn't changed from the original,
+ * and the ranges indicate which subsection of the sequence to pull.
+ */
 fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int): Set<SRange> {
     var rangeSet : MutableSet<SRange> = mutableSetOf()
     var found = 0
@@ -507,7 +616,12 @@ class SeqPositionRangeComparator: Comparator<SRange> {
 
 typealias SRangeSet = Set<SRange> // Kotlin immutable Set
 
-// User may supply own comparator.  Output is a Kotlin Immutable Set
+/**
+ * Method takes a list of SRanges and adds them to a sorted set.  Overlapping intervals are NOT coalesced.
+ * User must supply a comparator - either their own or one defined in SeqRangeSort
+ *
+ * return:  Output is a Kotlin Immutable Set of SRanges
+ */
 fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
 
@@ -522,9 +636,13 @@ fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparat
 }
 
 
-// Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
-// THis does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
-// When comparator is first, it is then required.
+/**
+ * Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
+ * This does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
+ * User must supply a comparator - either their own or one defined in SeqRangeSort
+ *
+ * return: Output is a Kotlin Immutable Set of SRanges
+ */
 fun coalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
@@ -649,12 +767,16 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
     return flankingRanges.toSet()
 }
 
-// Merge will merge overlapping and embedded ranges, and other ranges where distance between them
-// is "count" or less bps.  It will not merge adjacent/non-overlapping ranges
-// A comparator is necessary as we can't merge until the ranges are sorted.  SRange is Kotlin Set
-// which is immutable, but not necessarily sorted.
-// Merging of ranges requires that the upper endpoint SeqRecord of the first range matches
-// the lower endpoint SeqRecord of the next range.
+/**
+ * Merge will merge overlapping and embedded ranges, and other ranges where distance between them
+ * is "count" or less bps.  It will not merge adjacent/non-overlapping ranges
+ * A comparator is necessary as we can't merge until the ranges are sorted.  SRange is Kotlin Set
+ * which is immutable, but not necessarily sorted.
+ * Merging of ranges requires that the upper endpoint SeqRecord of the first range matches
+ * the lower endpoint SeqRecord of the next range.
+ *
+ * return: an SRangeSet
+ */
 fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqPositionRangeComparator.sprComparator ): SRangeSet {
 
     val sRangeSet  = TreeSet(comparator) // will be returned
@@ -704,7 +826,10 @@ fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqPositionRange
 
 }
 
-// Add "count" bps to the right (upper) end of each range
+/**
+ * Add "count" bps to the right (upper) end of each range
+ * return:  the adjusted SRangeSet
+ */
 fun SRangeSet.flankRight(count: Int): SRangeSet {
     var frRangeSet: MutableSet<SRange> = mutableSetOf()
     this.forEach { range ->
@@ -715,7 +840,10 @@ fun SRangeSet.flankRight(count: Int): SRangeSet {
     return frRangeSet.toSet()
 }
 
-// subtract "count" bps from the left (lower) end of each range
+/**
+ * subtract "count" bps from the left (lower) end of each range
+ * return: the adjusted SRangeSet
+ */
 fun SRangeSet.flankLeft(count: Int): SRangeSet {
     var flRangeSet : MutableSet<SRange> = mutableSetOf()
     this.forEach{range ->
@@ -726,7 +854,10 @@ fun SRangeSet.flankLeft(count: Int): SRangeSet {
     return flRangeSet.toSet()
 }
 
-// Shift each range in the set by "count" bps.  Can be positive or negative number
+/**
+ * Shift each range in the set by "count" bps.  Can be positive or negative number
+ * return: the adjusted SRangeSet
+ */
 fun SRangeSet.shift(count: Int): SRangeSet {
     var sRangeSet : MutableSet<SRange> = mutableSetOf()
     this.forEach{range ->
@@ -737,11 +868,26 @@ fun SRangeSet.shift(count: Int): SRangeSet {
     return sRangeSet.toSet()
 }
 
-// Find the complement for a set of ranges.  The boundaryRange sets
-// the upper and lower limits for the complemented ranges.
+/**
+ * Find the complement for a set of ranges.  The boundaryRange sets
+ * the upper and lower limits for the complemented ranges.
+ *
+ * return:  an SRangeSet whose ranges are the complement of the original SRangeSet
+ */
 fun SRangeSet.complement(boundaryRange:SRange): SRangeSet {
     val complementRanges = complement(boundaryRange,this)
     return complementRanges
+}
+
+/**
+ * Find the intersecting positions from 2 SRangeSets
+ *
+ * input:  "this" and a second SRangeSet
+ * output:  An SRangeSet with specific SRange positions that intersect (ie, appear in both sets)
+ */
+fun SRangeSet.intersect(set2:SRangeSet): SRangeSet {
+    val intersectingRanges = findIntersectingPositions(this, set2)
+    return intersectingRanges
 }
 
 fun main() {

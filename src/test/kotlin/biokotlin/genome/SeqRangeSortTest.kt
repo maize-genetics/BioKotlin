@@ -104,6 +104,30 @@ class SeqRangeSortTest: StringSpec({
         srSet4.elementAt(5).start.site shouldBe 14
 
     }
+    "Test RightEdge single seqRecord" {
+        // Currently, RightEdge sorts by range end-side "reversed", ie high->low
+        val chr1A = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
+        val record1 = NucSeqRecord(NucSeq(chr1A), "1A")
+        val sr1 = record1.range(2..15)
+        val sr2 = record1.range(8..24)
+        val sr3 = record1.range(27..82)
+        val sr4 = record1.range(15..44)
+        val sr5 = record1.range(30..50)
+        val srSet4 = nonCoalescingSetOf(SeqRangeSort.by(alphaThenNumberSort,rightEdge), sr1,sr2,sr3,sr5,sr4)
+
+        println("\n Tree set single seqRecord - rightEdge sort:")
+        for (sp in srSet4) {
+            println(sp.toString())
+        }
+
+        srSet4.elementAt(0).endInclusive.site shouldBe 82
+        srSet4.elementAt(1).endInclusive.site shouldBe 50
+        srSet4.elementAt(2).endInclusive.site shouldBe 44
+        srSet4.elementAt(3).endInclusive.site shouldBe 24
+        srSet4.elementAt(4).endInclusive.site shouldBe 15
+
+
+    }
     "Test SeqRangeSort just on record" {
         val chr1A = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
         val chr2A = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
