@@ -14,6 +14,7 @@ import org.ehcache.Cache
 import org.ehcache.config.builders.CacheConfigurationBuilder
 import org.ehcache.config.builders.CacheManagerBuilder
 import org.ehcache.config.builders.ResourcePoolsBuilder
+import java.net.SocketTimeoutException
 
 private val cacheManager by lazy {
     CacheManagerBuilder.newCacheManagerBuilder().build(true)
@@ -153,11 +154,21 @@ fun domainsForSeq(proteinSeq: String): List<PFAMDomain> {
 
     val baseUrl = "https://www.ebi.ac.uk/Tools/hmmer/search/hmmscan/"
 
-    val post = post(baseUrl, data = mapOf("seq" to proteinSeq, "hmmdb" to "pfam")).url
-    val outputType = "?output=json"
-    val resultsUrl = post.plus(outputType)
+    try {
 
-    return loadDomains(resultsUrl)
+        try {
+            val post = post(baseUrl, data = mapOf("seq" to proteinSeq, "hmmdb" to "pfam")).url
+            val resultsUrl = post.plus("?output=json")
+            return loadDomains(resultsUrl, proteinSeq)
+        } catch (ste: SocketTimeoutException) { // try a second time if timeout
+            val post = post(baseUrl, data = mapOf("seq" to proteinSeq, "hmmdb" to "pfam")).url
+            val resultsUrl = post.plus("?output=json")
+            return loadDomains(resultsUrl, proteinSeq)
+        }
+
+    } catch (e: Exception) {
+        throw e
+    }
 
 }
 
@@ -177,45 +188,53 @@ fun domainsForAcc(proteinAcc: String): List<PFAMDomain> {
     val outputType = "?output=json"
     val resultsUrl = post.plus(outputType)
 
-    return loadDomains(resultsUrl)
+    return loadDomains(resultsUrl, proteinAcc)
 
 }
 
-private fun loadDomains(resultsUrl: String): List<PFAMDomain> {
+private fun loadDomains(resultsUrl: String, info: String? = null): List<PFAMDomain> {
 
-    println("query: $resultsUrl")
+    try {
 
-    val json = Json.parseToJsonElement(get(resultsUrl).text)
+        println("query: $resultsUrl")
 
-    assert(json.jsonObject.entries.size == 1)
-    val resultsEntry = json.jsonObject.entries.first()
-    assert(resultsEntry.key == "results")
-    val results = resultsEntry.value.jsonObject
+        val json = Json.parseToJsonElement(get(resultsUrl).text)
 
-    val hits = results["hits"]?.jsonArray ?: throw IllegalArgumentException("must have hits entry")
+        assert(json.jsonObject.entries.size == 1)
+        val resultsEntry = json.jsonObject.entries.first()
+        assert(resultsEntry.key == "results")
+        val results = resultsEntry.value.jsonObject
 
-    val domains = hits
-            .map { it.jsonObject }
-            .map { hit ->
-                val allHitsAttributes = hit.entries
-                        .filter { it.key != "domains" }
-                        .map { it.key to it.value.toString().removeSurrounding("\"") }
-                        .toMap()
+        val hits = results["hits"]?.jsonArray ?: throw IllegalArgumentException("must have hits entry")
 
-                val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
-                val firstDomain = domains[0].jsonObject
+        val domains = hits
+                .map { it.jsonObject }
+                .map { hit ->
+                    val allHitsAttributes = hit.entries
+                            .filter { it.key != "domains" }
+                            .map { it.key to it.value.toString().removeSurrounding("\"") }
+                            .toMap()
 
-                val attributes = mutableMapOf<String, String>()
-                attributes.putAll(allHitsAttributes)
+                    val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
+                    val firstDomain = domains[0].jsonObject
 
-                firstDomain.entries
-                        .forEach { attributes.put(it.key, it.value.toString().removeSurrounding("\"")) }
+                    val attributes = mutableMapOf<String, String>()
+                    attributes.putAll(allHitsAttributes)
 
-                PFAMDomain(attributes)
-            }
-            .toList()
+                    firstDomain.entries
+                            .forEach { attributes.put(it.key, it.value.toString().removeSurrounding("\"")) }
 
-    return domains
+                    PFAMDomain(attributes)
+                }
+                .toList()
+
+        return domains
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+        println("WARNING: problem loading PFAM Domains for: $info.  Return empty list")
+        return emptyList()
+    }
 
 }
 
