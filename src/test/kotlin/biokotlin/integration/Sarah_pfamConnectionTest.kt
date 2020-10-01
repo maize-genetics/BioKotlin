@@ -1,6 +1,7 @@
 package biokotlin.integration
 
 import biokotlin.ncbi.UniProt
+import biokotlin.util.setUniProtLogging
 import khttp.get
 import khttp.post
 import org.xml.sax.InputSource

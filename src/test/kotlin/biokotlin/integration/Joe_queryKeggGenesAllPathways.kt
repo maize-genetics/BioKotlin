@@ -2,6 +2,7 @@ package biokotlin.integration
 
 import biokotlin.kegg.Kegg
 import biokotlin.ncbi.UniProt
+import biokotlin.util.setUniProtLogging
 import krangl.*
 import java.io.File
 

@@ -6,6 +6,7 @@ import biokotlin.ncbi.mapStringXRefToOG
 import biokotlin.ncbi.readEggNogMemberFile
 import biokotlin.seq.ProteinSeq
 import biokotlin.util.asDataFrame
+import biokotlin.util.setUniProtLogging
 import krangl.*
 import java.io.File
 
