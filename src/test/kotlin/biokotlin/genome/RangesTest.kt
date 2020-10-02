@@ -485,7 +485,7 @@ class RangesTest: StringSpec({
             println(range)
         }
     }
-    " test SRange.intersectAndRemove" {
+    " test SRange.subtract" {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGAC"
 
         val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
@@ -498,13 +498,14 @@ class RangesTest: StringSpec({
         val sr4 = record1.range(3..13)
         val sr5 = record1.range(80..87)
         val sr6 = record1.range(40..45)
+        val sr7 = record1.range(100..105)
 
         val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr6,sr3,sr5,sr4)
 
         var peak = SeqPosition(record1, 45)..SeqPosition(record1,75)
 
         // The negative peak is picked from the regions flanking the peak.  here we'll
-        // make that be 30 bps up and down, so positions 35..44 and 76..105
+        // make that be 30 bps up and down, so positions 15..44 and 76..105
         var flankedPeaks = peak.flankBoth(30)
 
         println("length of dnaString: ${dnaString.length}")
@@ -517,8 +518,8 @@ class RangesTest: StringSpec({
         // This  returns the areas that can still be used.  It removes
         // the peak spaces that are identified in srSet from the upper and lower
         // flanking peaks that were created above from the flankBoth call
-        var searchSpace1 = flankedPeaks.elementAt(0).intersectAndRemove(srSet)
-        var searchSpace2 = flankedPeaks.elementAt(1).intersectAndRemove(srSet)
+        var searchSpace1 = flankedPeaks.elementAt(0).subtract(srSet)
+        var searchSpace2 = flankedPeaks.elementAt(1).subtract(srSet)
 
         println("\nranges left after peak removal from lower flank:")
         for (range in searchSpace1) {
@@ -534,6 +535,17 @@ class RangesTest: StringSpec({
         searchSpace2.size shouldBe 2
         searchSpace2.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
         searchSpace2.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
+
+        // test SRangeSet.subtract
+        var searchSpace = flankedPeaks.subtract(srSet)
+        println("\nranges after SUBTRACT from flankedPeaks SRangeSet")
+        for (range in searchSpace) {
+            println(range)
+        }
+        searchSpace.size shouldBe 3
+        searchSpace.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
+        searchSpace.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
+        searchSpace.contains(SeqPosition(record1,15)..SeqPosition(record1,24)) shouldBe true
     }
     " test SRange.complement" {
         val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGACTATATATATATATGCGCGCATGCATGCATGCATGACTGACCCCGGGGCCAAAATATA"

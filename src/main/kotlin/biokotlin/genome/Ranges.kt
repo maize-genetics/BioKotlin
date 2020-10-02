@@ -242,8 +242,9 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
  * For a given range, create new ranges based on removing any portion
  * of the old range which overlaps with any of the ranges in the "removeRanges"
  * set.  Return a new set of ranges
+ *
  */
-fun SRange.intersectAndRemove(removeRanges: Set<SRange>) : SRangeSet {
+fun SRange.subtract(removeRanges: Set<SRange>) : SRangeSet {
     //var newRanges: MutableSet<SRange> = mutableSetOf()
 
     val intersectingRanges = findIntersectingSRanges(this, removeRanges)
@@ -261,6 +262,9 @@ fun SRange.intersectAndRemove(removeRanges: Set<SRange>) : SRangeSet {
  * When complementing the SRanges for a full chromosome/contig, the "boundaryRange"
  * should be an SRange where boundaryRange.start.site = 1 and boundaryRange.endInclusive.site = <chromosome length>
  * When complementing for a specific "peak", the boundaries are the start/end of the peak.
+ *
+ * return: the split "boundaryRange" range set.  These are positions on the SRange that
+ * did not overlap any positions represented by an SRange on the intersectingRanges set.
  */
 fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSet {
     var newRanges : MutableSet<SRange> = mutableSetOf()
@@ -614,6 +618,7 @@ class SeqPositionRangeComparator: Comparator<SRange> {
     }
 }
 
+// Methods for SRangeSets
 typealias SRangeSet = Set<SRange> // Kotlin immutable Set
 
 /**
@@ -765,6 +770,23 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
     var upperF =  this.endInclusive + count
     flankingRanges.add(lowerF..upperF)
     return flankingRanges.toSet()
+}
+
+/**
+ * For a set of SRanges, create new ranges based on removing any portion
+ * of the old range which overlaps with any of the ranges in the "removeRanges"
+ * set.  Return a set of updated ranges .
+ *
+ */
+fun SRangeSet.subtract(removeRanges: Set<SRange>) : SRangeSet {
+    var newRanges: MutableSet<SRange> = mutableSetOf()
+
+    for (range in this) {
+        val intersectingRanges = findIntersectingSRanges(range, removeRanges)
+        val updatedRanges = complement(range, intersectingRanges)
+        newRanges.addAll(updatedRanges)
+    }
+    return newRanges
 }
 
 /**
