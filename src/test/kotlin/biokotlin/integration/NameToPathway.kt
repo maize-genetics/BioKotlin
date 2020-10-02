@@ -4,6 +4,7 @@ import biokotlin.kegg.Kegg
 import biokotlin.kegg.KeggServer
 import biokotlin.ncbi.UniProt
 import biokotlin.util.getOrNull
+import biokotlin.util.setUniProtLogging
 
 import krangl.eq
 import krangl.print

@@ -12,7 +12,7 @@ version = "0.01"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.4.0")
+    val kotlinVersion by extra("1.4.0")
 
     repositories {
         mavenCentral()
@@ -52,7 +52,7 @@ repositories {
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
-    maven("http://www.ebi.ac.uk/~maven/m2repo")  //Uniprot JAPI
+    maven("http://www.ebi.ac.uk/~maven/m2repo")  // Uniprot JAPI
 }
 
 dependencies {
@@ -78,8 +78,8 @@ dependencies {
     // implementation("net.maizegenetics:tassel:5.2.60")
 
     // Wide range of sequence tools in Java - API is dated
-     implementation("org.biojava:biojava:5.3.0")
-     implementation("org.biojava:biojava-genome:5.3.0")
+    implementation("org.biojava:biojava:5.3.0")
+    implementation("org.biojava:biojava-genome:5.3.0")
 
     implementation("org.graalvm.sdk:graal-sdk:20.0.0")
     implementation("org.apache.commons:commons-csv:1.8")
@@ -131,7 +131,7 @@ val dokkaJavadoc = tasks.register<DokkaTask>("dokkaJavadoc") {
 
 val dokkaJar by tasks.creating(Jar::class) {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
-    description = "BioKotlin: ${property("version")}"
+    description = "BioKotlin: ${property("archiveVersion")}"
     archiveClassifier.set("javadoc")
     from(dokkaJavadoc)
 }

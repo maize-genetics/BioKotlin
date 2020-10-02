@@ -1,6 +1,7 @@
 package biokotlin.integration
 
 import biokotlin.ncbi.UniProt
+import biokotlin.util.setUniProtLogging
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry
 import uk.ac.ebi.uniprot.dataservice.client.Client

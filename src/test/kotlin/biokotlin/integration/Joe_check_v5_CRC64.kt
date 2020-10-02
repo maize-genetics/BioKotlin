@@ -2,6 +2,7 @@ package biokotlin.integration
 
 import biokotlin.ncbi.UniProt
 import biokotlin.seq.ProteinSeq
+import biokotlin.util.setUniProtLogging
 import krangl.DataFrame
 import krangl.dataFrameOf
 import krangl.writeTSV
