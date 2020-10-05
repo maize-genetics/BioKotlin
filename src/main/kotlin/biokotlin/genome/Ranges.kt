@@ -64,6 +64,9 @@ class SeqPositionAlphaComparator: Comparator<SeqPosition>{
 data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
     init {
         require(site >= 0) { "All sites must be positive" }
+        if (seqRecord != null) {
+            require(site <= seqRecord.size())
+        }
     }
 
     val alphaSortSP = compareBy<SeqPosition> { it.seqRecord?.id }
@@ -143,6 +146,7 @@ object SeqPositionRanges {
 
 typealias SRange = ClosedRange<SeqPosition>
 
+// Verification of range endpoint values is done in SeqPosition
 fun SeqRecord.range(range: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange = SeqPositionRanges.of(this,range)
 fun SeqRecord.position(site: Int) : SeqPosition = SeqPosition(this, site)
 

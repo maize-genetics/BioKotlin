@@ -1,49 +1,48 @@
 package biokotlin.genome
 
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
+import biokotlin.seq.NUC
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.RandomNucSeq
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.Assertions
 import java.util.*
 
 class RangesTest: StringSpec({
-    "Multiple SeqPosition Ranges" {
-        // Create a Range set of range
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence1", description = "The first sequence",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence2", description = "The second sequence",
-                annotations = mapOf("key1" to "value1"))
-        val gr1 = record1.range(27..40)
 
+    // Consider using RandomNucSeq() - it may change assertions for findNegativePeak()
+    //val nucSeq1 = RandomNucSeq(80 * NUC.DNA.size)
+    //val record1 = NucSeqRecord(nucSeq1, "Seq1")
+    val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGACACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACA"
+    val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
+    val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
+    val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1")
+    val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2")
+    val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3")
+    "Multiple SeqPosition Ranges" {
+        val gr1 = record1.range(27..40)
         val gr2 = record2.range(5..10)
-        println("gr1: $gr1")
-        println("gr2: $gr2")
 
         // create a SeqPosition from a NucSeqRecord
-        val seqPos1 = record1.position(97378459)
-        println("seqPos1: $seqPos1")
-        println("seqPos1 to string is: ${seqPos1.toString()}")
+        val seqPos1 = record1.position(6)
+        println(seqPos1.toString())
 
         val parsedIdSite = parseIdSite(seqPos1.toString())
-        println("parseIdSite: $parsedIdSite")
-        parsedIdSite.second shouldBe 97378459
+        parsedIdSite.second shouldBe 6
+        println("parsedIdSite= $parsedIdSite ")
 
         // findSeqPosition isn't real yet - it creates a dummy sequence
         val seqPos_fromSeqPos1String = findSeqPosition(seqPos1.toString())
+        seqPos_fromSeqPos1String.site shouldBe 6
 
-        seqPos_fromSeqPos1String.site shouldBe 97378459
-
+        // out of bounds checks
+        shouldThrow<IllegalArgumentException> { record1.position(97378459) }
+        shouldThrow<IllegalArgumentException> {record1.position(-11)}
     }
     "Test SeqPosition Range functions " {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
-                annotations = mapOf("key1" to "value1"))
         val seqPos1 = SeqPosition(record1, 89)
         val sRange1: SRange = seqPos1..seqPos1
         println("sRange1: $sRange1")
@@ -76,21 +75,19 @@ class RangesTest: StringSpec({
         println("\nseqPos3 using -: $seqPos3")
         seqPos3.site shouldBe 85
 
+        // test out of range out of bounds
+        shouldThrow<IllegalArgumentException> { record2.range(5..8907) }
+        shouldThrow<IllegalArgumentException> { record2.range(-1..10) }
+
     }
     "Test SeqRecordSorts.alphasort " {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record3 = NucSeqRecord(NucSeq(dnaString), "Seq1-id2", description = "The first rec, second seq",
-                annotations = mapOf("key1" to "value1"))
+
+//        val record3 = NucSeqRecord(NucSeq(dnaString), "Seq1-id2", description = "The first rec, second seq",
+//                annotations = mapOf("key1" to "value1"))
         val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2", description = "The second rec, second seq",
                 annotations = mapOf("key1" to "value1"))
 
         val myComparator = NucSeqComparator()
-//        val mySet: NavigableSet<NucSeqRecord> = TreeSet(myComparator)
         val mySet = mutableSetOf<NucSeqRecord>()
         mySet.add(record4)
         mySet.add(record1)
@@ -99,28 +96,14 @@ class RangesTest: StringSpec({
 
         // This works here
         val sortedSet = mySet.toSortedSet(SeqRecordSorts.alphaSort)
+        sortedSet.elementAt(0).id shouldBe "Seq1"
 
-        println("\nunsorted ids")
-        for (record in mySet) {
-            println(record.id)
-        }
-
-        println("\nSORTED ids")
-        for (record in sortedSet) {
-            println(record.id)
-        }
+        sortedSet.elementAt(1).id shouldBe "Seq2"
+        sortedSet.elementAt(2).id shouldBe "Seq2-id2"
     }
 
     "General Set Test - test SeqPositionRangeComparator" {
-        // Create a Range set of range
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
-                annotations = mapOf("key1" to "value1"))
 
-        // This takes double the memory - it stores the sequence twice.
         var range1 = SeqPositionRanges.of(record1,8..28)
         var range2 = SeqPositionRanges.of(record2,3..19)
         var range3 = SeqPositionRanges.of(SeqPosition(record1, 32),SeqPosition(record1,40))
@@ -132,27 +115,22 @@ class RangesTest: StringSpec({
         println("\nlcj: setRanges before sorting ")
         for (range in setRanges) {
             println(range.toString())
-            println()
         }
+
+        setRanges.elementAt(0).start.site shouldBe 8
+        setRanges.elementAt(1).start.site shouldBe 25
 
         println("\n\nsetRanges after sorting:")
         var setRangesSorted = setRanges.toSortedSet(SeqPositionRangeComparator.sprComparator)
         for (range in setRangesSorted) {
             println(range.toString())
-            println()
         }
+        setRangesSorted.elementAt(0).start.site shouldBe 8
+        setRangesSorted.elementAt(1).start.site shouldBe 32
 
-        println("\nSeqPosition using over written toString() for range3 is:")
-        println(range3.start.toString())
     }
 
     "List SeqPositionRanges to sorted set" {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
-                annotations = mapOf("key1" to "value1"))
 
         var range1 = record1.range(8..28)
         var range2 = record2.range(3..19)
@@ -163,24 +141,15 @@ class RangesTest: StringSpec({
         rangeList.add(range3)
         rangeList.add(range1)
 
-        println("\nrangeList pre-sort:")
-        for (range in rangeList) {
-            println(range.toString())
-        }
+        rangeList[0].start.site shouldBe 3
+        rangeList[1].start.site shouldBe 32
 
         var rangeListSorted = rangeList.toSortedSet(SeqPositionRangeComparator.sprComparator)
-        println("\nrangeListSOrted:")
-        for (range in rangeListSorted) {
-            println(range.toString())
-        }
+
+        rangeListSorted.elementAt(0).start.site shouldBe 8
+        rangeListSorted.elementAt(1).start.site shouldBe 32
     }
     "Test SeqPosition default sorting " {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
-                annotations = mapOf("key1" to "value1"))
 
         //  test sorting - with a set of SeqPositions - not ranges:
         val sR: NavigableSet<SeqPosition> = TreeSet()
@@ -189,10 +158,10 @@ class RangesTest: StringSpec({
         sR.add(SeqPosition(record1,40))
         sR.add(SeqPosition(record2,19))
 
-        println("\n SeqPositions in TreeSet using default SeqPosition Ordering:")
-        for (sp in sR) {
-            println(sp.toString())
-        }
+        sR.elementAt(0).site shouldBe 8
+        sR.elementAt(1).site shouldBe 40
+        sR.elementAt(2).site shouldBe 3
+        sR.elementAt(3).site shouldBe 19
     }
 // THis test cases not needed if SeqPosition doesn't have user definable comparator
 
@@ -219,17 +188,6 @@ class RangesTest: StringSpec({
 //    }
 
     "Test nonCoalescingSetof for SRange" {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3-id1", description = "The first rec, second seq",
-                annotations = mapOf("key1" to "value1"))
-        val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2", description = "The second rec, second seq",
-                annotations = mapOf("key1" to "value1"))
 
         val sr1 = record1.range(27..44)
         val sr2 = record1.range(1..15)
@@ -238,24 +196,25 @@ class RangesTest: StringSpec({
 
         // Should create a NavigableSet - sorted set
         val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
-        println("\n - SeqPositions in Tree Set:")
-        for (sp in srSet) {
-            println(sp.toString())
-        }
 
         srSet.elementAt(0).start.site shouldBe 1
         srSet.elementAt(1).start.site shouldBe 27
         srSet.elementAt(2).start.site shouldBe 25
         srSet.elementAt(3).start.site shouldBe 18
+
+        var rangeList: MutableList<SRange> = mutableListOf()
+        rangeList.add(sr1)
+        rangeList.add(sr2)
+        rangeList.add(sr3)
+        rangeList.add(sr4)
+        val srSetFromList = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, rangeList)
+        srSetFromList.elementAt(0).start.site shouldBe 1
+        srSetFromList.elementAt(1).start.site shouldBe 27
+        srSetFromList.elementAt(2).start.site shouldBe 25
+        srSetFromList.elementAt(3).start.site shouldBe 18
     }
 
     "Test coalescing ranges" {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1-id1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id1", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
 
         val sr1 = record1.range(25..44)
         val sr2 = record1.range(5..10)
@@ -263,34 +222,30 @@ class RangesTest: StringSpec({
         val sr4 = record1.range(45..50)
 
         var srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr4)
-        println("\n - ranges NON-coalesced set:")
-        for (sp in srSet) {
-            println(sp.toString())
-        }
         srSet.size shouldBe 4
 
         var coalescedSet = coalescingsetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
-        println("\n - ranges coalesced set:")
-        for (sp in coalescedSet) {
-            println(sp.toString())
-        }
         coalescedSet.size shouldBe 3
+
+        var rangeList: MutableList<SRange> = mutableListOf()
+        rangeList.add(sr1)
+        rangeList.add(sr2)
+        rangeList.add(sr3)
+        rangeList.add(sr4)
+        val coalescedSetFromList = coalescingSetOf(SeqPositionRangeComparator.sprComparator, rangeList)
+        coalescedSetFromList.size shouldBe 3
     }
 
     "Test createShuffledSubRangeList and findPair" {
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
-        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1-id1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
 
         var targetLen = 10
-        var sRange = seqRec1.range(1..23)
+        var sRange = record1.range(1..23)
         var sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
         var subRanges = createShuffledSubRangeList(targetLen, sRangeSet)
         println("dnaString2 length: ${dnaString2.length}")
-        println("dnaString1 length: ${dnaString1.length}")
-        println("\nthe values in subRanges with seqlength of 23, targetLen of 10:")
+        println("dnaString1 length: ${record1.seq().length}")
+        println("\nthe values in shuffled subRanges with seqlength of 23, targetLen of 10:")
         for (range in subRanges) {
             val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
             val sequence = seqRec.sequence
@@ -311,15 +266,13 @@ class RangesTest: StringSpec({
             println("$sequence: $range")
         }
 
+        // When there are multiple peaks possible, the peaks returned will vary
+        // as they are pull from a shuffled list.  But size should be 3
+        negativePeaks.size shouldBe 3
     }
     "test findPair comparing to a NucSeq " {
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
-        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1")
-        var seqRec2 = NucSeqRecord(NucSeq(dnaString2), id = "Seq2")
-
-        var sRange = seqRec1.range(1..23)
-        var sRange2 = seqRec2.range(25..61)
+        var sRange = record1.range(1..23)
+        var sRange2 = record2.range(25..61)
         var sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
         sRangeSet.add(sRange2)
@@ -336,14 +289,10 @@ class RangesTest: StringSpec({
         }
     }
     "test findPair comparing to an SRange " {
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
-        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1")
-        var seqRec2 = NucSeqRecord(NucSeq(dnaString2), id = "Seq2")
 
-        var positivePeakSRange = seqRec1.range(1..10)
-        var sRange = seqRec1.range(1..23)
-        var sRange2 = seqRec2.range(25..61)
+        var positivePeakSRange = record1.range(1..10)
+        var sRange = record1.range(1..23)
+        var sRange2 = record2.range(25..61)
         var sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
         sRangeSet.add(sRange2)
@@ -359,19 +308,17 @@ class RangesTest: StringSpec({
         }
     }
     "test findPair from an SRange " {
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString1 = "ACGTGGTGAATATATATGCGCGC"
-        var seqRec1 = NucSeqRecord(NucSeq(dnaString1), "Seq1")
-        var seqRec2 = NucSeqRecord(NucSeq(dnaString2), id = "Seq2")
 
-        var positivePeakSRange = seqRec1.range(1..10)
-        var sRange = seqRec1.range(1..23)
-        var sRange2 = seqRec2.range(25..61)
+        var positivePeakSRange = record1.range(1..10)
+        var sRange = record1.range(1..23)
+        var sRange2 = record2.range(25..61)
 
         val sRangeSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort, SeqRangeSort.leftEdge), sRange, sRange2)
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
         var negativePeaks = positivePeakSRange.pairedInterval(sRangeSet, gcSame, 3)
 
+        // Peaks are from a shuffled list and will vary on each iteration
+        // of this test.
         println("number of negativePeaks: ${negativePeaks.size}")
         for (range in negativePeaks) {
             val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
@@ -433,15 +380,6 @@ class RangesTest: StringSpec({
     }
 
     "test findIntersectingSRanges " {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3", description = "The first rec, second seq",
-                annotations = mapOf("key1" to "value1"))
 
         val sr1 = record1.range(27..44)
         val sr2 = record1.range(1..15)
@@ -486,10 +424,6 @@ class RangesTest: StringSpec({
         }
     }
     " test SRange.subtract" {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGAC"
-
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
 
         // These must be on the same record to truly be intersecting ranges.
         val sr1 = record1.range(27..44)
@@ -508,7 +442,7 @@ class RangesTest: StringSpec({
         // make that be 30 bps up and down, so positions 15..44 and 76..105
         var flankedPeaks = peak.flankBoth(30)
 
-        println("length of dnaString: ${dnaString.length}")
+        println("length of dnaString: ${record1.seq().length}")
 
         println("\nFlanking ranges for the peak are these:")
         for (range in flankedPeaks) {
@@ -548,12 +482,8 @@ class RangesTest: StringSpec({
         searchSpace.contains(SeqPosition(record1,15)..SeqPosition(record1,24)) shouldBe true
     }
     " test SRange.complement" {
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGACTATATATATATATGCGCGCATGCATGCATGCATGACTGACCCCGGGGCCAAAATATA"
 
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-
-        println("lenght of dnaString: ${dnaString.length}")
+        println("lenght of record1 sequence: ${record1.seq().length}")
         // These must be on the same record to truly be intersecting ranges.
         val sr1 = record1.range(147..175)
         val sr2 = record1.range(119..122)
@@ -616,12 +546,6 @@ class RangesTest: StringSpec({
     "Test intersect for SRange Sets" {
         // test both calling the function findIntersectingPositions() with 2 SRangeSets
         // and test the SRangeSet.intersect(set2) function
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1")
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a")
-        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3")
 
         val sr1 = record1.range(27..40)
         val sr2 = record1.range(1..15)
@@ -663,17 +587,6 @@ class RangesTest: StringSpec({
         intersections2.contains(SeqPosition(record2, 10)..SeqPosition(record1,13)) shouldBe true
     }
         "Test kotlin set union,subtract,intersect " {
-
-        // try with SRanges now
-        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-        val dnaString3 = "TCAGTGATGATGATGCACACACACACACGTAGCTAGCTGCTAGCTAGTGATACGTAGCAAAAAATTTTTT"
-        val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1", description = "The first rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2a", description = "The second rec first seq",
-                annotations = mapOf("key1" to "value1"))
-        val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3", description = "The first rec, second seq",
-                annotations = mapOf("key1" to "value1"))
 
         val sr1 = record1.range(27..44)
         val sr2 = record1.range(1..15)

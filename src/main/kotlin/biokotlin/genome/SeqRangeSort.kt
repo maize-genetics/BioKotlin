@@ -40,7 +40,7 @@ object SeqRangeSort {
 
     // comparators based on site range
     val leftEdge = compareBy<ClosedRange<Int>>({ it.start }, { it.endInclusive })
-    val rightEdge = compareBy<ClosedRange<Int>>({ it.endInclusive }, { it.start }).reversed()
+    val rightEdge = compareBy<ClosedRange<Int>>({ it.endInclusive }, { it.start })
 
     // What does "middle" mean?  What value are we seeking ?
     val middle = compareBy<ClosedRange<Int>> {it.endInclusive.toLong() - it.start.toLong() }
