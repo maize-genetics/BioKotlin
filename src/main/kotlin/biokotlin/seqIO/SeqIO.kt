@@ -35,6 +35,7 @@ private fun seqIterator(format: SeqFormat, filename: String): SequenceIterator {
 
     return when (format) {
         SeqFormat.fasta -> FastaIO(filename)
+        SeqFormat.fastq -> FastqIO(filename)
         else -> throw IllegalArgumentException("SeqIO: seqIterator: unknown format: ${format.name}")
     }
 

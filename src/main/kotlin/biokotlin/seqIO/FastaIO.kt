@@ -65,7 +65,6 @@ class FastaIO(val filename: String) : SequenceIterator {
     companion object {
 
         private suspend fun readFastaLines(filename: String, inputChannel: Channel<Pair<String, List<String>>>) {
-
             try {
 
                 File(filename).bufferedReader().use { reader ->
