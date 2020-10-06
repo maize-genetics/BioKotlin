@@ -1,19 +1,16 @@
 package biokotlin.genome
 
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
-import biokotlin.seq.NUC
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
-import biokotlin.seq.RandomNucSeq
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import org.junit.jupiter.api.Assertions
 import java.util.*
 
 class RangesTest: StringSpec({
 
-    // Consider using RandomNucSeq() - it may change assertions for findNegativePeak()
+    // Consider using RandomNucSeq() to generate sequence: note it may change assertions for findNegativePeak()
     //val nucSeq1 = RandomNucSeq(80 * NUC.DNA.size)
     //val record1 = NucSeqRecord(nucSeq1, "Seq1")
     val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGACCGTACGTACGTATCAGTCAGCTGACACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACA"
@@ -22,17 +19,14 @@ class RangesTest: StringSpec({
     val record1 = NucSeqRecord(NucSeq(dnaString), "Seq1")
     val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2")
     val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3")
+    val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2")
     "Multiple SeqPosition Ranges" {
-        val gr1 = record1.range(27..40)
-        val gr2 = record2.range(5..10)
 
         // create a SeqPosition from a NucSeqRecord
         val seqPos1 = record1.position(6)
-        println(seqPos1.toString())
 
         val parsedIdSite = parseIdSite(seqPos1.toString())
         parsedIdSite.second shouldBe 6
-        println("parsedIdSite= $parsedIdSite ")
 
         // findSeqPosition isn't real yet - it creates a dummy sequence
         val seqPos_fromSeqPos1String = findSeqPosition(seqPos1.toString())
@@ -45,11 +39,9 @@ class RangesTest: StringSpec({
     "Test SeqPosition Range functions " {
         val seqPos1 = SeqPosition(record1, 89)
         val sRange1: SRange = seqPos1..seqPos1
-        println("sRange1: $sRange1")
 
         // test Plus
         var sRange2: SRange = seqPos1..seqPos1.plus(1)
-        println("\nsRange2: $sRange2")
         sRange2.endInclusive.site shouldBe 90
 
         // THis fails with "unexpected tokens (use ";" to separate expressions on the same line_
@@ -58,21 +50,17 @@ class RangesTest: StringSpec({
 
         var intRange = 1..10
         intRange = 1..10+1
-        println("intRange: $intRange")
         intRange.last shouldBe 11
 
         // this works, but doesn't work as part of a range (see above)
         var seqPos3 = seqPos1+1
-        println("\nseqPos3 using +: $seqPos3")
         seqPos3.site shouldBe 90
 
         // test minus
         sRange2 = seqPos1.minus(2)..seqPos1
-        println("\nsRange2 after minus: $sRange2")
         sRange2.start.site shouldBe 87
 
         seqPos3 = seqPos1-4
-        println("\nseqPos3 using -: $seqPos3")
         seqPos3.site shouldBe 85
 
         // test out of range out of bounds
@@ -82,12 +70,6 @@ class RangesTest: StringSpec({
     }
     "Test SeqRecordSorts.alphasort " {
 
-//        val record3 = NucSeqRecord(NucSeq(dnaString), "Seq1-id2", description = "The first rec, second seq",
-//                annotations = mapOf("key1" to "value1"))
-        val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2", description = "The second rec, second seq",
-                annotations = mapOf("key1" to "value1"))
-
-        val myComparator = NucSeqComparator()
         val mySet = mutableSetOf<NucSeqRecord>()
         mySet.add(record4)
         mySet.add(record1)
@@ -109,22 +91,13 @@ class RangesTest: StringSpec({
         var range3 = SeqPositionRanges.of(SeqPosition(record1, 32),SeqPosition(record1,40))
         var range4 = record2.range(25..40)
 
-        // THis is calling setOf from Ranges.  How is it defaulting to that?
-        // In jupyter notebook I have to explicitly do biokotlin.genome.setOf(...)
+        // This is calling Kotlin setOf(), which doesn't take a list
         var setRanges = setOf(range1, range4, range3, range2)
-        println("\nlcj: setRanges before sorting ")
-        for (range in setRanges) {
-            println(range.toString())
-        }
 
         setRanges.elementAt(0).start.site shouldBe 8
         setRanges.elementAt(1).start.site shouldBe 25
 
-        println("\n\nsetRanges after sorting:")
         var setRangesSorted = setRanges.toSortedSet(SeqPositionRangeComparator.sprComparator)
-        for (range in setRangesSorted) {
-            println(range.toString())
-        }
         setRangesSorted.elementAt(0).start.site shouldBe 8
         setRangesSorted.elementAt(1).start.site shouldBe 32
 
@@ -163,29 +136,6 @@ class RangesTest: StringSpec({
         sR.elementAt(2).site shouldBe 3
         sR.elementAt(3).site shouldBe 19
     }
-// THis test cases not needed if SeqPosition doesn't have user definable comparator
-
-//    "Test SeqPosition User Supplied sorting " {
-//        val dnaString = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
-//        val dnaString2 = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
-//        val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description = "The first sequence",
-//                annotations = mapOf("key1" to "value1"))
-//        val record2 = NucSeqRecord(NucSeq(dnaString2), "Sequence 2", description = "The second sequence",
-//                annotations = mapOf("key1" to "value1"))
-//
-//        //  test sorting - with a set of SeqPositions - not ranges:
-//        val sR: NavigableSet<SeqPosition> = TreeSet()
-//        sR.add(SeqPosition(record1,8, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-//        sR.add(SeqPosition(record2,3, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-//        sR.add(SeqPosition(record1,40, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-//        sR.add(SeqPosition(record2,19, comparator=SeqPositionReverseAlphaComparator.spReverseAlphaComparator))
-//
-//        println("\nLCJ - SeqPositions in TreeSet using user-supplied Reverse SeqPosition Ordering:")
-//        for (sp in sR) {
-//            println(sp.toString())
-//        }
-//
-//    }
 
     "Test nonCoalescingSetof for SRange" {
 
@@ -235,6 +185,39 @@ class RangesTest: StringSpec({
         val coalescedSetFromList = coalescingSetOf(SeqPositionRangeComparator.sprComparator, rangeList)
         coalescedSetFromList.size shouldBe 3
     }
+    "SRangeSet from SeqPositionRanges filtered and mapped toSet, and IntRanges filtered and mapped to SRanges Set" {
+
+        var range1 = record1.range(8..28) // id=Seq1
+        var range2 = record2.range(3..19) // id=Seq2
+        var range3 = record1.range( 32..40) // id=Seq1
+        var range4 = record3.range(1..10) // id=Seq3
+        var range5 = record1.range(5..15) // id=Seq1
+
+
+        var rangeList = mutableListOf<SRange>()
+        rangeList.add(range1)
+        rangeList.add(range2)
+        rangeList.add(range3)
+        rangeList.add(range4)
+        rangeList.add(range5)
+
+        var nonCoalescingSet = rangeList.filter{ it.start.seqRecord!!.id == "Seq1"}
+        nonCoalescingSet.contains(range4) shouldBe false
+        nonCoalescingSet.contains(range2) shouldBe false
+        nonCoalescingSet.size shouldBe 3
+
+        val intRanges = listOf(1..10, 15..25, 38..43, 67..102, 139..175)
+        val sRangeSet = intRanges.filter{it.last < 100}
+                .map{ range ->
+                    SeqPositionRanges.of(SeqPosition(record1,range.first),SeqPosition(record1,range.last))
+                }
+                .toSet()
+
+        sRangeSet.contains(record1.range(1..10)) shouldBe true
+        sRangeSet.contains(record1.range(15..25)) shouldBe true
+        sRangeSet.contains(record1.range(139..175)) shouldBe false
+        sRangeSet.size shouldBe 3
+    }
 
     "Test createShuffledSubRangeList and findPair" {
 
@@ -243,14 +226,6 @@ class RangesTest: StringSpec({
         var sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
         var subRanges = createShuffledSubRangeList(targetLen, sRangeSet)
-        println("dnaString2 length: ${dnaString2.length}")
-        println("dnaString1 length: ${record1.seq().length}")
-        println("\nthe values in shuffled subRanges with seqlength of 23, targetLen of 10:")
-        for (range in subRanges) {
-            val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
-            val sequence = seqRec.sequence
-            println("$sequence: $range")
-        }
         subRanges.size shouldBe 13
 
         // test findNegativePeaks - it needs the range list from above
@@ -347,15 +322,13 @@ class RangesTest: StringSpec({
         }
 
         var srangeList: List<SRange> = shuffledSet.toList()
-        // test sorting - well, our SeqRangeSort isn't done yet - use this default for now
-        var sortedSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,srangeList)
+        var sortedSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort, SeqRangeSort.leftEdge),srangeList)
         println("\nsortedSet from nonCoalescingSetOf:")
         for (range in sortedSet) {
             println(range)
         }
 
         // At this point, I want to test some intersect code on a large set - see small intersect case below
-
         var positivePeak = sortedSet.elementAt(16) // picking an arbitrary element as my peak
         println("\nPeak for testing: $positivePeak")
 
@@ -379,7 +352,7 @@ class RangesTest: StringSpec({
         }
     }
 
-    "test findIntersectingSRanges " {
+    "test findIntersectingSRanges with null and non-null seqRecord" {
 
         val sr1 = record1.range(27..44)
         val sr2 = record1.range(1..15)
@@ -392,36 +365,26 @@ class RangesTest: StringSpec({
 
         val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
 
-        println("\nRanges from sorted set:")
-        for (range in srSet) {
-            println(range)
-        }
-
-        // Verified the ranges sorted correctly, now define a peak, then
-        // look for intersections
-
+        // Ranges are sorted: define a peak - no SeqRecord, then look for intersections
         var peak = SeqPosition(null, 45)..SeqPosition(null,75)
         var intersectingRanges = findIntersectingSRanges(peak, srSet)
-
-        println("\nintersectin ranges for peak ${peak}:")
-        for (range in intersectingRanges) {
-            println(range)
-        }
+        intersectingRanges.size shouldBe 1
+        intersectingRanges.contains(sr1) shouldBe false
+        intersectingRanges.contains(sr0) shouldBe true
 
         peak = record2.range(10..18)
         intersectingRanges = findIntersectingSRanges(peak, srSet)
 
-        println("\nintersectin ranges - round 2 for peak ${peak}:")
-        for (range in intersectingRanges) {
-            println(range)
-        }
+        intersectingRanges.size shouldBe 1
+        intersectingRanges.contains(sr5) shouldBe true
+        intersectingRanges.contains(sr0) shouldBe false
 
         // Test the SRange function:  SRange.intersectingRanges()
         var intersectionsFromSRange = peak.intersectingRanges(srSet)
-        println("\nintersection from SRanges - round 2 for peak ${peak}:")
-        for (range in intersectionsFromSRange) {
-            println(range)
-        }
+
+        intersectionsFromSRange.size shouldBe 1
+        intersectionsFromSRange.contains(sr5) shouldBe true
+        intersectionsFromSRange.contains(sr0) shouldBe false
     }
     " test SRange.subtract" {
 
@@ -442,40 +405,22 @@ class RangesTest: StringSpec({
         // make that be 30 bps up and down, so positions 15..44 and 76..105
         var flankedPeaks = peak.flankBoth(30)
 
-        println("length of dnaString: ${record1.seq().length}")
-
-        println("\nFlanking ranges for the peak are these:")
-        for (range in flankedPeaks) {
-            println(range)
-        }
-
         // This  returns the areas that can still be used.  It removes
         // the peak spaces that are identified in srSet from the upper and lower
         // flanking peaks that were created above from the flankBoth call
         var searchSpace1 = flankedPeaks.elementAt(0).subtract(srSet)
         var searchSpace2 = flankedPeaks.elementAt(1).subtract(srSet)
 
-        println("\nranges left after peak removal from lower flank:")
-        for (range in searchSpace1) {
-            println(range)
-        }
         searchSpace1.contains(SeqPosition(record1,15)..SeqPosition(record1,24)) shouldBe true
         searchSpace1.size shouldBe 1
 
-        println("\nranges left after peak removal from upper flank:")
-        for (range in searchSpace2) {
-            println(range)
-        }
         searchSpace2.size shouldBe 2
         searchSpace2.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
         searchSpace2.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
 
         // test SRangeSet.subtract
         var searchSpace = flankedPeaks.subtract(srSet)
-        println("\nranges after SUBTRACT from flankedPeaks SRangeSet")
-        for (range in searchSpace) {
-            println(range)
-        }
+
         searchSpace.size shouldBe 3
         searchSpace.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
         searchSpace.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
@@ -525,21 +470,6 @@ class RangesTest: StringSpec({
         // in sorted order (by left-side boundary)
         val intersections = getOverlappingIntervals(set1,set2)
 
-        println("\nset1 values:")
-        for (range in set1) {
-            println(range.toString())
-        }
-
-        println("\nset2 values:")
-        for (range in set2) {
-            println(range.toString())
-        }
-
-        println("\nset intersections:")
-        for (range in intersections) {
-            println(range.toString())
-        }
-
         intersections.contains(15..20) shouldBe true
         intersections.contains(60..65) shouldBe true
     }
@@ -566,21 +496,12 @@ class RangesTest: StringSpec({
 
         val intersections = findIntersectingPositions(set1,set2)
 
-        println("\nset intersections from findIntersectingPositions call:")
-        for (srange in intersections) {
-            println(srange.toString())
-        }
-
         intersections.contains(SeqPosition(record1, 30)..SeqPosition(record1,35)) shouldBe true
         intersections.contains(SeqPosition(record1, 44)..SeqPosition(record1,50)) shouldBe true
         intersections.contains(SeqPosition(record2, 10)..SeqPosition(record1,13)) shouldBe true
 
         // repeat - but run this on the SRangeSet
         val intersections2 = set1.intersect(set2)
-        println("\nset1.intersect intersections:")
-        for (srange in intersections2) {
-            println(srange.toString())
-        }
 
         intersections2.contains(SeqPosition(record1, 30)..SeqPosition(record1,35)) shouldBe true
         intersections2.contains(SeqPosition(record1, 44)..SeqPosition(record1,50)) shouldBe true
