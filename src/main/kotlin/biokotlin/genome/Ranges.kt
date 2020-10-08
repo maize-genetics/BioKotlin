@@ -28,6 +28,10 @@ import kotlin.collections.HashMap
  * to be appropriate for SRange objects.
  *
  */
+
+/**
+ * Sorting for the SeqRecord object
+ */
 object SeqRecordSorts {
     // The alphaSort works when used as the comparator in "toSortedSet" (see RangesTest -
     //  "Test SeqRecordSorgs.alphasort " test case) but it isn't executed properly as
@@ -38,29 +42,6 @@ object SeqRecordSorts {
     val defaultSeqRecSort:Comparator<in SeqRecord> = compareBy{ defaultSeqRecSortIndex.getOrDefault(it, Int.MAX_VALUE) }
     fun setDefaultSort(seqRecords: List<SeqRecord>) {
         defaultSeqRecSortIndex = seqRecords.mapIndexed { index, seqRecord ->  seqRecord to index}.toMap()
-    }
-}
-
-// Default comparator for the SeqPosition class.
-// It sorts based first on seqRecord.id, then site.
-// SeqPositions without a SeqRecord are ordered first.
-class SeqPositionAlphaComparator: Comparator<SeqPosition>{
-    companion object{
-        var spAlphaComparator  = SeqPositionAlphaComparator()
-    }
-    override fun compare(p0: SeqPosition, p1:SeqPosition): Int {
-        // If both p0.seqRecord and p1.seqRecord are null, or just p0.seqRecord is null, return p0
-        // if only p1.seqRecord is null, return p1 (sorting so that null comes first)
-        // if neither is null, compare the sites and return accordingly.
-        if (p0.seqRecord == null ) {
-            if (p1.seqRecord == null) {
-                return p0.site.compareTo(p1.site)
-            } // they are equal
-            return -1 // null comes before non-null
-        }
-        if (p1.seqRecord == null) return 1 // null before non-null
-        val seqRecordCompare = p0.seqRecord.id.compareTo(p1.seqRecord.id)
-        return if (seqRecordCompare != 0) seqRecordCompare else return  p0.site.compareTo(p1.site)
     }
 }
 
@@ -129,10 +110,10 @@ fun findSeqPosition(idSite: String): SeqPosition {
 
 // "Object" is a single static instance.
 object SeqPositionRanges {
-    fun of(seqRecord: SeqRecord, siteRange: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange =
+    fun of(seqRecord: SeqRecord, siteRange: IntRange): SRange =
             SeqPosition(seqRecord, siteRange.first)..SeqPosition(seqRecord, siteRange.last)
     // The "requires" below do not allow ranges to cross contigs - should be changed?
-    fun of(first: SeqPosition, last: SeqPosition, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange {
+    fun of(first: SeqPosition, last: SeqPosition): SRange {
         require(first.seqRecord==last.seqRecord)
         require(first.site<=last.site)
         return SeqPosition(first.seqRecord, first.site)..SeqPosition(last.seqRecord, last.site)
@@ -151,7 +132,7 @@ object SeqPositionRanges {
 typealias SRange = ClosedRange<SeqPosition>
 
 // Verification of range endpoint values is done in SeqPosition
-fun SeqRecord.range(range: IntRange, comparator: Comparator<SeqPosition> = SeqPositionAlphaComparator.spAlphaComparator): SRange = SeqPositionRanges.of(this,range)
+fun SeqRecord.range(range: IntRange): SRange = SeqPositionRanges.of(this,range)
 fun SeqRecord.position(site: Int) : SeqPosition = SeqPosition(this, site)
 
 fun SRange.enlarge(bp: Int): SRange {
@@ -370,7 +351,7 @@ fun SRange.intersectingRanges(searchSpace: Set<SRange>) : SRangeSet {
 fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
     val intersectingRanges: MutableSet<SRange> = mutableSetOf()
 
-    val comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator
+    val comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge)
     // This is fastest if the ranges are sorted.  It doesn't matter how the user
     // would sort them for his purposes.  Here we use a natural ordering.  ALl
     // that matters is when the seqRecord.id's match, do their ranges overlap?
@@ -481,7 +462,7 @@ fun findIntersectingPositions(set1: SRangeSet, set2: SRangeSet): SRangeSet {
         }
     }
 
-    return intersections.toSortedSet(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort,leftEdge))
+    return intersections.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge))
 }
 
 /**
@@ -548,14 +529,14 @@ typealias SRangeSet = Set<SRange> // Kotlin immutable Set
  *
  * return:  Output is a Kotlin Immutable Set of SRanges
  */
-fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
+fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), ranges: List<SRange>): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
 
     sRangeSet.addAll(ranges.asIterable())
     return sRangeSet.toSet()
 }
 
-fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
+fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), vararg ranges: SRange): SRangeSet {
     val sRangeSet = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     return sRangeSet.toSet()
@@ -569,7 +550,7 @@ fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparat
  *
  * return: Output is a Kotlin Immutable Set of SRanges
  */
-fun coalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, ranges: List<SRange>): SRangeSet {
+fun coalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), ranges: List<SRange>): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     // Have a range set, now call merge with "0" for bp distance.
@@ -578,7 +559,7 @@ fun coalescingSetOf(comparator: Comparator<SRange> = SeqPositionRangeComparator.
     return sRangeSetCoalesced.toSet()
 }
 
-fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator.sprComparator, vararg ranges: SRange): SRangeSet {
+fun coalescingsetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), vararg ranges: SRange): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
     val sRangeSetCoalesced = sRangeSet.merge(0)
@@ -645,7 +626,7 @@ fun SRangeSet.subtract(removeRanges: Set<SRange>) : SRangeSet {
  *
  * return: an SRangeSet
  */
-fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqPositionRangeComparator.sprComparator ): SRangeSet {
+fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge) ): SRangeSet {
 
     val sRangeSet  = TreeSet(comparator) // will be returned
     val sRangeDeque: Deque<SRange> = ArrayDeque()
@@ -939,28 +920,28 @@ class NucSeqComparator: Comparator<NucSeqRecord>{
 
 //Default comparator for SeqPositionRanges
 // It is used in setOf below
-class SeqPositionRangeComparator: Comparator<SRange> {
-    companion object{
-        var sprComparator  = SeqPositionRangeComparator()
-    }
-    override fun compare(p0: SRange, p1: SRange): Int {
-        // ordering:  Null before other ordering
-        val seqRec1= p0.start.seqRecord
-        val seqRec2 = p1.start.seqRecord
-        if (seqRec1 == null) {
-            if (seqRec2 == null) {
-                return p0.start.site.compareTo(p1.start.site)
-            }
-            return -1 // choose p0 if only p0.seqRecord is null
-        } else if (seqRec2 == null) {
-            return 1
-        } else {
-
-            val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
-            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.start.site.compareTo(p1.start.site)
-        }
-    }
-}
+//class SeqPositionRangeComparator: Comparator<SRange> {
+//    companion object{
+//        var sprComparator  = SeqPositionRangeComparator()
+//    }
+//    override fun compare(p0: SRange, p1: SRange): Int {
+//        // ordering:  Null before other ordering
+//        val seqRec1= p0.start.seqRecord
+//        val seqRec2 = p1.start.seqRecord
+//        if (seqRec1 == null) {
+//            if (seqRec2 == null) {
+//                return p0.start.site.compareTo(p1.start.site)
+//            }
+//            return -1 // choose p0 if only p0.seqRecord is null
+//        } else if (seqRec2 == null) {
+//            return 1
+//        } else {
+//
+//            val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
+//            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.start.site.compareTo(p1.start.site)
+//        }
+//    }
+//}
 
 fun main() {
     // See additional test cases in test/kotlin/biokotlin/genome/RangesTest.kt

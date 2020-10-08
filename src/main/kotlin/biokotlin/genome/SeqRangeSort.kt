@@ -10,11 +10,12 @@ package biokotlin.genome
 object SeqRangeSort {
     // This one sorts just by the record
     // It takes a Comparator and returns an SRange comparator
-    fun record(seqRecordSort: Comparator<String>): Comparator<SRange> = compareBy(seqRecordSort, { it.start.seqRecord!!.id })
+    fun record(seqRecordSort: Comparator<String?>): Comparator<SRange> = compareBy(seqRecordSort, { it.start.seqRecord?.id })
 
     // User gives 2 comparators - one for the seqRecord id and one for the site sorting.
-    fun by(seqRecordSort: Comparator<String>, siteSort: Comparator<ClosedRange<Int>>): Comparator<SRange> {
-        return compareBy(seqRecordSort){ sr: SRange -> sr.start.seqRecord!!.id }.thenBy(siteSort) { sr: SRange ->  (sr.start.site..sr.endInclusive.site)}
+    // Note that SeqRecord could be null
+    fun by(seqRecordSort: Comparator<String?>, siteSort: Comparator<ClosedRange<Int>>): Comparator<SRange> {
+        return compareBy(seqRecordSort){ sr: SRange -> sr.start.seqRecord?.id }.thenBy(siteSort) { sr: SRange ->  (sr.start.site..sr.endInclusive.site)}
     }
 
     // This line complains - says alphaThenNumberSort has to be initialized
@@ -24,13 +25,13 @@ object SeqRangeSort {
     // Sometime we have letters first (A1 before 1A), sometimes numbers (1A before A1)
 
     // comparing the SeqRecord Id ( a String), but consider letters to come before numbers in the string
-    val alphaThenNumberSort:Comparator<String> =
+    val alphaThenNumberSort:Comparator<String?> =
             Comparator { a, b ->
                 compareId(a,b,false)
             }
 
     // comparing SeqRecord Id (a String), sort numbers before letters
-    val numberThenAlphaSort:Comparator<String> =
+    val numberThenAlphaSort:Comparator<String?> =
             Comparator { a, b ->
                 compareId(a,b,true)
             }
@@ -45,7 +46,7 @@ object SeqRangeSort {
 
 // comparing the SeqRecord Id ( a String). "numFirst" determines if numbers or letters come first
 // This creates a full number for comparison:  e.g. 1A, 10A, 2A - will be sorted as 1A, 2A, 10A
-fun compareId (first:String, second:String, numFirst: Boolean): Int {
+fun compareId (first:String?, second:String?, numFirst: Boolean): Int {
     var compareVal:Int = 0
     if (first == null) compareVal = -1
     else if (second == null) compareVal = 1

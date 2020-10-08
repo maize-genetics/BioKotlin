@@ -97,7 +97,7 @@ class RangesTest: StringSpec({
         setRanges.elementAt(0).start.site shouldBe 27
         setRanges.elementAt(1).start.site shouldBe 1
 
-        var setRangesSorted = setRanges.toSortedSet(SeqPositionRangeComparator.sprComparator)
+        var setRangesSorted = setRanges.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge))
         setRangesSorted.elementAt(0).start.site shouldBe 1
         setRangesSorted.elementAt(1).start.site shouldBe 27
 
@@ -113,7 +113,7 @@ class RangesTest: StringSpec({
         rangeList[0].start.site shouldBe 27
         rangeList[1].start.site shouldBe 1
 
-        var rangeListSorted = rangeList.toSortedSet(SeqPositionRangeComparator.sprComparator)
+        var rangeListSorted = rangeList.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge))
 
         rangeListSorted.elementAt(0).start.site shouldBe 1
         rangeListSorted.elementAt(1).start.site shouldBe 27
@@ -136,7 +136,7 @@ class RangesTest: StringSpec({
     "Test nonCoalescingSetof for SRange" {
 
         // Should create a NavigableSet - sorted set
-        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
+        val srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr4)
 
         srSet.elementAt(0).start.site shouldBe 1
         srSet.elementAt(1).start.site shouldBe 27
@@ -148,7 +148,7 @@ class RangesTest: StringSpec({
         rangeList.add(sr2)
         rangeList.add(sr3)
         rangeList.add(sr4)
-        val srSetFromList = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, rangeList)
+        val srSetFromList = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), rangeList)
         srSetFromList.elementAt(0).start.site shouldBe 1
         srSetFromList.elementAt(1).start.site shouldBe 27
         srSetFromList.elementAt(2).start.site shouldBe 25
@@ -157,10 +157,10 @@ class RangesTest: StringSpec({
 
     "Test coalescing ranges" {
 
-        var srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr6)
+        var srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge),  sr1,sr2,sr3,sr6)
         srSet.size shouldBe 4
 
-        var coalescedSet = coalescingsetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr6)
+        var coalescedSet = coalescingsetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr6)
         coalescedSet.size shouldBe 3
 
         var rangeList: MutableList<SRange> = mutableListOf()
@@ -168,7 +168,7 @@ class RangesTest: StringSpec({
         rangeList.add(sr2)
         rangeList.add(sr3)
         rangeList.add(sr6)
-        val coalescedSetFromList = coalescingSetOf(SeqPositionRangeComparator.sprComparator, rangeList)
+        val coalescedSetFromList = coalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), rangeList)
         coalescedSetFromList.size shouldBe 3
     }
     "SRangeSet from SeqPositionRanges filtered and mapped toSet, and IntRanges filtered and mapped to SRanges Set" {
@@ -348,7 +348,7 @@ class RangesTest: StringSpec({
         val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
         val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
 
-        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
+        val srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
 
         // Ranges are sorted: define a peak - no SeqRecord, then look for intersections
         var peak = SeqPosition(null, 45)..SeqPosition(null,75)
@@ -382,7 +382,7 @@ class RangesTest: StringSpec({
         val sr6 = record1.range(40..45)
         val sr7 = record1.range(100..105)
 
-        val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr6,sr3,sr5,sr4)
+        val srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr6,sr3,sr5,sr4)
 
         var peak = SeqPosition(record1, 45)..SeqPosition(record1,75)
 
@@ -466,7 +466,7 @@ class RangesTest: StringSpec({
         val sr3 = record3.range(18..33)
         val sr4 = record2.range(25..35)
         val sr5 = record2.range(3..13)
-        val set1 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr6,sr2,sr3,sr5,sr4)
+        val set1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr6,sr2,sr3,sr5,sr4)
 
         val sr10 = record1.range(30..35)
         val sr20 = record1.range(18..22)
@@ -474,7 +474,7 @@ class RangesTest: StringSpec({
         val sr30 = record3.range(1..10)
         val sr40 = record2.range(45..55)
         val sr50 = record2.range(10..13)
-        val set2 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr10,sr60,sr20,sr30,sr50,sr40)
+        val set2 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr10,sr60,sr20,sr30,sr50,sr40)
 
         val intersections = findIntersectingPositions(set1,set2)
 
@@ -500,9 +500,9 @@ class RangesTest: StringSpec({
         val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
         val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
 
-        val srSet1 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
-        var srSet2 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr0a,sr2)
-        var srSet3 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
+        val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
+        var srSet2 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr0a,sr2)
+        var srSet3 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr4)
 
         var set1set2Intersect = srSet1 intersect srSet2
         println("\nintersect of SRANGE set1/set2:  should be 3 elements")
@@ -524,7 +524,7 @@ class RangesTest: StringSpec({
     }
     "Test Krangl DataFrames " {
 
-        val srSet1 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr5,sr4)
+        val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr5,sr4)
         var df:DataFrame = srSet1.toDataFrame()
         df.print()
 
