@@ -3,9 +3,12 @@ package biokotlin.genome
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.ProteinSeq
+import biokotlin.seq.ProteinSeqRecord
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import krangl.*
 import java.util.*
 
 class RangesTest: StringSpec({
@@ -20,6 +23,13 @@ class RangesTest: StringSpec({
     val record2 = NucSeqRecord(NucSeq(dnaString2), "Seq2")
     val record3 = NucSeqRecord(NucSeq(dnaString3), "Seq3")
     val record4 = NucSeqRecord(NucSeq(dnaString2), "Seq2-id2")
+    val sr1 = record1.range(27..44)
+    val sr2 = record1.range(1..15)
+    val sr3 = record3.range(18..33)
+    val sr4 = record2.range(25..35)
+    val sr5 = record2.range(3..13)
+    val sr6 = record1.range(20..28)
+
     "Multiple SeqPosition Ranges" {
 
         // create a SeqPosition from a NucSeqRecord
@@ -38,15 +48,10 @@ class RangesTest: StringSpec({
     }
     "Test SeqPosition Range functions " {
         val seqPos1 = SeqPosition(record1, 89)
-        val sRange1: SRange = seqPos1..seqPos1
 
         // test Plus
         var sRange2: SRange = seqPos1..seqPos1.plus(1)
         sRange2.endInclusive.site shouldBe 90
-
-        // THis fails with "unexpected tokens (use ";" to separate expressions on the same line_
-        // sRange2: SRange = seqPos1..seqPos1+1
-        //println("\nsRange2 using +: $sRange2")
 
         var intRange = 1..10
         intRange = 1..10+1
@@ -86,41 +91,32 @@ class RangesTest: StringSpec({
 
     "General Set Test - test SeqPositionRangeComparator" {
 
-        var range1 = SeqPositionRanges.of(record1,8..28)
-        var range2 = SeqPositionRanges.of(record2,3..19)
-        var range3 = SeqPositionRanges.of(SeqPosition(record1, 32),SeqPosition(record1,40))
-        var range4 = record2.range(25..40)
-
         // This is calling Kotlin setOf(), which doesn't take a list
-        var setRanges = setOf(range1, range4, range3, range2)
+        var setRanges = setOf(sr1, sr2, sr3, sr4)
 
-        setRanges.elementAt(0).start.site shouldBe 8
-        setRanges.elementAt(1).start.site shouldBe 25
+        setRanges.elementAt(0).start.site shouldBe 27
+        setRanges.elementAt(1).start.site shouldBe 1
 
         var setRangesSorted = setRanges.toSortedSet(SeqPositionRangeComparator.sprComparator)
-        setRangesSorted.elementAt(0).start.site shouldBe 8
-        setRangesSorted.elementAt(1).start.site shouldBe 32
+        setRangesSorted.elementAt(0).start.site shouldBe 1
+        setRangesSorted.elementAt(1).start.site shouldBe 27
 
     }
 
     "List SeqPositionRanges to sorted set" {
 
-        var range1 = record1.range(8..28)
-        var range2 = record2.range(3..19)
-        var range3 = SeqPositionRanges.of(SeqPosition(record1, 32),SeqPosition(record1,40))
-
         var rangeList = mutableListOf<SRange>()
-        rangeList.add(range2)
-        rangeList.add(range3)
-        rangeList.add(range1)
+        rangeList.add(sr1)
+        rangeList.add(sr2)
+        rangeList.add(sr3)
 
-        rangeList[0].start.site shouldBe 3
-        rangeList[1].start.site shouldBe 32
+        rangeList[0].start.site shouldBe 27
+        rangeList[1].start.site shouldBe 1
 
         var rangeListSorted = rangeList.toSortedSet(SeqPositionRangeComparator.sprComparator)
 
-        rangeListSorted.elementAt(0).start.site shouldBe 8
-        rangeListSorted.elementAt(1).start.site shouldBe 32
+        rangeListSorted.elementAt(0).start.site shouldBe 1
+        rangeListSorted.elementAt(1).start.site shouldBe 27
     }
     "Test SeqPosition default sorting " {
 
@@ -138,11 +134,6 @@ class RangesTest: StringSpec({
     }
 
     "Test nonCoalescingSetof for SRange" {
-
-        val sr1 = record1.range(27..44)
-        val sr2 = record1.range(1..15)
-        val sr3 = record3.range(18..33)
-        val sr4 = record2.range(25..35)
 
         // Should create a NavigableSet - sorted set
         val srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
@@ -166,45 +157,33 @@ class RangesTest: StringSpec({
 
     "Test coalescing ranges" {
 
-        val sr1 = record1.range(25..44)
-        val sr2 = record1.range(5..10)
-        val sr3 = record1.range(15..27)
-        val sr4 = record1.range(45..50)
-
-        var srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr4)
+        var srSet = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator,  sr1,sr2,sr3,sr6)
         srSet.size shouldBe 4
 
-        var coalescedSet = coalescingsetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr4)
+        var coalescedSet = coalescingsetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr6)
         coalescedSet.size shouldBe 3
 
         var rangeList: MutableList<SRange> = mutableListOf()
         rangeList.add(sr1)
         rangeList.add(sr2)
         rangeList.add(sr3)
-        rangeList.add(sr4)
+        rangeList.add(sr6)
         val coalescedSetFromList = coalescingSetOf(SeqPositionRangeComparator.sprComparator, rangeList)
         coalescedSetFromList.size shouldBe 3
     }
     "SRangeSet from SeqPositionRanges filtered and mapped toSet, and IntRanges filtered and mapped to SRanges Set" {
 
-        var range1 = record1.range(8..28) // id=Seq1
-        var range2 = record2.range(3..19) // id=Seq2
-        var range3 = record1.range( 32..40) // id=Seq1
-        var range4 = record3.range(1..10) // id=Seq3
-        var range5 = record1.range(5..15) // id=Seq1
-
-
         var rangeList = mutableListOf<SRange>()
-        rangeList.add(range1)
-        rangeList.add(range2)
-        rangeList.add(range3)
-        rangeList.add(range4)
-        rangeList.add(range5)
+        rangeList.add(sr1)
+        rangeList.add(sr2)
+        rangeList.add(sr3)
+        rangeList.add(sr4)
+        rangeList.add(sr5)
 
         var nonCoalescingSet = rangeList.filter{ it.start.seqRecord!!.id == "Seq1"}
-        nonCoalescingSet.contains(range4) shouldBe false
-        nonCoalescingSet.contains(range2) shouldBe false
-        nonCoalescingSet.size shouldBe 3
+        nonCoalescingSet.contains(sr3) shouldBe false
+        nonCoalescingSet.contains(sr4) shouldBe false
+        nonCoalescingSet.size shouldBe 2
 
         val intRanges = listOf(1..10, 15..25, 38..43, 67..102, 139..175)
         val sRangeSet = intRanges.filter{it.last < 100}
@@ -219,6 +198,18 @@ class RangesTest: StringSpec({
         sRangeSet.size shouldBe 3
     }
 
+    "Test grabbing sequence from SRange" {
+        val range1seq = sr1.sequence()
+        val range2seq = sr2.sequence()
+
+        range1seq shouldBe "CGTGGATCAGTCAGTCAT"
+        range2seq shouldBe "ACGTGGTGAATATAT"
+
+        val rangeNull = SeqPosition(null,8)..SeqPosition(null,65)
+        val rangeNullSeq = rangeNull.sequence()
+
+        rangeNullSeq shouldBe null
+    }
     "Test createShuffledSubRangeList and findPair" {
 
         var targetLen = 10
@@ -354,12 +345,6 @@ class RangesTest: StringSpec({
 
     "test findIntersectingSRanges with null and non-null seqRecord" {
 
-        val sr1 = record1.range(27..44)
-        val sr2 = record1.range(1..15)
-        val sr3 = record3.range(18..33)
-        val sr4 = record2.range(25..35)
-        val sr5 = record2.range(3..13)
-
         val sr0 = SeqPosition(null,8)..SeqPosition(null,65)
         val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
 
@@ -388,7 +373,7 @@ class RangesTest: StringSpec({
     }
     " test SRange.subtract" {
 
-        // These must be on the same record to truly be intersecting ranges.
+        // These ranges are created on the same record so they intersect for the subraction.
         val sr1 = record1.range(27..44)
         val sr2 = record1.range(119..122)
         val sr3 = record1.range(25..35)
@@ -428,8 +413,7 @@ class RangesTest: StringSpec({
     }
     " test SRange.complement" {
 
-        println("lenght of record1 sequence: ${record1.seq().length}")
-        // These must be on the same record to truly be intersecting ranges.
+        // These are on the same record to get the complement across that sequence
         val sr1 = record1.range(147..175)
         val sr2 = record1.range(119..122)
         val sr3 = record1.range(25..35)
@@ -441,15 +425,14 @@ class RangesTest: StringSpec({
         val boundSRange = record1.range(1..183)
         val complementRanges = srSet.complement(boundSRange)
 
-        println("\noriginal ranges set:")
-        for (range in srSet) {
-            println(range)
-        }
-
-        println("\ncomplement ranges set:")
-        for (range in complementRanges) {
-            println(range)
-        }
+        complementRanges.contains(record1.position(1)..record1.position(2)) shouldBe true
+        complementRanges.contains(record1.position(14)..record1.position(24)) shouldBe true
+        complementRanges.contains(record1.position(14)..record1.position(24)) shouldBe true
+        complementRanges.contains(record1.position(36)..record1.position(49)) shouldBe true
+        complementRanges.contains(record1.position(61)..record1.position(79)) shouldBe true
+        complementRanges.contains(record1.position(88)..record1.position(118)) shouldBe true
+        complementRanges.contains(record1.position(123)..record1.position(146)) shouldBe true
+        complementRanges.contains(record1.position(176)..record1.position(183)) shouldBe true
 
     }
     "Test getOverlappingIntervals" {
@@ -484,7 +467,6 @@ class RangesTest: StringSpec({
         val sr4 = record2.range(25..35)
         val sr5 = record2.range(3..13)
         val set1 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr6,sr2,sr3,sr5,sr4)
-
 
         val sr10 = record1.range(30..35)
         val sr20 = record1.range(18..22)
@@ -539,6 +521,13 @@ class RangesTest: StringSpec({
         for (range in set1SubtractSet2) {
             println(range)
         }
+    }
+    "Test Krangl DataFrames " {
+
+        val srSet1 = nonCoalescingSetOf(SeqPositionRangeComparator.sprComparator, sr1,sr2,sr3,sr5,sr4)
+        var df:DataFrame = srSet1.toDataFrame()
+        df.print()
+
     }
 
 })

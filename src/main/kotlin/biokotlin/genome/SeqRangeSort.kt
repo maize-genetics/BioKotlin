@@ -17,9 +17,6 @@ object SeqRangeSort {
         return compareBy(seqRecordSort){ sr: SRange -> sr.start.seqRecord!!.id }.thenBy(siteSort) { sr: SRange ->  (sr.start.site..sr.endInclusive.site)}
     }
 
-    val alphaSortSP = compareBy<SeqPosition> { it.seqRecord?.id }
-    val siteSortSP = compareBy<SeqPosition> {it.site}
-    val alphaAndSiteSort: Comparator<SeqPosition> = alphaSortSP.then(siteSortSP)
     // This line complains - says alphaThenNumberSort has to be initialized
     //var defaultSort:Comparator<String> = numberThenAlphaSort
 

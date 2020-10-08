@@ -5,8 +5,12 @@ package biokotlin.genome
 import biokotlin.genome.SeqRangeSort.leftEdge
 import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.ProteinSeq
 import biokotlin.seq.SeqRecord
 import com.google.common.collect.*
+import krangl.DataFrame
+import krangl.dataFrameOf
+import krangl.deparseRecords
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
@@ -157,8 +161,33 @@ fun SRange.enlarge(bp: Int): SRange {
 }
 
 /**
+ * Return the sequence represented by this SRange.
+ * Return null of the SRange does not have a SeqRecord.
+ */
+fun SRange.sequence(): String? {
+
+    var start = this.start.site
+    var end = this.endInclusive.site
+    var seqRec = this.start.seqRecord //as NucSeq // couldn't this be ProteinSeq?
+
+    var seq: String? = null
+    //var seq = if (seqRec != null && (seqRec is NucSeq || seqRec is ProteinSeq) ) seqRec.seq() else null
+    // hmmm ... can't combine this check as done above or code doesn't know which seq() to call
+    if (seqRec != null) {
+        if (seqRec is NucSeq ) {
+            seq = seqRec.seq()
+        }
+        if (seqRec is ProteinSeq) {
+            seq = seqRec.seq()
+        }
+    }
+    val rangeSequence = if (seq != null) seq.substring(start-1,end) else null
+    return rangeSequence
+}
+
+/**
  * Shift the given range by "count" positions.  If the number
- * is negative, it is a left shift.  If the number is positive, shift righ
+ * is negative, it is a left shift.  If the number is positive, shift right
  * This will not shift into an adjacent contig of the genome
  */
 fun SRange.shift(count: Int): SRange {
@@ -256,7 +285,6 @@ fun SRange.subtract(removeRanges: Set<SRange>) : SRangeSet {
 
     return newRanges
 }
-
 
 /**
  * This method takes an SRange and a set of ranges that intersect it.
@@ -510,117 +538,6 @@ fun SRange.pairedInterval(searchSpace: Set<SRange>, pairingFunc: (NucSeq,NucSeq)
     return rangeSet // return immutable Kotlin Set
 }
 
-fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
-
-    // this assumes the searchSpace has already been filtered for ranges that are too short
-    var targetLen = positive.size()
-    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
-    var rangeSet = findNegativePeaks(positive, tempRangeList, pairingFunc, count)
-
-    return rangeSet
-}
-
-fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
-
-    var targetLen = positive.endInclusive.site - positive.start.site + 1
-
-    // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
-    var seqRecord = positive.start.seqRecord as NucSeqRecord
-    //val seqRec:NucSeqRecord = sRange.start.seqRecord as NucSeqRecord
-    var targetSeq = seqRecord.sequence.toString().substring(positive.start.site-1,positive.endInclusive.site)
-    // this assumes the searchSpace has already been filtered for ranges that are too short
-
-    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
-    var rangeSet = findNegativePeaks(NucSeq(targetSeq), tempRangeList, pairingFunc, count)
-
-    return rangeSet // findNegativePeaks returns an immutable set
-}
-
-/**
- * The function creates a list of sub-ranges from a given set of SRanges.
- * It takes a set or SRanges, creates  subsets of length "targetLen".  These are created
- * using a window of 1.
- * This method does NOT change the sequence in the record. It assumes the ranges represent
- * an interval on the sequence.
- * It then shuffles the list prior to returning.  This method is used by applications
- * (e.g. pairedInterval() to find negative peaks) which want a list that doesn't prioritize
- * a specific section of a range.
- *
- * return:  A List<SRange> of subranges
- */
-fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRange> {
-    var subRangeList : MutableList<SRange> = mutableListOf()
-
-    for (range in ranges) {
-        var origRange = range.start.seqRecord as NucSeqRecord
-        var origSeq = origRange.sequence
-        val start = range.start.site
-        val end = range.endInclusive.site
-        for (idx in start .. end - targetLen) {
-            // Leave sequence alone - no changes
-            var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
-            var seqPos1 = range.start.copy( site = idx)
-            var seqPos2 = range.endInclusive.copy(site = idx+targetLen-1)
-
-            val sRange = seqPos1..seqPos2
-            subRangeList.add(sRange)
-        }
-    }
-    subRangeList.shuffle()
-    return subRangeList
-}
-
-/**
- * Find peaks with criteria matching that specified by the user-supplied pairing function.
- * This method assumes the sequence in the NucSeqRecord hasn't changed from the original,
- * and the ranges indicate which subsection of the sequence to pull.
- */
-fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int): Set<SRange> {
-    var rangeSet : MutableSet<SRange> = mutableSetOf()
-    var found = 0
-    for (range in rangeList)  { // Traverse the ranges, select the first "count" number that match
-        // ranges are 1-based, inclusive/inclusive.  seq.substring will be 0-based, inclusive/exclusive
-        var testSeqRec = range.start.seqRecord as NucSeqRecord
-        var testSeq = testSeqRec.sequence.toString().substring(range.start.site-1,range.endInclusive.site)
-        if (pairingFunc(positive,NucSeq(testSeq))) {
-            rangeSet.add(range)
-            found++
-        }
-        if (found == count) break
-    }
-    return rangeSet.toSet()
-}
-
-class NucSeqComparator: Comparator<NucSeqRecord>{
-    override fun compare(p0: NucSeqRecord, p1: NucSeqRecord): Int {
-        return p0.id.compareTo(p1.id)
-    }
-}
-
-//Default comparator for SeqPositionRanges
-// It is used in setOf below
-class SeqPositionRangeComparator: Comparator<SRange> {
-    companion object{
-        var sprComparator  = SeqPositionRangeComparator()
-    }
-    override fun compare(p0: SRange, p1: SRange): Int {
-        // ordering:  Null before other ordering
-        val seqRec1= p0.start.seqRecord
-        val seqRec2 = p1.start.seqRecord
-        if (seqRec1 == null) {
-            if (seqRec2 == null) {
-                return p0.start.site.compareTo(p1.start.site)
-            }
-            return -1 // choose p0 if only p0.seqRecord is null
-        } else if (seqRec2 == null) {
-            return 1
-        } else {
-
-            val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
-            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.start.site.compareTo(p1.start.site)
-        }
-    }
-}
 
 // Methods for SRangeSets
 typealias SRangeSet = Set<SRange> // Kotlin immutable Set
@@ -668,96 +585,6 @@ fun coalescingsetOf( comparator: Comparator<SRange> = SeqPositionRangeComparator
     return sRangeSetCoalesced.toSet()
 }
 
-/**
- * Takes an input fasta, returns a Map of <contig-id,NucSeq> where
- * NucSeq is the Biokotlin data structure for DNA and RNA sequences.
- */
-fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
-    var chromNucSeqMap  = HashMap<String,NucSeq>()
-    try {
-        val file = File(fasta)
-        file.bufferedReader().use { br ->
-            var currChrom: String = "-1"
-            var prevChrom = "-1"
-            var currSeq = ByteArrayOutputStream()
-            var line = br.readLine()
-            while (line != null) {
-
-                line = line.trim()
-                if (line.startsWith(">")) {
-                    if (currChrom != "-1") {
-                        // finished with this chromosome's sequence
-                        println("fastaToNucSeq: finished chrom $currChrom")
-                        chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
-                    }
-                    // reset chromosome name and sequence, begin processing next chrom
-                    currChrom = line.replace(">","")
-                    currSeq = ByteArrayOutputStream()
-                } else {
-                    currSeq.write(line.toByteArray())
-                }
-                line = br.readLine()
-            }
-            if (currSeq.size() > 0) {
-                println("fastaToNucSeq: finished chrom $currChrom")
-                chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
-            }
-        }
-    } catch (exc: Exception) {
-        throw IllegalArgumentException("error reading fasta file: $fasta: ${exc.message}")
-    }
-
-    return chromNucSeqMap
-}
-
-/**
- * Takes a genome fasta and a bedFile of ranges,
- * creates a set of SRanges
- */
-fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
-    var rangeSet : MutableSet<SRange> = mutableSetOf()
-    // read and store fasta sequences into map keyed by idLine chrom.
-    // Then do bedfile a line at a time, use the chr column to get sequence from map
-    // Can I hold all of this in memory?
-
-    println("bedfileToSRangeSet: calling fastaToNucSeq")
-    var chrToNucSeq = fastaToNucSeq (fasta)
-    println("bedfileToSRangeSet: start bedfile processing")
-    File(bedfile).readLines().forEach{
-        val data = it.split("\t")
-        require (data.size >= 3) {"bad line in bedfile: $it"}
-        var seq = chrToNucSeq.get(data[0])
-        require (seq != null) {"chrom ${data[0]} not found in fasta file"}
-        // Used data[0] as the ID instead of the "name" from the bedfile.
-        // Because the sequence is the full chromosome, so the id's need to be
-        // the same.  If we instead only included the partial sequence, then
-        // we would not be able to grab sequence for comparison - we'd have the
-        // coordinates, but couldn't go up/down 30kb from that peak.
-        // And the SeqRecord Id's must match so we know the coordinates are
-        // relative to the same chromosome.
-        val seqRec = NucSeqRecord(seq,data[0])
-        val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
-        val upperSite = data[2].toInt()
-        val srange = SeqPosition(seqRec,lowerSite)..SeqPosition(seqRec,upperSite)
-        rangeSet.add(srange)
-    }
-    return rangeSet.toSet()
-}
-
-// Create a set of IntRanges instead of SRanges - will this be needed?
-fun bedfileToIntRangeSet (bedfile: String): Set<IntRange> {
-    var rangeSet : MutableSet<IntRange> = mutableSetOf()
-    File(bedfile).readLines().forEach{
-        val data = it.split("\t")
-        require (data.size >= 3) {"bad line in bedfile: $it"}
-
-        val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
-        val upperSite = data[2].toInt()
-        rangeSet.add(lowerSite..upperSite)
-    }
-
-    return rangeSet.toSet()
-}
 
 // Sometimes we just want a range - Travis's stuff
 fun IntRange.flankBoth(count: Int): Set<IntRange> {
@@ -774,6 +601,21 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
     var upperF =  this.endInclusive + count
     flankingRanges.add(lowerF..upperF)
     return flankingRanges.toSet()
+}
+
+/**
+ * Transform the set of SRanges into a DataFrame
+ * with the SeqRange ID and a IntRange
+ */
+fun SRangeSet.toDataFrame():DataFrame {
+
+    var df = this.map{ range ->
+        val seqRec = range.start.seqRecord
+        val id = if (seqRec == null) "NONE" else seqRec.id
+        var pair = Pair<String,IntRange>(id,range.start.site..range.endInclusive.site)
+        pair
+    }.deparseRecords{mapOf("ID" to it.first,"range" to it.second)}
+    return df
 }
 
 /**
@@ -914,6 +756,210 @@ fun SRangeSet.complement(boundaryRange:SRange): SRangeSet {
 fun SRangeSet.intersect(set2:SRangeSet): SRangeSet {
     val intersectingRanges = findIntersectingPositions(this, set2)
     return intersectingRanges
+}
+
+// Helper functions
+fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
+
+    // this assumes the searchSpace has already been filtered for ranges that are too short
+    var targetLen = positive.size()
+    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
+    var rangeSet = findNegativePeaks(positive, tempRangeList, pairingFunc, count)
+
+    return rangeSet
+}
+
+fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
+
+    var targetLen = positive.endInclusive.site - positive.start.site + 1
+
+    // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
+    var seqRecord = positive.start.seqRecord as NucSeqRecord
+    //val seqRec:NucSeqRecord = sRange.start.seqRecord as NucSeqRecord
+    var targetSeq = seqRecord.sequence.toString().substring(positive.start.site-1,positive.endInclusive.site)
+    // this assumes the searchSpace has already been filtered for ranges that are too short
+
+    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
+    var rangeSet = findNegativePeaks(NucSeq(targetSeq), tempRangeList, pairingFunc, count)
+
+    return rangeSet // findNegativePeaks returns an immutable set
+}
+
+/**
+ * The function creates a list of sub-ranges from a given set of SRanges.
+ * It takes a set or SRanges, creates  subsets of length "targetLen".  These are created
+ * using a window of 1.
+ * This method does NOT change the sequence in the record. It assumes the ranges represent
+ * an interval on the sequence.
+ * It then shuffles the list prior to returning.  This method is used by applications
+ * (e.g. pairedInterval() to find negative peaks) which want a list that doesn't prioritize
+ * a specific section of a range.
+ *
+ * return:  A List<SRange> of subranges
+ */
+fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRange> {
+    var subRangeList : MutableList<SRange> = mutableListOf()
+
+    for (range in ranges) {
+        var origRange = range.start.seqRecord as NucSeqRecord
+        var origSeq = origRange.sequence
+        val start = range.start.site
+        val end = range.endInclusive.site
+        for (idx in start .. end - targetLen) {
+            // Leave sequence alone - no changes
+            var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
+            var seqPos1 = range.start.copy( site = idx)
+            var seqPos2 = range.endInclusive.copy(site = idx+targetLen-1)
+
+            val sRange = seqPos1..seqPos2
+            subRangeList.add(sRange)
+        }
+    }
+    subRangeList.shuffle()
+    return subRangeList
+}
+
+/**
+ * Find peaks with criteria matching that specified by the user-supplied pairing function.
+ * This method assumes the sequence in the NucSeqRecord hasn't changed from the original,
+ * and the ranges indicate which subsection of the sequence to pull.
+ */
+fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int): Set<SRange> {
+    var rangeSet : MutableSet<SRange> = mutableSetOf()
+    var found = 0
+    for (range in rangeList)  { // Traverse the ranges, select the first "count" number that match
+        // ranges are 1-based, inclusive/inclusive.  seq.substring will be 0-based, inclusive/exclusive
+        var testSeqRec = range.start.seqRecord as NucSeqRecord
+        var testSeq = testSeqRec.sequence.toString().substring(range.start.site-1,range.endInclusive.site)
+        if (pairingFunc(positive,NucSeq(testSeq))) {
+            rangeSet.add(range)
+            found++
+        }
+        if (found == count) break
+    }
+    return rangeSet.toSet()
+}
+
+/**
+ * Takes an input fasta, returns a Map of <contig-id,NucSeq> where
+ * NucSeq is the Biokotlin data structure for DNA and RNA sequences.
+ */
+fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
+    var chromNucSeqMap  = HashMap<String,NucSeq>()
+    try {
+        val file = File(fasta)
+        file.bufferedReader().use { br ->
+            var currChrom: String = "-1"
+            var prevChrom = "-1"
+            var currSeq = ByteArrayOutputStream()
+            var line = br.readLine()
+            while (line != null) {
+
+                line = line.trim()
+                if (line.startsWith(">")) {
+                    if (currChrom != "-1") {
+                        // finished with this chromosome's sequence
+                        println("fastaToNucSeq: finished chrom $currChrom")
+                        chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
+                    }
+                    // reset chromosome name and sequence, begin processing next chrom
+                    currChrom = line.replace(">","")
+                    currSeq = ByteArrayOutputStream()
+                } else {
+                    currSeq.write(line.toByteArray())
+                }
+                line = br.readLine()
+            }
+            if (currSeq.size() > 0) {
+                println("fastaToNucSeq: finished chrom $currChrom")
+                chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
+            }
+        }
+    } catch (exc: Exception) {
+        throw IllegalArgumentException("error reading fasta file: $fasta: ${exc.message}")
+    }
+
+    return chromNucSeqMap
+}
+
+/**
+ * Takes a genome fasta and a bedFile of ranges,
+ * creates a set of SRanges
+ */
+fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
+    var rangeSet : MutableSet<SRange> = mutableSetOf()
+    // read and store fasta sequences into map keyed by idLine chrom.
+    // Then do bedfile a line at a time, use the chr column to get sequence from map
+    // Can I hold all of this in memory?
+
+    println("bedfileToSRangeSet: calling fastaToNucSeq")
+    var chrToNucSeq = fastaToNucSeq (fasta)
+    println("bedfileToSRangeSet: start bedfile processing")
+    File(bedfile).readLines().forEach{
+        val data = it.split("\t")
+        require (data.size >= 3) {"bad line in bedfile: $it"}
+        var seq = chrToNucSeq.get(data[0])
+        require (seq != null) {"chrom ${data[0]} not found in fasta file"}
+        // Used data[0] as the ID instead of the "name" from the bedfile.
+        // Because the sequence is the full chromosome, so the id's need to be
+        // the same.  If we instead only included the partial sequence, then
+        // we would not be able to grab sequence for comparison - we'd have the
+        // coordinates, but couldn't go up/down 30kb from that peak.
+        // And the SeqRecord Id's must match so we know the coordinates are
+        // relative to the same chromosome.
+        val seqRec = NucSeqRecord(seq,data[0])
+        val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
+        val upperSite = data[2].toInt()
+        val srange = SeqPosition(seqRec,lowerSite)..SeqPosition(seqRec,upperSite)
+        rangeSet.add(srange)
+    }
+    return rangeSet.toSet()
+}
+
+// Create a set of IntRanges instead of SRanges - will this be needed?
+fun bedfileToIntRangeSet (bedfile: String): Set<IntRange> {
+    var rangeSet : MutableSet<IntRange> = mutableSetOf()
+    File(bedfile).readLines().forEach{
+        val data = it.split("\t")
+        require (data.size >= 3) {"bad line in bedfile: $it"}
+
+        val lowerSite = data[1].toInt() + 1 // bedfiles are 0-based inclusive/exclusive
+        val upperSite = data[2].toInt()
+        rangeSet.add(lowerSite..upperSite)
+    }
+
+    return rangeSet.toSet()
+}
+
+class NucSeqComparator: Comparator<NucSeqRecord>{
+    override fun compare(p0: NucSeqRecord, p1: NucSeqRecord): Int {
+        return p0.id.compareTo(p1.id)
+    }
+}
+
+//Default comparator for SeqPositionRanges
+// It is used in setOf below
+class SeqPositionRangeComparator: Comparator<SRange> {
+    companion object{
+        var sprComparator  = SeqPositionRangeComparator()
+    }
+    override fun compare(p0: SRange, p1: SRange): Int {
+        // ordering:  Null before other ordering
+        val seqRec1= p0.start.seqRecord
+        val seqRec2 = p1.start.seqRecord
+        if (seqRec1 == null) {
+            if (seqRec2 == null) {
+                return p0.start.site.compareTo(p1.start.site)
+            }
+            return -1 // choose p0 if only p0.seqRecord is null
+        } else if (seqRec2 == null) {
+            return 1
+        } else {
+
+            val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
+            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.start.site.compareTo(p1.start.site)
+        }
+    }
 }
 
 fun main() {

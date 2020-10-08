@@ -16,26 +16,25 @@ class SeqRangeSortTest: StringSpec({
     val chr10A = "ACGTGGTGAATATATATGCGCGCATCATCATTATGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"
     val chr1B = "ACGTATATATATATATCGCGCGATGCATGCATGCATCGACGCGTTAAGGCT"
     val chrB2 = "ACGTATATATATATATAGCACACAGGTCGCGACATGCATCGACGCGTTAAGGCT"
+
     val record1 = NucSeqRecord(NucSeq(chr1A), "1A")
     val record2 = NucSeqRecord(NucSeq(chr2A), "2A")
     val record3 = NucSeqRecord(NucSeq(chr1B), "1B")
     val record4 = NucSeqRecord(NucSeq(chrB2), "B2")
     val record5 = NucSeqRecord(NucSeq(chr10A),"10A")
-    "Test Record sort variations with record then site" {
 
-        val sr1 = record1.range(27..44)
-        val sr2 = record1.range(1..15)
-        val sr3 = record3.range(18..33)
-        val sr4 = record2.range(25..35)
-        val sr5 = record4.range(10..20)
-        val sr6 = record5.range(14..25)
+    val sr1 = record1.range(27..44)
+    val sr2 = record1.range(1..15)
+    val sr3 = record3.range(18..33)
+    val sr4 = record2.range(25..35)
+    val sr5 = record4.range(10..20)
+    val sr6 = record5.range(14..25)
+
+    "Test Record sort variations with record then site" {
 
         // sort with SeqRecordSort object sorters
         val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(numberThenAlphaSort,leftEdge), sr1,sr2,sr3,sr5,sr4,sr6)
-        println("\n Tree set after numberThanALphaSort - leftEdge:")
-        for (sp in srSet1) {
-            println(sp.toString())
-        }
+
         srSet1.elementAt(0).start.site shouldBe 1
         srSet1.elementAt(1).start.site shouldBe 27
         srSet1.elementAt(2).start.site shouldBe 18
@@ -47,11 +46,6 @@ class SeqRangeSortTest: StringSpec({
 
         // sort with SeqRecordSort object sorters
         val srSet2 = nonCoalescingSetOf(SeqRangeSort.by(numberThenAlphaSort,rightEdge), sr1,sr2,sr3,sr5,sr4,sr6)
-
-        println("\n Tree set after numberThanALphaSort - rightEdge:")
-        for (sp in srSet2) {
-            println(sp.toString())
-        }
 
         srSet2.elementAt(0).start.seqRecord!!.id  shouldBe "1A"
         srSet2.elementAt(1).start.seqRecord!!.id  shouldBe "1A"
@@ -70,11 +64,6 @@ class SeqRangeSortTest: StringSpec({
         // sort with SeqRecordSort object sorters
         val srSet3 = nonCoalescingSetOf(SeqRangeSort.by(alphaThenNumberSort,leftEdge), sr1,sr2,sr3,sr5,sr4,sr6)
 
-        println("\n Tree set after alphaThenNumberSort - leftEdge:")
-        for (sp in srSet3) {
-            println(sp.toString())
-        }
-
         srSet3.elementAt(0).start.site shouldBe 10
         srSet3.elementAt(1).start.site shouldBe 1
         srSet3.elementAt(2).start.site shouldBe 27
@@ -83,11 +72,6 @@ class SeqRangeSortTest: StringSpec({
         srSet3.elementAt(5).start.site shouldBe 14
 
         val srSet4 = nonCoalescingSetOf(SeqRangeSort.by(alphaThenNumberSort,rightEdge), sr1,sr2,sr3,sr5,sr4,sr6)
-
-        println("\n Tree set after alphaThenNumberSort - rightEdge:")
-        for (sp in srSet4) {
-            println(sp.toString())
-        }
 
         srSet4.elementAt(0).start.seqRecord!!.id  shouldBe "B2"
         srSet4.elementAt(1).start.seqRecord!!.id  shouldBe "1A"
@@ -112,11 +96,6 @@ class SeqRangeSortTest: StringSpec({
         val sr5 = record1.range(30..50)
         val srSet4 = nonCoalescingSetOf(SeqRangeSort.by(alphaThenNumberSort,rightEdge), sr1,sr2,sr3,sr5,sr4)
 
-        println("\n Tree set single seqRecord - rightEdge sort:")
-        for (sp in srSet4) {
-            println(sp.toString())
-        }
-
         srSet4.elementAt(0).endInclusive.site shouldBe 15
         srSet4.elementAt(1).endInclusive.site shouldBe 24
         srSet4.elementAt(2).endInclusive.site shouldBe 44
@@ -125,26 +104,10 @@ class SeqRangeSortTest: StringSpec({
 
     }
     "Test SeqRangeSort just on record" {
-        val record1 = NucSeqRecord(NucSeq(chr1A), "1A")
-        val record2 = NucSeqRecord(NucSeq(chr2A), "2A")
-        val record3 = NucSeqRecord(NucSeq(chr1B), "1B")
-        val record4 = NucSeqRecord(NucSeq(chrB2), "B2")
-        val record5 = NucSeqRecord(NucSeq(chr10A),"10A")
 
-        val sr1 = record1.range(27..44)
-        val sr2 = record1.range(1..15)
-        val sr3 = record3.range(18..33)
-        val sr4 = record2.range(25..35)
-        val sr5 = record4.range(10..20)
-        val sr6 = record5.range(14..25)
-
-        // Should create a NavigableSet - sorted set - numbers before letters in the id
+        // Should create a NavigableSet - sorted set - letters before numbers in the id
+        // This doesn't repeat records with duplicate SeqRecord IDs
         val srSet = nonCoalescingSetOf(record(alphaThenNumberSort), sr1,sr2,sr3,sr5,sr4,sr6)
-
-        println("\n SRanges from just record sort, size of srSet: ${srSet.size}")
-        for (sp in srSet) {
-            println(sp.toString())
-        }
 
         srSet.elementAt(0).start.seqRecord!!.id  shouldBe "B2"
         srSet.elementAt(1).start.seqRecord!!.id  shouldBe "1A"
