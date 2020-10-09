@@ -7,18 +7,17 @@ import java.io.File
 import java.nio.file.Path
 
 
-// TODO this doesn't seem right.  I should just be passing the class, not an instance.
 enum class SeqFormat(val suffixes: List<String>) {
-    fasta(listOf("fa", "fasta")),
-    fastq(listOf("fq", "fastq")),
-    // clustal(),
-    // phylip()
-    // genbank()
+    fasta(listOf("fa", "fasta", "fa.gz", "fasta.gz")),
+    fastq(listOf("fq", "fastq", "fq.gz", "fastq.gz"))
+}
+
+enum class SeqType {
+    nucleotide,
+    protein
 }
 
 interface SequenceIterator : Iterator<SeqRecord> {
-    /**Says [Seq] will be converted to SeqRecord when finished*/
-    // fun read(file: File): Iterator<TempSeqRecord>
     fun read(): SeqRecord?
     fun readAll(): Map<String, SeqRecord>
 }
@@ -31,17 +30,16 @@ interface SequenceWriter {
     fun writeFooter(): Boolean
 }
 
-private fun seqIterator(format: SeqFormat, filename: String): SequenceIterator {
+private fun seqIterator(format: SeqFormat, type: SeqType, filename: String): SequenceIterator {
 
     return when (format) {
-        SeqFormat.fasta -> FastaIO(filename)
+        SeqFormat.fasta -> FastaIO(filename, type)
         SeqFormat.fastq -> FastqIO(filename)
-        else -> throw IllegalArgumentException("SeqIO: seqIterator: unknown format: ${format.name}")
     }
 
 }
 
-class SeqIO(filename: String, format: SeqFormat? = null) : Iterable<SeqRecord> {
+class SeqIO(filename: String, format: SeqFormat? = null, type: SeqType = SeqType.nucleotide) : Iterable<SeqRecord> {
 
     private val reader: SequenceIterator
     private val format: SeqFormat
@@ -68,7 +66,7 @@ class SeqIO(filename: String, format: SeqFormat? = null) : Iterable<SeqRecord> {
 
         }
 
-        reader = seqIterator(this.format, filename)
+        reader = seqIterator(this.format, type, filename)
 
     }
 
