@@ -3,6 +3,7 @@ package biokotlin.seq
 
 import biokotlin.data.Codon
 import biokotlin.data.CodonTable
+import java.util.*
 
 
 internal sealed class BioSeqByte constructor(sequence: String) : Seq {
@@ -49,10 +50,6 @@ internal sealed class BioSeqByte constructor(sequence: String) : Seq {
                 return index
         }
         return -1
-    }
-
-    override fun ungap(): Seq {
-        TODO("Not yet implemented")
     }
 
     override fun equals(other: Any?): Boolean {
@@ -106,6 +103,7 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
     override fun repr(): String = "${this::class.simpleName}('${if (seqS.length < 60) seq()
     else "${seq().substring(0, 54)}...${seq().takeLast(3)}"}',${nucSet})"
 
+    override fun ungap(): NucSeq = NucSeq(seq().replace(AminoAcid.GAP.char.toString(),""))
 
     override fun complement(): NucSeq {
         val comp = ByteArray(seqS.length)
@@ -124,9 +122,10 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
         return NucSeqByte(String(comp), nucSet)
     }
 
-    override fun join(vararg seqs: NucSeq): NucSeq {
-        TODO("Not yet implemented")
-    }
+    override fun join(vararg seqs: NucSeq): NucSeq = buildString {
+        append(seq())
+        seqs.forEach { append(it.toString()) }
+    }.let{ NucSeq(it)}
 
 
     override fun gc() = seqS.count { it.equals(NUC.G.utf8) ||  it.equals(NUC.C.utf8)}
@@ -164,23 +163,22 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
 
     override fun translate(table: CodonTable, to_stop: Boolean, cds: Boolean): ProteinSeqByte {
         if(cds && size()%3!=0) throw IllegalStateException("Sequence not multiple of three")
-        val pB = ByteArray(size = size() / 3)
-        for (i in 0 until (size() - 2) step 3) {
-            //TODO makes these work with Char
-            pB[i / 3] = table.nucBytesToCodonByte(seqS[i].toByte(), seqS[i + 1].toByte(), seqS[i + 2].toByte())
-            if(cds && i==0 && pB[0]!=AminoAcid.M.char.toByte()) {
-                //TODO makes these work with Char
-                val startCodon = Codon[seqS[i].toByte(), seqS[i + 1].toByte(), seqS[i + 2].toByte()]
-                if(table.start_codons.contains(startCodon)) pB[0]=AminoAcid.M.char.toByte()
-                else throw IllegalStateException("Sequence does not with valid start codon")
+        val pB = buildString(size() / 3) {
+            for (i in 0 until (size() - 2) step 3) {
+                append(table.nucCharToCodonByte(seqS[i], seqS[i + 1], seqS[i + 2]).toChar())
+                if (cds && i == 0 && this[0] != AminoAcid.M.char) {
+                    val startCodon = Codon[seqS[i], seqS[i + 1], seqS[i + 2]]
+                    if (table.start_codons.contains(startCodon)) this[0] = AminoAcid.M.char
+                    else throw IllegalStateException("Sequence does not with valid start codon")
+                }
             }
         }
-        if(cds && pB[pB.lastIndex]!=AminoAcid.STOP.char.toByte())  throw IllegalStateException("Sequence does end with valid stop codon")
+        if(cds && pB[pB.lastIndex]!=AminoAcid.STOP.char)  throw IllegalStateException("Sequence does end with valid stop codon")
         val proStr= if(to_stop || cds) {
-            val stopIndex = pB.indexOf(AminoAcid.stopChar.toByte())
-            if(stopIndex<0)  String(pB) else String(pB.sliceArray(0..(stopIndex-1)))
+            val stopIndex = pB.indexOf(AminoAcid.stopChar)
+            if(stopIndex<0)  pB.toString() else pB.substring(0 until stopIndex)
         } else {
-            String(pB)
+            pB.toString()
         }
         return ProteinSeqByte(proStr)
     }
@@ -224,9 +222,11 @@ private fun String.replaceUracilAndX(): String {
 
 
 internal class ProteinSeqByte(sequence: String) : BioSeqByte(sequence), ProteinSeq {
-  //  constructor(seq: String) : this(seq.toUpperCase().toByteArray(Charsets.UTF_8))
 
     override fun seq(): String = seqS
+
+    override fun ungap(): ProteinSeq = ProteinSeq(seqS.replace(AminoAcid.GAP.char.toString(),""))
+
     override fun get(i: Int): AminoAcid = if (i >= 0) AminoAcid.fromChar(seqS[i]) else AminoAcid
             .fromChar(seqS[seqS.length + i])
 
@@ -255,9 +255,10 @@ internal class ProteinSeqByte(sequence: String) : BioSeqByte(sequence), ProteinS
     override fun lastIndexOf(query: ProteinSeq, start: Int, end: Int): Int =
             indexOf(query.seq(),start,end,true)
 
-    override fun join(vararg seqs: ProteinSeq): ProteinSeq {
-        TODO("Not yet implemented")
-    }
+    override fun join(vararg seqs: ProteinSeq): ProteinSeq = buildString {
+        append(seqS)
+        seqs.forEach { append(it.toString()) }
+    }.let{ ProteinSeq(it) }
 
     override fun back_translate(): NucSeq = TODO("Need to figure this out")//TODO - use degenerate everywhere
 }
