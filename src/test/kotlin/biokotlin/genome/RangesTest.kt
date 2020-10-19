@@ -1,10 +1,7 @@
 package biokotlin.genome
 
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
-import biokotlin.seq.NucSeq
-import biokotlin.seq.NucSeqRecord
-import biokotlin.seq.ProteinSeq
-import biokotlin.seq.ProteinSeqRecord
+import biokotlin.seq.*
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -527,6 +524,14 @@ class RangesTest: StringSpec({
         val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr5,sr4)
         var df:DataFrame = srSet1.toDataFrame()
         df.print()
+
+        df.nrow shouldBe 5
+        df.ncol shouldBe 4
+
+        println(df.cols)
+        df.names.contains("start") shouldBe true
+        df.names.contains("end") shouldBe true
+        df.names.size shouldBe 4
 
     }
 

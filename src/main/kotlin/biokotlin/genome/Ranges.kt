@@ -9,6 +9,7 @@ import biokotlin.seq.ProteinSeq
 import biokotlin.seq.SeqRecord
 import com.google.common.collect.*
 import krangl.DataFrame
+import krangl.asDataFrame
 import krangl.dataFrameOf
 import krangl.deparseRecords
 import java.io.ByteArrayOutputStream
@@ -586,16 +587,32 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
 
 /**
  * Transform the set of SRanges into a DataFrame
- * with the SeqRange ID and a IntRange
+ * with the SeqRange ID, start, end and  IntRange columns
+ * How to change the order it is printed - does it matter?
+ * df.print() from Krangl prints columns in lexicographic order
+ *
+ * Is there a better way to create this dataFrame?
  */
 fun SRangeSet.toDataFrame():DataFrame {
 
-    var df = this.map{ range ->
+    // This returns a list of objects, which is converted to
+    // a dataFrame, then returned.
+    var rangesWithStartEnd = this.map{ range ->
         val seqRec = range.start.seqRecord
         val id = if (seqRec == null) "NONE" else seqRec.id
-        var pair = Pair<String,IntRange>(id,range.start.site..range.endInclusive.site)
-        pair
-    }.deparseRecords{mapOf("ID" to it.first,"range" to it.second)}
+        val start = range.start.site
+        val end = range.endInclusive.site
+        val frameRange = start..end
+        val frameObject = object {
+            var ID = id
+            var start = start
+            var end = end
+            val range = frameRange
+        }
+        frameObject
+    }
+
+    var df = rangesWithStartEnd.asDataFrame()
     return df
 }
 
