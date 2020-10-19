@@ -121,10 +121,3 @@ $filename  Error: ${e.message}""")
     }
 
 }
-
-fun main() {
-    val seqio = SeqIO("src/test/resources//biokotlin/seqIO/example.fq")
-    for (item in seqio) {
-        print(item)
-    }
-}

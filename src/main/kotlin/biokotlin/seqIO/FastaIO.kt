@@ -138,14 +138,3 @@ open class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
     }
 
 }
-
-fun main() {
-    val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa", type = SeqType.protein)
-    // val seqio = SeqIO("https://raw.githubusercontent.com/biopython/biopython/master/Tests/Align/ecoli.fa")
-    val time = measureNanoTime {
-        seqio.forEachIndexed { index, record ->
-            println("$index: ${(record as ProteinSeqRecord).id}: ${record.sequence.size()}")
-        }
-    }
-    println("time: ${time / 1e9} secs.")
-}
