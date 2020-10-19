@@ -110,13 +110,13 @@ open class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
         private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
 
             for (entry in inputChannel) {
-                val deffered = async {
+                val deferred = async {
                     val builder = StringBuilder()
                     entry.second.forEach { builder.append(it.trim()) }
                     val seq = Seq(builder.toString())
                     NucSeqRecord(seq, entry.first)
                 }
-                outputChannel.send(deffered)
+                outputChannel.send(deferred)
             }
 
         }
@@ -124,13 +124,13 @@ open class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
         private suspend fun processProteinInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
 
             for (entry in inputChannel) {
-                val deffered = async {
+                val deferred = async {
                     val builder = StringBuilder()
                     entry.second.forEach { builder.append(it.trim()) }
                     val seq = ProteinSeq(builder.toString())
                     ProteinSeqRecord(seq, entry.first)
                 }
-                outputChannel.send(deffered)
+                outputChannel.send(deferred)
             }
 
         }
