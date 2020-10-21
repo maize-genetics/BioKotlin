@@ -1,10 +1,8 @@
 package biokotlin.seqIO
 
-import biokotlin.seq.BioSet
 import biokotlin.seq.Seq
 import biokotlin.seq.SeqRecord
 import java.io.File
-import java.nio.file.Path
 
 
 enum class SeqFormat(val suffixes: List<String>) {
@@ -39,56 +37,24 @@ private fun seqIterator(format: SeqFormat, type: SeqType, filename: String): Seq
 
 }
 
-class SeqIO(filename: String, format: SeqFormat? = null, type: SeqType = SeqType.nucleotide) : Iterable<SeqRecord> {
+fun reader(filename: String, format: SeqFormat? = null, type: SeqType = SeqType.nucleotide): SequenceIterator {
 
-    private val reader: SequenceIterator
-    private val format: SeqFormat
+    assert(filename.isNotEmpty())
 
-    init {
+    val formatToUse = if (format != null) {
+        format
+    } else {
 
-        assert(filename.isNotEmpty())
+        val extension = File(filename).extension
 
-        if (format != null) {
-            this.format = format
-        } else {
-
-            val extension = File(filename).extension
-
-            val guessFormat = SeqFormat.values().find {
-                it.suffixes.contains(extension)
-            }
-
-            if (guessFormat == null) {
-                throw IllegalArgumentException("Unknown file type: $filename")
-            } else {
-                this.format = guessFormat
-            }
-
+        val guessFormat = SeqFormat.values().find {
+            it.suffixes.contains(extension)
         }
 
-        reader = seqIterator(this.format, type, filename)
+        guessFormat ?: throw IllegalArgumentException("Unknown file type: $filename")
 
     }
 
-    /** BioPython reads a single record */
-    fun read() = reader.read()
-
-    fun readAll(): Map<String, SeqRecord> = reader.readAll()
-
-    fun parse(path: Path, seqFormat: SeqFormat, preferredBioSet: BioSet? = null): SequenceIterator {
-        TODO("Not yet implemented")
-    }
-
-    fun to_dict(sequences: SequenceIterator, keyFunction: (Seq) -> String): Map<String, SeqRecord> {
-        TODO("Not yet implemented")
-    }
-
-    fun to_dict(sequences: List<Seq>, keyFunction: (Seq) -> String): Map<String, SeqRecord> {
-        TODO("Not yet implemented")
-    }
-
-    override fun iterator(): Iterator<SeqRecord> {
-        return reader.iterator()
-    }
+    return seqIterator(formatToUse, type, filename)
 
 }

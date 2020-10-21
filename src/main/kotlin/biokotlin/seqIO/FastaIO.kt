@@ -7,9 +7,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.receiveOrNull
 import java.util.*
-import kotlin.system.measureNanoTime
 
-open class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
+class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
 
     private val inputChannel = Channel<Pair<String, List<String>>>(5)
     private val outputChannel = Channel<Deferred<SeqRecord>>(5)
@@ -25,7 +24,7 @@ open class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
 
         val processInputJob = CoroutineScope(Dispatchers.IO).launch {
             when (type) {
-                SeqType.nucleotide -> processInput(inputChannel, outputChannel)
+                SeqType.nucleotide -> processNucleotideInput(inputChannel, outputChannel)
                 SeqType.protein -> processProteinInput(inputChannel, outputChannel)
             }
         }
@@ -107,7 +106,7 @@ open class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
 
         }
 
-        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
+        private suspend fun processNucleotideInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
 
             for (entry in inputChannel) {
                 val deferred = async {
