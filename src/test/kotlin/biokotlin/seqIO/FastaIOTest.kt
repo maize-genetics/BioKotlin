@@ -1,12 +1,11 @@
 package biokotlin.seqIO
 
-import biokotlin.seq.NucSeqRecord
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
 class FastaIOTest : StringSpec({
 
-    val fasta = SeqIO("src/test/resources//biokotlin/seqIO/B73_Ref_Subset.fa")
+    val fasta = NucSeqIO("src/test/resources//biokotlin/seqIO/B73_Ref_Subset.fa")
 
     val seqLengths = mapOf(
             "B73V4_ctg182" to 256,
@@ -22,7 +21,7 @@ class FastaIOTest : StringSpec({
         var numSeqs = 0
         fasta.forEachIndexed { index, record ->
             numSeqs++
-            (record as NucSeqRecord).sequence.size() shouldBe seqLengths[record.id]
+            record.sequence.size() shouldBe seqLengths[record.id]
         }
         numSeqs shouldBe 6
 
