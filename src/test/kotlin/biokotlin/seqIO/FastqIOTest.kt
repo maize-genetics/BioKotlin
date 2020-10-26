@@ -43,4 +43,22 @@ class FastqIOTest : StringSpec({
 
     }
 
+    "Quality score containing @" {
+        val seqLengths = mapOf(
+                "071113_EAS56_0053:1:1:998:236" to 36,
+                "071113_EAS56_0053:1:1:182:712" to 36,
+                "071113_EAS56_0053:1:1:153:10" to 36
+        )
+
+        val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/tricky_at.fq")
+
+        var numSeqs = 0
+        fastq.forEachIndexed { index, record ->
+            numSeqs++
+            record.sequence.size() shouldBe seqLengths[record.id]
+        }
+        numSeqs shouldBe 3
+
+    }
+
 })
