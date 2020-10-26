@@ -6,21 +6,41 @@ import io.kotest.matchers.shouldBe
 class FastqIOTest : StringSpec({
 
 
-    "iterateFile" {
+    "simpleFile" {
         val seqLengths = mapOf(
                 "EAS54_6_R1_2_1_413_324" to 25,
-                "EAS54_6_R1_2_1_540_792" to 25,
-                "EAS54_6_R1_2_1_443_348" to 25
+                "EAS54_6_R1_2_1_540_792" to 20,
+                "EAS54_6_R1_2_1_443_348" to 15
         )
 
-        val fasta = NucSeqIO("src/test/resources/biokotlin/seqIO/example.fq")
+        val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/example.fq")
 
         var numSeqs = 0
-        fasta.forEachIndexed { index, record ->
+        fastq.forEachIndexed { index, record ->
             numSeqs++
             record.sequence.size() shouldBe seqLengths[record.id]
         }
         numSeqs shouldBe 3
 
     }
+
+    "zeroLengthSeqFile" {
+        val seqLengths = mapOf(
+                "EMWLCP001DET6P" to 47,
+                "EMWLCP001CB6TP" to 127,
+                "EMWLCP001DHOHL" to 0,
+                "EMWLCP001C1YIG" to 38
+        )
+
+        val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/zero_length.fq")
+
+        var numSeqs = 0
+        fastq.forEachIndexed { index, record ->
+            numSeqs++
+            record.sequence.size() shouldBe seqLengths[record.id]
+        }
+        numSeqs shouldBe 4
+
+    }
+
 })

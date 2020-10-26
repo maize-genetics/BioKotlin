@@ -4,6 +4,7 @@ import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.Seq
 import biokotlin.seq.SeqRecord
+import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -13,6 +14,16 @@ import java.io.File
 import java.util.*
 import kotlin.system.measureNanoTime
 
+/**
+[FastqIO] implements a [SequenceIterator] for a FASTQ file at path [filename]
+
+Attributes:
+- filename    - File path of FASTQ file being parsed
+
+@throws [IllegalArgumentException] if the FASTQ file is formatted incorrectly and cannot be parsed.
+@throws [IllegalStateException] if one of the sequences is not a valid []NUCSeq].
+
+ */
 class FastqIO(val filename: String) : SequenceIterator {
 
     private val inputChannel = Channel<Triple<String, String, String>>(5)
@@ -64,24 +75,30 @@ class FastqIO(val filename: String) : SequenceIterator {
     }
 
     companion object {
-        private fun extractSeq(firstLine: String, reader: BufferedReader, filename: String): Triple<String,
+        private fun extractSeq(firstLine: String, lineNumber: Int, reader: BufferedReader,
+                               filename: String): Triple<String,
                 String, String> {
             var line = firstLine
-            print("l")
+            var lineNumber = lineNumber
             if (line.startsWith("@")) {
                 var id = line.substring(1)
                 var seq: String
                 var quality: String
                 seq = reader.readLine()
+                lineNumber++
                 if (seq != null) {
                     line = reader.readLine()
-                    if (line != null && line.startsWith("+")) {
+                    lineNumber++
+                    if (line != null && line.startsWith("+") &&
+                            (line.substring(1) == "" || line.substring(1) == id)) {
                         quality = reader.readLine()
+                        lineNumber++
                         if (quality != null) return Triple(id, seq, quality)
                     }
                 }
             }
-            throw IllegalArgumentException("FastqIO: readFastqLines: invalid format file: $filename")
+            throw IllegalArgumentException("FastqIO: readFastqLines: Error at line $lineNumber, " +
+                    "invalid format file: $filename")
         }
 
         private suspend fun readFastqLines(filename: String, inputChannel: Channel<Triple<String,
@@ -90,10 +107,12 @@ class FastqIO(val filename: String) : SequenceIterator {
             try {
                 File(filename).bufferedReader().use { reader ->
                     var line = reader.readLine()
+                    var lineNumber = 1
                     while (line != null) {
                         line = line.trim()
-                        inputChannel.send(extractSeq(line, reader, filename))
+                        inputChannel.send(extractSeq(line, lineNumber, reader, filename))
                         line = reader.readLine()
+                        lineNumber += 4
                     }
                 }
                 inputChannel.close()
@@ -107,7 +126,6 @@ $filename  Error: ${e.message}""")
                                          outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
 
             for (entry in inputChannel) {
-                print("line")
                 val deferred = async {
                     val seq = Seq(entry.second)
                     NucSeqRecord(seq as NucSeq, entry.first, letterAnnotations =
