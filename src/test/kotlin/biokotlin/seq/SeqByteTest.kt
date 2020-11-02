@@ -217,9 +217,16 @@ class SeqByteTest : StringSpec({
         println(CodonTable(1).name)
     }
 
+    "Test joining sequences" {
+        dnaSeq.join(NucSeq("TTT"),NucSeq("GGG"))  shouldBe NucSeq(dnaString+"TTT"+"GGG")
+        shouldThrow<IllegalStateException> {dnaSeq.join(NucSeq("UUU"))}
+        rnaSeq.join(NucSeq("UUU")) shouldBe NucSeq(rnaString+"UUU")
+    }
+
 
 
     "ungap" {
-        //TODO need to decide on how the GAP character is implemented
+        NucSeq("AC-GTG-GTGA-").ungap() shouldBe dnaSeq
+        NucSeq("AC-GUG-GUGA-").ungap() shouldBe rnaSeq
     }
 })

@@ -136,7 +136,13 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
                 .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.toByte() ?: illegalCodon }
         stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.STOP.char.toByte() }
     }
-    internal fun nucBytesToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
+    internal fun nucCharToCodonByte(b1:Char, b2:Char, b3:Char): Byte {
+        val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
+        if(codonB == illegalCodon) throw IllegalArgumentException("Illegal bytes used to encode codon")
+        return codonB
+    }
+
+    internal fun nucByteToCodonByte(b1:Byte, b2:Byte, b3:Byte): Byte {
         val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
         if(codonB == illegalCodon) throw IllegalArgumentException("Illegal bytes used to encode codon")
         return codonB
@@ -283,8 +289,8 @@ enum class Codon {
             Codon.values().forEach{nuc3bytesToCodon[toPackedInt(it.name)] =  it }
         }
         operator fun get(s: String) = valueOf(s)
-        fun get(c1: Char, c2: Char, c3: Char) = get(c1.toByte(), c2.toByte(), c3.toByte())
-        fun get(c1: NUC, c2: NUC, c3: NUC) = get(c1.utf8, c2.utf8, c3.utf8)
+        operator fun get(c1: Char, c2: Char, c3: Char) = get(c1.toByte(), c2.toByte(), c3.toByte())
+        operator fun get(c1: NUC, c2: NUC, c3: NUC) = get(c1.utf8, c2.utf8, c3.utf8)
         val DNA: CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isDNACodon }))
         val RNA : CodonSet =  Sets.immutableEnumSet(EnumSet.copyOf(values().filter { it.isRNACodon }))
         val nucToCodon : Map<List<Byte>,Codon>
@@ -297,11 +303,14 @@ enum class Codon {
                     NUC.utf8To2BitInt(codon[1].toByte()).toInt().shl(2) or
                     NUC.utf8To2BitInt(codon[2].toByte()).toInt()
         }
+
         internal fun toPackedInt(c1 : Byte, c2 : Byte, c3 : Byte):Int {
-            return NUC.utf8To2BitInt(c1).toInt().shl(4) or
-                    NUC.utf8To2BitInt(c2).toInt().shl(2) or
-                    NUC.utf8To2BitInt(c3).toInt()
+            return NUC.utf8To2BitInt(c1).shl(4) or
+                    NUC.utf8To2BitInt(c2).shl(2) or
+                    NUC.utf8To2BitInt(c3)
         }
+
+        internal fun toPackedInt(c1 : Char, c2 : Char, c3 : Char):Int = toPackedInt(c1.toByte(),c2.toByte(), c3.toByte())
 
         operator fun get(c1: Byte, c2: Byte, c3: Byte): Codon {
             return nuc3bytesToCodon[toPackedInt(c1,c2,c3)]?:throw IllegalStateException("Byte are not standard nucleotides for codon")
