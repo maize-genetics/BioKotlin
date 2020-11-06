@@ -1,11 +1,12 @@
 package biokotlin.seqIO
 
+import biokotlin.util.bufferedReader
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
 class FastaIOTest : StringSpec({
 
-    val fasta = NucSeqIO("src/test/resources//biokotlin/seqIO/B73_Ref_Subset.fa")
+    val fasta = NucSeqIO("src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa")
 
     val seqLengths = mapOf(
             "B73V4_ctg182" to 256,
@@ -26,4 +27,94 @@ class FastaIOTest : StringSpec({
         numSeqs shouldBe 6
 
     }
+
+    "singleNucleicFiles" {
+
+        val paths = listOf(
+                "lupine.nu",
+                "elderberry.nu",
+                "phlox.nu",
+                "centaurea.nu",
+                "wisteria.nu",
+                "sweetpea.nu",
+                "lavender.nu"
+        )
+
+        paths.forEach {
+            val filename = "src/test/resources/biokotlin/seqIO/$it"
+            println("singleNucleicFiles testing $filename")
+            simpleCheck(filename)
+        }
+
+    }
+
+    "singleProteinFiles" {
+
+        val paths = listOf(
+                "aster.pro",
+                "rosemary.pro",
+                "rose.pro",
+                //"loveliesbleeding.pro"
+        )
+
+        paths.forEach {
+            val filename = "src/test/resources/biokotlin/seqIO/$it"
+            println("singleNucleicFiles testing $filename")
+            simpleCheck(filename, SeqFormat.fasta, SeqType.protein)
+        }
+
+    }
+
 })
+
+fun readTitleAndSeq(filename: String): Pair<String, String> {
+
+    bufferedReader(filename).use { reader ->
+        val title = reader.readLine().trim()
+        assert(title.startsWith(">"))
+        val seq = StringBuilder()
+        var line = reader.readLine()
+        while (line != null && !line.startsWith(">")) {
+            seq.append(line.trim())
+            line = reader.readLine()
+        }
+        return Pair(title, seq.toString())
+    }
+
+}
+
+fun titleToIds(title: String): Triple<String, String, String> {
+
+    val INFO_POSSIBILIES = arrayListOf("gb", "emb", "dbj", "pdb")
+
+    val idInfo = title.substringBefore(" ")
+    val desc = title.substringAfter(" ")
+    val idInfoItems = idInfo.split("|")
+
+    return if (idInfoItems.size >= 4) {
+        assert(INFO_POSSIBILIES.contains(idInfoItems[2]))
+        Triple(idInfoItems[3], idInfoItems[4], desc)
+    } else {
+        Triple(idInfoItems[0], idInfoItems[0], desc)
+    }
+
+}
+
+fun simpleCheck(filename: String, format: SeqFormat = SeqFormat.fasta, type: SeqType = SeqType.nucleotide) {
+
+    val msg = "Test failure parsing file $filename"
+    val titleSeq = readTitleAndSeq(filename)
+    val idnNameDesc = titleToIds(titleSeq.first)
+
+    val record = when (type) {
+        SeqType.nucleotide -> NucSeqIO(filename, format).read()!!
+        SeqType.protein -> ProteinSeqIO(filename, format).read()!!
+    }
+
+    val name = titleSeq.first.split(" ")[0]
+    assert(record.id == name) { msg }
+    assert(record.name == name) { msg }
+    assert(record.description == titleSeq.first) { msg }
+    assert(record.seq() == titleSeq.second) { msg }
+
+}
