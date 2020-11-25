@@ -244,7 +244,7 @@ class RangesTest: StringSpec({
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
 
         var negativePeaks = findPair(positive, sRangeSet, gcSame, 3)
-        println("number of nuegativePeaks: ${negativePeaks.size}")
+        println("number of negativePeaks: ${negativePeaks.size}")
         for (range in negativePeaks) {
             val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
             val sequence = seqRec.sequence
@@ -291,12 +291,12 @@ class RangesTest: StringSpec({
     }
 
     "Test bedfileToSRangeSet " {
-        var fasta = "/Users/lcj34/notes_files/biokotlin/ranges/paired_intervals/chr9chr10.fa"
-        // THis bedfile has 10 chr9 and 10 chr10 entries
-        var bedFile = "/Users/lcj34/notes_files/biokotlin/ranges/paired_intervals/travis_peaks_chr9chr10_SHORT.bed"
+        var fasta = "src/test/kotlin/biokotlin/genome/chr9chr10short.fa"
+        // This bedfile has 5 chr9 and 4 chr10 entries
+        var bedFile = "src/test/kotlin/biokotlin/genome/chr9chr10_SHORT.bed"
         var srangeSet = bedfileToSRangeSet(bedFile,fasta)
         println("Size of srangeSet: ${srangeSet.size}")
-        srangeSet.size shouldBe 20
+        srangeSet.size shouldBe 9
         println("\nnon-shuffled set:")
         for (range in srangeSet) {
             println(range)
@@ -317,11 +317,11 @@ class RangesTest: StringSpec({
         }
 
         // At this point, I want to test some intersect code on a large set - see small intersect case below
-        var positivePeak = sortedSet.elementAt(16) // picking an arbitrary element as my peak
+        var positivePeak = sortedSet.elementAt(8) // picking an arbitrary element as my peak
         println("\nPeak for testing: $positivePeak")
 
-        val flankedSet = positivePeak.flankBoth(30000)
-        println("flankedSet - 30000:")
+        val flankedSet = positivePeak.flankBoth(100)
+        println("flankedSet - 100:")
         for (range in flankedSet) {
             println(range)
         }
@@ -370,7 +370,7 @@ class RangesTest: StringSpec({
     }
     " test SRange.subtract" {
 
-        // These ranges are created on the same record so they intersect for the subraction.
+        // These ranges are created on the same record so they intersect for the subtraction.
         val sr1 = record1.range(27..44)
         val sr2 = record1.range(119..122)
         val sr3 = record1.range(25..35)
