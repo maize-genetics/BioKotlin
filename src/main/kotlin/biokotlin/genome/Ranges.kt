@@ -28,6 +28,7 @@ import kotlin.collections.HashMap
  * Many of the functions, e.g. flank, shift, complement, are based on bedFile functions, but altered
  * to be appropriate for SRange objects.
  *
+ * @author lcj34
  */
 
 /**
@@ -35,7 +36,7 @@ import kotlin.collections.HashMap
  */
 object SeqRecordSorts {
     // The alphaSort works when used as the comparator in "toSortedSet" (see RangesTest -
-    //  "Test SeqRecordSorgs.alphasort " test case) but it isn't executed properly as
+    //  "Test SeqRecordSorts.alphasort " test case) but it isn't executed properly as
     // part of SeqPosition compareTo().
     val alphaSort:Comparator<in SeqRecord> = compareBy { it.id }
 
@@ -227,7 +228,7 @@ fun SRange.flankRight(count: Int) : SRange? {
 
 /**
  * Flank both ends of the range by the specified amount
- * THe lower end (left edge) will not drop below 1.
+ * The lower end (left edge) will not drop below 1.
  * The upper end (right edge) will not exceed max size of sequence in the SeqRecord
  */
 fun SRange.flankBoth(count: Int) : Set<SRange> {
@@ -260,7 +261,6 @@ fun SRange.flankBoth(count: Int) : Set<SRange> {
  *
  */
 fun SRange.subtract(removeRanges: Set<SRange>) : SRangeSet {
-    //var newRanges: MutableSet<SRange> = mutableSetOf()
 
     val intersectingRanges = findIntersectingSRanges(this, removeRanges)
     val newRanges = complement(this, intersectingRanges)
@@ -316,7 +316,7 @@ fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSe
 
     var peakSeqRec = boundaryRange.start.seqRecord
     for (range in fixedComplementRanges.asRanges()) {
-        // lowerBoundType() fails on range, but works if I set a new variable
+        // lowerBoundType() fails on range, but works when setting a new variable
         var crange = range
         var lbtype = crange.lowerBoundType()
         var ubtype = crange.upperBoundType()
@@ -376,7 +376,7 @@ fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
                 stop = true
             }
         } else if (thatSeqRec == null){
-            continue // nul before non-null, keep going through SearchSpace
+            continue // null before non-null, keep going through SearchSpace
         } else {
             if (thisSeqRecID == thatSeqRec.id) {
                 val intersects = overlaps(peak, search)
@@ -468,7 +468,7 @@ fun findIntersectingPositions(set1: SRangeSet, set2: SRangeSet): SRangeSet {
 
 /**
  * This function takes 2 sorted sets of Kotlin IntRange and returns
- * a Set<IntRange> of overlapping positions.
+ * a Set<IntRange> of overlapping positions.  It is called from findIntersectingPosition()
  */
 fun getOverlappingIntervals(set1: Set<IntRange>, set2: Set<IntRange>): Set<IntRange> {
     val intersections : MutableSet<IntRange> = mutableSetOf()
@@ -525,7 +525,7 @@ fun SRange.pairedInterval(searchSpace: Set<SRange>, pairingFunc: (NucSeq,NucSeq)
 typealias SRangeSet = Set<SRange> // Kotlin immutable Set
 
 /**
- * Method takes a list of SRanges and adds them to a sorted set.  Overlapping intervals are NOT coalesced.
+ * Method takes a List<SRange> and adds them to a sorted set.  Overlapping intervals are NOT coalesced.
  * User must supply a comparator - either their own or one defined in SeqRangeSort
  *
  * return:  Output is a Kotlin Immutable Set of SRanges
@@ -537,6 +537,12 @@ fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRange
     return sRangeSet.toSet()
 }
 
+/**
+ * Method takes a comma separated list of SRanges and adds them to a sorted set.  Overlapping intervals are NOT coalesced.
+ * User must supply a comparator - either their own or one defined in SeqRangeSort
+ *
+ * return:  Output is a Kotlin Immutable Set of SRanges
+ */
 fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), vararg ranges: SRange): SRangeSet {
     val sRangeSet = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
@@ -549,6 +555,8 @@ fun nonCoalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRange
  * This does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
  * User must supply a comparator - either their own or one defined in SeqRangeSort
  *
+ * Input is a List<SRange>
+ *
  * return: Output is a Kotlin Immutable Set of SRanges
  */
 fun coalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), ranges: List<SRange>): SRangeSet {
@@ -560,6 +568,15 @@ fun coalescingSetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSor
     return sRangeSetCoalesced.toSet()
 }
 
+/**
+ * Coalescing Sets:  When added to set, ranges that overlap or are embedded will be merged.
+ * This does not merge adjacent ranges (ie, 14..29 and 30..35 are not merged, but 14..29 and 29..31 are merged)
+ * User must supply a comparator - either their own or one defined in SeqRangeSort
+ *
+ * Input is a comma separated list of SRanges
+ *
+ * return: Output is a Kotlin Immutable Set of SRanges
+ */
 fun coalescingsetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge), vararg ranges: SRange): SRangeSet {
     val sRangeSet  = TreeSet(comparator)
     sRangeSet.addAll(ranges.asIterable())
@@ -588,7 +605,7 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
 /**
  * Transform the set of SRanges into a DataFrame
  * with the SeqRange ID, start, end and  IntRange columns
- * How to change the order it is printed - does it matter?
+ *
  * df.print() from Krangl prints columns in lexicographic order
  *
  * Is there a better way to create this dataFrame?
@@ -619,7 +636,9 @@ fun SRangeSet.toDataFrame():DataFrame {
 /**
  * For a set of SRanges, create new ranges based on removing any portion
  * of the old range which overlaps with any of the ranges in the "removeRanges"
- * set.  Return a set of updated ranges .
+ * set.
+ *
+ * Returns a set of updated ranges .
  *
  */
 fun SRangeSet.subtract(removeRanges: Set<SRange>) : SRangeSet {
@@ -635,7 +654,7 @@ fun SRangeSet.subtract(removeRanges: Set<SRange>) : SRangeSet {
 
 /**
  * Merge will merge overlapping and embedded ranges, and other ranges where distance between them
- * is "count" or less bps.  It will not merge adjacent/non-overlapping ranges
+ * is "count" or less base pairss.  It will not merge adjacent/non-overlapping ranges
  * A comparator is necessary as we can't merge until the ranges are sorted.  SRange is Kotlin Set
  * which is immutable, but not necessarily sorted.
  * Merging of ranges requires that the upper endpoint SeqRecord of the first range matches
@@ -694,6 +713,7 @@ fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqRangeSort.by(
 
 /**
  * Add "count" bps to the right (upper) end of each range
+ *
  * return:  the adjusted SRangeSet
  */
 fun SRangeSet.flankRight(count: Int): SRangeSet {
@@ -708,6 +728,7 @@ fun SRangeSet.flankRight(count: Int): SRangeSet {
 
 /**
  * subtract "count" bps from the left (lower) end of each range
+ *
  * return: the adjusted SRangeSet
  */
 fun SRangeSet.flankLeft(count: Int): SRangeSet {
@@ -722,6 +743,7 @@ fun SRangeSet.flankLeft(count: Int): SRangeSet {
 
 /**
  * Shift each range in the set by "count" bps.  Can be positive or negative number
+ *
  * return: the adjusted SRangeSet
  */
 fun SRangeSet.shift(count: Int): SRangeSet {
@@ -735,7 +757,7 @@ fun SRangeSet.shift(count: Int): SRangeSet {
 }
 
 /**
- * Find the complement for a set of ranges.  The boundaryRange sets
+ * Find the complement for a set of ranges.  The boundaryRange parameter sets
  * the upper and lower limits for the complemented ranges.
  *
  * return:  an SRangeSet whose ranges are the complement of the original SRangeSet
@@ -756,7 +778,7 @@ fun SRangeSet.intersect(set2:SRangeSet): SRangeSet {
     return intersectingRanges
 }
 
-// Helper functions
+// findPair from NucSeq:  Helper functions used for Travis negativePeak() algorithm
 fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
 
     // this assumes the searchSpace has already been filtered for ranges that are too short
@@ -767,20 +789,21 @@ fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,Nu
     return rangeSet
 }
 
+// findPair from SRange:  Helper functions used for Travis negativePeak() algorithm
 fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
 
     var targetLen = positive.endInclusive.site - positive.start.site + 1
 
     // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
     var seqRecord = positive.start.seqRecord as NucSeqRecord
-    //val seqRec:NucSeqRecord = sRange.start.seqRecord as NucSeqRecord
+
     var targetSeq = seqRecord.sequence.toString().substring(positive.start.site-1,positive.endInclusive.site)
     // this assumes the searchSpace has already been filtered for ranges that are too short
 
     var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
     var rangeSet = findNegativePeaks(NucSeq(targetSeq), tempRangeList, pairingFunc, count)
 
-    return rangeSet // findNegativePeaks returns an immutable set
+    return rangeSet // findNegativePeaks above returns an immutable set
 }
 
 /**
@@ -792,6 +815,8 @@ fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,Nu
  * It then shuffles the list prior to returning.  This method is used by applications
  * (e.g. pairedInterval() to find negative peaks) which want a list that doesn't prioritize
  * a specific section of a range.
+ *
+ * This method was created to faciliate Travis's negative peak algorithm
  *
  * return:  A List<SRange> of subranges
  */
@@ -848,7 +873,6 @@ fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
         val file = File(fasta)
         file.bufferedReader().use { br ->
             var currChrom: String = "-1"
-            var prevChrom = "-1"
             var currSeq = ByteArrayOutputStream()
             var line = br.readLine()
             while (line != null) {
@@ -935,31 +959,6 @@ class NucSeqComparator: Comparator<NucSeqRecord>{
     }
 }
 
-//Default comparator for SeqPositionRanges
-// It is used in setOf below
-//class SeqPositionRangeComparator: Comparator<SRange> {
-//    companion object{
-//        var sprComparator  = SeqPositionRangeComparator()
-//    }
-//    override fun compare(p0: SRange, p1: SRange): Int {
-//        // ordering:  Null before other ordering
-//        val seqRec1= p0.start.seqRecord
-//        val seqRec2 = p1.start.seqRecord
-//        if (seqRec1 == null) {
-//            if (seqRec2 == null) {
-//                return p0.start.site.compareTo(p1.start.site)
-//            }
-//            return -1 // choose p0 if only p0.seqRecord is null
-//        } else if (seqRec2 == null) {
-//            return 1
-//        } else {
-//
-//            val seqRecordCompare = seqRec1.id.compareTo(seqRec2.id)
-//            return if (seqRecordCompare != 0) seqRecordCompare else return  p0.start.site.compareTo(p1.start.site)
-//        }
-//    }
-//}
-
 fun main() {
     // See additional test cases in test/kotlin/biokotlin/genome/RangesTest.kt
     val chr1 = NucSeqRecord(NucSeq("AAAACACAGAGATATA"),"1")
@@ -987,6 +986,3 @@ fun main() {
 // Creates basic NucSeqRecord containing only the sequence and an id
 private fun NucSeq.id(id: String): SeqRecord = NucSeqRecord(this,id)
 
-private operator fun String.get(rangeTo: IntRange) {
-
-}

@@ -6,13 +6,15 @@ package biokotlin.genome
  * More types can be added based on biologists specifications for sorting - these are
  * just a few examples.
  *
+ * @author lcj34
+ *
  */
 object SeqRangeSort {
     // This one sorts just by the record
     // It takes a Comparator and returns an SRange comparator
     fun record(seqRecordSort: Comparator<String?>): Comparator<SRange> = compareBy(seqRecordSort, { it.start.seqRecord?.id })
 
-    // User gives 2 comparators - one for the seqRecord id and one for the site sorting.
+    // here user gives 2 comparators - one for the seqRecord id and one for the site sorting.
     // Note that SeqRecord could be null
     fun by(seqRecordSort: Comparator<String?>, siteSort: Comparator<ClosedRange<Int>>): Comparator<SRange> {
         return compareBy(seqRecordSort){ sr: SRange -> sr.start.seqRecord?.id }.thenBy(siteSort) { sr: SRange ->  (sr.start.site..sr.endInclusive.site)}
@@ -40,8 +42,8 @@ object SeqRangeSort {
     val leftEdge = compareBy<ClosedRange<Int>>({ it.start }, { it.endInclusive })
     val rightEdge = compareBy<ClosedRange<Int>>({ it.endInclusive }, { it.start })
 
-    // What does "middle" mean?  What value are we seeking ?
-    val middle = compareBy<ClosedRange<Int>> {it.endInclusive.toLong() - it.start.toLong() }
+    // middle is middle of the range, ie (start + end)/2
+    val middle = compareBy<ClosedRange<Int>> {(it.start.toLong() + it.endInclusive.toLong())/2 }
 }
 
 // comparing the SeqRecord Id ( a String). "numFirst" determines if numbers or letters come first
