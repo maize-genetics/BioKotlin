@@ -20,9 +20,6 @@ object SeqRangeSort {
         return compareBy(seqRecordSort){ sr: SRange -> sr.start.seqRecord?.id }.thenBy(siteSort) { sr: SRange ->  (sr.start.site..sr.endInclusive.site)}
     }
 
-    // This line complains - says alphaThenNumberSort has to be initialized
-    //var defaultSort:Comparator<String> = numberThenAlphaSort
-
     // number-alpha sorts:  sorting just the SeqRecord ID, determines precedence of numbers vs letters
     // Sometime we have letters first (A1 before 1A), sometimes numbers (1A before A1)
 

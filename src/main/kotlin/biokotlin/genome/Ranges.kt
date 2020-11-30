@@ -47,7 +47,12 @@ object SeqRecordSorts {
     }
 }
 
-// This class users a default comparator
+/**
+ * Class defines SeqPosition as an optional seqRecord and a site.
+ * All sites must be non-zero positive.
+ * The SeqPosition class is used when defining an SRange.
+ */
+
 data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
     init {
         require(site >= 0) { "All sites must be positive" }
@@ -199,7 +204,7 @@ fun SRange.shift(count: Int): SRange {
 }
 
 /**
- * Flank the lower end of the range if it isn't already a 1
+ * Flank the lower end of the range if it isn't already at 1
  */
 fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
     if (this.start.site > 1) {
@@ -212,7 +217,7 @@ fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
 }
 
 /**
- * Flank the upper end of the range if it isn't already a max
+ * Flank the upper end of the range if it isn't already at max
  */
 fun SRange.flankRight(count: Int) : SRange? {
     val seqRecord = this.endInclusive.seqRecord
@@ -916,7 +921,7 @@ fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
 
     println("bedfileToSRangeSet: calling fastaToNucSeq")
     var chrToNucSeq = fastaToNucSeq (fasta)
-    println("bedfileToSRangeSet: start bedfile processing")
+
     File(bedfile).readLines().forEach{
         val data = it.split("\t")
         require (data.size >= 3) {"bad line in bedfile: $it"}
