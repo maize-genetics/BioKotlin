@@ -49,13 +49,13 @@ object SeqRecordSorts {
 
 /**
  * Class defines SeqPosition as an optional seqRecord and a site.
- * All sites must be non-zero positive.
+ * All sites must be non-zero positive. Sites are physical positions.
  * The SeqPosition class is used when defining an SRange.
  */
 
 data class SeqPosition(val seqRecord: SeqRecord?, val site: Int): Comparable<SeqPosition> {
     init {
-        require(site >= 0) { "All sites must be positive" }
+        require(site > 0) { "All sites must be positive" }
         if (seqRecord != null) {
             require(site <= seqRecord.size())
         }
@@ -121,8 +121,8 @@ object SeqPositionRanges {
             SeqPosition(seqRecord, siteRange.first)..SeqPosition(seqRecord, siteRange.last)
     // The "requires" below do not allow ranges to cross contigs - should be changed?
     fun of(first: SeqPosition, last: SeqPosition): SRange {
-        require(first.seqRecord==last.seqRecord)
-        require(first.site<=last.site)
+        require(first.seqRecord==last.seqRecord) {"Seq Records in first and last SeqPosition are not equal."}
+        require(first.site<=last.site) { " The SeqPosition First site must be less than or equal to the last.site"}
         return SeqPosition(first.seqRecord, first.site)..SeqPosition(last.seqRecord, last.site)
     }
     fun generator(): Sequence<SRange> {
@@ -187,10 +187,10 @@ fun SRange.shift(count: Int): SRange {
     if (count > 0) {
         // shift right (increase) verify neither exceeds size of sequence
         var seqRecord = lower.seqRecord
-        var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
+        var max = seqRecord?.size()?:Int.MAX_VALUE
         lower  = this.start.copy(site = minOf(this.endInclusive.site + count,max ))
         seqRecord = upper.seqRecord
-        max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
+        max = seqRecord?.size()?:Int.MAX_VALUE
         upper = this.endInclusive.copy( site = minOf (this.endInclusive.site + count, max))
     } else if (count < 0) {
         // shift left, verify we don't drop below 1
@@ -221,7 +221,7 @@ fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
  */
 fun SRange.flankRight(count: Int) : SRange? {
     val seqRecord = this.endInclusive.seqRecord
-    var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
+    var max = seqRecord?.size()?:Int.MAX_VALUE
     if (this.endInclusive.site < max) {
         var lowerF = this.endInclusive.site + 1
         var upperF = (minOf (this.endInclusive.site + count, max))
@@ -239,23 +239,12 @@ fun SRange.flankRight(count: Int) : SRange? {
 fun SRange.flankBoth(count: Int) : Set<SRange> {
     var flankingRanges: MutableSet<SRange> = mutableSetOf()
     // Flank the lower end of the range if it isn't already at 1
-    if (this.start.site > 1) {
-        val seqRecord = this.start.seqRecord
-        var lowerF = (this.start.site.toLong() - count).coerceAtLeast(1).toInt()
-        var upperF = this.start.site - 1
-        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),
-                SeqPosition(seqRecord,upperF)))
-    }
+    val leftFlank = this.flankLeft(count)
+    if (leftFlank != null) flankingRanges.add(leftFlank)
 
     // Flank the upper end of range if it isn't already at max
-    val seqRecord = this.endInclusive.seqRecord
-    var max = if (seqRecord != null) seqRecord.size() else Int.MAX_VALUE
-    if (this.endInclusive.site < max) {
-        var lowerF = this.endInclusive.site + 1
-        var upperF = (minOf (this.endInclusive.site + count, max))
-        flankingRanges.add(SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),
-                SeqPosition(seqRecord,upperF)))
-    }
+    val rightFlank = this.flankRight(count)
+    if (rightFlank != null) flankingRanges.add(rightFlank)
     return flankingRanges
 }
 
@@ -443,12 +432,12 @@ fun findIntersectingPositions(set1: SRangeSet, set2: SRangeSet): SRangeSet {
     val set2Map: Multimap<SeqRecord,IntRange> = HashMultimap.create()
 
     set1.forEach{range ->
-        val seqRec = if (range.start.seqRecord != null) range.start.seqRecord else NucSeqRecord(NucSeq("ATAT"), "NONE")
+        val seqRec = range.start.seqRecord?:NucSeqRecord(NucSeq("ATAT"), "NONE")
         set1Map.put(seqRec,range.start.site..range.endInclusive.site)
     }
 
     set2.forEach{range ->
-        val seqRec = if (range.start.seqRecord != null) range.start.seqRecord else NucSeqRecord(NucSeq("ATAT"), "NONE")
+        val seqRec = range.start.seqRecord?:NucSeqRecord(NucSeq("ATAT"), "NONE")
         set2Map.put(seqRec,range.start.site..range.endInclusive.site)
     }
 
@@ -473,7 +462,11 @@ fun findIntersectingPositions(set1: SRangeSet, set2: SRangeSet): SRangeSet {
 
 /**
  * This function takes 2 sorted sets of Kotlin IntRange and returns
- * a Set<IntRange> of overlapping positions.  It is called from findIntersectingPosition()
+ * a Set<IntRange> of overlapping positions.  It is only called internally
+ * from findIntersectingPosition().
+ *
+ * To guarantee accurate results in the case of a user calling this function directly
+ * with unsorted sets, the sets are sorted again here.
  */
 fun getOverlappingIntervals(set1: Set<IntRange>, set2: Set<IntRange>): Set<IntRange> {
     val intersections : MutableSet<IntRange> = mutableSetOf()
@@ -481,12 +474,16 @@ fun getOverlappingIntervals(set1: Set<IntRange>, set2: Set<IntRange>): Set<IntRa
     var idx2 = 0
     var len1 = set1.size
     var len2 = set2.size
+
+    // sort the set: protects against user calling this directly with unsorted sets
+    val sortedSet1 = set1.toSortedSet(leftEdge)
+    val sortedSet2 = set2.toSortedSet(leftEdge)
     while (idx1 < len1 && idx2 < len2) {
         // left bound for intersecting segment
-        val left = Math.max(set1.elementAt(idx1).start, set2.elementAt(idx2).start)
+        val left = Math.max(sortedSet1.elementAt(idx1).start, sortedSet2.elementAt(idx2).start)
 
         // right bound for intersecting segment
-        val right = Math.min(set1.elementAt(idx1).endInclusive, set2.elementAt(idx2).endInclusive)
+        val right = Math.min(sortedSet1.elementAt(idx1).endInclusive, sortedSet2.elementAt(idx2).endInclusive)
 
         // if segment has intersection, add it to list
         if (left <= right) {
@@ -495,7 +492,7 @@ fun getOverlappingIntervals(set1: Set<IntRange>, set2: Set<IntRange>): Set<IntRa
 
         // increment set1's index if its right-side boundary is smaller than set2's right-side boundary.
         // Else increment set2's index
-        if (set1.elementAt(idx1).endInclusive < set2.elementAt(idx2).endInclusive) {
+        if (sortedSet1.elementAt(idx1).endInclusive < sortedSet2.elementAt(idx2).endInclusive) {
             idx1++
         } else {
             idx2++
