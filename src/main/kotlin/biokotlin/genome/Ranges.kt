@@ -22,8 +22,8 @@ import kotlin.collections.HashMap
  * This class defines  Biokotlin ranges as well as functions that may be run against
  * those ranges.
  *
- * An SRange has 2 parts:  An optional SeqRecord and a range.  The range is a kotlin closed range,
- * inclusive/inclusive and represents the physical position on a sequence.
+ * An SRange is a kotlin closed range of Biokotlin SeqPositions. Each SeqPosition has an optional SeqRecord and a site.
+ * The range is inclusive/inclusive and represents the physical positions of a sequence.
  *
  * Many of the functions, e.g. flank, shift, complement, are based on bedFile functions, but altered
  * to be appropriate for SRange objects.
