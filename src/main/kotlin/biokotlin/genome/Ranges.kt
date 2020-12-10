@@ -158,17 +158,11 @@ fun SRange.sequence(): String? {
     var end = this.endInclusive.site
     var seqRec = this.start.seqRecord //as NucSeq // couldn't this be ProteinSeq?
 
-    var seq: String? = null
-    //var seq = if (seqRec != null && (seqRec is NucSeq || seqRec is ProteinSeq) ) seqRec.seq() else null
-    // hmmm ... can't combine this check as done above or code doesn't know which seq() to call
-    if (seqRec != null) {
-        if (seqRec is NucSeq ) {
-            seq = seqRec.seq()
-        }
-        if (seqRec is ProteinSeq) {
-            seq = seqRec.seq()
-        }
-    }
+    val seq = if (seqRec == null) null
+              else if (seqRec is NucSeq ) seqRec.seq()
+              else if (seqRec is ProteinSeq) seqRec.seq()
+              else null
+
     val rangeSequence = if (seq != null) seq.substring(start-1,end) else null
     return rangeSequence
 }
