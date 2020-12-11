@@ -10,8 +10,6 @@ import biokotlin.seq.SeqRecord
 import com.google.common.collect.*
 import krangl.DataFrame
 import krangl.asDataFrame
-import krangl.dataFrameOf
-import krangl.deparseRecords
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
@@ -305,13 +303,13 @@ fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSe
     var peakSeqRec = boundaryRange.start.seqRecord
     for (range in fixedComplementRanges.asRanges()) {
         // lowerBoundType() fails on range, but works when setting a new variable
-        var crange = range
-        var lbtype = crange.lowerBoundType()
-        var ubtype = crange.upperBoundType()
-        var lowerEndpoint = if (lbtype == BoundType.OPEN) crange.lowerEndpoint() + 1 else crange.lowerEndpoint()
-        var upperEndpoint = if (ubtype == BoundType.OPEN) crange.upperEndpoint() - 1 else crange.upperEndpoint()
+       // var crange = range
+        val lbtype = range.lowerBoundType()
+        val ubtype = range.upperBoundType()
+        val lowerEndpoint = if (lbtype == BoundType.OPEN) range.lowerEndpoint() + 1 else range.lowerEndpoint()
+        val upperEndpoint = if (ubtype == BoundType.OPEN) range.upperEndpoint() - 1 else range.upperEndpoint()
 
-        var srange = SeqPosition(peakSeqRec, lowerEndpoint)..SeqPosition(peakSeqRec, upperEndpoint)
+        val srange = SeqPosition(peakSeqRec, lowerEndpoint)..SeqPosition(peakSeqRec, upperEndpoint)
         newRanges.add(srange)
     }
 
@@ -319,7 +317,6 @@ fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSe
 }
 
 /**
- * Finds all ranges in a set that intersect with the given SRange.
  * This function identifies the intersecting SRanges, not specific positions on these ranges.
  */
 fun SRange.intersectingRanges(searchSpace: Set<SRange>) : SRangeSet {
@@ -337,7 +334,7 @@ fun SRange.intersectingRanges(searchSpace: Set<SRange>) : SRangeSet {
  *
  * returns a Set of Ranges from the searchSpace that overlap the "peak" range
  */
-fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
+fun findIntersectingSRanges(query: SRange, searchSpace: Set<SRange>): SRangeSet {
     val intersectingRanges: MutableSet<SRange> = mutableSetOf()
 
     val comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort,leftEdge)
@@ -349,32 +346,35 @@ fun findIntersectingSRanges(peak: SRange, searchSpace: Set<SRange>): SRangeSet {
     // Now that they are sorted, we only want to process while the peak-id is
     // less than or equal to the search-id.  Once search-id is > than peak id,
     // or the search.start.site > peak.endInclusive.site, we can stop
-    val thisSeqRec = peak.start.seqRecord
-    val thisSeqRecID = if (thisSeqRec == null) null else thisSeqRec.id
+    val querySeqRec = query.start.seqRecord
+
+    val querySeqRecID = querySeqRec?.id
     var stop = false
     for (search in searchSpace) {
-        val thatSeqRec = search.start.seqRecord
+        val searchSeqRec = search.start.seqRecord
 
-        if (thisSeqRec == null)  {
-            if (thatSeqRec == null) {
-                val intersects = overlaps(peak, search)
+        if (querySeqRec == null)  {
+            if (searchSeqRec == null) {
+                // Null for both SeqRecords is a match - check the sites
+                val intersects = overlaps(query, search)
                 if (intersects) intersectingRanges.add(search)
             } else {
                 // Sorted set - nulls come before non-nulls, so nothing beyond will overlap/intersect
+                // Only the querySeqRec is null, so the 2 SeqRecords do not match
                 stop = true
             }
-        } else if (thatSeqRec == null){
+        } else if (searchSeqRec == null){
             continue // null before non-null, keep going through SearchSpace
         } else {
-            if (thisSeqRecID == thatSeqRec.id) {
-                val intersects = overlaps(peak, search)
+            if (querySeqRecID == searchSeqRec.id) {
+                val intersects = overlaps(query, search)
                 if (intersects) intersectingRanges.add(search)
-                else if (peak.endInclusive.site < search.start.site) {
+                else if (query.endInclusive.site < search.start.site) {
                     // Sorted set - the start of the search site is greater than our peak's end site,
                     // so there will be no more intersecting ranges
                     stop = true
                 }
-            } else if (thisSeqRecID!! > thatSeqRec.id) {
+            } else if (querySeqRecID!! > searchSeqRec.id) {
                 continue // not far enough in sorted list to find ranges with matching id
             } else { // the positive peak id is < the search peak Id, nothing left on the sorted list will match now
                 stop = true
@@ -404,9 +404,7 @@ fun srangeSiteIntersection(peak: SRange, search: SRange): SRange? {
  * Return:  boolean indicating if the ranges overlapped.
  */
 fun overlaps(peak: SRange, search: SRange): Boolean {
-    val peakRange = peak.start.site..peak.endInclusive.site
-    val searchRange = search.start.site..search.endInclusive.site
-    if ((peak.start.site < search.endInclusive.site) && (peak.endInclusive.site >= search.start.site)) {
+    if ((peak.start.site <= search.endInclusive.site) && (peak.endInclusive.site >= search.start.site)) {
         return true
     }
     return false
@@ -455,7 +453,7 @@ fun findIntersectingPositions(set1: SRangeSet, set2: SRangeSet): SRangeSet {
 }
 
 /**
- * This function takes 2 sorted sets of Kotlin IntRange and returns
+ * This function takes 2 sets of Kotlin IntRange and returns
  * a Set<IntRange> of overlapping positions.  It is only called internally
  * from findIntersectingPosition().
  *
