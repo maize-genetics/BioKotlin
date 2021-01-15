@@ -55,10 +55,10 @@ fun main() {
 //                    println("domain: $it")
                         val pfamAccession = it.accession
                         val domainName = it.name
-                        val domainStart = it.start!!.toInt()
-                        val domainEnd = it.end!!.toInt()
+                        val domainStart = it.tophit.start!!.toInt()
+                        val domainEnd = it.tophit.end!!.toInt()
                         val significance = it.score
-                        val domainSeq = it.alignedSeq
+                        val domainSeq = it.tophit.aliaseq
 
 //                        val protPfamInfo = uniprotID.plus("\t").plus(crc64).plus("\t").plus(proteinID).plus("\t").plus(pfamAccession)
 //                                .plus("\t").plus(domainName).plus("\t").plus(significance)
@@ -75,8 +75,8 @@ fun main() {
                 } else {
                     val protPfamMap = mutableMapOf<Tuple<Int, Int>, PFAMDomain>()
                     proteinQuery.forEach {
-                        val domainStart = it.start!!.toInt()
-                        val domainEnd = it.end!!.toInt()
+                        val domainStart = it.tophit.start!!.toInt()
+                        val domainEnd = it.tophit.end!!.toInt()
 
                         protPfamMap[Tuple(domainStart, domainEnd)] = it
 
@@ -103,10 +103,10 @@ fun main() {
 
                         val pfamAccession = domain?.accession
                         val domainName = domain?.name
-                        val domainStart = domain?.start!!.toInt()
-                        val domainEnd = domain.end!!.toInt()
+                        val domainStart = domain?.tophit?.start!!.toInt()
+                        val domainEnd = domain.tophit.end!!.toInt()
                         val significance = domain.score
-                        val domainSeq = domain.alignedSeq
+                        val domainSeq = domain.tophit.aliaseq
 
 //                        val protPfamInfo = uniprotID.plus("\t").plus(crc64).plus("\t").plus(proteinID).plus("\t").plus(pfamAccession)
 //                                .plus("\t").plus(domainName).plus("\t").plus(significance)

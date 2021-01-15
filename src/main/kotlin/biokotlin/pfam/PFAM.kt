@@ -26,7 +26,14 @@ private val proteinCache: Cache<String, ProteinSeqRecord> by lazy {
 
 }
 
-data class PFAMDomain(val attributes: Map<String, String>) {
+class PFAMDomain(val attributes: Map<String, String>, private var inputLocations: List<PFAMDomainLocation>) {
+
+    init {
+        inputLocations = inputLocations
+                .map { Pair(it, it.bitscore ?: Double.MIN_VALUE) }
+                .sortedByDescending { it.second }
+                .map { it.first }
+    }
 
     /**
      * PFAM accession
@@ -39,24 +46,9 @@ data class PFAMDomain(val attributes: Map<String, String>) {
     val name by lazy { attributes["name"] }
 
     /**
-     * start position for pfam domain within protein
-     */
-    val start by lazy { attributes["ienv"]?.toInt() }
-
-    /**
-     * end position for pfam domain within protein
-     */
-    val end by lazy { attributes["jenv"]?.toInt() }
-
-    /**
      * PFAM taxid
      */
     val taxid by lazy { attributes["taxid"]?.substringBeforeLast(".") }
-
-    /**
-     * alignment aa seq: amino acid residues from the region of the protein corresponding to the identified domain
-     */
-    val alignedSeq by lazy { attributes["aliaseq"] }
 
     /**
      * prediction score for domain
@@ -77,6 +69,32 @@ data class PFAMDomain(val attributes: Map<String, String>) {
      * pvalue for prediction
      */
     val pvalue by lazy { attributes["pvalue"] }
+
+    /**
+     * The top predicted location for this PFAM Domain.
+     * Location with the highest bitscore
+     */
+    val tophit by lazy { locations[0] }
+
+    /**
+     * All predicted locations for this PFAM Domain
+     * in order from highest bitscore to lowest.
+     */
+    val locations by lazy { inputLocations }
+
+}
+
+data class PFAMDomainLocation(val attributes: Map<String, String>) {
+
+    /**
+     * start position for pfam domain within protein
+     */
+    val start by lazy { attributes["ienv"]?.toInt() }
+
+    /**
+     * end position for pfam domain within protein
+     */
+    val end by lazy { attributes["jenv"]?.toInt() }
 
     /**
      * pfam domain clan
@@ -107,6 +125,10 @@ data class PFAMDomain(val attributes: Map<String, String>) {
      * alignment conserved structure: conserved structures identified within domain
      */
     val alicsline by lazy { attributes["alicsline"] }
+
+    val bitscore by lazy { attributes["bitscore"]?.toDouble() }
+
+    val ievalue by lazy { attributes["ievalue"]?.toDouble() }
 
 }
 
@@ -216,15 +238,16 @@ private fun loadDomains(resultsUrl: String, info: String? = null): List<PFAMDoma
                             .toMap()
 
                     val domains = hit["domains"]?.jsonArray ?: throw IllegalArgumentException("must have domains entry")
-                    val firstDomain = domains[0].jsonObject
 
-                    val attributes = mutableMapOf<String, String>()
-                    attributes.putAll(allHitsAttributes)
+                    val locations = mutableListOf<PFAMDomainLocation>()
+                    domains.forEach {
+                        val locAttributes = it.jsonObject.entries
+                                .map { Pair(it.key, it.value.toString().removeSurrounding("\"")) }
+                                .toMap()
+                        locations.add(PFAMDomainLocation(locAttributes))
+                    }
 
-                    firstDomain.entries
-                            .forEach { attributes.put(it.key, it.value.toString().removeSurrounding("\"")) }
-
-                    PFAMDomain(attributes)
+                    PFAMDomain(allHitsAttributes, locations)
                 }
                 .toList()
 
@@ -253,7 +276,7 @@ fun findNonOverlappingDomains(domains: List<PFAMDomain>): Set<PFAMDomain> {
     domains.forEach { candidate ->
 
         // Range for current candidate domain
-        val candidateRange = Range.closed(candidate.start!!, candidate.end!!)
+        val candidateRange = Range.closed(candidate.tophit.start!!, candidate.tophit.end!!)
 
         // domains to remove if candidate accepted
         val replace = candidateSet
@@ -286,7 +309,18 @@ fun main() {
     val sequenceStr = "MIKNLMHEGKLVPSDIIVRLLLTAMLQSGNDRFLVDGFPRNEENRRAYESVIGIEPELVL"
     val domain = domainsForSeq(sequenceStr)
     println(domain)
-    println("clan: ${domain[0].clan}")
-    println("alimline: ${domain[0].alimline}")
+    println("clan: ${domain[0].tophit.clan}")
+    println("alimline: ${domain[0].tophit.alimline}")
+
+    println("P00183")
+    val domains = domainsForAcc("P00183")
+    domains.forEachIndexed { index, pfamDomain ->
+        println("$index: $pfamDomain")
+    }
+    domains[0].locations.forEach {
+        println(it)
+    }
+
+    println("tophit: ${domains[0].tophit}")
 
 }
