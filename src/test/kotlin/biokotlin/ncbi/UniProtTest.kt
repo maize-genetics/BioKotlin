@@ -1,6 +1,6 @@
 package biokotlin.ncbi
 
-import biokotlin.integration.setUniProtLogging
+import biokotlin.util.setUniProtLogging
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import krangl.print
