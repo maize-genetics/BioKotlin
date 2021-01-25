@@ -118,6 +118,14 @@ typealias NucSet = ImmutableSet<NUC>
  * @param twoBit encoding scheme for two bit encoding for unambiguous nucleotides
  * @param fourBit encoding scheme for four bit encoding for all nucleotides
  * @param ambiguous indicates whether ambiguous code, e.g. A.ambiguous == false, R.ambiguous == true
+ *
+ * Note two bit encoding uses A=0, C=1, G=3, T or U = 2
+ * ```
+ * A 65 01000|00|1  0
+ * C 67 01000|01|1  1
+ * G 71 01000|11|1  3
+ * T 84 01010|10|0  2
+ * ```
  */
 enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                val ambiguous: Boolean) {
@@ -126,11 +134,11 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
     /**Cytosine*/
     C('C', 1, 1, false),
     /**Guanine*/
-    G('G', 2, 2, false),
+    G('G', 3, 2, false),
     /**Thymine*/
-    T('T', 3, 3, false),
+    T('T', 2, 3, false),
     /**Uracil*/
-    U('U', 3, 3, false),
+    U('U', 2, 3, false),
     /**aMino*/
     M('M', -1, 4, true),
     /**puRine*/
@@ -154,8 +162,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
     /**Any base*/
     X('X', -1, 14, true),
     /**Any base*/
-    N('N', -1, 15, true);
-    //  GAP('-',-1,15,true)
+    N('N', -1, 15, true),
+      GAP('-',-1,16,true);
 
     /**DNA complement of this nucleotide - includes ambiguous*/
     val dnaComplement
@@ -190,9 +198,19 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
     val utf8 = char.toByte()
 
     companion object {
+        /*Immutable Guava set back by EnumSet*/
+        /**Unambiguous DNA nucleotides in [NucSet]*/
+        val DNA: NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
+        /**Unambiguous RNA nucleotides in [NucSet]*/
+        val RNA: NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
+        /**Ambiguous DNA nucleotides in [NucSet]*/
+        val AmbiguousDNA: NucSet = Sets.immutableEnumSet(EnumSet.allOf(NUC::class.java) - U)
+        /**Ambiguous RNA nucleotides in [NucSet]*/
+        val AmbiguousRNA: NucSet = Sets.immutableEnumSet(EnumSet.allOf(NUC::class.java) - T)
+
         private val charToDNA = NUC.values().associateBy { it.name[0] } //TODO change to array
-        private val byteTo2Bit: ByteArray = ByteArray(Byte.MAX_VALUE.toInt()) { -1 }
-        private val byteTo4Bit: ByteArray = ByteArray(Byte.MAX_VALUE.toInt()) { -1 }
+        private val utf8To2Bit: IntArray = IntArray(Byte.MAX_VALUE.toInt()) { -1 }
+        private val twoBitToUTF8: ByteArray= ByteArray(4)
         private val byteToNUC: Array<NUC?> = Array(Byte.MAX_VALUE.toInt()) { null }
 
         private val dnaCompMap: EnumMap<NUC, NUC> = EnumMap(mapOf(
@@ -212,7 +230,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                 D to H,
                 B to V,
                 X to X,
-                N to N
+                N to N,
+                GAP to GAP
         ))
         private val rnaCompMap: EnumMap<NUC, NUC> = EnumMap(dnaCompMap.entries.map { (key, comp) -> key to if (comp == T) U else comp }.toMap())
         internal val ambigDnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
@@ -235,7 +254,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                 D to setOf(A, G, T),
                 B to setOf(C, G, T),
                 X to setOf(G, A, T, C),
-                N to setOf(G, A, T, C)
+                N to setOf(G, A, T, C),
+                GAP to setOf(GAP)
         ))
         private val nucToAmbigRNA: EnumMap<NUC, Set<NUC>> = EnumMap(nucToAmbigDNA.entries.map { (nuc, ambigSet) ->
             nuc to ambigSet.map { if (it == T) U else it }.toSet()
@@ -246,17 +266,18 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
 
         init {
             values().forEach {
-                byteTo2Bit[it.char.toInt()] = it.twoBit
-                byteTo4Bit[it.char.toInt()] = it.fourBit
+                utf8To2Bit[it.char.toInt()] = it.twoBit.toInt()
                 byteToNUC[it.char.toInt()] = it
                 ambigDnaCompByByteArray[it.char.toInt()] = it.dnaComplement.utf8
                 ambigRnaCompByByteArray[it.char.toInt()] = it.rnaComplement.utf8
             }
+            DNA.forEach { twoBitToUTF8[it.twoBit.toInt()] = it.utf8 }
             val dnaUnAmWeights = mapOf<NUC, Double>(
                     A to 331.2218,
                     C to 307.1971,
                     G to 347.2212,
-                    T to 322.2085)
+                    T to 322.2085,
+                    GAP to -1.0)
             //Calculating average weights for the ambiquous nucleotides
             dnaWeights = EnumMap(values().associate { nuc ->
                 nuc to nuc.ambigDNA
@@ -267,7 +288,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                     A to 347.2212,
                     C to 323.1965,
                     G to 363.2206,
-                    U to 324.1813)
+                    U to 324.1813,
+                    GAP to -1.0)
             //Calculating average weights for the ambiquous nucleotides
             rnaWeights = EnumMap(values().associate { nuc ->
                 nuc to nuc.ambigRNA
@@ -277,15 +299,14 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
         }
 
         fun fromChar(char: Char) = charToDNA[char]
-        internal fun byteTo2Bit(base: Byte): Byte {
-            val b = byteTo2Bit[base.toInt()]
+        internal fun utf8To2BitInt(base: Byte): Int {
+            val b = utf8To2Bit[base.toInt()]
             if (b < 0) throw IllegalArgumentException("Only unambiguous nucleotides allowed for 2 bit conversion")
             return b
         }
 
-        internal fun byteTo4Bit(base: Byte): Byte {
-            val b = byteTo4Bit[base.toInt()]
-            if (b < 0) throw IllegalArgumentException("Only IUPAC nucleotides allowed for 4 bit conversion")
+        internal fun twoBitToUTF8(twoBitBase: Int): Byte {
+            val b = twoBitToUTF8[twoBitBase]
             return b
         }
 
@@ -294,16 +315,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
             return b
         }
 
+        internal fun dnaComplementOfUtf8(base: Byte) = ambigDnaCompByByteArray[base.toInt()]
 
-        /*Immutable Guava set back by EnumSet*/
-        /**Unambiguous DNA nucleotides in [NucSet]*/
-        val DNA: NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, T))
-        /**Unambiguous RNA nucleotides in [NucSet]*/
-        val RNA: NucSet = Sets.immutableEnumSet(EnumSet.of(A, C, G, U))
-        /**Ambiguous DNA nucleotides in [NucSet]*/
-        val AmbiguousDNA: NucSet = Sets.immutableEnumSet(EnumSet.allOf(NUC::class.java) - U)
-        /**Ambiguous RNA nucleotides in [NucSet]*/
-        val AmbiguousRNA: NucSet = Sets.immutableEnumSet(EnumSet.allOf(NUC::class.java) - T)
 
         internal fun transcipt_equivalent(nucSet: NucSet) = when (nucSet) {
             DNA -> RNA

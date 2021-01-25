@@ -4,6 +4,7 @@ package biokotlin.seq
 import biokotlin.data.CodonTable
 import com.google.common.collect.ImmutableSet
 import java.util.*
+import java.util.stream.Collectors
 import kotlin.random.Random
 
 //import biokotlin.seq.
@@ -22,24 +23,30 @@ import kotlin.random.Random
 
 
 /**
- * Create a Seq from a String, could be DNA, RNA, or Protein.
+ * Create a Seq from a String, could be DNA or RNA.
  * This functions provides compatibility with BioPython, but the preferred
- * use is to use either [NucSeq] or [ProteinSeq()], as the Seq type has less functionality
- * than either of these other two.
+ * use is to use either [NucSeq] or [ProteinSeq], as the Seq is less clear.  Unlike
+ * Biopython Seq will not convert Protein String to Protein - use [ProteinSeq]
  *
- * The String is tested for with compatibility DNA, RNA, and Protein in order.  It will
+ * The String is tested for with compatibility DNA, RNA, and then ambiguous versions.  It will
  * throw an [IllegalStateException], if it is not compatible with any.
- * [Seq] can be cast to [NucSeq] or [ProteinSeq]:
+
  * ```kotlin
  * val aSeq = Seq("GCATA")
- * val aNucSeq = Seq("GCATA") as NucSeq
+ * val aNucSeq = Seq("GCATA")
  * val nSeq = NucSeq("GCATA")
  * val pSeq = ProteinSeq("MAIVMGR")
+ *
+ * val pSeq = Seq("MAIVMGR")  //Throw error
  * ```
  */
-fun Seq(seq: String): Seq {
+fun Seq(seq: String): NucSeq {
     // factory functions used to create instances of classes can have the same name as the abstract return
-    return compatibleBioSet(seq)[0].creator(seq)
+    val compatibleBioSet = compatibleBioSet(seq)
+    if(compatibleBioSet[0] == BioSet.AminoAcid) {
+        throw IllegalStateException("Protein Sequence should be created with ProteinSeq(SEQUENCE)")
+    }
+    return compatibleBioSet[0].creator(seq) as NucSeq
 }
 
 /**
@@ -55,8 +62,8 @@ fun Seq(seq: String): Seq {
  *
  */
 fun NucSeq(vararg seq: String): NucSeq {
-    //TODO when there are 4bit and 2bit versions logic can be expanded
-    return NucSeqByteEncode(seq.joinToString(separator = ""))
+    val seqS = seq.joinToString(separator = "")
+    return if(seqS.length < 1_000_000) NucSeqByteEncode(seqS) else NucSeq2Bit(seqS)
 }
 
 /**Create a NucSeq with a specified NucSet
@@ -64,8 +71,7 @@ fun NucSeq(vararg seq: String): NucSeq {
  * @param preferredNucSet can be [NUC.DNA],[NUC.RNA],[NUC.AmbiguousDNA] or [NUC.AmbiguousRNA]
  * */
 fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
-    //TODO when there are 4bit and 2bit versions logic can be expanded
-    return NucSeqByteEncode(seq, preferredNucSet)
+    return if(seq.length < 1_000_000) NucSeqByteEncode(seq, preferredNucSet) else NucSeq2Bit(seq, preferredNucSet)
 }
 
 //fun NucSeq(seq: List<NUC>): NucSeq = TODO()
@@ -116,7 +122,8 @@ internal fun compatibleBioSet(seq: String): List<BioSet> {
                 origCharBits.cardinality() == 0
             }
     if (compatibleSets.isEmpty()) throw IllegalStateException("The characters in the String are not compatible with RNA, DNA, or AminoAcids. " +
-            "Or they are a mix of RNA and DNA")
+            "Or they are a mix of RNA and DNA.\n" +
+            "${bytePresent.stream().mapToObj{it.toChar()}.collect(Collectors.toList())}")
     return compatibleSets
 }
 
@@ -128,7 +135,7 @@ internal fun compatibleNucSet(seq: String): List<NucSet> {
             .map { it.set as NucSet }
 }
 
-internal enum class BioSet(val set: ImmutableSet<*>, val bitSets: BitSet, val creator: (String) -> Seq) {
+enum class BioSet(val set: ImmutableSet<*>, internal val bitSets: BitSet, internal val creator: (String) -> Seq) {
     DNA(NUC.DNA, bitSetOfChars(NUC.DNA), { s: String -> NucSeq(s, NUC.DNA) }),
     RNA(NUC.RNA, bitSetOfChars(NUC.RNA), { s: String -> NucSeq(s, NUC.RNA) }),
     AmbiguousDNA(NUC.AmbiguousDNA, bitSetOfChars(NUC.AmbiguousDNA), { s: String -> NucSeq(s, NUC.AmbiguousDNA) }),
@@ -156,7 +163,7 @@ interface Seq {
     fun repr(): String
 
     /**Returns the length of the sequence*/
-    fun len(): Int
+    fun size(): Int
 
     operator fun compareTo(other: Seq): Int
 
@@ -214,6 +221,7 @@ interface NucSeq : Seq {
     operator fun plus(seq2: NucSeq): NucSeq
     operator fun times(n: Int): NucSeq
     fun indexOf(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    operator fun contains(element: NucSeq): Boolean
     fun lastIndexOf(query: NucSeq, start: Int = Int.MAX_VALUE, end: Int = 0): Int
     /*Same as [indexOf] but provides compatibility with BioPython*/
     fun find(query: NucSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
@@ -268,6 +276,7 @@ interface ProteinSeq : Seq {
     operator fun plus(seq2: ProteinSeq): ProteinSeq
     operator fun times(n: Int): ProteinSeq
     fun indexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
+    operator fun contains(element: ProteinSeq): Boolean
     fun lastIndexOf(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int
     /*Same as [indexOf] but provides compatibility with BioPython*/
     fun find(query: ProteinSeq, start: Int = 0, end: Int = Int.MAX_VALUE): Int = indexOf(query,start,end)
