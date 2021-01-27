@@ -94,7 +94,7 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
-    val kotestVersion = "4.2.3"
+    val kotestVersion = "4.2.6"
     listOf("runner-junit5", "assertions-core", "property").forEach {
         testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
     }

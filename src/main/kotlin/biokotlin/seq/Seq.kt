@@ -64,8 +64,8 @@ fun Seq(seq: String): NucSeq {
  *
  */
 fun NucSeq(vararg seq: String): NucSeq {
-    //TODO when there are 4bit and 2bit versions logic can be expanded
-    return NucSeqByteEncode(seq.joinToString(separator = ""))
+    val seqS = seq.joinToString(separator = "")
+    return if(seqS.length < 1_000_000) NucSeqByteEncode(seqS) else NucSeq2Bit(seqS)
 }
 
 /**Create a NucSeq with a specified NucSet
@@ -73,8 +73,7 @@ fun NucSeq(vararg seq: String): NucSeq {
  * @param preferredNucSet can be [NUC.DNA],[NUC.RNA],[NUC.AmbiguousDNA] or [NUC.AmbiguousRNA]
  * */
 fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
-    //TODO when there are 4bit and 2bit versions logic can be expanded
-    return NucSeqByteEncode(seq, preferredNucSet)
+    return if(seq.length < 1_000_000) NucSeqByteEncode(seq, preferredNucSet) else NucSeq2Bit(seq, preferredNucSet)
 }
 
 //fun NucSeq(seq: List<NUC>): NucSeq = TODO()

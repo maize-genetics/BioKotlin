@@ -243,7 +243,7 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
         if (cds && size() % 3 != 0) throw IllegalStateException("Sequence not multiple of three")
         val pB = ByteArray(size = size() / 3)
         for (i in 0 until (size() - 2) step 3) {
-            pB[i / 3] = table.nucBytesToCodonByte(getUTF8(i), getUTF8(i + 1), getUTF8(i + 2))
+            pB[i / 3] = table.nucByteToCodonByte(getUTF8(i), getUTF8(i + 1), getUTF8(i + 2))
             if (cds && i == 0 && pB[0] != AminoAcid.M.char.toByte()) {
                 val startCodon = Codon[getUTF8(i), getUTF8(i + 1), getUTF8(i + 2)]
                 if (table.start_codons.contains(startCodon)) pB[0] = AminoAcid.M.char.toByte()

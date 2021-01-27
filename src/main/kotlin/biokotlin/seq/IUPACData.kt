@@ -164,8 +164,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
     /**Any base*/
     X('X', -1, 14, true),
     /**Any base*/
-    N('N', -1, 15, true);
-    //  GAP('-',-1,15,true)
+    N('N', -1, 15, true),
+      GAP('-',-1,16,true);
 
     /**DNA complement of this nucleotide - includes ambiguous*/
     val dnaComplement
@@ -232,7 +232,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                 D to H,
                 B to V,
                 X to X,
-                N to N
+                N to N,
+                GAP to GAP
         ))
         private val rnaCompMap: EnumMap<NUC, NUC> = EnumMap(dnaCompMap.entries.map { (key, comp) -> key to if (comp == T) U else comp }.toMap())
         internal val ambigDnaCompByByteArray = ByteArray(Byte.MAX_VALUE.toInt())
@@ -255,7 +256,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                 D to setOf(A, G, T),
                 B to setOf(C, G, T),
                 X to setOf(G, A, T, C),
-                N to setOf(G, A, T, C)
+                N to setOf(G, A, T, C),
+                GAP to setOf(GAP)
         ))
         private val nucToAmbigRNA: EnumMap<NUC, Set<NUC>> = EnumMap(nucToAmbigDNA.entries.map { (nuc, ambigSet) ->
             nuc to ambigSet.map { if (it == T) U else it }.toSet()
@@ -276,7 +278,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                     A to 331.2218,
                     C to 307.1971,
                     G to 347.2212,
-                    T to 322.2085)
+                    T to 322.2085,
+                    GAP to -1.0)
             //Calculating average weights for the ambiquous nucleotides
             dnaWeights = EnumMap(values().associate { nuc ->
                 nuc to nuc.ambigDNA
@@ -287,7 +290,8 @@ enum class NUC(val char: Char, val twoBit: Byte, val fourBit: Byte,
                     A to 347.2212,
                     C to 323.1965,
                     G to 363.2206,
-                    U to 324.1813)
+                    U to 324.1813,
+                    GAP to -1.0)
             //Calculating average weights for the ambiquous nucleotides
             rnaWeights = EnumMap(values().associate { nuc ->
                 nuc to nuc.ambigRNA
