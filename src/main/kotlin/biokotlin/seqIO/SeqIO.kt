@@ -1,24 +1,21 @@
 package biokotlin.seqIO
 
-import biokotlin.seq.BioSet
 import biokotlin.seq.Seq
 import biokotlin.seq.SeqRecord
 import java.io.File
-import java.nio.file.Path
 
 
-// TODO this doesn't seem right.  I should just be passing the class, not an instance.
 enum class SeqFormat(val suffixes: List<String>) {
-    fasta(listOf("fa", "fasta")),
-    fastq(listOf("fq", "fastq")),
-    // clustal(),
-    // phylip()
-    // genbank()
+    fasta(listOf("fa", "fasta", "fa.gz", "fasta.gz")),
+    fastq(listOf("fq", "fastq", "fq.gz", "fastq.gz"))
+}
+
+enum class SeqType {
+    nucleotide,
+    protein
 }
 
 interface SequenceIterator : Iterator<SeqRecord> {
-    /**Says [Seq] will be converted to SeqRecord when finished*/
-    // fun read(file: File): Iterator<TempSeqRecord>
     fun read(): SeqRecord?
     fun readAll(): Map<String, SeqRecord>
 }
@@ -31,65 +28,33 @@ interface SequenceWriter {
     fun writeFooter(): Boolean
 }
 
-private fun seqIterator(format: SeqFormat, filename: String): SequenceIterator {
+private fun seqIterator(format: SeqFormat, type: SeqType, filename: String): SequenceIterator {
 
     return when (format) {
-        SeqFormat.fasta -> FastaIO(filename)
-        else -> throw IllegalArgumentException("SeqIO: seqIterator: unknown format: ${format.name}")
+        SeqFormat.fasta -> FastaIO(filename, type)
+        SeqFormat.fastq -> FastqIO(filename)
     }
 
 }
 
-class SeqIO(filename: String, format: SeqFormat? = null) : Iterable<SeqRecord> {
+fun reader(filename: String, format: SeqFormat? = null, type: SeqType = SeqType.nucleotide): SequenceIterator {
 
-    private val reader: SequenceIterator
-    private val format: SeqFormat
+    assert(filename.isNotEmpty())
 
-    init {
+    val formatToUse = if (format != null) {
+        format
+    } else {
 
-        assert(filename.isNotEmpty())
+        val extension = File(filename).extension
 
-        if (format != null) {
-            this.format = format
-        } else {
-
-            val extension = File(filename).extension
-
-            val guessFormat = SeqFormat.values().find {
-                it.suffixes.contains(extension)
-            }
-
-            if (guessFormat == null) {
-                throw IllegalArgumentException("Unknown file type: $filename")
-            } else {
-                this.format = guessFormat
-            }
-
+        val guessFormat = SeqFormat.values().find {
+            it.suffixes.contains(extension)
         }
 
-        reader = seqIterator(this.format, filename)
+        guessFormat ?: throw IllegalArgumentException("Unknown file type: $filename")
 
     }
 
-    /** BioPython reads a single record */
-    fun read() = reader.read()
-
-    fun readAll(): Map<String, SeqRecord> = reader.readAll()
-
-    fun parse(path: Path, seqFormat: SeqFormat, preferredBioSet: BioSet? = null): SequenceIterator {
-        TODO("Not yet implemented")
-    }
-
-    fun to_dict(sequences: SequenceIterator, keyFunction: (Seq) -> String): Map<String, SeqRecord> {
-        TODO("Not yet implemented")
-    }
-
-    fun to_dict(sequences: List<Seq>, keyFunction: (Seq) -> String): Map<String, SeqRecord> {
-        TODO("Not yet implemented")
-    }
-
-    override fun iterator(): Iterator<SeqRecord> {
-        return reader.iterator()
-    }
+    return seqIterator(formatToUse, type, filename)
 
 }
