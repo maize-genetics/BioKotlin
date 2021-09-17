@@ -2,16 +2,24 @@ package biokotlin.genome
 
 import java.io.File
 import htsjdk.samtools.*
-import org.jetbrains.dataframe.DataFrame
-import org.jetbrains.dataframe.columnOf
-import org.jetbrains.dataframe.dataFrameOf
-import org.jetbrains.dataframe.toDataFrameByProperties
+import org.jetbrains.dataframe.*
+import org.jetbrains.dataframe.columns.AnyCol
 
 data class BKSamRecord(val queryName: String, val queryLength: Int, val strand:String,
                        val targetName: String, val targetStart:Int,val targetEnd: Int, val mapQ:Int,
                        val NM: Int, val numM:Int, val numEQ:Int, val numX:Int,
                        val numI:Int,  val numD:Int,  val numH:Int,  val numS:Int
                        )
+
+
+interface SAMDataFrame<T> : DataFrame<T> {
+    //Create functions that are specific and useful for SAM dataframe
+    //add percent identity column
+    //remove unmapped
+    //remove secondary mappings
+    
+}
+
 
 fun main() {
 
@@ -21,15 +29,16 @@ fun main() {
     val priority by columnOf("yes", "yes", "no", "yes", "no", "no", "no", "yes", "no", "no")
 
     val df = dataFrameOf(animal, age, visits, priority)
-
+    listOf<String>("sdf","sdf").filter { it == "t" }
+    priority.filter { it == "yes" }.print()
     println(df)
 
     val samDF = convertSAMToDataFrame("/Users/edwardbuckler/Downloads/su1_alignments/" +
-            "Andropogon_virginicus_CanuHiFi-BioNano-Hybrid-scaffolds-merged_v2.fasta_su1.sam")
+            "Andropogon_virginicus_CanuHiFi-BioNano-Hybrid-scaffolds-merged_v2.fasta_su1.sam", "6" == "5")
     println(samDF)
 }
 
-fun convertSAMToDataFrame(inputFile : String) : DataFrame<*> {
+fun <T> convertSAMToDataFrame(inputFile : String, filter: (T) -> Boolean) : SAMDataFrame<*> {
     val samReader = loadInSAMReader(inputFile)
 
     val samIterator = samReader.iterator()
@@ -38,7 +47,7 @@ fun convertSAMToDataFrame(inputFile : String) : DataFrame<*> {
         val currentRecord = samIterator.next()
         dataFrameRows+= convertSamRecordToDataFrameRow(currentRecord)
     }
-    return dataFrameRows.toDataFrameByProperties()
+    return dataFrameRows.toDataFrameByProperties() as SAMDataFrame<*>
 }
 fun loadInSAMReader(inputFile: String) : SamReader {
     return SamReaderFactory.makeDefault()
