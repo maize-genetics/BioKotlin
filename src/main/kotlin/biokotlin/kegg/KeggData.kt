@@ -200,4 +200,33 @@ data class KeggPathway(val keggInfo: KeggInfo, val genes: List<KeggEntry>, val c
 
 }
 
+/**
+ * KGML Entry data class - for holding parsed XML entry data in graph
+ */
+data class KGMLEntry(
+        var id: Int = -1,
+        var name: List<String> = emptyList(),
+        var type: String = "",
+        var link: String = "",
+        var reaction: String = ""
+)
 
+/**
+ * KGML Reaction data class - for delegating relationships (substrate, product, entry) in graph object
+ */
+data class KGMLReaction(
+        var id: Int = -1,
+        var name: String = "",
+        var type: String = "",
+        var substrate: Map<Int, String> = emptyMap<Int, String>(), // ID and substrate name
+        var product: Map<Int, String> = emptyMap<Int, String>() // ID and product name
+)
+
+/**
+ * KGML Relation data class - for delegating relationships in graph object
+ */
+data class KGMLRelation(
+        var entry1: Int = -1,
+        var entry2: Int = -1,
+        var type: String = ""
+)
