@@ -116,11 +116,32 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
-    operator fun get(i: IntRange, j: IntRange): List<NUC> = TODO("implement")
+    /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [List] of [NucSeq]s,
+     * based on the [IntRange]s given.
+     * [i] represents the row range indices, and [j] represents the column range indices.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: IntRange, j: IntRange) = this[i].map {it[j]}
 
-    operator fun get(i: Int, j: IntRange): Nothing = TODO("implement")
+    /** Returns a subset of the [i]th [NucSeqRecord] in the [NucMSA] as a [NucSeq],
+     * based on the [IntRange] given.
+     * [i] represents the row index, and [j] represents the column range indices.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: Int, j: IntRange) = this[i][j]
 
-    operator fun get(i: IntRange, j: Int): Nothing = TODO("implement")
+    /** Returns the [j]th column of a subset of [NucSeqRecord]s in the [NucMSA] as a
+     * [List] of [NUC]s, based on the [IntRange] given.
+     * [i] represents the row range indices, and [j] represents the column index.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: IntRange, j: Int) = this[i].map {it[j]}
 
     /**
      * Returns a string summary of the [NucMSA].
@@ -192,19 +213,39 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
     operator fun get(i: Int, j: Int): AminoAcid = this[i][j]
 
     /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List],
-     * based on
-     * the [IntRange] given.
+     * based on the [IntRange] given.
      * Kotlin range operator is "..". Indices start at zero.
      * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
     operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
 
-    operator fun get(i: IntRange, j: IntRange): Nothing = TODO("implement")
+    /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List],
+     * based on the [IntRange]s given.
+     * [i] represents the row range indices, and [j] represents the column range indices.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: IntRange, j: IntRange) = this[i].map {it[j]}
 
-    operator fun get(i: Int, j: IntRange): Nothing = TODO("implement")
+    /** Returns a subset of the [i]th [ProteinSeqRecord] in the [ProteinMSA] as a [ProteinSeq],
+     * based on the [IntRange] given.
+     * [i] represents the row index, and [j] represents the column range indices.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: Int, j: IntRange) = this[i][j]
 
-    operator fun get(i: IntRange, j: Int): Nothing = TODO("implement")
+    /** Returns the [j]th column of a subset of [ProteinSeqRecord]s in the [ProteinMSA] as a
+     * [List] of [AminoAcid]s, based on the [IntRange] given.
+     * [i] represents the row range indices, and [j] represents the column index.
+     * Kotlin range operator is "..". Indices start at zero.
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
+     */
+    operator fun get(i: IntRange, j: Int) = this[i].map {it[j]}
 
 
     /**
