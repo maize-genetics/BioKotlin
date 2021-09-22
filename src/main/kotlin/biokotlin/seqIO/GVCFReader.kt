@@ -91,22 +91,47 @@ class GVCFReader {
 
         }
 
+    // This method constructs the sequence for a single contig (i.e. chromosome)
     private suspend fun sequenceFromContexts(
         chromosome: String,
         channel: Channel<VariantContext>
     ): Pair<String, SeqRecord> {
 
-        val sequence = StringBuilder()
+        // Holds resulting sequence
+        val result = StringBuilder()
 
         for (context in channel) {
+
+            val contig = context.contig
             val start = context.start
             val end = context.end
-            val alleles = context.alleles
-            // TODO()
+            val genotypes = context.genotypes[0]
+            val alleles = genotypes.alleles
+            val refAllele = context.reference.baseString
+
+            val allele = alleles.first()
+
+            if (allele.isReference) {
+
+                val referenceSeq = reference[contig]
+                if (referenceSeq == null) {
+                    throw IllegalStateException("GVCFReader: sequenceFromContexts: contig: $contig doesn't exist in reference.")
+                } else {
+                    // subtracting 1 from start and end to convert 1-based to 0-based
+                    val refStr = (referenceSeq as NucSeq)[start - 1, end - 1].toString()
+                    check(refStr.startsWith(refAllele))
+                    { "GVCFReader: sequenceFromContexts: reference allele: $refAllele for contig: $contig start: $start doesn't match start sequence from reference file: $refStr" }
+                    result.append(refStr)
+                }
+
+            } else {
+                val alleleStr = allele.baseString
+                if (alleleStr != "*") result.append(allele.baseString)
+            }
+
         }
 
-        NucSeqRecord(NucSeq(sequence.toString()), chromosome)
-        return Pair(chromosome, NucSeqRecord(NucSeq(sequence.toString()), chromosome))
+        return Pair(chromosome, NucSeqRecord(NucSeq(result.toString()), chromosome))
 
     }
 
@@ -128,5 +153,8 @@ fun main() {
     val gvcfFile =
         "/Users/tmc46/hackathon/20210916_tribe/su1_gvcfs_v2/AN20TSCR000225_CKDL200169516-1a-AK6517-AK6687_HLTF5DSXY_L4_srt_Su1.gvcf"
     val reference = "/Users/tmc46/hackathon/20210916_tribe/Sbicolor_454_v3_numeric.0.1.fa"
-    GVCFReader().read(gvcfFile, reference)
+    val result = GVCFReader().read(gvcfFile, reference)
+    result.forEach {
+        println("${it.key}: ${it.value.toString().substring(0, 100)}")
+    }
 }
