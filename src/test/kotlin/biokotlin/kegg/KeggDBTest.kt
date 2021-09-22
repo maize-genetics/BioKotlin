@@ -97,10 +97,10 @@ class KeggDBTest : StringSpec({
     }
 
     "Test pathway graph creation" {
-        val pathway = Kegg.pathway("path:zma00072")
+        val pathway = Kegg.pathway("path:zma00500")
         val graph = pathway.kgmlGraph()
-        graph.vertexSet().size shouldBe 17
-        graph.edgeSet().size shouldBe 19
+        graph.vertexSet().size shouldBe 140
+        graph.edgeSet().size shouldBe 184
         graph.javaClass.toString() shouldBe "class org.jgrapht.graph.DefaultDirectedGraph"
     }
 
