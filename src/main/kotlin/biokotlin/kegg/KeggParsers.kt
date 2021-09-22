@@ -1,6 +1,17 @@
 package biokotlin.kegg
 
 import biokotlin.kegg.KeggDB.*
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.w3c.dom.NodeList
+import org.xml.sax.InputSource
+import java.io.StringReader
+import javax.print.DocFlavor
+import javax.xml.parsers.DocumentBuilder
+import javax.xml.parsers.DocumentBuilderFactory
+
 
 /**
  * Parses the Kegg Response to a map of KEGG labels to String with the new lines
@@ -12,7 +23,7 @@ private fun parseKEGG(str: String): Map<String, String> {
             .withDefault{ throw NoSuchElementException("KEGG response is missing the $it field") }
     var lastKeyword = ""
     for (line in str.lines()) {
-        if (line.startsWith( "///")) break
+        if (line.startsWith("///")) break
         if (line.substring(0..11).isNotBlank()) lastKeyword = line.substring(0..11).trim()
         val data = line.substring(12).trim()
         keggKeyToValue.merge(lastKeyword, data) { old, new -> old + "\n" + new }
@@ -106,4 +117,177 @@ internal fun orthologyParser(keggResponseText: String): KeggOrtholog {
             }
     val ki = KeggInfoImpl(orthology, kid, name = name, definition = definition)
     return KeggOrtholog(ki, ec, genes)
+}
+
+
+// === KGML functions ===============================================
+
+/**
+ * Return graph from KEGG pathway using parsed KGML data
+ * TODO - verify if this pathway extension is usable for deployment
+ */
+fun KeggPathway.kgmlGraph(): DefaultDirectedGraph<Any, DefaultEdge> {
+    val parsedData = kgmlParser(this.keggInfo.keggEntry.dbAbbrev, this.keggInfo.keggEntry.kid)
+    return kgmlGraphConstructor(parsedData)
+}
+
+/**
+ * Parse KGML data into KGML data classes. Returns a Map.
+ */
+internal fun kgmlParser(path: String, kid: String): Map<String, MutableList<out Any>> {
+    val rawXML = KeggServer.query(KeggOperations.get, "$path:$kid/kgml")?: error("Not found in KEGG")
+    val doc = convertStringToXMLDocument(rawXML)
+
+    val entryList: NodeList = doc!!.getElementsByTagName("entry")
+    val relationList: NodeList = doc.getElementsByTagName("relation")
+    val reactionList: NodeList = doc.getElementsByTagName("reaction")
+
+    val parsedEntryList = mutableListOf<KGMLEntry>()
+    val parsedReactList = mutableListOf<KGMLReaction>()
+    val parsedRelateList = mutableListOf<KGMLRelation>()
+
+    // Get entries
+    for (i in 0 until entryList.length) {
+        val baseChild = entryList.item(i).attributes
+        val entry = KGMLEntry()
+        entry.id = baseChild.getNamedItem("id").nodeValue.toInt()
+        entry.name = baseChild.getNamedItem("name").nodeValue.split(" ")
+
+        if (baseChild.getNamedItem("type") == null) {
+            entry.type = "null"
+        } else {
+            entry.type = baseChild.getNamedItem("type").nodeValue
+        }
+        if (baseChild.getNamedItem("link") == null) {
+            entry.link = "null"
+        } else {
+            entry.link = baseChild.getNamedItem("link").nodeValue
+        }
+        if (baseChild.getNamedItem("reaction") == null) {
+            entry.reaction = "null"
+        } else {
+            entry.reaction = baseChild.getNamedItem("reaction").nodeValue
+        }
+
+        parsedEntryList += entry
+    }
+
+    // Get reactions - substrates and products
+    for (i in 0 until reactionList.length) {
+        val baseChild = reactionList.item(i).attributes
+        val reaction = KGMLReaction()
+        reaction.id = baseChild.getNamedItem("id").nodeValue.toInt()
+        reaction.name = baseChild.getNamedItem("name").nodeValue
+
+        if (baseChild.getNamedItem("type") == null) {
+            reaction.type = "null"
+        } else {
+            reaction.type = baseChild.getNamedItem("type").nodeValue
+        }
+
+        val subList = mutableMapOf<Int, String>()
+        val proList = mutableMapOf<Int, String>()
+        val eElement: Element? = reactionList.item(i) as Element
+        val sProt = eElement?.getElementsByTagName("substrate")
+        val pProt = eElement?.getElementsByTagName("product")
+
+        if (sProt != null) {
+            for (j in 0 until sProt.length) {
+                subList.put(
+                        sProt.item(j).attributes.getNamedItem("id").nodeValue.toInt(),
+                        sProt.item(j).attributes.getNamedItem("name").nodeValue
+                )
+            }
+        }
+
+        if (pProt != null) {
+            for (j in 0 until pProt.length) {
+                proList.put(
+                        pProt.item(j).attributes.getNamedItem("id").nodeValue.toInt(),
+                        pProt.item(j).attributes.getNamedItem("name").nodeValue
+                )
+            }
+        }
+        reaction.substrate = subList
+        reaction.product = proList
+
+        parsedReactList += reaction
+    }
+
+    for (i in 0 until relationList.length) {
+        val baseChild = relationList.item(i).attributes
+        val relation = KGMLRelation()
+        relation.entry1 = baseChild.getNamedItem("entry1").nodeValue.toInt()
+        relation.entry2 = baseChild.getNamedItem("entry2").nodeValue.toInt()
+        relation.type = baseChild.getNamedItem("type").nodeValue
+
+        parsedRelateList += relation
+    }
+
+    return mapOf("entries" to parsedEntryList, "reactions" to parsedReactList, "relationships" to parsedRelateList)
+}
+
+/**
+ * Construct graph from parsed KGML data using JGraphT libraries
+ */
+internal fun kgmlGraphConstructor(parsedKGML: Map<String, MutableList<out Any>>): DefaultDirectedGraph<Any, DefaultEdge> {
+    val relationships = parsedKGML["relationships"] as List<KGMLRelation>
+    val entries = parsedKGML["entries"] as List<KGMLEntry>
+    val reactions = parsedKGML["reactions"] as List<KGMLReaction>
+
+    val g: DefaultDirectedGraph<Any, DefaultEdge> = DefaultDirectedGraph<Any, DefaultEdge>(DefaultEdge::class.java)
+
+    for (i in entries.indices) {
+        g.addVertex(entries[i])
+    }
+
+    // Add all edges for each entry ID from KGML relationship information
+    val tmpGL = g.vertexSet().toList() as List<KGMLEntry>
+    for (i in relationships.indices) {
+        val tmpG1 = tmpGL.find {it.id == relationships[i].entry1}
+        val tmpG2 = tmpGL.find {it.id == relationships[i].entry2}
+        g.addEdge(tmpG1, tmpG2)
+    }
+
+    // Add substrate and product edges
+    //   * substrates go into gene list (sub) --> [gene1, gene2, ...]
+    //   * products come out of gene list [gene1, gene2, ...] --> (product)
+    for (i in reactions.indices) {
+        val tmpG1 = tmpGL.find {it.id == reactions[i].id}
+        reactions[i].substrate.forEach { k, v ->
+            val tmpSub = tmpGL.find{it.id == k}
+            g.addEdge(tmpSub, tmpG1)
+        }
+        reactions[i].product.forEach{ k, v ->
+            val tmpProd = tmpGL.find{it.id == k}
+            g.addEdge(tmpG1, tmpProd)
+        }
+    }
+
+    return g
+}
+
+/**
+ * Get XML document class from string output
+ */
+internal fun convertStringToXMLDocument(xmlString: String): Document? {
+    //Parser that produces DOM object trees from XML content
+    val factory = DocumentBuilderFactory.newInstance()
+    var builder: DocumentBuilder? = null
+
+    try {
+        builder = factory.newDocumentBuilder()
+        return builder.parse(InputSource(StringReader(xmlString)))
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return null
+}
+
+/**
+ * Get reaction components from graph object
+ */
+private fun <V, E> DefaultDirectedGraph<V, E>.getReactions() {
+    val nodes = this.vertexSet()
+//    nodes =
 }
