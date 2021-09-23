@@ -12,7 +12,7 @@ version = "0.03"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.4.0")
+    val kotlinVersion by extra ("1.5.31")
 
     repositories {
         mavenCentral()
@@ -28,7 +28,7 @@ buildscript {
 
 
 plugins {
-    val kotlinVersion = "1.4.0"
+    val kotlinVersion = "1.5.31"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
@@ -46,7 +46,6 @@ apply {
 
 repositories {
     mavenCentral()
-    jcenter()
     maven("https://maven.imagej.net/content/groups/public/")
     maven("https://jitpack.io")
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
@@ -59,8 +58,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.0.0-RC") // JVM dependency
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("de.mpicbg.scicomp:krangl:0.13")
@@ -86,6 +85,8 @@ dependencies {
 
 
     implementation("com.google.guava:guava:29.0-jre")
+    implementation("org.apache.tinkerpop:gremlin-core:3.4.8")
+    implementation("org.jgrapht:jgrapht-core:1.5.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 

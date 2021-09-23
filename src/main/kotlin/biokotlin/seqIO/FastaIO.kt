@@ -1,20 +1,16 @@
 package biokotlin.seqIO
 
-import biokotlin.seq.NucSeq
-import biokotlin.seq.NucSeqRecord
-import biokotlin.seq.Seq
-import biokotlin.seq.SeqRecord
+import biokotlin.seq.*
+import biokotlin.util.bufferedReader
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.receiveOrNull
-import java.io.File
 import java.util.*
-import kotlin.system.measureNanoTime
 
-class FastaIO(val filename: String) : SequenceIterator {
+class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
 
-    private val inputChannel = Channel<Pair<String, List<String>>>(5)
+    private val inputChannel = Channel<FastaInputSequence>(5)
     private val outputChannel = Channel<Deferred<SeqRecord>>(5)
     private val outputIterator = outputChannel.iterator()
 
@@ -27,7 +23,10 @@ class FastaIO(val filename: String) : SequenceIterator {
         }
 
         val processInputJob = CoroutineScope(Dispatchers.IO).launch {
-            processInput(inputChannel, outputChannel)
+            when (type) {
+                SeqType.nucleotide -> processNucleotideInput(inputChannel, outputChannel)
+                SeqType.protein -> processProteinInput(inputChannel, outputChannel)
+            }
         }
         processInputJob.invokeOnCompletion { outputChannel.close() }
 
@@ -64,25 +63,30 @@ class FastaIO(val filename: String) : SequenceIterator {
 
     companion object {
 
-        private suspend fun readFastaLines(filename: String, inputChannel: Channel<Pair<String, List<String>>>) {
+        private data class FastaInputSequence(val id: String, val description: String, val lines: List<String>)
 
+        private suspend fun readFastaLines(filename: String, inputChannel: Channel<FastaInputSequence>) {
             try {
 
-                File(filename).bufferedReader().use { reader ->
+                bufferedReader(filename).use { reader ->
 
                     var line = reader.readLine()
                     while (line != null) {
                         line = line.trim()
+                        // skips comments
                         if (line.startsWith(";")) {
                             line = reader.readLine()
                         } else if (line.startsWith(">")) {
+
                             val tokens = StringTokenizer(line)
                             var id = tokens.nextToken()
                             id = if (id.length == 1) {
-                                tokens.nextToken()
+                                tokens.nextToken().trim()
                             } else {
                                 id.substring(1).trim()
                             }
+
+                            val description = line
 
                             val temp = mutableListOf<String>()
                             line = reader.readLine()
@@ -91,7 +95,7 @@ class FastaIO(val filename: String) : SequenceIterator {
                                 line = reader.readLine()
                             }
 
-                            inputChannel.send(Pair(id, temp))
+                            inputChannel.send(FastaInputSequence(id, description, temp))
 
                         } else {
                             throw IllegalArgumentException("FastaIO: readFastaLines: invalid format file: $filename")
@@ -103,35 +107,46 @@ class FastaIO(val filename: String) : SequenceIterator {
                 inputChannel.close()
 
             } catch (e: Exception) {
+                e.printStackTrace()
                 throw IllegalStateException("""FastaIO: readFasta: problem reading file: $filename  Error: ${e.message}""")
             }
 
         }
 
-        private suspend fun processInput(inputChannel: Channel<Pair<String, List<String>>>, outputChannel: Channel<Deferred<SeqRecord>>) = withContext(Dispatchers.IO) {
+        private suspend fun processNucleotideInput(
+            inputChannel: Channel<FastaInputSequence>,
+            outputChannel: Channel<Deferred<SeqRecord>>
+        ) = withContext(Dispatchers.IO) {
 
             for (entry in inputChannel) {
-                val deffered = async {
+                val deferred = async {
                     val builder = StringBuilder()
-                    entry.second.forEach { builder.append(it.trim()) }
+                    entry.lines.forEach { builder.append(it.trim()) }
                     val seq = Seq(builder.toString())
-                    NucSeqRecord(seq as NucSeq, entry.first)
+                    NucSeqRecord(seq, entry.id, description = entry.description)
                 }
-                outputChannel.send(deffered)
+                outputChannel.send(deferred)
+            }
+
+        }
+
+        private suspend fun processProteinInput(
+            inputChannel: Channel<FastaInputSequence>,
+            outputChannel: Channel<Deferred<SeqRecord>>
+        ) = withContext(Dispatchers.IO) {
+
+            for (entry in inputChannel) {
+                val deferred = async {
+                    val builder = StringBuilder()
+                    entry.lines.forEach { builder.append(it.trim()) }
+                    val seq = ProteinSeq(builder.toString())
+                    ProteinSeqRecord(seq, entry.id, description = entry.description)
+                }
+                outputChannel.send(deferred)
             }
 
         }
 
     }
 
-}
-
-fun main() {
-    val seqio = SeqIO("/Users/tmc46/B73Reference/Zea_mays.AGPv4.dna.toplevelMtPtv3.fa")
-    val time = measureNanoTime {
-        seqio.forEachIndexed { index, record ->
-            println("$index: ${(record as NucSeqRecord).id}: ${(record as NucSeqRecord).sequence.size()}")
-        }
-    }
-    println("time: ${time / 1e9} secs.")
 }

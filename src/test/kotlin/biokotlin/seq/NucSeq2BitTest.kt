@@ -152,10 +152,10 @@ class NucSeq2BitTest : StringSpec({
     }
 
     "repr" {
-        dnaSeq.repr() shouldBe "DNASeq2Bit('$dnaString',[A, C, G, T, M, R, W, S, Y, K, V, H, D, B, X, N])"
+        dnaSeq.repr() shouldBe "DNASeq2Bit('$dnaString',[A, C, G, T, M, R, W, S, Y, K, V, H, D, B, X, N, GAP])"
         dnaSeq.times(10).repr() shouldBe "DNASeq2Bit('ACGTGGTGTNNNNNGCGCGCACGTGGTGTNNNNNGCGCGCACGTGGTGTNNNNNG...CGC'," +
-                "[A, C, G, T, M, R, W, S, Y, K, V, H, D, B, X, N])"
-        rnaSeq.repr() shouldBe "RNASeq2Bit('$rnaString',[A, C, G, U, M, R, W, S, Y, K, V, H, D, B, X, N])"
+                "[A, C, G, T, M, R, W, S, Y, K, V, H, D, B, X, N, GAP])"
+        rnaSeq.repr() shouldBe "RNASeq2Bit('$rnaString',[A, C, G, U, M, R, W, S, Y, K, V, H, D, B, X, N, GAP])"
     }
 
     "Test of get [] of single base/residue should be enum" {

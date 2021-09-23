@@ -6,8 +6,11 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import krangl.DataFrame
-import krangl.print
+import krangl.*
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+
 
 class KeggDBTest : StringSpec({
 
@@ -64,18 +67,18 @@ class KeggDBTest : StringSpec({
         gene.proteinSeq.size() shouldBe 789
         gene.orthology shouldBe KeggEntry.of("ko:K01214")
         //println(gene)
-        shouldThrow<IllegalStateException> {Kegg.gene("zma:5423x18")}
+        shouldThrow<IllegalStateException> { Kegg.gene("zma:5423x18") }
     }
 
     "Test parse pathway" {
         val pathway = Kegg.pathway("path:zma00500")
         pathway.name shouldContain "Starch and sucrose metabolism"
-        pathway.genes shouldContainAll listOf(KeggEntry.of("zma","542590"), KeggEntry.of("zma","541678"))
-        pathway.compounds shouldContainAll listOf(KeggEntry.of("cpd","C00029"), KeggEntry.of("cpd","C20237"))
+        pathway.genes shouldContainAll listOf(KeggEntry.of("zma", "542590"), KeggEntry.of("zma", "541678"))
+        pathway.compounds shouldContainAll listOf(KeggEntry.of("cpd", "C00029"), KeggEntry.of("cpd", "C20237"))
 
         val pathway2 = Kegg.pathway("path:zma00500")
         pathway shouldBe pathway2
-        shouldThrow<IllegalArgumentException> {Kegg.pathway("path:zmaX00500")}
+        shouldThrow<IllegalArgumentException> { Kegg.pathway("path:zmaX00500") }
     }
 
     "Test parse orthology" {
@@ -84,45 +87,23 @@ class KeggDBTest : StringSpec({
         ortholog.name shouldContain "ISA"
         ortholog.definition shouldContain "isoamylase"
         (ortholog.genes["zma"] ?: error("zma missing")) shouldContainAll listOf(
-                KeggEntry.of("zma","103649172"), KeggEntry.of("zma","542095"),
-                KeggEntry.of("zma","542318"), KeggEntry.of("zma","542679"))
-        shouldThrow<IllegalStateException> {Kegg.ortholog("K012145")}
+                KeggEntry.of("zma", "103649172"), KeggEntry.of("zma", "542095"),
+                KeggEntry.of("zma", "542318"), KeggEntry.of("zma", "542679"))
+        shouldThrow<IllegalStateException> { Kegg.ortholog("K012145") }
     }
 
     "Test save cache" {
         KeggCache.close()
     }
 
+    "Test pathway graph creation" {
+        val pathway = Kegg.pathway("path:zma00500")
+        val graph = pathway.kgmlGraph()
+        graph.vertexSet().size shouldBe 140
+        graph.edgeSet().size shouldBe 184
+        graph.javaClass.toString() shouldBe "class org.jgrapht.graph.DefaultDirectedGraph"
+    }
 
 })
 
-
-//fun main() {
-//parseKEGG(testParse)
-//        println(KeggDB.pathway.info())
-// KeggDB.values().filter { it.name.startsWith("p") }.forEach { println(it.info()) }
-
-// KeggDB.genes.find("shiga").print()
-//KeggDB.genes.find("zma542318").print()  //current this throws an error should be empty
-// KeggDB.genes.find("zma:542318").print()
-
-//        KeggDB.genes.find("Z1464").print()
-//
-//        KeggDB.path.find("map00010").print()
-//       KeggDB.path.find("Glycolysis").print()
-//        KeggDB.genome.find("T01001").print()
-//        KeggDB.genes.find("hsa:3643").print()
-//        val keggOrg :DataFrame = organisms()
-//
-//   println(keggOrg)
-
-//    // Get our IP
-//    println(get("http://httpbin.org/ip").jsonObject.getString("origin"))
-//    // Get our IP in a simpler way
-//    println(get("http://icanhazip.com").text)
-//
-//    val r = get("https://api.github.com/events")
-//    println(r)
-
-//}
 
