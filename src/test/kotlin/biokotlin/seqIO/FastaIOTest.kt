@@ -102,7 +102,8 @@ fun titleToIds(title: String): Triple<String, String, String> {
 
 fun simpleCheck(filename: String, format: SeqFormat = SeqFormat.fasta, type: SeqType = SeqType.nucleotide) {
 
-    val msg = "Test failure parsing file $filename"
+    println("checking filename: $filename")
+
     val titleSeq = readTitleAndSeq(filename)
     val idnNameDesc = titleToIds(titleSeq.first)
 
@@ -111,10 +112,10 @@ fun simpleCheck(filename: String, format: SeqFormat = SeqFormat.fasta, type: Seq
         SeqType.protein -> ProteinSeqIO(filename, format).read()!!
     }
 
-    val name = titleSeq.first.split(" ")[0]
-    assert(record.id == name) { msg }
-    assert(record.name == name) { msg }
-    assert(record.description == titleSeq.first) { msg }
-    assert(record.seq() == titleSeq.second) { msg }
+    val name = titleSeq.first.substring(1).split(" ")[0]
+    assert(record.id == name) { "record id: ${record.id} should be $name in file: $filename" }
+    //assert(record.name == name) { msg }
+    assert(record.description == titleSeq.first) { "record description: ${record.description} should be ${titleSeq.first} in file: $filename" }
+    assert(record.seq() == titleSeq.second) { "record seq: ${record.seq()} should be ${titleSeq.second} in file: $filename" }
 
 }
