@@ -77,7 +77,8 @@ internal fun convertSamRecordToDataFrameRow(currentRecord: SAMRecord, includeSeq
     return BKSamRecord(
         currentRecord.readName, currentRecord.readLength,
         if (currentRecord.readNegativeStrandFlag) "-" else "+",
-        currentRecord.contig, currentRecord.alignmentStart, currentRecord.alignmentEnd,
+        currentRecord?.contig?:"*",
+        currentRecord.alignmentStart, currentRecord.alignmentEnd,
         currentRecord.mappingQuality,
         ((currentRecord.getAttribute("NM") ?: 0) as Int),
         (cigarCounts["M"] ?: 0),
@@ -103,6 +104,7 @@ fun main() {
         "/Users/edwardbuckler/Downloads/su1_alignments/" +
                 "Andropogon_virginicus_CanuHiFi-BioNano-Hybrid-scaffolds-merged_v2.fasta_su1.sam",
     false) { NM > 0 }
+    samDF.filter { it[SAMDataFrame::NM] > 0 }
     println(samDF[0][0])
     println(samDF.schema())
     println(samDF)
