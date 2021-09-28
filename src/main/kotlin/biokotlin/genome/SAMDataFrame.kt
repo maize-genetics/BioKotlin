@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package biokotlin.genome
 
 import java.io.File
@@ -7,6 +9,9 @@ import org.jetbrains.dataframe.annotations.DataSchema
 import org.jetbrains.dataframe.columns.DataColumn
 import kotlin.reflect.full.primaryConstructor
 
+/**
+ * SAM or BAM file parsed into a dataframe with the CIGAR string summarized into counts
+ */
 @DataSchema
 interface SAMDataFrame {
     val queryName: String
