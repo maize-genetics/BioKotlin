@@ -5,6 +5,15 @@ import biokotlin.kegg.KeggOperations.*
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.ImmutableBiMap
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
@@ -202,18 +211,34 @@ object KeggCache : AutoCloseable {
  */
 object KeggServer {
     private var httpRoot = "http://rest.kegg.jp"  //there is a .net version with paid subscription
+    val client = HttpClient(CIO)
+    internal fun query(operation: KeggOperations, vararg args: String = emptyArray()): String =
+        runBlocking {
+            val queryAction = listOf(operation.name, *args).joinToString("/")
+            val queryText = "$httpRoot/$queryAction"
+            val responseChannel = Channel<HttpResponse>()
 
-    internal fun query(operation: KeggOperations, vararg args: String = emptyArray()): String {
-        val queryAction = listOf(operation.name, *args).joinToString("/")
-        val queryText = "$httpRoot/$queryAction"
-        val reponse = khttp.get(queryText)
-        when (reponse.statusCode) {
-            200 -> println("Query success: $queryText")
-            400 -> System.err.println("Bad request (syntax error, wrong database name, etc.): $queryText")
-            404 -> System.err.println("Not found in KEGG: $queryText")
+            launch {
+                val response: HttpResponse = client.get(queryText) //TODO update request URL
+                responseChannel.send(response)
+                responseChannel.close()	//close out the response channel as we are only getting one
+            }
+
+            //Loop through the channel and process the result
+            //Adding to response list to make sure that we only have one response TODO update if incorrect
+            val responseList = mutableListOf<HttpResponse>()
+            for(response in responseChannel) {
+                responseList.add(response)
+            }
+            check(responseList.size == 1) {"Incorrect Number of responses coming from client."}
+            val finalResponse: HttpResponse = responseList.first()
+            when (finalResponse.status.value) {
+                200 -> println("Query success: $queryText")
+                400 -> System.err.println("Bad request (syntax error, wrong database name, etc.): $queryText")
+                404 -> System.err.println("Not found in KEGG: $queryText")
+            }
+            finalResponse.readText()
         }
-        return reponse.text
-    }
 }
 
 fun organisms(): DataFrame {
@@ -224,10 +249,6 @@ fun organisms(): DataFrame {
             .addColumn("taxaIndex") { it["kid"].asStrings().map { it!!.substring(1) } }
 }
 
-/**Get the text response from Kegg*/
-fun geneText(orgCode: String, kid: String): String {
-    return khttp.get("http://rest.kegg.jp/get/$orgCode:$kid").text
-}
 
 
 
