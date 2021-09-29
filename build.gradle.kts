@@ -90,6 +90,14 @@ dependencies {
     implementation("io.ktor:ktor-client-core:1.6.3")
     implementation("io.ktor:ktor-client-cio:1.6.3")
 
+
+
+    implementation ("org.jetbrains.lets-plot:lets-plot-common:2.1.0")
+    implementation ("org.jetbrains.lets-plot:lets-plot-batik:2.1.0")
+    implementation("org.jetbrains.lets-plot:lets-plot-image-export:2.1.0")
+    implementation ("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:3.0.2")
+
+
     implementation("com.google.guava:guava:30.1.1-jre")
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
