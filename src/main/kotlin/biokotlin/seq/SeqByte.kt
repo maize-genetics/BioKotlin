@@ -3,7 +3,6 @@ package biokotlin.seq
 
 import biokotlin.data.Codon
 import biokotlin.data.CodonTable
-import java.util.*
 
 
 internal sealed class BioSeqByte constructor(sequence: String) : Seq {
@@ -117,7 +116,7 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
     override fun reverse_complement(): NucSeq {
         val comp = ByteArray(seqS.length)
         for (i in seqS.indices) {
-            comp[comp.size - i - 1] = NUC.ambigDnaCompByByteArray[seqS[i].toInt()]
+            comp[comp.size - i - 1] = NUC.ambigDnaCompByByteArray[seqS[i].code]
         }
         return NucSeqByte(String(comp), nucSet)
     }
@@ -128,7 +127,7 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
     }.let{ NucSeq(it)}
 
 
-    override fun gc() = seqS.count { it.equals(NUC.G.utf8) ||  it.equals(NUC.C.utf8)}
+    override fun gc() = seqS.count { it.code.toByte() == NUC.G.utf8 ||  it.code.toByte() == NUC.C.utf8}
 
     private fun toNUC(i: Int):NUC {
         val n = NUC.byteToNUC(seqS[i].code.toByte())
@@ -165,7 +164,7 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
         if(cds && size()%3!=0) throw IllegalStateException("Sequence not multiple of three")
         val pB = buildString(size() / 3) {
             for (i in 0 until (size() - 2) step 3) {
-                append(table.nucCharToCodonByte(seqS[i], seqS[i + 1], seqS[i + 2]).toChar())
+                append(table.nucCharToCodonByte(seqS[i], seqS[i + 1], seqS[i + 2]).toInt().toChar())
                 if (cds && i == 0 && this[0] != AminoAcid.M.char) {
                     val startCodon = Codon[seqS[i], seqS[i + 1], seqS[i + 2]]
                     if (table.start_codons.contains(startCodon)) this[0] = AminoAcid.M.char
@@ -176,9 +175,9 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
         if(cds && pB[pB.lastIndex]!=AminoAcid.STOP.char)  throw IllegalStateException("Sequence does end with valid stop codon")
         val proStr= if(to_stop || cds) {
             val stopIndex = pB.indexOf(AminoAcid.stopChar)
-            if(stopIndex<0)  pB.toString() else pB.substring(0 until stopIndex)
+            if(stopIndex<0)  pB else pB.substring(0 until stopIndex)
         } else {
-            pB.toString()
+            pB
         }
         return ProteinSeqByte(proStr)
     }
