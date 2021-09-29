@@ -2,6 +2,7 @@ package biokotlin.seqIO
 
 import biokotlin.seq.NucSeqRecord
 
+@Suppress("UNCHECKED_CAST")
 class NucSeqIO(filename: String, format: SeqFormat? = null) : Iterable<NucSeqRecord> {
 
     private val reader = reader(filename, format, SeqType.nucleotide)

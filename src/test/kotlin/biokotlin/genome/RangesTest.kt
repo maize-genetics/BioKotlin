@@ -53,6 +53,7 @@ class RangesTest: StringSpec({
         sRange2.endInclusive.site shouldBe 90
 
         var intRange = 1..10
+        intRange.last shouldBe 10
         intRange = 1..10+1
         intRange.last shouldBe 11
 
