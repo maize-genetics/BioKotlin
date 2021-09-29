@@ -7,7 +7,7 @@ import java.util.*
 
 
 internal sealed class BioSeqByte constructor(sequence: String) : Seq {
-    protected val seqS: String by lazy { sequence.toUpperCase().replaceUracilAndX() }
+    protected val seqS: String by lazy { sequence.uppercase().replaceUracilAndX() }
 
     /*Copy of the underlying bytes array*/
     override fun copyOfBytes(): ByteArray = seqS.toByteArray()
@@ -80,7 +80,7 @@ internal fun NucSeqByteEncode(seq: String): NucSeq {
 }
 
 /*Note protein don't use U, so the uracil conversion has no effect*/
-private fun String.toNucSeqByteArray() = this.toUpperCase().toByteArray().replaceUracilAndX()
+private fun String.toNucSeqByteArray() = this.uppercase().toByteArray().replaceUracilAndX()
 
 /**A byte level encoding of Nucleotides.
  *NOTE: Both DNA and RNA are represented internally with U as T.  NucSet - determines which is displayed.
@@ -109,7 +109,7 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
         val comp = ByteArray(seqS.length)
         //Code a version to do reverse complement directly
         for (i in seqS.indices) {
-            comp[i] = NUC.ambigDnaCompByByteArray[seqS[i].toInt()]
+            comp[i] = NUC.ambigDnaCompByByteArray[seqS[i].code]
         }
         return NucSeqByte(String(comp), nucSet)
     }
@@ -131,7 +131,7 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
     override fun gc() = seqS.count { it.equals(NUC.G.utf8) ||  it.equals(NUC.C.utf8)}
 
     private fun toNUC(i: Int):NUC {
-        val n = NUC.byteToNUC(seqS[i].toByte())
+        val n = NUC.byteToNUC(seqS[i].code.toByte())
         return if(!isDNA && n == NUC.T) NUC.U else n
     }
     override operator fun get(i: Int): NUC = if (i >= 0) toNUC(i) else toNUC(seqS.length + i)

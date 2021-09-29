@@ -100,7 +100,7 @@ internal fun convertSamRecordToDataFrameRow(currentRecord: SAMRecord, includeSeq
         currentRecord.flags,
         currentRecord.readLength,
         if (currentRecord.readNegativeStrandFlag) "-" else "+",
-        currentRecord?.contig?:"*",
+        currentRecord.contig ?:"*",
         currentRecord.alignmentStart, currentRecord.alignmentEnd,
         currentRecord.mappingQuality,
         ((currentRecord.getAttribute("NM") ?: 0) as Int),

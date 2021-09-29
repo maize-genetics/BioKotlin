@@ -6,11 +6,9 @@ import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.ImmutableBiMap
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.http.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -90,12 +88,12 @@ object KeggCache : AutoCloseable {
     }
 
     object KeggSerializer : JsonContentPolymorphicSerializer<KeggInfo>(KeggInfo::class) {
-        override fun selectDeserializer(content: JsonElement): DeserializationStrategy<out KeggInfo> = when {
-            (content as JsonObject).contains("orgCode") -> KeggOrg.serializer()
-            "ntSeq" in content -> KeggGene.serializer()
-            "refSeqID" in content -> KeggGenome.serializer()
-            "ec" in content -> KeggOrtholog.serializer()
-            "genes" in content && "compounds" in content -> KeggPathway.serializer()
+        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<out KeggInfo> = when {
+            (element as JsonObject).contains("orgCode") -> KeggOrg.serializer()
+            "ntSeq" in element -> KeggGene.serializer()
+            "refSeqID" in element -> KeggGenome.serializer()
+            "ec" in element -> KeggOrtholog.serializer()
+            "genes" in element && "compounds" in element -> KeggPathway.serializer()
             else -> KeggInfoImpl.serializer()
         }
     }
