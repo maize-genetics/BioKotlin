@@ -21,6 +21,8 @@ interface SAMDataFrame {
     val targetName: String
     val targetStart: Int
     val targetEnd: Int
+    val startClip: Int
+    val endClip: Int
     val mapQ: Int
     val NM: Int
     val numM: Int
@@ -40,6 +42,7 @@ data class BKSamRecord(
     //The order of this constructor in the data class sets the column order
     override val queryName: String, override val flag: Int, override val queryLength: Int, override val strand: String,
     override val targetName: String, override val targetStart: Int, override val targetEnd: Int,
+    override val startClip: Int, override val endClip: Int,
     override val mapQ: Int, override val NM: Int, override val numM: Int, override val numEQ: Int,
     override val numX: Int, override val numI: Int, override val numD: Int, override val numH: Int,
     override val numS: Int, override val sequence: String
@@ -102,6 +105,8 @@ internal fun convertSamRecordToDataFrameRow(currentRecord: SAMRecord, includeSeq
         if (currentRecord.readNegativeStrandFlag) "-" else "+",
         currentRecord.contig ?:"*",
         currentRecord.alignmentStart, currentRecord.alignmentEnd,
+        currentRecord.alignmentStart-currentRecord.unclippedStart,
+        currentRecord.unclippedEnd-currentRecord.alignmentEnd,
         currentRecord.mappingQuality,
         ((currentRecord.getAttribute("NM") ?: 0) as Int),
         (cigarCounts["M"] ?: 0),
