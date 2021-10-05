@@ -25,18 +25,12 @@ fun main() {
         println("Edge value $i... ${graphProto.edgeSet().toList()[i]}")
     }
 
+    @Suppress("UNCHECKED_CAST")
     val nodes = graphProto.vertexSet().toList() as List<KGMLEntry>
     val rxnNodes = nodes.filter { it.reaction != "null" && it.type == "gene"}
     rxnNodes.forEach {
         println("RXN ID: ${it.reaction}  | Gene IDs: ${it.name}")
     }
-
-    val users : DataFrame = dataFrameOf(
-            "firstName", "lastName", "age", "hasSudo")(
-            "max", "smith" , 53, false,
-            "eva", "miller", 23, true,
-            null , "meyer" , 23, null
-    )
 
     val test = mapOf<String, Int>("a" to 1, "b" to 2, "c" to 3)
 

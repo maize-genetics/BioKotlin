@@ -72,7 +72,7 @@ dependencies {
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
-    implementation("com.github.samtools:htsjdk:2.21.3")
+    implementation("com.github.samtools:htsjdk:2.24.1")
 
     // implementation("org.jetbrains.bio:bioinf-commons:0.0.9")
 
@@ -85,16 +85,16 @@ dependencies {
     // implementation("org.biojava:biojava:5.3.0")
     // implementation("org.biojava:biojava-genome:5.3.0")
 
-    implementation("org.graalvm.sdk:graal-sdk:20.0.0")
+    implementation("org.graalvm.sdk:graal-sdk:21.2.0")
     implementation("org.apache.commons:commons-csv:1.8")
-    implementation("khttp:khttp:1.0.0")
+    implementation("io.ktor:ktor-client-core:1.6.3")
+    implementation("io.ktor:ktor-client-cio:1.6.3")
 
+    implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
+    implementation("org.jgrapht:jgrapht-core:1.5.1")
 
-    implementation("com.google.guava:guava:29.0-jre")
-    implementation("org.apache.tinkerpop:gremlin-core:3.4.8")
-    implementation("org.jgrapht:jgrapht-core:1.5.0")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
     val kotestVersion = "4.2.6"
     listOf("runner-junit5", "assertions-core", "property").forEach {

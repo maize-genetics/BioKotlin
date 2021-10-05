@@ -114,7 +114,7 @@ fun RandomProteinSeq(length: Int, seed: Int = 0): ProteinSeq {
 
 internal fun compatibleBioSet(seq: String): List<BioSet> {
     val bytePresent: BitSet = BitSet(128)
-    for (i in seq) bytePresent[i.toUpperCase().toInt()] = true
+    for (i: Char in seq) bytePresent[i.uppercaseChar().code] = true
     val compatibleSets = BioSet.values()
             .filter {
                 val origCharBits = bytePresent.clone() as BitSet
@@ -140,12 +140,12 @@ enum class BioSet(val set: ImmutableSet<*>, internal val bitSets: BitSet, intern
     RNA(NUC.RNA, bitSetOfChars(NUC.RNA), { s: String -> NucSeq(s, NUC.RNA) }),
     AmbiguousDNA(NUC.AmbiguousDNA, bitSetOfChars(NUC.AmbiguousDNA), { s: String -> NucSeq(s, NUC.AmbiguousDNA) }),
     AmbiguousRNA(NUC.AmbiguousRNA, bitSetOfChars(NUC.AmbiguousRNA), { s: String -> NucSeq(s, NUC.AmbiguousRNA) }),
-    AminoAcid(biokotlin.seq.AminoAcid.all, biokotlin.seq.AminoAcid.bitSetOfChars, { s: kotlin.String -> ProteinSeqByte(s) }),
+    AminoAcid(biokotlin.seq.AminoAcid.all, biokotlin.seq.AminoAcid.bitSetOfChars, { s: String -> ProteinSeqByte(s) }),
 }
 
 private fun bitSetOfChars(nucs: NucSet): BitSet {
     val bsc = BitSet(128)
-    nucs.forEach { bsc.set(it.char.toInt()) }
+    nucs.forEach { bsc.set(it.char.code) }
     return bsc
 }
 

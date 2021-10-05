@@ -1,18 +1,13 @@
 package biokotlin.seqIO
 
-import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.Seq
 import biokotlin.seq.SeqRecord
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.receiveOrNull
 import java.io.BufferedReader
 import java.io.File
-import java.util.*
-import kotlin.system.measureNanoTime
 
 /**
 [FastqIO] implements a [SequenceIterator] for a FASTQ file at path [filename]
@@ -47,7 +42,7 @@ class FastqIO(val filename: String) : SequenceIterator {
 
     override fun read(): SeqRecord? {
         return runBlocking {
-            outputChannel.receiveOrNull()?.await()
+            outputChannel.receiveCatching().getOrNull()?.await()
         }
     }
 
@@ -75,15 +70,15 @@ class FastqIO(val filename: String) : SequenceIterator {
     }
 
     companion object {
-        private fun extractSeq(firstLine: String, lineNumber: Int, reader: BufferedReader,
+        private fun extractSeq(firstLine: String, startLineNumber: Int, reader: BufferedReader,
                                filename: String): Triple<String,
                 String, String> {
             var line = firstLine
-            var lineNumber = lineNumber
+            var lineNumber = startLineNumber
             if (line.startsWith("@")) {
-                var id = line.substring(1)
-                var seq: String
-                var quality: String
+                val id = line.substring(1)
+                val seq: String
+                val quality: String
                 seq = reader.readLine()
                 lineNumber++
                 if (seq != null) {
@@ -128,7 +123,7 @@ $filename  Error: ${e.message}""")
             for (entry in inputChannel) {
                 val deferred = async {
                     val seq = Seq(entry.second)
-                    NucSeqRecord(seq as NucSeq, entry.first, letterAnnotations =
+                    NucSeqRecord(seq, entry.first, letterAnnotations =
                     ImmutableMap.of("quality", entry.third.toCharArray().toTypedArray()))
                 }
                 outputChannel.send(deferred)

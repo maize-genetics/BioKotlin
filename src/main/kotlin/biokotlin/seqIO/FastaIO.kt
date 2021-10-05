@@ -5,7 +5,6 @@ import biokotlin.util.bufferedReader
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.receiveOrNull
 import java.util.*
 
 class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
@@ -34,7 +33,7 @@ class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
 
     override fun read(): SeqRecord? {
         return runBlocking {
-            outputChannel.receiveOrNull()?.await()
+            outputChannel.receiveCatching().getOrNull()?.await()
         }
     }
 

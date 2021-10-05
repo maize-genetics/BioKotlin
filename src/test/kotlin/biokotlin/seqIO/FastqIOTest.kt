@@ -16,7 +16,7 @@ class FastqIOTest : StringSpec({
         val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/example.fq")
 
         var numSeqs = 0
-        fastq.forEachIndexed { index, record ->
+        fastq.forEach { record ->
             numSeqs++
             record.sequence.size() shouldBe seqLengths[record.id]
         }
@@ -35,7 +35,7 @@ class FastqIOTest : StringSpec({
         val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/zero_length.fq")
 
         var numSeqs = 0
-        fastq.forEachIndexed { index, record ->
+        fastq.forEach { record ->
             numSeqs++
             record.sequence.size() shouldBe seqLengths[record.id]
         }
@@ -53,7 +53,7 @@ class FastqIOTest : StringSpec({
         val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/tricky_at.fq")
 
         var numSeqs = 0
-        fastq.forEachIndexed { index, record ->
+        fastq.forEach { record ->
             numSeqs++
             record.sequence.size() shouldBe seqLengths[record.id]
         }

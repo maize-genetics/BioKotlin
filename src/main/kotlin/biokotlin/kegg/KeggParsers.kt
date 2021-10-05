@@ -82,7 +82,7 @@ private fun cleanSeqWithLength(sizeSeq: String): String {
 internal fun pathwayParser(keggResponseText: String): KeggPathway {
     val attributes = parseKEGG(keggResponseText)
     val kid = (attributes.get("ENTRY")?:error("KID not in ENTRY")).split(whiteSpace)[0].let { KeggEntry.of("path", it) }
-    val orgCode = attributes["ORGANISM"]?.let { orgCodeInGN.find(it)?.value?.toLowerCase() }.orEmpty()
+    val orgCode = attributes["ORGANISM"]?.let { orgCodeInGN.find(it)?.value?.lowercase() }.orEmpty()
     val nameAndDefinition = attributes["NAME"].orEmpty()
 
     val genes = (attributes["GENE"].orEmpty()).lines()
@@ -111,7 +111,7 @@ internal fun orthologyParser(keggResponseText: String): KeggOrtholog {
             //TODO filter by species or clade
             .associate { lineOfOrg ->
                 val orgGenes = lineOfOrg.split(": ")
-                val orgEntry = orgGenes[0].toLowerCase()
+                val orgEntry = orgGenes[0].lowercase()
                 val ke = orgGenes[1].split(" ")
                         .map { it.substringBefore("(") }
                         .map { KeggEntry.of(orgEntry, it) }
@@ -137,7 +137,7 @@ fun KeggPathway.kgmlGraph(): DefaultDirectedGraph<Any, DefaultEdge> {
  * Parse KGML data into KGML data classes. Returns a Map.
  */
 internal fun kgmlParser(path: String, kid: String): Map<String, MutableList<out Any>> {
-    val rawXML = KeggServer.query(KeggOperations.get, "$path:$kid/kgml")?: error("Not found in KEGG")
+    val rawXML = KeggServer.query(KeggOperations.get, "$path:$kid/kgml")//?: error("Not found in KEGG")
     val doc = convertStringToXMLDocument(rawXML)
 
     val entryList: NodeList = doc!!.getElementsByTagName("entry")
@@ -232,6 +232,7 @@ internal fun kgmlParser(path: String, kid: String): Map<String, MutableList<out 
 /**
  * Construct graph from parsed KGML data using JGraphT libraries
  */
+@Suppress("UNCHECKED_CAST")
 internal fun kgmlGraphConstructor(parsedKGML: Map<String, MutableList<out Any>>): DefaultDirectedGraph<Any, DefaultEdge> {
     val relationships = parsedKGML["relationships"] as List<KGMLRelation>
     val entries = parsedKGML["entries"] as List<KGMLEntry>
@@ -256,11 +257,11 @@ internal fun kgmlGraphConstructor(parsedKGML: Map<String, MutableList<out Any>>)
     //   * products come out of gene list [gene1, gene2, ...] --> (product)
     for (i in reactions.indices) {
         val tmpG1 = tmpGL.find {it.id == reactions[i].id}
-        reactions[i].substrate.forEach { k, v ->
+        reactions[i].substrate.forEach { k, _ ->
             val tmpSub = tmpGL.find{it.id == k}
             g.addEdge(tmpSub, tmpG1)
         }
-        reactions[i].product.forEach{ k, v ->
+        reactions[i].product.forEach{ k, _ ->
             val tmpProd = tmpGL.find{it.id == k}
             g.addEdge(tmpG1, tmpProd)
         }
@@ -275,7 +276,7 @@ internal fun kgmlGraphConstructor(parsedKGML: Map<String, MutableList<out Any>>)
 internal fun convertStringToXMLDocument(xmlString: String): Document? {
     //Parser that produces DOM object trees from XML content
     val factory = DocumentBuilderFactory.newInstance()
-    var builder: DocumentBuilder? = null
+    val builder: DocumentBuilder?
 
     try {
         builder = factory.newDocumentBuilder()
