@@ -35,6 +35,10 @@ plugins {
     // Shadow allows for the creation of fat jars (all dependencies)
     id("com.github.johnrengelman.shadow") version "5.2.0"
 
+    //This is used for code generation for DataFrame Schema, however, it does not work
+    //https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
+    //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
+
     id("org.jetbrains.dokka") version "0.10.1"
     `java-library`
     `maven-publish`
@@ -43,6 +47,7 @@ plugins {
 apply {
     plugin("kotlinx-serialization")
 }
+
 
 repositories {
     mavenCentral()
@@ -63,6 +68,7 @@ dependencies {
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("de.mpicbg.scicomp:krangl:0.13")
+    implementation("org.jetbrains.kotlinx:dataframe:0.8.0-dev-321")
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
@@ -97,6 +103,9 @@ dependencies {
     //consider adding Kotlintest
     //mockk
 }
+//This is used for code generation for DataFrame Schema, however, it does not work
+//https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
+//kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
     sourceCompatibility = VERSION_11

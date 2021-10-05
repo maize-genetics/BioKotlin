@@ -133,8 +133,8 @@ data class CodonTable(val id: Int, val name: List<String>, val start_codons: Lis
     private val nuc3bytesToCodonByte: ByteArray = ByteArray(65){illegalCodon}
     init {
         Codon.values()
-                .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.toByte() ?: illegalCodon }
-        stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.STOP.char.toByte() }
+                .forEach {nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  codonToAA[it]?.char?.code?.toByte() ?: illegalCodon }
+        stop_codons.forEach { nuc3bytesToCodonByte[Codon.toPackedInt(it.name)] =  AminoAcid.STOP.char.code.toByte() }
     }
     internal fun nucCharToCodonByte(b1:Char, b2:Char, b3:Char): Byte {
         val  codonB = nuc3bytesToCodonByte[Codon.toPackedInt(b1,b2,b3)]
