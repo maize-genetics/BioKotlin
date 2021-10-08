@@ -3,9 +3,9 @@ package biokotlin.seqIO
 import biokotlin.seq.NucSeqRecord
 
 @Suppress("UNCHECKED_CAST")
-class NucSeqIO(filename: String, format: SeqFormat? = null) : Iterable<NucSeqRecord> {
+class NucSeqIO(val filename: String, val format: SeqFormat? = null) : Iterable<NucSeqRecord> {
 
-    private val reader = reader(filename, format, SeqType.nucleotide)
+    private var reader = reader(filename, format, SeqType.nucleotide)
 
     fun read() = reader.read() as NucSeqRecord?
 
@@ -14,5 +14,7 @@ class NucSeqIO(filename: String, format: SeqFormat? = null) : Iterable<NucSeqRec
     override fun iterator(): Iterator<NucSeqRecord> {
         return reader.iterator() as Iterator<NucSeqRecord>
     }
+
+    fun reset() = NucSeqIO(filename, format)
 
 }

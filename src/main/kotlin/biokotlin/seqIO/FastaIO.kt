@@ -7,7 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.util.*
 
-class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
+class FastaIO(val filename: String, val type: SeqType) : SequenceIterator {
 
     private val inputChannel = Channel<FastaInputSequence>(5)
     private val outputChannel = Channel<Deferred<SeqRecord>>(5)
@@ -47,6 +47,8 @@ class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
         }
         return result.build()
     }
+
+    override fun reset(): SequenceIterator = FastaIO(filename,type)
 
     override fun hasNext(): Boolean {
         return runBlocking {

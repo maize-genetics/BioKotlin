@@ -18,6 +18,7 @@ enum class SeqType {
 interface SequenceIterator : Iterator<SeqRecord> {
     fun read(): SeqRecord?
     fun readAll(): Map<String, SeqRecord>
+    fun reset(): SequenceIterator
 }
 
 interface SequenceWriter {

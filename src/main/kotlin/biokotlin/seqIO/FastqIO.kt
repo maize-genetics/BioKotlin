@@ -57,6 +57,8 @@ class FastqIO(val filename: String) : SequenceIterator {
         return result.build()
     }
 
+    override fun reset(): SequenceIterator = FastqIO(filename)
+
     override fun hasNext(): Boolean {
         return runBlocking {
             outputIterator.hasNext()
