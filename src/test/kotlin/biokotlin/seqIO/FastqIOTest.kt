@@ -3,8 +3,10 @@ package biokotlin.seqIO
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
-class FastqIOTest : StringSpec({
 
+
+class FastqIOTest() : StringSpec({
+    val fastqFile = "src/test/resources/biokotlin/seqIO/example.fq"
 
     "simpleFile" {
         val seqLengths = mapOf(
@@ -13,7 +15,7 @@ class FastqIOTest : StringSpec({
                 "EAS54_6_R1_2_1_443_348" to 15
         )
 
-        val fastq = NucSeqIO("src/test/resources/biokotlin/seqIO/example.fq")
+        val fastq = NucSeqIO(fastqFile)
 
         var numSeqs = 0
         fastq.forEach { record ->
@@ -59,6 +61,19 @@ class FastqIOTest : StringSpec({
         }
         numSeqs shouldBe 3
 
+    }
+
+    "reset" {
+        //this map maintains order
+        val fastaMap = NucSeqIO(fastqFile).readAll()
+        val fastaIOIter = NucSeqIO(fastqFile)
+        for ((id, _) in fastaMap) {
+            fastaIOIter.read()?.id shouldBe id
+        }
+        fastaIOIter.reset()
+        for ((id, _) in fastaMap) {
+            fastaIOIter.read()?.id shouldBe id
+        }
     }
 
 })

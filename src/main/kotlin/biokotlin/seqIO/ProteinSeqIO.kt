@@ -15,6 +15,6 @@ class ProteinSeqIO(val filename: String, val format: SeqFormat? = null) : Iterab
         return reader.iterator() as Iterator<ProteinSeqRecord>
     }
 
-    fun reset() = ProteinSeqIO(filename, format)
+    fun reset() = reader.reset()
 
 }

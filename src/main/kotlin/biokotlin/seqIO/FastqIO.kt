@@ -6,6 +6,7 @@ import biokotlin.seq.SeqRecord
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ChannelIterator
 import java.io.BufferedReader
 import java.io.File
 
@@ -21,19 +22,26 @@ Attributes:
  */
 class FastqIO(val filename: String) : SequenceIterator {
 
-    private val inputChannel = Channel<Triple<String, String, String>>(5)
-    private val outputChannel = Channel<Deferred<SeqRecord>>(5)
-    private val outputIterator = outputChannel.iterator()
+    private lateinit var inputChannel: Channel<Triple<String, String, String>>
+    private lateinit var outputChannel: Channel<Deferred<SeqRecord>>
+    private lateinit var outputIterator: ChannelIterator<Deferred<SeqRecord>>
+    private lateinit var processInputJob: Job
 
     init {
 
         assert(filename.isNotEmpty())
+        setUpProcessors()
+    }
 
+    private fun setUpProcessors() {
+        inputChannel = Channel<Triple<String, String, String>>(5)
+        outputChannel = Channel<Deferred<SeqRecord>>(5)
+        outputIterator= outputChannel.iterator()
         CoroutineScope(Dispatchers.IO).launch {
             readFastqLines(filename, inputChannel)
         }
 
-        val processInputJob = CoroutineScope(Dispatchers.IO).launch {
+        processInputJob = CoroutineScope(Dispatchers.IO).launch {
             processInput(inputChannel, outputChannel)
         }
         processInputJob.invokeOnCompletion { outputChannel.close() }
@@ -57,7 +65,13 @@ class FastqIO(val filename: String) : SequenceIterator {
         return result.build()
     }
 
-    override fun reset(): SequenceIterator = FastqIO(filename)
+    override fun reset(): SequenceIterator {
+        processInputJob.cancelChildren()
+        inputChannel.close()
+        outputChannel.close()
+        setUpProcessors()
+        return this
+    }
 
     override fun hasNext(): Boolean {
         return runBlocking {

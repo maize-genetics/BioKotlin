@@ -1,12 +1,14 @@
 package biokotlin.seqIO
 
+import biokotlin.seq.NucSeqRecord
 import biokotlin.util.bufferedReader
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import org.nield.kotlinstatistics.random
 
 class FastaIOTest : StringSpec({
-
-    val fasta = NucSeqIO("src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa")
+    val multiSeqFastaFile = "src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa"
+    val fasta = NucSeqIO(multiSeqFastaFile)
 
     val seqLengths = mapOf(
             "B73V4_ctg182" to 256,
@@ -65,6 +67,19 @@ class FastaIOTest : StringSpec({
 
     }
 
+    "reset" {
+        //this map maintains order
+        val fastaMap = FastaIO(multiSeqFastaFile, SeqType.nucleotide).readAll()
+        val fastaIOIter: SequenceIterator = FastaIO(multiSeqFastaFile, SeqType.nucleotide)
+        for ((id, seqRec) in fastaMap) {
+            fastaIOIter.read()?.id shouldBe id
+        }
+        fastaIOIter.reset()
+        for ((id, seqRec) in fastaMap) {
+            fastaIOIter.read()?.id shouldBe id
+        }
+    }
+
 })
 
 fun readTitleAndSeq(filename: String): Pair<String, String> {
@@ -119,3 +134,5 @@ fun simpleCheck(filename: String, format: SeqFormat = SeqFormat.fasta, type: Seq
     assert(record.seq() == titleSeq.second) { "record seq: ${record.seq()} should be ${titleSeq.second} in file: $filename" }
 
 }
+
+

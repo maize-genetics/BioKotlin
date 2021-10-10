@@ -15,6 +15,6 @@ class NucSeqIO(val filename: String, val format: SeqFormat? = null) : Iterable<N
         return reader.iterator() as Iterator<NucSeqRecord>
     }
 
-    fun reset() = NucSeqIO(filename, format)
+    fun reset() = reader.reset()
 
 }

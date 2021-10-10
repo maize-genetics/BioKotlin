@@ -5,30 +5,38 @@ import biokotlin.util.bufferedReader
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ChannelIterator
 import java.util.*
 
 class FastaIO(val filename: String, val type: SeqType) : SequenceIterator {
 
-    private val inputChannel = Channel<FastaInputSequence>(5)
-    private val outputChannel = Channel<Deferred<SeqRecord>>(5)
-    private val outputIterator = outputChannel.iterator()
+    private lateinit var inputChannel:Channel<FastaInputSequence>
+    private lateinit var outputChannel:Channel<Deferred<SeqRecord>>
+    private lateinit var outputIterator: ChannelIterator<Deferred<SeqRecord>>
+    private lateinit var processInputJob: Job
 
     init {
 
         assert(filename.isNotEmpty())
+        //Setting up co-routines in a function so that it can also be called for restart.
+        setUpProcessors()
+    }
 
+    private fun setUpProcessors() {
+        inputChannel = Channel<FastaInputSequence>(5)
+        outputChannel = Channel<Deferred<SeqRecord>>(5)
+        outputIterator = outputChannel.iterator()
         CoroutineScope(Dispatchers.IO).launch {
             readFastaLines(filename, inputChannel)
         }
 
-        val processInputJob = CoroutineScope(Dispatchers.IO).launch {
+        processInputJob = CoroutineScope(Dispatchers.IO).launch {
             when (type) {
                 SeqType.nucleotide -> processNucleotideInput(inputChannel, outputChannel)
                 SeqType.protein -> processProteinInput(inputChannel, outputChannel)
             }
         }
         processInputJob.invokeOnCompletion { outputChannel.close() }
-
     }
 
     override fun read(): SeqRecord? {
@@ -48,7 +56,13 @@ class FastaIO(val filename: String, val type: SeqType) : SequenceIterator {
         return result.build()
     }
 
-    override fun reset(): SequenceIterator = FastaIO(filename,type)
+    override fun reset(): SequenceIterator {
+        processInputJob.cancelChildren()
+        inputChannel.close()
+        outputChannel.close()
+        setUpProcessors()
+        return this
+    }
 
     override fun hasNext(): Boolean {
         return runBlocking {
