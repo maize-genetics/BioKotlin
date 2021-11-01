@@ -220,7 +220,7 @@ fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArra
     var arrayOffset = 0 // offset into the coverage and identity arrays for incrementing the count
     if (startDiff >=0) {
         // the seqence in this MAF alignment starts after what the user requested,
-        // So we can start at the beginning of hte alignment, but the move the counter/identiry
+        // So we can start at the beginning of the alignment,  then move the counter/identity
         // array offset to account for this difference
         alignStart = 0
         arrayOffset = startDiff
@@ -240,7 +240,7 @@ fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArra
     val end = Math.min(userEnd, refEnd)
     val numBPs = Math.abs(end - start)
     //TODO: Does this need adjustment for 0-based array ???
-    val alignEnd = alignStart - numBPs
+    val alignEnd = alignStart + numBPs
 
     // THe index into the arrays for storing data does not necessarily start at position 0.
     // It starts where the alignment block has overlapping sequence with the user requested sequence.
