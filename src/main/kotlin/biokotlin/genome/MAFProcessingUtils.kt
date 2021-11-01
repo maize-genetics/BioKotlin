@@ -110,6 +110,8 @@ fun findOverlapsFromSingleMAF( contig:String, startStop:ClosedRange<Int>, mafFil
 // A MAF paragraph starts at the beginning of an alignment block, and ends
 // with a blank link.  The first sequence should be the reference sequence.
 // There may be multiple other sequences
+// When entering this function, the first line read SHOULD be an "s" line.  "s" line
+// should follow the "a" line that started the alignment
 fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedRange<Int>): MAFAlignmentBlock? {
     try {
         var line = reader.readLine()
@@ -119,14 +121,14 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
         // Stop when we either reach end of file, or we reach a blank line.
         while (line != null && line.length > 0) {
             line = line.trim()
-            // skip other informational lines in the alignment block
             if (!line.startsWith("s")) {
                 // there could be "i", "e" or "q" lines
                 // explaining the alignments below.  We only deal with the "s"
                 // lines, which are the alignments.  The first "s" line should be the reference.
-                // All lines after the first "s" line should also be "s" lines until we hit
-                // a blank line indicating end of the alignment paragraph.
-                line = reader.readLine() // read and go back to outer "while"
+                //line = reader.readLine() // read and go back to outer "while"
+                println("ERROR - non s line after a line for alignment block start")
+                println(line)
+                return null
             }
             else {
                 // Process the first line, which we assume is the reference
@@ -149,8 +151,11 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
                 if (skip) {
                     // either this first sequence alignment isn't on our contig, or it
                     // is on the contig, but not overlapping the range for which we want alignment data
-                    // SKip it - return null
-                    while (line.startsWith("s")) {
+                    // SKip it - read past all the lines in the alignment, return null
+                    while (line.startsWith("s") ||
+                            line.startsWith("e") ||
+                            line.startsWith("q") ||
+                            line.startsWith("s")) {
                         line = reader.readLine()
                     }
                     return null
@@ -166,7 +171,19 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
                     val queryContigList = ArrayList<String>()
                     val querySeqList = ArrayList<String>()
 
-                    while(line.startsWith("s")) {
+                    while(line.startsWith("s") || line.startsWith("e") || line.startsWith("i") || line.startsWith("q")) {
+
+                        if (!line.startsWith("s")) {
+                            // there were "i", "e", or "q" lines in the alignment block
+                            // these are lines that
+                            //  i:  give information on what's happening before or after the alignment
+                            //  e: give information about empty parts of the alignment block
+                            //  q: give information about the quality of each aligned base for the species
+
+                            // we are ignoring these lines
+                            line = reader.readLine()
+                            continue
+                        }
                         // the alignment string is the last value in this tab-delimted line
                         val lastTab = line.lastIndexOf("\t")
                         val tabIdx1 = line!!.indexOf("\t")
