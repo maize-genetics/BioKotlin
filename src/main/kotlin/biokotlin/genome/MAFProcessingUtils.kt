@@ -201,7 +201,6 @@ fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArra
 
     // Calculate where to start processing on the alignment sequence
     var alignStart = 0 // where to start processing the sequence
-    var alignStop = 0 // when to stop processing the sequence
     var arrayOffset = 0 // offset into the coverage and identity arrays for incrementing the count
     if (startDiff >=0) {
         // the seqence in this MAF alignment starts after what the user requested,
@@ -227,7 +226,6 @@ fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArra
     //TODO: Does this need adjustment for 0-based array ???
     val alignEnd = alignStart - numBPs
 
-
     // THe index into the arrays for storing data does not necessarily start at position 0.
     // It starts where the alignment block has overlapping sequence with the user requested sequence.
     // if user wants bps 20-50 and this alignment block covers bps from 30-40, then the index into
@@ -246,7 +244,7 @@ fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArra
     for (querySeq in alignments.querySeqs) {
         // gapped sequence sizes in the MAF file will be the same for ref and all alignments
         counter = arrayOffset // reset to start place for each query sequence in this alignment
-        for (idx in alignStart until alignStop) {
+        for (idx in alignStart until alignEnd) {
             if (refSeq.get(idx) == '-') continue  // skip reference gaps, don't increment counter
             if (querySeq.get(idx) != '-') {
                 coverageCnt[counter]++ // we have coverage here
