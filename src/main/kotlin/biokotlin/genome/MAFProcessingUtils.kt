@@ -6,13 +6,14 @@ import java.io.File
 import java.nio.file.Files
 
 /**
+ * This file holds methods used to process MAF Files with the intent of
+ * creating Wiggle or BED formatted files for IGV viewing
+ */
+/**
  * This method takes a contig name, a Kotlin CLosedRange indicating the start and stop coordinates,
  * and a MAF formatted file.
  * From this data, it will return a list containing pairs of sequence:  the first in the Pair is the reference
  * sequence, the second is the corresponding aligned sequence.
- *
- * That isn't enough.  I need to know which elements of that sequence to check.
- * So ... return the
  *
  * Hmmm.. For each aligned file, I need to check each alignmeht:
  *  1.  does the contig match?  if no, go to next
@@ -25,12 +26,8 @@ import java.nio.file.Files
  */
 
 // This class to hold data from the alignment paragraph.  Will it be too big?
-// We read in the sequence, but need to be sure we drop the class instance when through
-// THe query strings are a list, because there can be more than 1 alignment in each alignment block
+// The query strings are a list, because there can be more than 1 alignment in each alignment block
 data class MAFAlignmentBlock(val refStart:Int, val refSize:Int, val refSeq:String, val queryContigs:List<String>, val querySeqs:List<String>)
-
-// THis is top function - this is what user calls.
-// They merely need to provide the ref contig name, the start/stop, and the MAF directory
 
 fun createWiggleFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, start:Int, stop:Int):String {
     //TODO
@@ -38,10 +35,22 @@ fun createWiggleFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, c
 }
 
 fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, start:Int, stop:Int):String {
-
     //TODO -
     return "code this up"
 }
+
+/**
+ * This function takes a user contig,  start/stop positions which are 1-based and inclusive/inclusive
+ * and a directory where MAF (*.maf) files may be found.
+ * From this input it creates 2 IntArrays which are returned as a Pair:
+ *
+ * The IntArray  sizes are determined by the range size of the user requested data.
+ * The first array in the pair indicates how many sequence alignments from the MAF files have coverage
+ * at each basepair.
+ * The second array in the pair indicates how many sequence alignments from the MAF files have an allele
+ * identical to the reference at the specified base pair.
+ */
+
 fun getCoverageAndIdentityFromMAFs(contig:String, start:Int, stop:Int, mafDir:String):Pair<IntArray,IntArray> {
     val refSpan = (start..stop)
     val coverage = IntArray(refSpan.count())
@@ -62,16 +71,20 @@ fun getCoverageAndIdentityFromMAFs(contig:String, start:Int, stop:Int, mafDir:St
     return Pair<IntArray,IntArray>(coverage,identity)
 }
 
+/**
+ * This function updates the coverage and identity arrays based on overlapping sequences from
+ * a specific MAF file.
+ * The MAF file may have several "paragraphs" whose alignment sections overlap the user requested
+ * sequence positions.
+ */
 fun findOverlapsFromSingleMAF( contig:String, startStop:ClosedRange<Int>, mafFile:File, coverageArray:IntArray, identityArray:IntArray) {
 
     // read the MAF file.  Filter for alignments where
     //  a.  contig matches our contig
     //  b.  keep if refStart is <= startStop end
-    //  c.  if (refStart + refSize -1) < start then skip
-    //  d.  keep if (refStart + refSize-1) >= start
+    //  c.  keep if (refStart + refSize-1) >= start
 
     // should  filter and process at once so we aren't keeping too much in memory
-
     try {
         bufferedReader(mafFile.toString()).use { reader ->
             var line = reader.readLine()
@@ -92,10 +105,9 @@ fun findOverlapsFromSingleMAF( contig:String, startStop:ClosedRange<Int>, mafFil
     } catch (exc:Exception) {
         throw IllegalStateException("findOverlapsFromSingleMAF - error processing file ${mafFile.toString()}")
     }
-
 }
 
-// This starts at the beginning of an alignment block, and ends
+// A MAF paragraph starts at the beginning of an alignment block, and ends
 // with a blank link.  The first sequence should be the reference sequence.
 // There may be multiple other sequences
 fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedRange<Int>): MAFAlignmentBlock? {
@@ -104,6 +116,7 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
 
         // There should be a blank link after each alignment block
         // only read lines associated with this alignment block
+        // Stop when we either reach end of file, or we reach a blank line.
         while (line != null && line.length > 0) {
             line = line.trim()
             // skip other informational lines in the alignment block
@@ -111,6 +124,8 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
                 // there could be "i", "e" or "q" lines
                 // explaining the alignments below.  We only deal with the "s"
                 // lines, which are the alignments.  The first "s" line should be the reference.
+                // All lines after the first "s" line should also be "s" lines until we hit
+                // a blank line indicating end of the alignment paragraph.
                 line = reader.readLine() // read and go back to outer "while"
             }
             else {
@@ -170,6 +185,7 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
 
         } // end while
         // either end of file, or we reached a blank line, meaning end of alignment paragraph
+        // We should only get here if there were no alignment blocks to process
         println("readMafParagraph: WARNING - alignment block with no s lines !!")
 
     } catch (exc:Exception) {
@@ -182,7 +198,7 @@ fun readMafParagraph(reader: BufferedReader, refContig:String, startStop:ClosedR
 // The coverageArray and identityArray positions will be updated
 // But first we have to find the correct coordinates in which to begin.
 // The alignments pulled are those that overlap the user requested coordinates.  So in each alignment,
-// we  only want to process the coordinates that overlap what the user wanted.
+// we  only want to process the coordinates that overlap what the user requests.
 // This function processes a single alignment block.  It may have multiple query sequences, but they
 // are all to the same contig and coordinates on that contig
 fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArray, identityCnt:IntArray, startStop:ClosedRange<Int>) {
@@ -231,7 +247,7 @@ fun processCoverageAndIdentity(alignments:MAFAlignmentBlock, coverageCnt:IntArra
     // if user wants bps 20-50 and this alignment block covers bps from 30-40, then the index into
     // the counter and identity arrays will start at position 10 because the IntArray starts at 0,
     // which is bp at position 20.
-    // offsets were calcualted above
+    // offsets were calculated above
 
     var counter = arrayOffset // figure this out
 
