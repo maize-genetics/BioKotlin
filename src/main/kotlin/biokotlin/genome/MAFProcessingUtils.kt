@@ -3,6 +3,7 @@ package biokotlin.genome
 import biokotlin.util.bufferedReader
 import java.io.BufferedReader
 import java.io.File
+import java.lang.Math.abs
 import java.nio.file.Files
 
 /**
@@ -147,7 +148,7 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
 fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, identityCnt:IntArray, startStop:ClosedRange<Int>) {
 
     println("processCoverageAndIdentity: begin")
-    // sample MAF file line: "words" are white-space delimited (so spaces or tabs)
+    // sample MAF file line: "words" are white-space delimited ( spaces or tabs)
     // The first "s" line should be the reference
     // a       sCore=23262.0
     // s       B73.chr7        12      38      +       158545518       AAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG
@@ -167,27 +168,37 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
 
     val startDiff = refStart-userStart
 
-    // Calculate where to start processing on the alignment sequence
-    var arrayOffset = 0 // offset into the coverage and identity arrays for incrementing the count
-    if (startDiff >=0) {
-        // the seqence in this MAF alignment starts after what the user requested,
-        // So we can start at the beginning of the alignment,  then move the counter/identity
-        // array offset to account for this difference
-        arrayOffset = startDiff
-    } else {
-        // The MAF alignment includes sequence that occurs before that which the user requested.
-        // adjust the alignStart. The adjustment for 0-based has already been done
-        arrayOffset = 0
-    }
-
-    // calculate where to stop processing on the alignment sequence
-    // This means determining which part of the alignment sequence overlaps the user
-    // requested sequence
-
+    // Get the number of basepairs
     val start = Math.max(userStart, refStart)
     val end = Math.min(userEnd, refEnd)
     val numBPs = Math.abs(end - start) + 1
-    val alignEnd = arrayOffset + numBPs
+
+    var refSeqIdxStart = 0
+    // Calculate where to start and stop processing on the alignment sequence
+    // This means determining which part of the alignment sequence overlaps the user
+    // requested sequence
+    var arrayOffset = 0 // offset into the coverage and identity arrays for incrementing the count
+    var alignEnd = numBPs
+    println("number of bps: $numBPs")
+    if (startDiff > 0) {
+        // the seqence in this MAF alignment starts after what the user requested,
+        // So we can start at the beginning of the alignment,  then move the counter/identity
+        // array offset to account for this difference
+        refSeqIdxStart = 0
+        arrayOffset = startDiff  // lcj - need +1?
+        alignEnd = arrayOffset + numBPs
+        //alignEnd--  // the +1 is needed for the arrayOffset start, but must be subtracted from the end or we go over.
+    } else {
+        // The MAF alignment includes sequence that occurs before that which the user requested.
+        // adjust the alignStart. The adjustment for 0-based has already been done
+        refSeqIdxStart = abs(startDiff)
+        arrayOffset = 0
+    }
+
+    println("\n numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
+    // Having difficulty getting the alignEnd correct.  It is 1 too many
+    // when the arrayOffset > 0
+
 
     // Need to run through only the sequence covered by the user request  It may not
     // start at the beginning of the ref sequence and it may not end
@@ -207,21 +218,28 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
         println("  sEntry:${sEntry}")
         val querySeq = sEntry.split("\\s+".toRegex())[6] // there are 7 columns, the sequence is in the last one
         // gapped sequence sizes in the MAF file will be the same for ref and all alignments
-        var counter = arrayOffset
-        // note: in ... until  excludes the ending value
-        for (idx in 0 until refSeq.length) {
-            if (idx < arrayOffset ) continue
-            if (refSeq.get(idx) == '-') continue // skip until we're at the overlap start point, don't count gaps
-            if (querySeq.get(idx) != '-') {
+
+        var counter = arrayOffset // where in the coverage/identity arrays we start to increment the metrics
+        // note: "in ... until"  excludes the ending value
+        var numDashes = 0
+        //for (refSeqIdx in refSeqIdxStart until refSeq.length) {
+        for (refSeqIdx in 0 until refSeq.length) {
+            if (refSeq.get(refSeqIdx) == '-') {
+                numDashes++
+                continue
+            }
+            // skip until we're at the overlap start point, don't count gaps
+            if ((refSeqIdx - numDashes) < refSeqIdxStart ) continue
+            if (querySeq.get(refSeqIdx) != '-') {
                 coverageCnt[counter]++ // we have coverage here
-                if (querySeq.get(idx).uppercaseChar() == refSeq.get(idx).uppercaseChar()) {
+                if (querySeq.get(refSeqIdx).uppercaseChar() == refSeq.get(refSeqIdx).uppercaseChar()) {
                     // the MAF file can contain both upper and lower characters.
                     // According to the MAF spec, repeats are shown as lowercase,
                     identityCnt[counter]++ // we have identity
                 }
             }
             counter++ // move to next spot in the vectors.
-            if (counter > alignEnd) break; // that's the end of the overlapping alignment
+            if (counter == alignEnd) break; // that's the end of the overlapping alignment
         }
     }
 }
