@@ -46,7 +46,6 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
     val identity = IntArray(userSpan.count())
 
     // get list of .maf files from the user provided folder
-    println("getCoverageAndIdentityFromMAFs - reading maf directory to get files")
     val mafFiles = File(mafDir).walk()
         .filter { item -> Files.isRegularFile(item.toPath()) }
         .filter { item -> item.toString().endsWith(".maf") }
@@ -61,9 +60,8 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
         try {
             val reader = bufferedReader(mafFile.toString())
             var mafBlock = readMafBlock(reader)
-            println("mafBlock Size after first: ${mafBlock?.size}")
             while (mafBlock != null) {
-                // filter the strings, add the alignment counts
+                // filter the strings, only keep the "s" lines
                 val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
                 // the first entry should be the ref
                 val refData = filteredMafBlock.get(0)
@@ -72,6 +70,8 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
                 val refStart = refSplitLine[2].toInt()
                 val refSize = refSplitLine[3].toInt()
 
+                // Determine if the alignment ref contig matches the user specified contig,
+                // and if the alignment overlaps the user requested positions.
                 var skip = false
                 if (refStart+1 > stop ) skip = true
                 else if (refStart + refSize < start)  skip = true // don't add -1 because refStart is 0-based
@@ -79,12 +79,9 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
 
                 if (!skip) {
                     // process the counts
-                    println("getCoverageAndIdentityFromMAFs: calling calculateCoverageAndIdentity")
                     calculateCoverageAndIdentity(filteredMafBlock, coverage, identity, userSpan)
                 }
-                println("Getting next MAF block")
                 mafBlock = readMafBlock(reader)
-                println("next mafBlock Size after first: ${mafBlock?.size}")
             }
         } catch (exc:Exception) {
             throw IllegalStateException("getCoverageAndIdentityFromMAFs: error processing file ${mafFile}: ${exc.message}")
@@ -95,10 +92,10 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
 
 
 // function to read alignment block from the MAF file.
-// alignment block first line starts with 'a', the block ends with a blank line
-// A MAF paragraph starts at the beginning of an alignment block, and ends
-// with a blank link.  The first sequence should be the reference sequence.
-// There may be multiple other sequences
+// An alignment block starts with a line whose first character is 'a',
+// The block ends with a blank line
+// The first sequence should be the reference sequence.
+// There may be multiple other contigs aligned to this reference sequence
 fun readMafBlock (reader: BufferedReader): List<String>? {
     val mafBlockLines = mutableListOf<String>()
     try {
@@ -109,7 +106,7 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
             if (line == null) println("null line inside while")
             line = line.trim()
             if (!line.startsWith("a")) {
-                // this skips headers
+                // skip until we find an alignment block start
                 line = reader.readLine()
                 continue
             }
@@ -137,17 +134,16 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
 
 
 // This function will walk the ref and query sequences, checking for bp coverage, and bp matches.
-// The coverageArray and identityArray positions will be updated
-// But first we have to find the correct coordinates in which to begin.
-// The alignments pulled are those that overlap the user requested coordinates.  So in each alignment,
-// we  only want to process the coordinates that overlap what the user requests.
+// The counts at each overlapping position in the coverageArray and identityArray will be updated
+// The alignments pulled are those that overlap the user requested coordinates so it is necessary
+// to calculate the start and end positions on the alignment that should be processed.
 // This function processes a single alignment block.  It may have multiple query sequences, but they
 // are all to the same contig and coordinates on that contig
 
 // This method assumes the alignments List contains only the "s" lines, with ref line first
+// Any existing "i,"e" or "q" lines from the alignment block should have been filtered out.
 fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, identityCnt:IntArray, startStop:ClosedRange<Int>) {
 
-    println("processCoverageAndIdentity: begin")
     // sample MAF file line: "words" are white-space delimited ( spaces or tabs)
     // The first "s" line should be the reference
     // a       sCore=23262.0
@@ -177,17 +173,15 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
     // Calculate where to start and stop processing on the alignment sequence
     // This means determining which part of the alignment sequence overlaps the user
     // requested sequence
-    var arrayOffset = 0 // offset into the coverage and identity arrays for incrementing the count
+    var arrayOffset = 0 // initial offset into the coverage and identity arrays for incrementing the count
     var alignEnd = numBPs
-    println("number of bps: $numBPs")
     if (startDiff > 0) {
         // the seqence in this MAF alignment starts after what the user requested,
         // So we can start at the beginning of the alignment,  then move the counter/identity
         // array offset to account for this difference
         refSeqIdxStart = 0
-        arrayOffset = startDiff  // lcj - need +1?
+        arrayOffset = startDiff
         alignEnd = arrayOffset + numBPs
-        //alignEnd--  // the +1 is needed for the arrayOffset start, but must be subtracted from the end or we go over.
     } else {
         // The MAF alignment includes sequence that occurs before that which the user requested.
         // adjust the alignStart. The adjustment for 0-based has already been done
@@ -195,10 +189,7 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
         arrayOffset = 0
     }
 
-    println("\n numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
-    // Having difficulty getting the alignEnd correct.  It is 1 too many
-    // when the arrayOffset > 0
-
+    println("\ncalculateCoverageAndIdentity: numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
 
     // Need to run through only the sequence covered by the user request  It may not
     // start at the beginning of the ref sequence and it may not end
@@ -210,19 +201,15 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
     // depends on the counter variable, NOT the idx below.  "idx" gets us through the MAF alignment
     // sequence.  "counter" moves us through the coverage/identity vectors.
 
-    println("\ncalculateCoverageAndIdentity: arrayOffset: ${arrayOffset} alignEnd: ${alignEnd} numBPs: ${numBPs}")
     // Only the "s" lines have been included.  The first one is the ref.
     for (alignIdx in 1 until alignments.size) {
-        println("calculateCoveageAndIdentity: for loop, alignIdx=$alignIdx")
         val sEntry = alignments.get(alignIdx)
-        println("  sEntry:${sEntry}")
         val querySeq = sEntry.split("\\s+".toRegex())[6] // there are 7 columns, the sequence is in the last one
         // gapped sequence sizes in the MAF file will be the same for ref and all alignments
 
         var counter = arrayOffset // where in the coverage/identity arrays we start to increment the metrics
         // note: "in ... until"  excludes the ending value
         var numDashes = 0
-        //for (refSeqIdx in refSeqIdxStart until refSeq.length) {
         for (refSeqIdx in 0 until refSeq.length) {
             if (refSeq.get(refSeqIdx) == '-') {
                 numDashes++
