@@ -99,6 +99,7 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
  */
 
 fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDir:String):Pair<IntArray,IntArray> {
+    val startTime = System.nanoTime()
     val userSpan = (start..stop)
     val coverage = IntArray(userSpan.count())
     val identity = IntArray(userSpan.count())
@@ -142,10 +143,13 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
                 }
                 mafBlock = readMafBlock(reader)
             }
+            reader.close()
         } catch (exc:Exception) {
             throw IllegalStateException("getCoverageAndIdentityFromMAFs: error processing file ${mafFile}: ${exc.message}")
         }
     }
+    val totalTime = (System.nanoTime() - startTime)/1e9
+    println("getCoverageAndIdentityFromMAFs: finished in ${totalTime} seconds")
     return Pair<IntArray,IntArray>(coverage,identity)
 }
 
@@ -166,7 +170,6 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
         // look for lines starting with "a", read until hit blank line or end of file
         while (line != null ) {
             // find beginning of the alignment block - a line that starts with "a"
-            if (line == null) println("null line inside while")
             line = line.trim()
             if (!line.startsWith("a")) {
                 // skip until we find an alignment block start
@@ -208,7 +211,7 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
  * the calling method.
  *
  * If there is need for this to be called from a process that will not have filtered for only S lines,
- * we could add additional filtering here with this line:
+ * we could add additional filtering at the begining and then process the filteredAlignments
  *
  *    val filteredAlignments = alignments.filter { it.startsWith("s")}
  */
