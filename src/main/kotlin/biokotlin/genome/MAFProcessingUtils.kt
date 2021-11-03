@@ -23,9 +23,67 @@ fun createWiggleFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, c
     return "code this up!"
 }
 
-fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, start:Int, stop:Int):String {
-    //TODO -
-    return "code this up"
+fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, minCoverage:Int,
+                                      minIdentity:Int, outputFile:String) {
+    //The start and stop indicate where on the genome these positions are.
+    // To make the bed file, we'll also need user specified minCoverage, minIdentity
+    // The user start/stop are 1-based.  THe bedfiles are 0-based,inclusive/exclusive
+
+    val bedFileLines = mutableListOf<String>()
+    // coverage and identity should be the same size and represent the same range of bps
+    val arraySize = coverage.size
+    var idx = 0
+    while (idx < arraySize) {
+        if (coverage[idx] < minCoverage || identity[idx] < minIdentity) {
+            // looping until both cov and identity criteria are met
+            idx++
+            continue
+        }
+        if (idx >= arraySize) {
+            break
+        }
+
+        // here idx represents the chrom start for the bedfile entry
+        val bedStart = idx+refStart-1 // userStart is 1-based, bed start is 0-based
+        var bedEnd = bedStart+1
+        val entrySB = StringBuilder()
+        idx++
+        if (idx >= arraySize) {
+            entrySB.append(contig).append("\t").append(bedStart).append("\t").append(bedEnd).append("\n")
+            bedFileLines.add(entrySB.toString())
+        } else {
+            while (idx < arraySize && coverage[idx] >= minCoverage && identity[idx] >= minIdentity) {
+                idx++
+            }
+            bedEnd = idx+refStart -1 // -1 because we incremented beyond the values that matched our criteria
+            entrySB.append(contig).append("\t").append(bedStart).append("\t").append(bedEnd).append("\t")
+            // This bed file will have the #gffTags added - Name is what will be displayed as
+            // the display name of the feature in IGV
+            val entryName="Name=${contig}_${bedStart}_${bedEnd}"
+            entrySB.append(entryName).append("\n")
+            bedFileLines.add(entrySB.toString())
+        }
+    }
+    if (bedFileLines.size == 0) {
+        println("createBedFileFromCoverageIdentity: WARNING - no entries found that meet user criteria of minCoverage:$minCoverage and minIdentity:$minIdentity")
+        return
+    }
+
+    // Create the file
+    try {
+        // File will be closed by "use"
+        File(outputFile).bufferedWriter().use { out ->
+            out.write("#gffTags\n")
+            bedFileLines.forEach {
+                out.write(it)
+            }
+        }
+        println("createBedFileFromCoverageIdentity: File written to ${outputFile}")
+    } catch (exc:Exception) {
+        throw IllegalStateException("createBedFileFromCoverageIdentity: error creating bedFile: ${exc.message}")
+    }
+
+
 }
 
 /**
@@ -65,6 +123,7 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
                 val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
                 // the first entry should be the ref
                 val refData = filteredMafBlock.get(0)
+                // Maf files are white space separated - could be tabs or spaces
                 val refSplitLine = refData.split("\\s+".toRegex())
                 val alignContig = refSplitLine[1]
                 val refStart = refSplitLine[2].toInt()
@@ -91,11 +150,15 @@ fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDi
 }
 
 
-// function to read alignment block from the MAF file.
-// An alignment block starts with a line whose first character is 'a',
-// The block ends with a blank line
-// The first sequence should be the reference sequence.
-// There may be multiple other contigs aligned to this reference sequence
+/**
+ * function to read alignment block from the MAF file.
+ *
+ * An alignment block starts with a line whose first character is 'a',
+ * The block ends with a blank line
+ * The first sequence should be the reference sequence.
+ * There may be multiple  contigs aligned to this reference sequence
+ * The MAF alignment block may also contain lines beginning with "e", "i" or "q"
+ */
 fun readMafBlock (reader: BufferedReader): List<String>? {
     val mafBlockLines = mutableListOf<String>()
     try {
@@ -132,21 +195,27 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
     return null  // no alignment block found
 }
 
-
-// This function will walk the ref and query sequences, checking for bp coverage, and bp matches.
-// The counts at each overlapping position in the coverageArray and identityArray will be updated
-// The alignments pulled are those that overlap the user requested coordinates so it is necessary
-// to calculate the start and end positions on the alignment that should be processed.
-// This function processes a single alignment block.  It may have multiple query sequences, but they
-// are all to the same contig and coordinates on that contig
-
-// This method assumes the alignments List contains only the "s" lines, with ref line first
-// Any existing "i,"e" or "q" lines from the alignment block should have been filtered out.
+/**
+ * This function will walk the ref and query sequences, checking for bp coverage, and bp matches.
+ * The counts at each overlapping position in the coverageArray and identityArray will be updated
+ * The alignments pulled are those that overlap the user requested coordinates so it is necessary
+ * to calculate the start and end positions on the alignment that should be processed.
+ * This function processes a single alignment block.  It may have multiple query sequences, but they
+ * are all to the same contig and coordinates on that contig
+ *
+ * This method assumes the alignments List contains only the "s" lines, with ref line first
+ * Any existing "i,"e" or "q" lines from the alignment block should have been filtered by
+ * the calling method.
+ *
+ * If there is need for this to be called from a process that will not have filtered for only S lines,
+ * we could add additional filtering here with this line:
+ *
+ *    val filteredAlignments = alignments.filter { it.startsWith("s")}
+ */
 fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, identityCnt:IntArray, startStop:ClosedRange<Int>) {
 
-    // sample MAF file line: "words" are white-space delimited ( spaces or tabs)
+    // sample MAF alignment block filtered to only contain the "s" lines: "words" are white-space delimited ( spaces or tabs)
     // The first "s" line should be the reference
-    // a       sCore=23262.0
     // s       B73.chr7        12      38      +       158545518       AAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG
     // s       OH43.chr6       48      38      +       161576975       AAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG
     // s       Ms71.chr7       116834  38      +       4622798 AAA-GGGAATGTTAACCAAATGA---GTTGTCTCTTATGGTG
