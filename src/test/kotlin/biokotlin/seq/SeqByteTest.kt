@@ -54,7 +54,7 @@ class SeqByteTest : StringSpec({
     "copyOfBytes for SeqByte should be simple UTF-8" {
         dnaSeq.copyOfBytes() shouldBe dnaString.toByteArray(Charsets.UTF_8)
         rnaSeq.copyOfBytes() shouldNotBe rnaString.toByteArray()  //the byte array has U -> T
-        rnaSeq.copyOfBytes()[3] shouldBe 'T'.toByte()  //the byte array has U -> T
+        rnaSeq.copyOfBytes()[3] shouldBe 'T'.code.toByte()  //the byte array has U -> T
     }
 
     "Test of transcription" {

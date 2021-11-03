@@ -3,7 +3,9 @@ package biokotlin.kegg
 import biokotlin.seq.NucSeq
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.Seq
+import io.ktor.util.*
 import kotlinx.serialization.*
+import java.util.*
 
 /**
  * Fundamental key for a KEGG entities.  A combination of DB abbreviation combined with a KEGG ID (kid)
@@ -59,7 +61,7 @@ data class KeggEntry private constructor(val dbAbbrev: String, val kid: String) 
                 else -> throw IllegalArgumentException("Must be 1 to 3 strings representing the DB and KID")
             }
             if (dbAbbr == null) throw IllegalArgumentException("DB could not be inferred from ${dbKid[0]}")
-            dbAbbr = dbAbbr.toLowerCase()
+            dbAbbr = dbAbbr.lowercase()
             if (KeggCache.isOrgCode(dbAbbr)) {//no more checks for genes
                 return KeggEntry(dbAbbr, kid)
             }
@@ -80,7 +82,7 @@ data class KeggEntry private constructor(val dbAbbrev: String, val kid: String) 
          * the initial validation table.
          */
         internal fun orgAndGenome(orgCode: String, genomeKid: String): Pair<KeggEntry,KeggEntry> {
-            if(orgCode.length !in 3..4 || orgCode != orgCode.toLowerCase())
+            if(orgCode.length !in 3..4 || orgCode != orgCode.lowercase())
                 throw IllegalArgumentException("Org code '$orgCode' does not look alike Kegg Organisms")
             if(!genomeKid.startsWith("T") || genomeKid.length !in 5..6)
                 throw IllegalArgumentException("Genome KID '$genomeKid' does not look alike Kegg KID")

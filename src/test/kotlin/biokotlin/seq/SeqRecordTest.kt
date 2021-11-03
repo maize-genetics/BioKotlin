@@ -1,20 +1,10 @@
 package biokotlin.seq
 
-import biokotlin.data.CodonTable
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.data.blocking.forAll
-import io.kotest.data.row
-import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import org.nield.kotlinstatistics.median
-import kotlin.system.measureTimeMillis
 
 class SeqRecordTest : StringSpec({
     val dnaString = "ACGTGGTGA"
-    val rnaString = "ACGUGGUGA"
     val proteinString = "TW*"
 
     val record1 = NucSeqRecord(NucSeq(dnaString), "Sequence 1", description="The first sequence",

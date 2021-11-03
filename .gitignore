@@ -93,3 +93,5 @@ vignettes/*.pdf
 kotlinScripting.xml
 uiDesigner.xml
 /kegg.cache.json
+/.idea
+lets-plot-images

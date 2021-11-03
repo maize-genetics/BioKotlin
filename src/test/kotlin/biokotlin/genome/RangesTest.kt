@@ -1,3 +1,5 @@
+@file:Suppress("NAME_SHADOWING")
+
 package biokotlin.genome
 
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
@@ -51,6 +53,7 @@ class RangesTest: StringSpec({
         sRange2.endInclusive.site shouldBe 90
 
         var intRange = 1..10
+        intRange.last shouldBe 10
         intRange = 1..10+1
         intRange.last shouldBe 11
 
@@ -89,12 +92,12 @@ class RangesTest: StringSpec({
     "General Set Test - test SeqPositionRangeComparator" {
 
         // This is calling Kotlin setOf(), which doesn't take a list
-        var setRanges = setOf(sr1, sr2, sr3, sr4)
+        val setRanges = setOf(sr1, sr2, sr3, sr4)
 
         setRanges.elementAt(0).start.site shouldBe 27
         setRanges.elementAt(1).start.site shouldBe 1
 
-        var setRangesSorted = setRanges.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge))
+        val setRangesSorted = setRanges.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge))
         setRangesSorted.elementAt(0).start.site shouldBe 1
         setRangesSorted.elementAt(1).start.site shouldBe 27
 
@@ -102,7 +105,7 @@ class RangesTest: StringSpec({
 
     "List SeqPositionRanges to sorted set" {
 
-        var rangeList = mutableListOf<SRange>()
+        val rangeList = mutableListOf<SRange>()
         rangeList.add(sr1)
         rangeList.add(sr2)
         rangeList.add(sr3)
@@ -110,7 +113,7 @@ class RangesTest: StringSpec({
         rangeList[0].start.site shouldBe 27
         rangeList[1].start.site shouldBe 1
 
-        var rangeListSorted = rangeList.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge))
+        val rangeListSorted = rangeList.toSortedSet(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge))
 
         rangeListSorted.elementAt(0).start.site shouldBe 1
         rangeListSorted.elementAt(1).start.site shouldBe 27
@@ -140,7 +143,7 @@ class RangesTest: StringSpec({
         srSet.elementAt(2).start.site shouldBe 25
         srSet.elementAt(3).start.site shouldBe 18
 
-        var rangeList: MutableList<SRange> = mutableListOf()
+        val rangeList: MutableList<SRange> = mutableListOf()
         rangeList.add(sr1)
         rangeList.add(sr2)
         rangeList.add(sr3)
@@ -154,13 +157,13 @@ class RangesTest: StringSpec({
 
     "Test coalescing ranges" {
 
-        var srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge),  sr1,sr2,sr3,sr6)
+        val srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge),  sr1,sr2,sr3,sr6)
         srSet.size shouldBe 4
 
-        var coalescedSet = coalescingsetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr6)
+        val coalescedSet = coalescingsetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr6)
         coalescedSet.size shouldBe 3
 
-        var rangeList: MutableList<SRange> = mutableListOf()
+        val rangeList: MutableList<SRange> = mutableListOf()
         rangeList.add(sr1)
         rangeList.add(sr2)
         rangeList.add(sr3)
@@ -170,14 +173,14 @@ class RangesTest: StringSpec({
     }
     "SRangeSet from SeqPositionRanges filtered and mapped toSet, and IntRanges filtered and mapped to SRanges Set" {
 
-        var rangeList = mutableListOf<SRange>()
+        val rangeList = mutableListOf<SRange>()
         rangeList.add(sr1)
         rangeList.add(sr2)
         rangeList.add(sr3)
         rangeList.add(sr4)
         rangeList.add(sr5)
 
-        var nonCoalescingSet = rangeList.filter{ it.start.seqRecord!!.id == "Seq1"}
+        val nonCoalescingSet = rangeList.filter{ it.start.seqRecord!!.id == "Seq1"}
         nonCoalescingSet.contains(sr3) shouldBe false
         nonCoalescingSet.contains(sr4) shouldBe false
         nonCoalescingSet.size shouldBe 2
@@ -209,15 +212,15 @@ class RangesTest: StringSpec({
     }
     "Test createShuffledSubRangeList and findPair" {
 
-        var targetLen = 10
-        var sRange = record1.range(1..23)
-        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        val targetLen = 10
+        val sRange = record1.range(1..23)
+        val sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
-        var subRanges = createShuffledSubRangeList(targetLen, sRangeSet)
+        val subRanges = createShuffledSubRangeList(targetLen, sRangeSet)
         subRanges.size shouldBe 13
 
         // test findNegativePeaks - it needs the range list from above
-        var positive = NucSeq("ACGTGGTGAA")
+        val positive = NucSeq("ACGTGGTGAA")
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
         val negativePeaks = findNegativePeaks(positive, subRanges, gcSame,3)
 
@@ -234,16 +237,16 @@ class RangesTest: StringSpec({
         negativePeaks.size shouldBe 3
     }
     "test findPair comparing to a NucSeq " {
-        var sRange = record1.range(1..23)
-        var sRange2 = record2.range(25..61)
-        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        val sRange = record1.range(1..23)
+        val sRange2 = record2.range(25..61)
+        val sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
         sRangeSet.add(sRange2)
 
-        var positive = NucSeq("ACGTGGTGAA")
+        val positive = NucSeq("ACGTGGTGAA")
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
 
-        var negativePeaks = findPair(positive, sRangeSet, gcSame, 3)
+        val negativePeaks = findPair(positive, sRangeSet, gcSame, 3)
         println("number of negativePeaks: ${negativePeaks.size}")
         for (range in negativePeaks) {
             val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
@@ -253,16 +256,16 @@ class RangesTest: StringSpec({
     }
     "test findPair comparing to an SRange " {
 
-        var positivePeakSRange = record1.range(1..10)
-        var sRange = record1.range(1..23)
-        var sRange2 = record2.range(25..61)
-        var sRangeSet:MutableSet<SRange> = mutableSetOf()
+        val positivePeakSRange = record1.range(1..10)
+        val sRange = record1.range(1..23)
+        val sRange2 = record2.range(25..61)
+        val sRangeSet:MutableSet<SRange> = mutableSetOf()
         sRangeSet.add(sRange)
         sRangeSet.add(sRange2)
 
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
 
-        var negativePeaks = findPair(positivePeakSRange, sRangeSet, gcSame, 3)
+        val negativePeaks = findPair(positivePeakSRange, sRangeSet, gcSame, 3)
         println("number of negativePeaks: ${negativePeaks.size}")
         for (range in negativePeaks) {
             val seqRec:NucSeqRecord = range.start.seqRecord as NucSeqRecord
@@ -272,13 +275,13 @@ class RangesTest: StringSpec({
     }
     "test findPair from an SRange " {
 
-        var positivePeakSRange = record1.range(1..10)
-        var sRange = record1.range(1..23)
-        var sRange2 = record2.range(25..61)
+        val positivePeakSRange = record1.range(1..10)
+        val sRange = record1.range(1..23)
+        val sRange2 = record2.range(25..61)
 
         val sRangeSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort, SeqRangeSort.leftEdge), sRange, sRange2)
         val gcSame:(NucSeq, NucSeq) -> Boolean = { a, b -> (a.gc() == b.gc())}
-        var negativePeaks = positivePeakSRange.pairedInterval(sRangeSet, gcSame, 3)
+        val negativePeaks = positivePeakSRange.pairedInterval(sRangeSet, gcSame, 3)
 
         // Peaks are from a shuffled list and will vary on each iteration
         // of this test.
@@ -291,10 +294,10 @@ class RangesTest: StringSpec({
     }
 
     "Test bedfileToSRangeSet " {
-        var fasta = "src/test/kotlin/biokotlin/genome/chr9chr10short.fa"
+        val fasta = "src/test/kotlin/biokotlin/genome/chr9chr10short.fa"
         // This bedfile has 5 chr9 and 4 chr10 entries
-        var bedFile = "src/test/kotlin/biokotlin/genome/chr9chr10_SHORT.bed"
-        var srangeSet = bedfileToSRangeSet(bedFile,fasta)
+        val bedFile = "src/test/kotlin/biokotlin/genome/chr9chr10_SHORT.bed"
+        val srangeSet = bedfileToSRangeSet(bedFile,fasta)
         println("Size of srangeSet: ${srangeSet.size}")
         srangeSet.size shouldBe 9
         println("\nnon-shuffled set:")
@@ -303,21 +306,21 @@ class RangesTest: StringSpec({
         }
 
         // now shuffle, sort them, then find intersections
-        var shuffledSet = srangeSet.shuffled()
+        val shuffledSet = srangeSet.shuffled()
         println("\nshuffledSet")
         for (range in shuffledSet) {
             println(range)
         }
 
-        var srangeList: List<SRange> = shuffledSet.toList()
-        var sortedSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort, SeqRangeSort.leftEdge),srangeList)
+        val srangeList: List<SRange> = shuffledSet.toList()
+        val sortedSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.alphaThenNumberSort, SeqRangeSort.leftEdge),srangeList)
         println("\nsortedSet from nonCoalescingSetOf:")
         for (range in sortedSet) {
             println(range)
         }
 
         // At this point, I want to test some intersect code on a large set - see small intersect case below
-        var positivePeak = sortedSet.elementAt(8) // picking an arbitrary element as my peak
+        val positivePeak = sortedSet.elementAt(8) // picking an arbitrary element as my peak
         println("\nPeak for testing: $positivePeak")
 
         val flankedSet = positivePeak.flankBoth(100)
@@ -327,9 +330,9 @@ class RangesTest: StringSpec({
         }
 
         // find ranges that intersect with lower flank
-        var lowerFlankIntersections = flankedSet.elementAt(0).intersectingRanges(sortedSet)
+        val lowerFlankIntersections = flankedSet.elementAt(0).intersectingRanges(sortedSet)
         // find ranges that intersect with upper flank
-        var upperFlankIntersections = flankedSet.elementAt(1).intersectingRanges(sortedSet)
+        val upperFlankIntersections = flankedSet.elementAt(1).intersectingRanges(sortedSet)
         println("\nlower flanking intersecting ranges:")
         for (range in lowerFlankIntersections) {
             println(range)
@@ -362,7 +365,7 @@ class RangesTest: StringSpec({
         intersectingRanges.contains(sr0) shouldBe false
 
         // Test the SRange function:  SRange.intersectingRanges()
-        var intersectionsFromSRange = peak.intersectingRanges(srSet)
+        val intersectionsFromSRange = peak.intersectingRanges(srSet)
 
         intersectionsFromSRange.size shouldBe 1
         intersectionsFromSRange.contains(sr5) shouldBe true
@@ -381,17 +384,17 @@ class RangesTest: StringSpec({
 
         val srSet = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr6,sr3,sr5,sr4)
 
-        var peak = SeqPosition(record1, 45)..SeqPosition(record1,75)
+        val peak = SeqPosition(record1, 45)..SeqPosition(record1,75)
 
         // The negative peak is picked from the regions flanking the peak.  here we'll
         // make that be 30 bps up and down, so positions 15..44 and 76..105
-        var flankedPeaks = peak.flankBoth(30)
+        val flankedPeaks = peak.flankBoth(30)
 
         // This  returns the areas that can still be used.  It removes
         // the peak spaces that are identified in srSet from the upper and lower
         // flanking peaks that were created above from the flankBoth call
-        var searchSpace1 = flankedPeaks.elementAt(0).subtract(srSet)
-        var searchSpace2 = flankedPeaks.elementAt(1).subtract(srSet)
+        val searchSpace1 = flankedPeaks.elementAt(0).subtract(srSet)
+        val searchSpace2 = flankedPeaks.elementAt(1).subtract(srSet)
 
         searchSpace1.contains(SeqPosition(record1,15)..SeqPosition(record1,24)) shouldBe true
         searchSpace1.size shouldBe 1
@@ -401,7 +404,7 @@ class RangesTest: StringSpec({
         searchSpace2.contains(SeqPosition(record1,88)..SeqPosition(record1,105)) shouldBe true
 
         // test SRangeSet.subtract
-        var searchSpace = flankedPeaks.subtract(srSet)
+        val searchSpace = flankedPeaks.subtract(srSet)
 
         searchSpace.size shouldBe 3
         searchSpace.contains(SeqPosition(record1,76)..SeqPosition(record1,79)) shouldBe true
@@ -433,8 +436,8 @@ class RangesTest: StringSpec({
 
     }
     "Test getOverlappingIntervals" {
-        var set1:MutableSet<IntRange> = mutableSetOf()
-        var set2:MutableSet<IntRange> = mutableSetOf()
+        val set1:MutableSet<IntRange> = mutableSetOf()
+        val set2:MutableSet<IntRange> = mutableSetOf()
 
         set1.add(1..20)
         set1.add(30..40)
@@ -498,22 +501,22 @@ class RangesTest: StringSpec({
         val sr0a = SeqPosition(null,89)..SeqPosition(null,104)
 
         val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr0a,sr2,sr0,sr3,sr5,sr4)
-        var srSet2 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr0a,sr2)
-        var srSet3 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr4)
+        val srSet2 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr0a,sr2)
+        val srSet3 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr4)
 
-        var set1set2Intersect = srSet1 intersect srSet2
+        val set1set2Intersect = srSet1 intersect srSet2
         println("\nintersect of SRANGE set1/set2:  should be 3 elements")
         for (range in set1set2Intersect) {
             println(range)
         }
 
-        var set2Set3Union = srSet2 union srSet3
+        val set2Set3Union = srSet2 union srSet3
         println("\nunion of SRANGE set2/set3:  should be 5 elements")
         for (range in set2Set3Union) {
             println(range)
         }
 
-        var set1SubtractSet2 = srSet1 subtract srSet2
+        val set1SubtractSet2 = srSet1 subtract srSet2
         println("\nsubtract  SRANGE set2 from set1:  should be 4 elements")
         for (range in set1SubtractSet2) {
             println(range)
@@ -522,7 +525,7 @@ class RangesTest: StringSpec({
     "Test Krangl DataFrames " {
 
         val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr5,sr4)
-        var df:DataFrame = srSet1.toDataFrame()
+        val df:DataFrame = srSet1.toDataFrame()
         df.print()
 
         df.nrow shouldBe 5

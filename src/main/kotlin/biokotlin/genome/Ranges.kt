@@ -1,4 +1,6 @@
 @file:JvmName("Ranges")
+@file:Suppress("UnstableApiUsage")
+
 package biokotlin.genome
 
 
@@ -152,9 +154,9 @@ fun SRange.enlarge(bp: Int): SRange {
  */
 fun SRange.sequence(): String? {
 
-    var start = this.start.site
-    var end = this.endInclusive.site
-    var seqRec = this.start.seqRecord //as NucSeq // couldn't this be ProteinSeq?
+    val start = this.start.site
+    val end = this.endInclusive.site
+    val seqRec = this.start.seqRecord //as NucSeq // couldn't this be ProteinSeq?
 
     val seq = if (seqRec == null) null
               else if (seqRec is NucSeq ) seqRec.seq()
@@ -198,10 +200,10 @@ fun SRange.shift(count: Int): SRange {
 /**
  * Flank the lower end of the range if it isn't already at 1
  */
-fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
+fun SRange.flankLeft(count: Int) : SRange? {
     if (this.start.site > 1) {
-        var lowerF  = (this.start.site.toLong() - count).toInt().coerceAtLeast(1)
-        var upperF = this.start.site - 1
+        val lowerF  = (this.start.site.toLong() - count).toInt().coerceAtLeast(1)
+        val upperF = this.start.site - 1
         return SeqPositionRanges.of(SeqPosition(this.start.seqRecord,lowerF),
                 SeqPosition(this.endInclusive.seqRecord,upperF))
     }
@@ -213,10 +215,10 @@ fun SRange.flankLeft(count: Int, max: Int = Int.MAX_VALUE) : SRange? {
  */
 fun SRange.flankRight(count: Int) : SRange? {
     val seqRecord = this.endInclusive.seqRecord
-    var max = seqRecord?.size()?:Int.MAX_VALUE
+    val max = seqRecord?.size()?:Int.MAX_VALUE
     if (this.endInclusive.site < max) {
-        var lowerF = this.endInclusive.site + 1
-        var upperF = (minOf (this.endInclusive.site + count, max))
+        val lowerF = this.endInclusive.site + 1
+        val upperF = (minOf (this.endInclusive.site + count, max))
         return SeqPositionRanges.of(SeqPosition(seqRecord,lowerF),
                 SeqPosition(seqRecord,upperF))
     }
@@ -229,7 +231,7 @@ fun SRange.flankRight(count: Int) : SRange? {
  * The upper end (right edge) will not exceed max size of sequence in the SeqRecord
  */
 fun SRange.flankBoth(count: Int) : Set<SRange> {
-    var flankingRanges: MutableSet<SRange> = mutableSetOf()
+    val flankingRanges: MutableSet<SRange> = mutableSetOf()
     // Flank the lower end of the range if it isn't already at 1
     val leftFlank = this.flankLeft(count)
     if (leftFlank != null) flankingRanges.add(leftFlank)
@@ -267,15 +269,15 @@ fun SRange.subtract(removeRanges: Set<SRange>) : SRangeSet {
  * did not overlap any positions represented by an SRange on the intersectingRanges set.
  */
 fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSet {
-    var newRanges : MutableSet<SRange> = mutableSetOf()
+    val newRanges : MutableSet<SRange> = mutableSetOf()
 
-    var boundaryStart = boundaryRange.start.site
-    var boundaryEnd = boundaryRange.endInclusive.site
+    val boundaryStart = boundaryRange.start.site
+    val boundaryEnd = boundaryRange.endInclusive.site
 
     // Create Guava coalescing map from the intersetingRanges
-    var rangeMap: RangeMap<Int,String> = TreeRangeMap.create()
+    val rangeMap: RangeMap<Int,String> = TreeRangeMap.create()
     for (srange in intersectingRanges) {
-         var range = Range.closed(srange.start.site, srange.endInclusive.site)
+         val range = Range.closed(srange.start.site, srange.endInclusive.site)
         rangeMap.putCoalescing(range,"srange")
     }
 
@@ -300,7 +302,7 @@ fun complement(boundaryRange: SRange, intersectingRanges: Set<SRange>): SRangeSe
     // AS noted above: The complemented ranges were calculated as if the original ranges were inclusive/exclusive.
     // (closedOpen) These are adjusted to closed/closed ranges before they are returned in an SRangeSet
 
-    var peakSeqRec = boundaryRange.start.seqRecord
+    val peakSeqRec = boundaryRange.start.seqRecord
     for (range in fixedComplementRanges.asRanges()) {
         // lowerBoundType() fails on range, but works when setting a new variable
        // var crange = range
@@ -464,8 +466,8 @@ fun getOverlappingIntervals(set1: Set<IntRange>, set2: Set<IntRange>): Set<IntRa
     val intersections : MutableSet<IntRange> = mutableSetOf()
     var idx1 = 0
     var idx2 = 0
-    var len1 = set1.size
-    var len2 = set2.size
+    val len1 = set1.size
+    val len2 = set2.size
 
     // sort the set: protects against user calling this directly with unsorted sets
     val sortedSet1 = set1.toSortedSet(leftEdge)
@@ -500,16 +502,16 @@ fun srangeIDMatch(peak: SRange, searchSpace: Set<SRange>) {
 // with fun findPair() with the same signature
 fun SRange.pairedInterval(searchSpace: Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int=1): Set<SRange> {
 
-    var targetLen = this.endInclusive.site - this.start.site + 1
+    val targetLen = this.endInclusive.site - this.start.site + 1
 
     // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
-    var seqRecordStart = this.start.seqRecord as NucSeqRecord
+    val seqRecordStart = this.start.seqRecord as NucSeqRecord
 
     // this assumes the searchSpace has already been filtered for ranges that are too short
-    var tempRangeList = createShuffledSubRangeList(targetLen, searchSpace)
+    val tempRangeList = createShuffledSubRangeList(targetLen, searchSpace)
 
-    var targetSeq = seqRecordStart.sequence.toString().substring(this.start.site-1,this.endInclusive.site)
-    var rangeSet = findNegativePeaks(NucSeq(targetSeq),tempRangeList, pairingFunc, count)
+    val targetSeq = seqRecordStart.sequence.toString().substring(this.start.site-1,this.endInclusive.site)
+    val rangeSet = findNegativePeaks(NucSeq(targetSeq),tempRangeList, pairingFunc, count)
 
     return rangeSet // return immutable Kotlin Set
 }
@@ -581,17 +583,17 @@ fun coalescingsetOf(comparator: Comparator<SRange> = SeqRangeSort.by(SeqRangeSor
 
 // Sometimes we just want a range - Travis's stuff
 fun IntRange.flankBoth(count: Int): Set<IntRange> {
-    var flankingRanges: MutableSet<IntRange> = mutableSetOf()
+    val flankingRanges: MutableSet<IntRange> = mutableSetOf()
     // Flank the lower end of the range if it isn't already at 1
     if (this.first > 1) {
-        var lowerF = (this.first.toLong() - count).coerceAtLeast(1).toInt()
-        var upperF = this.first - 1
+        val lowerF = (this.first.toLong() - count).coerceAtLeast(1).toInt()
+        val upperF = this.first - 1
         flankingRanges.add(lowerF..upperF)
     }
 
     // Flank the upper end of range
-    var lowerF = this.endInclusive + 1
-    var upperF =  this.endInclusive + count
+    val lowerF = this.endInclusive + 1
+    val upperF =  this.endInclusive + count
     flankingRanges.add(lowerF..upperF)
     return flankingRanges.toSet()
 }
@@ -608,7 +610,7 @@ fun SRangeSet.toDataFrame():DataFrame {
 
     // This returns a list of objects, which is converted to
     // a dataFrame, then returned.
-    var rangesWithStartEnd = this.map{ range ->
+    val rangesWithStartEnd = this.map{ range ->
         val seqRec = range.start.seqRecord
         val id = if (seqRec == null) "NONE" else seqRec.id
         val start = range.start.site
@@ -623,7 +625,7 @@ fun SRangeSet.toDataFrame():DataFrame {
         frameObject
     }
 
-    var df = rangesWithStartEnd.asDataFrame()
+    val df = rangesWithStartEnd.asDataFrame()
     return df
 }
 
@@ -636,7 +638,7 @@ fun SRangeSet.toDataFrame():DataFrame {
  *
  */
 fun SRangeSet.subtract(removeRanges: Set<SRange>) : SRangeSet {
-    var newRanges: MutableSet<SRange> = mutableSetOf()
+    val newRanges: MutableSet<SRange> = mutableSetOf()
 
     for (range in this) {
         val intersectingRanges = findIntersectingSRanges(range, removeRanges)
@@ -665,11 +667,11 @@ fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqRangeSort.by(
     sortedRanges.addAll(this)
     sRangeDeque.add(sortedRanges.elementAt(0))
     for (index in 1 until sortedRanges.size) {
-        var prevRange = sRangeDeque.peekLast()
-        var nextRange = sortedRanges.elementAt(index)
+        val prevRange = sRangeDeque.peekLast()
+        val nextRange = sortedRanges.elementAt(index)
         // SeqRecord must match, then check positions
-        var prevSeqRecord = prevRange.endInclusive.seqRecord
-        var nextRangeSeqRecord = nextRange.start.seqRecord
+        val prevSeqRecord = prevRange.endInclusive.seqRecord
+        val nextRangeSeqRecord = nextRange.start.seqRecord
         var merge = false
         if (prevSeqRecord == null) {
             if (nextRangeSeqRecord == null) {
@@ -711,9 +713,9 @@ fun SRangeSet.merge(count: Int, comparator: Comparator<SRange> =SeqRangeSort.by(
  * return:  the adjusted SRangeSet
  */
 fun SRangeSet.flankRight(count: Int): SRangeSet {
-    var frRangeSet: MutableSet<SRange> = mutableSetOf()
+    val frRangeSet: MutableSet<SRange> = mutableSetOf()
     this.forEach { range ->
-        var fRange = range.flankRight(count)
+        val fRange = range.flankRight(count)
         if (fRange != null) frRangeSet.add(fRange)
     }
 
@@ -726,9 +728,9 @@ fun SRangeSet.flankRight(count: Int): SRangeSet {
  * return: the adjusted SRangeSet
  */
 fun SRangeSet.flankLeft(count: Int): SRangeSet {
-    var flRangeSet : MutableSet<SRange> = mutableSetOf()
+    val flRangeSet : MutableSet<SRange> = mutableSetOf()
     this.forEach{range ->
-        var fRange = range.flankLeft(count)
+        val fRange = range.flankLeft(count)
         if (fRange != null) flRangeSet.add(fRange)
     }
 
@@ -741,12 +743,11 @@ fun SRangeSet.flankLeft(count: Int): SRangeSet {
  * return: the adjusted SRangeSet
  */
 fun SRangeSet.shift(count: Int): SRangeSet {
-    var sRangeSet : MutableSet<SRange> = mutableSetOf()
+    val sRangeSet : MutableSet<SRange> = mutableSetOf()
     this.forEach{range ->
-        var sRange = range.shift(count)
-        if (sRange != null) sRangeSet.add(sRange)
+        val sRange = range.shift(count)
+        sRangeSet.add(sRange)
     }
-
     return sRangeSet.toSet()
 }
 
@@ -776,9 +777,9 @@ fun SRangeSet.intersect(set2:SRangeSet): SRangeSet {
 fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
 
     // this assumes the searchSpace has already been filtered for ranges that are too short
-    var targetLen = positive.size()
-    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
-    var rangeSet = findNegativePeaks(positive, tempRangeList, pairingFunc, count)
+    val targetLen = positive.size()
+    val tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
+    val rangeSet = findNegativePeaks(positive, tempRangeList, pairingFunc, count)
 
     return rangeSet
 }
@@ -786,16 +787,16 @@ fun findPair(positive:NucSeq, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,Nu
 // findPair from SRange:  Helper functions used for Travis negativePeak() algorithm
 fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count: Int=1): Set<SRange> {
 
-    var targetLen = positive.endInclusive.site - positive.start.site + 1
+    val targetLen = positive.endInclusive.site - positive.start.site + 1
 
     // Kotlin ranges are closed/inclusive - BioKotlin is all 1-based here.
-    var seqRecord = positive.start.seqRecord as NucSeqRecord
+    val seqRecord = positive.start.seqRecord as NucSeqRecord
 
-    var targetSeq = seqRecord.sequence.toString().substring(positive.start.site-1,positive.endInclusive.site)
+    val targetSeq = seqRecord.sequence.toString().substring(positive.start.site-1,positive.endInclusive.site)
     // this assumes the searchSpace has already been filtered for ranges that are too short
 
-    var tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
-    var rangeSet = findNegativePeaks(NucSeq(targetSeq), tempRangeList, pairingFunc, count)
+    val tempRangeList = createShuffledSubRangeList(targetLen, negativeSpace)
+    val rangeSet = findNegativePeaks(NucSeq(targetSeq), tempRangeList, pairingFunc, count)
 
     return rangeSet // findNegativePeaks above returns an immutable set
 }
@@ -815,18 +816,18 @@ fun findPair(positive:SRange, negativeSpace:Set<SRange>, pairingFunc: (NucSeq,Nu
  * return:  A List<SRange> of subranges
  */
 fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRange> {
-    var subRangeList : MutableList<SRange> = mutableListOf()
+    val subRangeList : MutableList<SRange> = mutableListOf()
 
     for (range in ranges) {
-        var origRange = range.start.seqRecord as NucSeqRecord
-        var origSeq = origRange.sequence
+        val origRange = range.start.seqRecord as NucSeqRecord
+        val origSeq = origRange.sequence
         val start = range.start.site
         val end = range.endInclusive.site
         for (idx in start .. end - targetLen) {
             // Leave sequence alone - no changes
-            var seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
-            var seqPos1 = range.start.copy( site = idx)
-            var seqPos2 = range.endInclusive.copy(site = idx+targetLen-1)
+            //val seq = origSeq.toString().substring(idx-start,idx-start+targetLen)
+            val seqPos1 = range.start.copy( site = idx)
+            val seqPos2 = range.endInclusive.copy(site = idx+targetLen-1)
 
             val sRange = seqPos1..seqPos2
             subRangeList.add(sRange)
@@ -842,12 +843,12 @@ fun createShuffledSubRangeList(targetLen: Int, ranges: Set<SRange>) : List<SRang
  * and the ranges indicate which subsection of the sequence to pull.
  */
 fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (NucSeq,NucSeq) -> Boolean, count:Int): Set<SRange> {
-    var rangeSet : MutableSet<SRange> = mutableSetOf()
+    val rangeSet : MutableSet<SRange> = mutableSetOf()
     var found = 0
     for (range in rangeList)  { // Traverse the ranges, select the first "count" number that match
         // ranges are 1-based, inclusive/inclusive.  seq.substring will be 0-based, inclusive/exclusive
-        var testSeqRec = range.start.seqRecord as NucSeqRecord
-        var testSeq = testSeqRec.sequence.toString().substring(range.start.site-1,range.endInclusive.site)
+        val testSeqRec = range.start.seqRecord as NucSeqRecord
+        val testSeq = testSeqRec.sequence.toString().substring(range.start.site-1,range.endInclusive.site)
         if (pairingFunc(positive,NucSeq(testSeq))) {
             rangeSet.add(range)
             found++
@@ -862,7 +863,7 @@ fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (N
  * NucSeq is the Biokotlin data structure for DNA and RNA sequences.
  */
 fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
-    var chromNucSeqMap  = HashMap<String,NucSeq>()
+    val chromNucSeqMap  = HashMap<String,NucSeq>()
     try {
         val file = File(fasta)
         file.bufferedReader().use { br ->
@@ -903,18 +904,18 @@ fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
  * creates a set of SRanges
  */
 fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
-    var rangeSet : MutableSet<SRange> = mutableSetOf()
+    val rangeSet : MutableSet<SRange> = mutableSetOf()
     // read and store fasta sequences into map keyed by idLine chrom.
     // Then do bedfile a line at a time, use the chr column to get sequence from map
     // Can I hold all of this in memory?
 
     println("bedfileToSRangeSet: calling fastaToNucSeq")
-    var chrToNucSeq = fastaToNucSeq (fasta)
+    val chrToNucSeq = fastaToNucSeq (fasta)
 
     File(bedfile).readLines().forEach{
         val data = it.split("\t")
         require (data.size >= 3) {"bad line in bedfile: $it"}
-        var seq = chrToNucSeq.get(data[0])
+        val seq = chrToNucSeq.get(data[0])
         require (seq != null) {"chrom ${data[0]} not found in fasta file"}
         // Used data[0] as the ID instead of the "name" from the bedfile.
         // Because the sequence is the full chromosome, so the id's need to be
@@ -934,7 +935,7 @@ fun bedfileToSRangeSet (bedfile: String, fasta: String): SRangeSet {
 
 // Create a set of IntRanges instead of SRanges - will this be needed?
 fun bedfileToIntRangeSet (bedfile: String): Set<IntRange> {
-    var rangeSet : MutableSet<IntRange> = mutableSetOf()
+    val rangeSet : MutableSet<IntRange> = mutableSetOf()
     File(bedfile).readLines().forEach{
         val data = it.split("\t")
         require (data.size >= 3) {"bad line in bedfile: $it"}
@@ -953,28 +954,6 @@ class NucSeqComparator: Comparator<NucSeqRecord>{
     }
 }
 
-fun main() {
-    // See additional test cases in test/kotlin/biokotlin/genome/RangesTest.kt
-    val chr1 = NucSeqRecord(NucSeq("AAAACACAGAGATATA"),"1")
-    val chr2 = NucSeqRecord(NucSeq("GAGA".repeat(5)),"2")
-    val chr3 = NucSeqRecord(NucSeq("TATA".repeat(5)),"3")
-    // This invokes the "get" from SeqByte.kt:NucSeqByte class
-    // It slices the array, returns the sequence at the specified positions
-    val gr1 = chr1[1..5]
-    println("gr1 is: ${gr1.toString()}")
-    val gr1Rec = chr1[0..2].id("Little1")
-    println("gr1Rec is:\n $gr1Rec")
-    val grSet = setOf(chr1[0..2],chr1[4..8],chr1[2..3],chr1[3..12])
-    println(grSet)
-
-    val sRange = chr1.range(8..12)
-    println("sRange from chr.range is:\n ${sRange.toString()}")
-
-    // Creates a SeqPosition from a NucSeqRecord and position
-    val sPos = chr1.position(26)
-    println("\nsPos from chr.position is:\n${sPos.toString()}")
-
-}
 
 // Create a NucSeqRecord from this string and a provided id
 // Creates basic NucSeqRecord containing only the sequence and an id

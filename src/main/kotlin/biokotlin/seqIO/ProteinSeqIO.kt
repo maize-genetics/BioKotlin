@@ -2,6 +2,7 @@ package biokotlin.seqIO
 
 import biokotlin.seq.ProteinSeqRecord
 
+@Suppress("UNCHECKED_CAST")
 class ProteinSeqIO(filename: String, format: SeqFormat? = null) : Iterable<ProteinSeqRecord> {
 
     private val reader = reader(filename, format, SeqType.protein)
