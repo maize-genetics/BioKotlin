@@ -43,8 +43,6 @@ class MAFProcessingUtilsTest : StringSpec({
 
         val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles/test_multipleMafs"
         val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4.bed"
-        // test this with mafDir having only file mixedSeqs.maf to match the calculateCoverageAndIdentity()
-        // tests below
 
         // Test again when only files in mafDir is "mixedSeqsWithEIQlines.maf"
         // That file has identical sequence to mixedSeqs.maf, but includes i, e and q lines among the "s" lines
@@ -61,8 +59,8 @@ class MAFProcessingUtilsTest : StringSpec({
             println("${coverageAndIdentity.first[idx]}  ${coverageAndIdentity.second[idx]}")
         }
 
-        val minCov = 2
-        val minIdent = 2
+        val minCov = 4
+        val minIdent = 4
         // write a bedFile for this:
         println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
         createBedFileFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, contig, start, minCov,
