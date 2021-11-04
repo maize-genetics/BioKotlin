@@ -61,6 +61,10 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
             // the display name of the feature in IGV
             val entryName="Name=${contig}_${bedStart}_${bedEnd}"
             entrySB.append(entryName).append("\n")
+            // Ed wants coverage and identity in the attribute line, but that works on a per-bp basis,
+            // not for a coverage block.  The cov and identity could differ at each bps, so nothing so
+            // give for the full block.  Look at Wiggle file instead.
+            //var attributeLine = "coverage="
             bedFileLines.add(entrySB.toString())
         }
     }
@@ -98,6 +102,7 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
  * identical to the reference at the specified base pair.
  */
 
+// There is a more efficient implementation of this in GetCovIDFromMAFMultiThread.kt
 fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDir:String):Pair<IntArray,IntArray> {
     val startTime = System.nanoTime()
     val userSpan = (start..stop)
