@@ -95,7 +95,7 @@ class MAFProcessingUtilsTest : StringSpec({
         val minCov = 4
         val minIdent = 4
         // write the wig files for this:
-        println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
+        //println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
         val outputDir= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/"
         //createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String)
         createWiggleFilesFromCoverageIdentity(covId.first, covId.second, contig, start, outputDir)
