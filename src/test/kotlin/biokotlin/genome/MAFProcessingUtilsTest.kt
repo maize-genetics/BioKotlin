@@ -72,6 +72,35 @@ class MAFProcessingUtilsTest : StringSpec({
         createBedFileFromCoverageIdentity(covId.first, covId.second, contig, start, minCov,
             minIdent, output2)
     }
+    "test getWiggleFiles from multiple MAF" {
+
+        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles/test_multipleMafs"
+        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4.bed"
+
+        // Test again when only files in mafDir is "mixedSeqsWithEIQlines.maf"
+        // That file has identical sequence to mixedSeqs.maf, but includes i, e and q lines among the "s" lines
+        // That tests we are filtering these lines correctly.
+        val contig = "B73.chr7"
+        val start = 13
+        val stop = 50
+
+        val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+
+        println("\ncoverage/identity for original followed by multithreaded: size of array: ${covId.first.size}")
+        val startStop = (13..50)
+        for (idx in 0..startStop.count()-1) {
+            println("${covId.first[idx]}/${covId.second[idx]} ${covId.first[idx]}/${covId.second[idx]}")
+        }
+
+        val minCov = 4
+        val minIdent = 4
+        // write the wig files for this:
+        println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
+        val outputDir= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/"
+        //createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String)
+        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, contig, start, outputDir)
+
+    }
     "test Baoxing files: getCoverageAndIdentity multiple MAF" {
 
         // This test is here to verify we can process larger MAF files.  Verification the functions

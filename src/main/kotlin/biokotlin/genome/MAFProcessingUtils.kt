@@ -2,6 +2,7 @@ package biokotlin.genome
 
 import biokotlin.util.bufferedReader
 import java.io.BufferedReader
+//import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.abs
 import java.nio.file.Files
@@ -18,9 +19,72 @@ import java.nio.file.Files
  *    Words in a line are delimited by any white space.
  */
 
-fun createWiggleFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, start:Int, stop:Int):String {
-    //TODO
-    return "code this up!"
+fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String) {
+
+    // There will be 2 wiggle files created = 1 for identity and 1 for coverage
+
+    // The wiggle file has these formatted lines:
+    // variableStep chrom=chr2
+    //300701 12.5
+    //300702 12.5
+    //300703 12.5
+    //300704 12.5
+    //300705 12.5
+    //
+    // or more concisely:
+    // variableStep chrom=chr2 span=5
+    //300701 12.5
+
+    // The chrom positions in the wiggle file are 1-based
+    // This function codes the more concise version
+
+    // wiggle for identity
+    val identityFile = "${outputDir}/identity_${contig}.wig"
+    File(identityFile).bufferedWriter().use { writer ->
+        var idx = 0
+        while( idx < identity.size) {
+            val idValue = identity[idx]
+            var count = 1
+            while (idx+1 < identity.size && identity[idx+1] == idValue) {
+                count++
+                idx++
+            }
+            // +2 because the start is inclusive and we have to move up to 1-based
+            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
+            // 30-5 + 2 = 27
+            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
+            val start = idx-count+2
+            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
+            val fileLine2 = "${start} ${idValue}\n"
+            writer.write(fileLine1)
+            writer.write(fileLine2)
+            idx++
+        }
+    }
+
+    // wiggle for coverage
+    val coverageFile = "${outputDir}/coverage_${contig}.wig"
+    File(coverageFile).bufferedWriter().use { writer ->
+        var idx = 0
+        while( idx < coverage.size) {
+            val idValue = coverage[idx]
+            var count = 1
+            while (idx+1 < coverage.size && coverage[idx+1] == idValue) {
+                count++
+                idx++
+            }
+            // +2 because the start is inclusive and we have to move up to 1-based
+            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
+            // 30-5 + 2 = 27
+            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
+            val start = idx-count+2
+            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
+            val fileLine2 = "${start} ${idValue}\n"
+            writer.write(fileLine1)
+            writer.write(fileLine2)
+            idx++
+        }
+    }
 }
 
 fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, minCoverage:Int,
