@@ -53,10 +53,12 @@ class MAFProcessingUtilsTest : StringSpec({
 
         val coverageAndIdentity = getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
 
-        println("\ncoverage / identity for the array: size of array: ${coverageAndIdentity.first.size}")
+        val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+
+        println("\ncoverage/identity for original followed by multithreaded: size of array: ${coverageAndIdentity.first.size}")
         val startStop = (13..50)
         for (idx in 0..startStop.count()-1) {
-            println("${coverageAndIdentity.first[idx]}  ${coverageAndIdentity.second[idx]}")
+            println("${coverageAndIdentity.first[idx]}/${coverageAndIdentity.second[idx]} ${covId.first[idx]}/${covId.second[idx]}")
         }
 
         val minCov = 4
@@ -65,6 +67,10 @@ class MAFProcessingUtilsTest : StringSpec({
         println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
         createBedFileFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, contig, start, minCov,
             minIdent, outputBedFile)
+        println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
+        val output2= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4multiThread.bed"
+        createBedFileFromCoverageIdentity(covId.first, covId.second, contig, start, minCov,
+            minIdent, output2)
     }
     "test Baoxing files: getCoverageAndIdentity multiple MAF" {
 
