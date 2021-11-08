@@ -31,7 +31,7 @@ class MAFProcessingUtilsTest : StringSpec({
         val contig = "B73.chr7"
         val start = 13
         val stop = 50
-        val coverageAndIdentity = getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+        val coverageAndIdentity = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
 
         println("\ncoverage / identity for the array: size of array: ${coverageAndIdentity.first.size}")
         val startStop = (13..50)
@@ -51,22 +51,11 @@ class MAFProcessingUtilsTest : StringSpec({
         val start = 13
         val stop = 50
 
-        val coverageAndIdentity = getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
-
         val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
-
-        println("\ncoverage/identity for original followed by multithreaded: size of array: ${coverageAndIdentity.first.size}")
-        val startStop = (13..50)
-        for (idx in 0..startStop.count()-1) {
-            println("${coverageAndIdentity.first[idx]}/${coverageAndIdentity.second[idx]} ${covId.first[idx]}/${covId.second[idx]}")
-        }
 
         val minCov = 4
         val minIdent = 4
         // write a bedFile for this:
-        println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
-        createBedFileFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, contig, start, minCov,
-            minIdent, outputBedFile)
         println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
         val output2= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4multiThread.bed"
         createBedFileFromCoverageIdentity(covId.first, covId.second, contig, start, minCov,
@@ -94,11 +83,12 @@ class MAFProcessingUtilsTest : StringSpec({
 
         val minCov = 4
         val minIdent = 4
+        val wiggleContig = "chr7"
         // write the wig files for this:
         //println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
         val outputDir= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/"
         //createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String)
-        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, contig, start, outputDir)
+        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, wiggleContig, start, outputDir)
 
     }
     "test Baoxing files: getCoverageAndIdentity multiple MAF" {
@@ -123,7 +113,7 @@ class MAFProcessingUtilsTest : StringSpec({
         val start = 7078980
         val stop = 7091179
 
-        val coverageAndIdentity = getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+        val coverageAndIdentity = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
 
         println("\ncoverage / identity for the array: size of array: ${coverageAndIdentity.first.size}")
 

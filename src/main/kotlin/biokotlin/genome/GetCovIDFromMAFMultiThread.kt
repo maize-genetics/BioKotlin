@@ -43,6 +43,11 @@ class GetCovIDFromMAFMultiThread {
 
     }
 
+    /**
+     * This function takes a user contig,  start/stop positions which are 1-based and inclusive/inclusive
+     * and a MAF file.
+     * From this input it creates 2 IntArrays which are returned as a Pair of <Coverage,Identity>
+     */
     private suspend fun readFile(file: File, start:Int, end:Int, userContig:String) {
 
         val userSpan = (start..end)
@@ -83,6 +88,9 @@ class GetCovIDFromMAFMultiThread {
 
     }
 
+
+    // This method takes all the coverage and identity counts from the individually
+    // read files and concatenates them into 1 return result.
     private suspend fun combineResults(start:Int, end:Int): Pair<IntArray, IntArray> {
 
         val startTime = System.nanoTime()
@@ -100,7 +108,7 @@ class GetCovIDFromMAFMultiThread {
             }
         }
         val combined: Pair<IntArray, IntArray> = Pair(coverage, identity)
-        // This time is close the the amount of time it takes to run all the MAFs because
+        // This time is close to the amount of time it takes to run all the MAFs because
         // it starts as soon as the first result file appears, or rather as soon as we
         // exit the for-loop, which is nearly immediately.  A better judge of time is
         // a calling method that times how long it takes the call to this class's

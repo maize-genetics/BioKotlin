@@ -1,11 +1,9 @@
 package biokotlin.genome
 
-import biokotlin.util.bufferedReader
 import java.io.BufferedReader
 //import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.abs
-import java.nio.file.Files
 
 /**
  * This file holds methods used to process MAF Files with the intent of
@@ -17,6 +15,7 @@ import java.nio.file.Files
  *
  *  NOTE: these lines are NOT tab-delimited, but rather white-space delimited - per the spec:
  *    Words in a line are delimited by any white space.
+ *
  */
 
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String) {
@@ -40,30 +39,55 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
 
     // wiggle for identity
     val identityFile = "${outputDir}/identity_${contig}.wig"
+//    File(identityFile).bufferedWriter().use { writer ->
+//        var idx = 0
+//        while( idx < identity.size) {
+//            val idValue = identity[idx]
+//            var count = 1
+//            while (idx+1 < identity.size && identity[idx+1] == idValue) {
+//                count++
+//                idx++
+//            }
+//            // +2 because the start is inclusive and we have to move up to 1-based
+//            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
+//            // 30-5 + 2 = 27
+//            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
+//            val start = idx-count+2
+//            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
+//            val fileLine2 = "${start} ${idValue}\n"
+//            writer.write(fileLine1)
+//            writer.write(fileLine2)
+//            idx++
+//        }
+//
+//    }
+
+    // version that is step-1, vs the "span" above
+    // THe lines will look like this:
+    //fixedStep chrom=chr3 start=400601 step=100
+    //11
+    //22
+    //33
+    // In our case, it will be step=1, and start=1
+    //fixedStep chrom=chr1 start=1 step=100
+    //11
+    //22
+    //33
     File(identityFile).bufferedWriter().use { writer ->
         var idx = 0
+        val fixedStepHeader = "fixedStep chrom=${contig} start=1 step=1\n"
+        writer.write(fixedStepHeader)
         while( idx < identity.size) {
             val idValue = identity[idx]
-            var count = 1
-            while (idx+1 < identity.size && identity[idx+1] == idValue) {
-                count++
-                idx++
-            }
-            // +2 because the start is inclusive and we have to move up to 1-based
-            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
-            // 30-5 + 2 = 27
-            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
-            val start = idx-count+2
-            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
-            val fileLine2 = "${start} ${idValue}\n"
-            writer.write(fileLine1)
-            writer.write(fileLine2)
+            val fileLine = "${idValue}\n"
+            writer.write(fileLine)
             idx++
         }
     }
 
     // wiggle for coverage
     val coverageFile = "${outputDir}/coverage_${contig}.wig"
+
     File(coverageFile).bufferedWriter().use { writer ->
         var idx = 0
         while( idx < coverage.size) {
@@ -152,74 +176,6 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
     }
 
 
-}
-
-/**
- * This function takes a user contig,  start/stop positions which are 1-based and inclusive/inclusive
- * and a directory where MAF (*.maf) files may be found.
- * From this input it creates 2 IntArrays which are returned as a Pair of <Coverage,Identity>
- *
- * The IntArray  sizes are determined by the range size of the user requested data.
- * The first array in the pair indicates how many sequence alignments from the MAF files have coverage
- * at each basepair.
- * The second array in the pair indicates how many sequence alignments from the MAF files have an allele
- * identical to the reference at the specified base pair.
- */
-
-// There is a more efficient implementation of this in GetCovIDFromMAFMultiThread.kt
-fun getCoverageAndIdentityFromMAFs(userContig:String, start:Int, stop:Int, mafDir:String):Pair<IntArray,IntArray> {
-    val startTime = System.nanoTime()
-    val userSpan = (start..stop)
-    val coverage = IntArray(userSpan.count())
-    val identity = IntArray(userSpan.count())
-
-    // get list of .maf files from the user provided folder
-    val mafFiles = File(mafDir).walk()
-        .filter { item -> Files.isRegularFile(item.toPath()) }
-        .filter { item -> item.toString().endsWith(".maf") }
-        .toList()
-
-    // process each file, compiling counts for identity/coverage on user range for each assembly
-    for (mafFile in mafFiles) {
-        // This increments the coverage/identity array position counts
-        println("getCoverageAndIdentityFromMAFs: processing file $mafFile")
-
-        // get all alignment blocks
-        try {
-            val reader = bufferedReader(mafFile.toString())
-            var mafBlock = readMafBlock(reader)
-            while (mafBlock != null) {
-                // filter the strings, only keep the "s" lines
-                val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
-                // the first entry should be the ref
-                val refData = filteredMafBlock.get(0)
-                // Maf files are white space separated - could be tabs or spaces
-                val refSplitLine = refData.split("\\s+".toRegex())
-                val alignContig = refSplitLine[1]
-                val refStart = refSplitLine[2].toInt()
-                val refSize = refSplitLine[3].toInt()
-
-                // Determine if the alignment ref contig matches the user specified contig,
-                // and if the alignment overlaps the user requested positions.
-                var skip = false
-                if (refStart+1 > stop ) skip = true
-                else if (refStart + refSize < start)  skip = true // don't add -1 because refStart is 0-based
-                else if (!alignContig.equals(userContig)) skip = true
-
-                if (!skip) {
-                    // process the counts
-                    calculateCoverageAndIdentity(filteredMafBlock, coverage, identity, userSpan)
-                }
-                mafBlock = readMafBlock(reader)
-            }
-            reader.close()
-        } catch (exc:Exception) {
-            throw IllegalStateException("getCoverageAndIdentityFromMAFs: error processing file ${mafFile}: ${exc.message}")
-        }
-    }
-    val totalTime = (System.nanoTime() - startTime)/1e9
-    println("getCoverageAndIdentityFromMAFs: finished in ${totalTime} seconds")
-    return Pair<IntArray,IntArray>(coverage,identity)
 }
 
 
