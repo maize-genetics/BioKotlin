@@ -11,7 +11,7 @@ if (!(args.contains("-mafDir")) || !(args.contains("-mafContig")) || !(args.cont
     exitProcess(1)
 }
 
-println("After individual parameter checks")
+println("After parameter checks")
 
 val mafDir = args[1 + args.indexOf("-mafDir")]
 val mafContig = args[1 + args.indexOf("-mafContig")]
@@ -29,7 +29,7 @@ println("begin processing .. calling getCoverageAndIdentityFromMAFs with array o
 val startTime = System.nanoTime()
 val coverageAndIdentity = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(mafContig, start, end, mafDir)
 
-println("coverageAndIdenity finished - calling createBedFileFromCoverageIdentity ..")
+println("coverageAndIdenity finished - calling createWiggleFileFromCoverageIdentity ..")
 createWiggleFilesFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, wiggleContig, start, outputDir)
 
 val totalTime = (System.nanoTime() - startTime)/1e9

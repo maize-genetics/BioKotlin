@@ -1,5 +1,6 @@
 package biokotlin.genome
 
+import biokotlin.util.bufferedReader
 import java.io.BufferedReader
 //import java.io.BufferedReader
 import java.io.File
@@ -20,7 +21,7 @@ import java.lang.Math.abs
 
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String) {
 
-    // There will be 2 wiggle files created = 1 for identity and 1 for coverage
+    // There will be 2 wiggle files created: 1 for identity and 1 for coverage
 
     // The wiggle file has these formatted lines:
     // variableStep chrom=chr2
@@ -63,7 +64,7 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
 //    }
 
     // version that is step-1, vs the "span" above
-    // THe lines will look like this:
+    // The lines will look like this:
     //fixedStep chrom=chr3 start=400601 step=100
     //11
     //22
@@ -88,24 +89,67 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
     // wiggle for coverage
     val coverageFile = "${outputDir}/coverage_${contig}.wig"
 
+    // THis is "span" version
+//    File(coverageFile).bufferedWriter().use { writer ->
+//        var idx = 0
+//        while( idx < coverage.size) {
+//            val idValue = coverage[idx]
+//            var count = 1
+//            while (idx+1 < coverage.size && coverage[idx+1] == idValue) {
+//                count++
+//                idx++
+//            }
+//            // +2 because the start is inclusive and we have to move up to 1-based
+//            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
+//            // 30-5 + 2 = 27
+//            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
+//            val start = idx-count+2
+//            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
+//            val fileLine2 = "${start} ${idValue}\n"
+//            writer.write(fileLine1)
+//            writer.write(fileLine2)
+//            idx++
+//        }
+//    }
+
+    // Here is the step-1 version - ends up being more flexible later, but is BIG file
+    // so you will want to convert from WIG to bigWig format for loading to IGV
     File(coverageFile).bufferedWriter().use { writer ->
         var idx = 0
+        val fixedStepHeader = "fixedStep chrom=${contig} start=1 step=1\n"
+        writer.write(fixedStepHeader)
         while( idx < coverage.size) {
             val idValue = coverage[idx]
-            var count = 1
-            while (idx+1 < coverage.size && coverage[idx+1] == idValue) {
-                count++
-                idx++
-            }
-            // +2 because the start is inclusive and we have to move up to 1-based
-            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
-            // 30-5 + 2 = 27
-            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
-            val start = idx-count+2
-            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
-            val fileLine2 = "${start} ${idValue}\n"
-            writer.write(fileLine1)
-            writer.write(fileLine2)
+            val fileLine = "${idValue}\n"
+            writer.write(fileLine)
+            idx++
+        }
+    }
+}
+
+// THis method is written to merge coverage/identity values in to new
+fun mergeWiggleFiles(file1:IntArray, file2:IntArray, contig:String,  outputFile:String) {
+    // Take 2 wiggle files - must be the same length.  Merge the values from the 2
+    // into a new file.
+    val file1Array = mutableListOf<Int>()
+    val file2Array = mutableListOf<Int>()
+
+    var file1BR = bufferedReader(file1.toString())
+    var file2BR = bufferedReader(file2.toString())
+
+    // skip header line
+    file1BR.readLine()
+    file2BR.readLine()
+    File(outputFile).bufferedWriter().use { writer ->
+        var idx = 0
+        val fixedStepHeader = "fixedStep chrom=${contig} start=1 step=1\n"
+        writer.write(fixedStepHeader)
+        while( idx < file1.size) {
+            val val1 = file1BR.readLine().toInt() // should be just 1 value per line
+            val val2 = file2BR.read().toInt()
+            val idValue = val1 + val2
+            val fileLine = "${idValue}\n"
+            writer.write(fileLine)
             idx++
         }
     }
