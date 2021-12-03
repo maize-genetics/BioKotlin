@@ -2,7 +2,6 @@ package biokotlin.genome
 
 import biokotlin.util.bufferedReader
 import java.io.BufferedReader
-//import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.abs
 

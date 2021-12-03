@@ -2,7 +2,8 @@ import biokotlin.genome.*
 import java.util.*
 import kotlin.system.exitProcess
 
-println("at the very beginning with parameter check...")
+// This script can be run outside Intellij when the biokotlin jar is present.  And example is this:
+//   kotlinc -cp biokotlin-0.03-all.jar -script wiggle_fromMAFmultiThread.kts -- -mafDir /myDir/mafFileDir -mafContig chr1 -wiggleContig chr1 -start 1 -end 308452471 -outputDir /myDir/wiggle_files > script_chr1_output.txt
 
 // Check for parameters
 if (!(args.contains("-mafDir")) || !(args.contains("-mafContig")) || !(args.contains("-wiggleContig")) || !(args.contains("-start"))
