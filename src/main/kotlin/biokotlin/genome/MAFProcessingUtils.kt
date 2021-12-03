@@ -96,7 +96,7 @@ fun mergeWiggleFiles(file1:IntArray, file2:IntArray, contig:String,  outputFile:
         writer.write(fixedStepHeader)
         while( idx < file1.size) {
             val val1 = file1BR.readLine().toInt() // should be just 1 value per line
-            val val2 = file2BR.read().toInt()
+            val val2 = file2BR.readLine().toInt()
             val idValue = val1 + val2
             val fileLine = "${idValue}\n"
             writer.write(fileLine)
