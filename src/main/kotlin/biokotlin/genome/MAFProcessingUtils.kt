@@ -40,37 +40,10 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
 
     // wiggle for identity
     val identityFile = "${outputDir}/identity_${contig}.wig"
-//    File(identityFile).bufferedWriter().use { writer ->
-//        var idx = 0
-//        while( idx < identity.size) {
-//            val idValue = identity[idx]
-//            var count = 1
-//            while (idx+1 < identity.size && identity[idx+1] == idValue) {
-//                count++
-//                idx++
-//            }
-//            // +2 because the start is inclusive and we have to move up to 1-based
-//            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
-//            // 30-5 + 2 = 27
-//            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
-//            val start = idx-count+2
-//            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
-//            val fileLine2 = "${start} ${idValue}\n"
-//            writer.write(fileLine1)
-//            writer.write(fileLine2)
-//            idx++
-//        }
-//
-//    }
 
-    // version that is step-1, vs the "span" above
-    // The lines will look like this:
-    //fixedStep chrom=chr3 start=400601 step=100
-    //11
-    //22
-    //33
-    // In our case, it will be step=1, and start=1
-    //fixedStep chrom=chr1 start=1 step=100
+    // version that is step-1 vs "span" option
+    // The lines will look something like this:
+    //fixedStep chrom=chr3 start=400601 step=1
     //11
     //22
     //33
@@ -89,30 +62,7 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
     // wiggle for coverage
     val coverageFile = "${outputDir}/coverage_${contig}.wig"
 
-    // THis is "span" version
-//    File(coverageFile).bufferedWriter().use { writer ->
-//        var idx = 0
-//        while( idx < coverage.size) {
-//            val idValue = coverage[idx]
-//            var count = 1
-//            while (idx+1 < coverage.size && coverage[idx+1] == idValue) {
-//                count++
-//                idx++
-//            }
-//            // +2 because the start is inclusive and we have to move up to 1-based
-//            // So if from position 26 to 30 is a count of 5.  The start would be 27 (1-based)
-//            // 30-5 + 2 = 27
-//            // or ... position 0 to 1 is count of 2. 1-2 + 2 = 1:  the correct 1-based start position
-//            val start = idx-count+2
-//            val fileLine1 = "variableStep\tchrom=${contig}\tspan=${count}\n"
-//            val fileLine2 = "${start} ${idValue}\n"
-//            writer.write(fileLine1)
-//            writer.write(fileLine2)
-//            idx++
-//        }
-//    }
-
-    // Here is the step-1 version - ends up being more flexible later, but is BIG file
+    // Here is the step-1 version - ends up being more flexible than using span, but is BIG file
     // so you will want to convert from WIG to bigWig format for loading to IGV
     File(coverageFile).bufferedWriter().use { writer ->
         var idx = 0
@@ -127,7 +77,7 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
     }
 }
 
-// THis method is written to merge coverage/identity values in to new
+// This method is written to merge coverage/identity values together to a new file
 fun mergeWiggleFiles(file1:IntArray, file2:IntArray, contig:String,  outputFile:String) {
     // Take 2 wiggle files - must be the same length.  Merge the values from the 2
     // into a new file.
@@ -158,8 +108,8 @@ fun mergeWiggleFiles(file1:IntArray, file2:IntArray, contig:String,  outputFile:
 fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, minCoverage:Int,
                                       minIdentity:Int, outputFile:String) {
     //The start and stop indicate where on the genome these positions are.
-    // To make the bed file, we'll also need user specified minCoverage, minIdentity
-    // The user start/stop are 1-based.  THe bedfiles are 0-based,inclusive/exclusive
+    // user specified minCoverage, minIdentity are used to determine which regions to include
+    // The user start/stop are 1-based.  The bedfiles are 0-based,inclusive/exclusive
 
     val bedFileLines = mutableListOf<String>()
     // coverage and identity should be the same size and represent the same range of bps
@@ -193,10 +143,6 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
             // the display name of the feature in IGV
             val entryName="Name=${contig}_${bedStart}_${bedEnd}"
             entrySB.append(entryName).append("\n")
-            // Ed wants coverage and identity in the attribute line, but that works on a per-bp basis,
-            // not for a coverage block.  The cov and identity could differ at each bps, so nothing so
-            // give for the full block.  Look at Wiggle file instead.
-            //var attributeLine = "coverage="
             bedFileLines.add(entrySB.toString())
         }
     }

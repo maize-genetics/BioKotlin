@@ -6,6 +6,14 @@ import kotlinx.coroutines.channels.Channel
 import java.io.File
 import java.nio.file.Files
 
+/**
+ * This class has methods which create coverage and identity counts
+ * for a list of mafFiles.
+ *
+ * THe main function called by a user is getCoverageAndIdentityFromMAFS
+ * coverage/identity is computed for a specific contig found in the MAF files
+ *
+ */
 class GetCovIDFromMAFMultiThread {
     private val resultChannel = Channel<Pair<IntArray, IntArray>>()
 
