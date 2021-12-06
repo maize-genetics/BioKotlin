@@ -31,7 +31,7 @@ val startTime = System.nanoTime()
 val coverageAndIdentity = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(mafContig, start, end, mafDir)
 
 println("coverageAndIdenity finished - calling createWiggleFileFromCoverageIdentity ..")
-createWiggleFilesFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, wiggleContig, start, outputDir)
+createWiggleFilesFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, wiggleContig, outputDir)
 
 val totalTime = (System.nanoTime() - startTime)/1e9
 

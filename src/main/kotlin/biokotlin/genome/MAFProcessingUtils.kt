@@ -18,7 +18,7 @@ import java.lang.Math.abs
  *
  */
 
-fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String) {
+fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, outputDir:String) {
 
     // There will be 2 wiggle files created: 1 for identity and 1 for coverage
 
@@ -58,6 +58,7 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
         }
     }
 
+    println("createWiggleFilesFromCoverageIdentity: Identity written to ${identityFile}")
     // wiggle for coverage
     val coverageFile = "${outputDir}/coverage_${contig}.wig"
 
@@ -74,6 +75,7 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
             idx++
         }
     }
+    println("createWiggleFilesFromCoverageIdentity: Coverage written to ${coverageFile}")
 }
 
 // This method is written to merge coverage/identity values together to a new file
