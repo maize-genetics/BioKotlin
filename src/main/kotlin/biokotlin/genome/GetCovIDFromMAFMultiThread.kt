@@ -78,10 +78,9 @@ class GetCovIDFromMAFMultiThread {
                 // Determine if the alignment ref contig matches the user specified contig,
                 // and if the alignment overlaps the user requested positions.
                 var skip = false
-                if (refStart+1 > end ) skip = true
-                else if (refStart + refSize < start)  skip = true // don't add -1 because refStart is 0-based
-                else if (!alignContig.equals(userContig)) skip = true
-
+                if ((refStart+1 > end) || (refStart + refSize < start) || (!alignContig.equals(userContig))) {
+                    skip = true
+                }
                 if (!skip) {
                     // process the counts
                     calculateCoverageAndIdentity(filteredMafBlock, coverage, identity, userSpan)

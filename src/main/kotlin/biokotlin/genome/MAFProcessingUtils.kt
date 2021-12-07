@@ -3,7 +3,7 @@ package biokotlin.genome
 import biokotlin.util.bufferedReader
 import java.io.BufferedReader
 import java.io.File
-import java.lang.Math.abs
+import java.lang.Math.*
 
 /**
  * This file holds methods used to process MAF Files with the intent of
@@ -37,6 +37,7 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
     // The chrom positions in the wiggle file are 1-based
     // This function codes the more concise version
 
+    check (coverage.size == identity.size) {"createWiggleFilesFromCoverageIdentity:ERROR, coverage size ${coverage.size} does not match identity size ${identity.size}"}
     // wiggle for identity
     val identityFile = "${outputDir}/identity_${contig}.wig"
 
@@ -47,14 +48,9 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
     //22
     //33
     File(identityFile).bufferedWriter().use { writer ->
-        var idx = 0
-        val fixedStepHeader = "fixedStep chrom=${contig} start=1 step=1\n"
-        writer.write(fixedStepHeader)
-        while( idx < identity.size) {
-            val idValue = identity[idx]
-            val fileLine = "${idValue}\n"
-            writer.write(fileLine)
-            idx++
+        writer.write("fixedStep chrom=${contig} start=1 step=1\n")
+        for (idvalue in identity) {
+            writer.write("${idvalue}\n")
         }
     }
 
@@ -65,42 +61,31 @@ fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, 
     // Here is the step-1 version - ends up being more flexible than using span, but is BIG file
     // so you will want to convert from WIG to bigWig format for loading to IGV
     File(coverageFile).bufferedWriter().use { writer ->
-        var idx = 0
-        val fixedStepHeader = "fixedStep chrom=${contig} start=1 step=1\n"
-        writer.write(fixedStepHeader)
-        while( idx < coverage.size) {
-            val idValue = coverage[idx]
-            val fileLine = "${idValue}\n"
-            writer.write(fileLine)
-            idx++
+        writer.write("fixedStep chrom=${contig} start=1 step=1\n")
+        for (cov in coverage) {
+            writer.write("${cov}\n")
         }
     }
     println("createWiggleFilesFromCoverageIdentity: Coverage written to ${coverageFile}")
 }
 
 // This method is written to merge coverage/identity values together to a new file
-fun mergeWiggleFiles(file1:IntArray, file2:IntArray, contig:String,  outputFile:String) {
+fun mergeWiggleFiles(file1:String, file2:String, contig:String,  outputFile:String) {
     // Take 2 wiggle files - must be the same length.  Merge the values from the 2
     // into a new file.
-    val file1Array = mutableListOf<Int>()
-    val file2Array = mutableListOf<Int>()
 
-    var file1BR = bufferedReader(file1.toString())
-    var file2BR = bufferedReader(file2.toString())
+    val file1Lines = File(file1).bufferedReader().readLines()
+    val file2Lines = File(file2).bufferedReader().readLines()
 
-    // skip header line
-    file1BR.readLine()
-    file2BR.readLine()
+    check(file1Lines.size == file2Lines.size) {"mergeWiggleFiles: ERROR, ${file1} size ${file1Lines.size} does not match ${file2} size ${file2Lines.size}"}
+
     File(outputFile).bufferedWriter().use { writer ->
-        var idx = 0
         val fixedStepHeader = "fixedStep chrom=${contig} start=1 step=1\n"
         writer.write(fixedStepHeader)
-        while( idx < file1.size) {
-            val val1 = file1BR.readLine().toInt() // should be just 1 value per line
-            val val2 = file2BR.readLine().toInt()
-            val idValue = val1 + val2
-            val fileLine = "${idValue}\n"
-            writer.write(fileLine)
+        var idx = 1 // skip header
+        while( idx < file1Lines.size) {
+            val idValue = file1Lines[idx].toInt() + file2Lines[idx].toInt()
+            writer.write("${idValue}\n")
             idx++
         }
     }
@@ -112,6 +97,7 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
     // user specified minCoverage, minIdentity are used to determine which regions to include
     // The user start/stop are 1-based.  The bedfiles are 0-based,inclusive/exclusive
 
+    check(coverage.size == identity.size) {"createBedFileFromCoverageIdentity: ERROR, coverage size ${coverage.size} does not match identity size ${identity.size}"}
     val bedFileLines = mutableListOf<String>()
     // coverage and identity should be the same size and represent the same range of bps
     val arraySize = coverage.size
@@ -253,9 +239,9 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
     val startDiff = refStart-userStart
 
     // Get the number of basepairs
-    val start = Math.max(userStart, refStart)
-    val end = Math.min(userEnd, refEnd)
-    val numBPs = Math.abs(end - start) + 1
+    val start = max(userStart, refStart)
+    val end = min(userEnd, refEnd)
+    val numBPs = abs(end - start) + 1
 
     var refSeqIdxStart = 0
     // Calculate where to start and stop processing on the alignment sequence

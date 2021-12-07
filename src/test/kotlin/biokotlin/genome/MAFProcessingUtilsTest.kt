@@ -2,6 +2,7 @@ package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.assertThrows
 import java.io.File
 
 class MAFProcessingUtilsTest : StringSpec({
@@ -88,7 +89,7 @@ class MAFProcessingUtilsTest : StringSpec({
         //println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
         val outputDir= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/"
         //createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String)
-        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, wiggleContig, start, outputDir)
+        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, wiggleContig, outputDir)
 
     }
     "test Baoxing files: getCoverageAndIdentity multiple MAF" {
@@ -300,6 +301,21 @@ class MAFProcessingUtilsTest : StringSpec({
         for (idx in 0..startStop.count()-1) {
             println("${coverage[idx]}  ${identity[idx]}")
         }
+    }
+    "test mergeWiggleFiles" {
+
+        val mergeFile1 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile1_chr7.wig"
+        val mergeFile2 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile2_chr7.wig"
+        val mergeFile3 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile3_wrongLen.wig"
+
+        val outputFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergedFiles_chr7.wig"
+
+        println("Running good merge check - file lengths the same")
+        mergeWiggleFiles(mergeFile1, mergeFile2, "B73_chr7",  outputFile)
+
+        println("RUnning bad merge check - should be an exception thrown")
+        assertThrows<IllegalStateException>{mergeWiggleFiles(mergeFile1, mergeFile3, "B73_chr7",  outputFile)}
+
     }
 
 })
