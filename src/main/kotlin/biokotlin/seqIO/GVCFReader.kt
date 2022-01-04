@@ -11,27 +11,22 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.File
 
-class GVCFReader {
+class GVCFReader(val gvcfFile: String, val referenceFile: String) : SequenceIterator {
 
-    private val resultChannel = Channel<Deferred<Pair<String, SeqRecord>>>()
+    private val resultChannel = Channel<Deferred<Pair<String, SeqRecord>>>(5)
+    private val resultIterator = resultChannel.iterator()
 
-    private lateinit var reference: Map<String, SeqRecord>
-    private lateinit var taxon: String
+    private var reference: Map<String, SeqRecord> = reader(referenceFile).readAll()
+    private var taxon: String
 
-    /**
-     * Reads a GVCF file (.gvcf) and returns a map
-     * of Chromosomes (String) to Sequence (SeqRecord)
-     */
-    fun read(gvcfFile: String, referenceFile: String): Map<String, SeqRecord> {
-
-        reference = FastaIO(referenceFile).readAll()
+    init {
 
         VCFFileReader(File(gvcfFile), false).use { reader ->
 
             val header = reader.fileHeader
 
             val altHeaderLines = header.idHeaderLines
-                .filter { it is VCFAltHeaderLine }
+                .filterIsInstance<VCFAltHeaderLine>()
                 .map { Pair(it.id, it.toString().substringAfter("Description=\"").substringBefore("\"")) }
                 .toMap()
 
@@ -45,10 +40,34 @@ class GVCFReader {
                 readFile(reader)
             }
 
-            return runBlocking { combineResults() }
-
         }
 
+    }
+
+    override fun read(): SeqRecord? {
+        return runBlocking {
+            resultChannel.receiveCatching().getOrNull()?.await()?.second
+        }
+    }
+
+    /**
+     * Reads a GVCF file (.gvcf) and returns a map
+     * of Chromosomes (String) to Sequence (SeqRecord)
+     */
+    override fun readAll(): Map<String, SeqRecord> {
+        return runBlocking { combineResults() }
+    }
+
+    override fun hasNext(): Boolean {
+        return runBlocking {
+            resultIterator.hasNext()
+        }
+    }
+
+    override fun next(): SeqRecord {
+        return runBlocking {
+            resultIterator.next().await().second
+        }
     }
 
     private suspend fun readFile(reader: VCFFileReader) =
@@ -140,7 +159,7 @@ class GVCFReader {
         val result = ImmutableMap.builder<String, SeqRecord>()
         for (deferred in resultChannel) {
             val chrSeq = deferred.await()
-            println("adding ${chrSeq.first} to results")
+            println("GVCFReader: combineResults: adding chromosome ${chrSeq.first} to results")
             result.put(chrSeq.first, chrSeq.second)
         }
         return result.build()
@@ -157,4 +176,5 @@ fun main() {
     result.forEach {
         println("${it.key}: ${it.value.toString().substring(0, 100)}")
     }
+    //writeFasta(result, "/Users/tmc46/git/biokotlin/test_fasta")
 }
