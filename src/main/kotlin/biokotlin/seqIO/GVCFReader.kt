@@ -16,9 +16,9 @@ import java.io.File
  * The file can only be read one time. Either as an iterator (hasNext(), next()),
  * repeatedly calling read(), or using readAll().
  */
-class GVCFReader(val gvcfFile: String, val referenceFile: String) : SequenceIterator {
+class GVCFReader(val gvcfFile: String, val referenceFile: String, val sizeOfQueue: Int = 5) : SequenceIterator {
 
-    private val resultChannel = Channel<Deferred<Pair<String, SeqRecord>>>(5)
+    private val resultChannel = Channel<Deferred<Pair<String, SeqRecord>>>(sizeOfQueue)
     private val resultIterator = resultChannel.iterator()
 
     private var reference: Map<String, SeqRecord> = reader(referenceFile).readAll()
