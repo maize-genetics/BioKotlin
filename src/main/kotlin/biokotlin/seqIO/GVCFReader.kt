@@ -11,6 +11,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.File
 
+/**
+ * This reads a GVCF formatted file. The file is required to only have one sample.
+ * The file can only be read one time. Either as an iterator (hasNext(), next()),
+ * repeatedly calling read(), or using readAll().
+ */
 class GVCFReader(val gvcfFile: String, val referenceFile: String) : SequenceIterator {
 
     private val resultChannel = Channel<Deferred<Pair<String, SeqRecord>>>(5)
@@ -44,6 +49,9 @@ class GVCFReader(val gvcfFile: String, val referenceFile: String) : SequenceIter
 
     }
 
+    /**
+     * Returns next SeqRecord or null if finished reading.
+     */
     override fun read(): SeqRecord? {
         return runBlocking {
             resultChannel.receiveCatching().getOrNull()?.await()?.second
@@ -172,9 +180,9 @@ fun main() {
     val gvcfFile =
         "/Users/tmc46/hackathon/20210916_tribe/su1_gvcfs_v2/AN20TSCR000225_CKDL200169516-1a-AK6517-AK6687_HLTF5DSXY_L4_srt_Su1.gvcf"
     val reference = "/Users/tmc46/hackathon/20210916_tribe/Sbicolor_454_v3_numeric.0.1.fa"
-    val result = GVCFReader().read(gvcfFile, reference)
-    result.forEach {
-        println("${it.key}: ${it.value.toString().substring(0, 100)}")
-    }
-    //writeFasta(result, "/Users/tmc46/git/biokotlin/test_fasta")
+    val result = GVCFReader(gvcfFile, reference)
+    result
+        .forEach {
+            println("${it.id}: ${it.toString().substring(0, 100)}")
+        }
 }
