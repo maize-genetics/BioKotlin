@@ -5,6 +5,7 @@ import biokotlin.util.bufferedReader
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import java.io.File
 import java.util.*
 
 class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
@@ -146,6 +147,33 @@ class FastaIO(val filename: String, type: SeqType) : SequenceIterator {
 
         }
 
+    }
+
+}
+
+
+/**
+ * This writes the sequence iterator to the specified filename
+ * in Fasta Format
+ */
+fun writeFasta(input: SequenceIterator, filename: String) {
+
+    val extension = File(filename).extension
+    val newFilename = if (extension.equals("fa", false) || extension.equals("fasta", false)) {
+        filename
+    } else {
+        "$filename.fa"
+    }
+
+    println("FastaIO: writeFasta: writing file $newFilename")
+
+    val outFasta = File(newFilename)
+    outFasta.bufferedWriter().use { writer ->
+        input.forEach { seqRecord ->
+            writer.write(">${seqRecord.id}\n")
+            writer.write((seqRecord as NucSeqRecord).sequence.toString())
+            writer.newLine()
+        }
     }
 
 }

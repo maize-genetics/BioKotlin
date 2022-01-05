@@ -40,103 +40,103 @@ class MAFProcessingUtilsTest : StringSpec({
             println("${coverageAndIdentity.first[idx]}  ${coverageAndIdentity.second[idx]}")
         }
     }
-    "test getCoverageAndIdentity multiple MAF" {
-
-        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles/test_multipleMafs"
-        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4.bed"
-
-        // Test again when only files in mafDir is "mixedSeqsWithEIQlines.maf"
-        // That file has identical sequence to mixedSeqs.maf, but includes i, e and q lines among the "s" lines
-        // That tests we are filtering these lines correctly.
-        val contig = "B73.chr7"
-        val start = 13
-        val stop = 50
-
-        val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
-
-        val minCov = 4
-        val minIdent = 4
-        // write a bedFile for this:
-        println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
-        val output2= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4multiThread.bed"
-        createBedFileFromCoverageIdentity(covId.first, covId.second, contig, start, minCov,
-            minIdent, output2)
-    }
-    "test getWiggleFiles from multiple MAF" {
-
-        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles/test_multipleMafs"
-        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4.bed"
-
-        // Test again when only files in mafDir is "mixedSeqsWithEIQlines.maf"
-        // That file has identical sequence to mixedSeqs.maf, but includes i, e and q lines among the "s" lines
-        // That tests we are filtering these lines correctly.
-        val contig = "B73.chr7"
-        val start = 13
-        val stop = 50
-
-        val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
-
-        println("\ncoverage/identity for original followed by multithreaded: size of array: ${covId.first.size}")
-        val startStop = (13..50)
-        for (idx in 0..startStop.count()-1) {
-            println("${covId.first[idx]}/${covId.second[idx]} ${covId.first[idx]}/${covId.second[idx]}")
-        }
-
-        val minCov = 4
-        val minIdent = 4
-        val wiggleContig = "chr7"
-        // write the wig files for this:
-        //println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
-        val outputDir= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/"
-        //createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String)
-        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, wiggleContig, outputDir)
-
-    }
-    "test Baoxing files: getCoverageAndIdentity multiple MAF" {
-
-        // This test is here to verify we can process larger MAF files.  Verification the functions
-        // process correctly is done via the smaller test mafs where identify and coverage results
-        // are easier to verify
-        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles"
-        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/OH43_Ms71_CML247mafs_2and2.bed"
-
-        // Testing with just 3 files from Baoxing - can all be held in memory?
-        // Contigs and start/stop must match what is in Baoxing's maf files
-        // You don't want the full chrom -  pick some gene region from the GFF
-        // file and use that as start/stop
-
-        // testing with these genes from the gff file: /Users/lcj34/notes_files/phg_2018/b73v5_gff/gff3NAM5_gene.txt
-        //
-        //chr6    NAM     gene    7078980 7082912 .       -       .       ID=gene:Zm00001e029135;biotype=protein_coding;logic_name=mikado_gene
-        //chr6    NAM     gene    7084010 7089440 .       +       .       ID=gene:Zm00001e029136;biotype=protein_coding;logic_name=mikado_gene
-        //chr6    NAM     gene    7089468 7091179 .       -       .       ID=gene:Zm00001e029137;biotype=protein_coding;logic_name=mikado_gene
-        val contig = "B73.ref.fa.chr6"
-        val start = 7078980
-        val stop = 7091179
-
-        val coverageAndIdentity = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
-
-        println("\ncoverage / identity for the array: size of array: ${coverageAndIdentity.first.size}")
-
-        val startStop = (start..stop)
-        val testOutputArrayFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/Baoxing_chr6Test_covAndId.txt"
-        println("writing output file to ${testOutputArrayFile}")
-        File(testOutputArrayFile).bufferedWriter().use { out ->
-            out.write("coverage\tidentity\n")
-            for (idx in 0..startStop.count()-1) {
-                val line = "${coverageAndIdentity.first[idx]}\t${coverageAndIdentity.second[idx]}\n"
-                out.write(line)
-            }
-        }
-
-
-        val minCov = 2
-        val minIdent = 2
-        // write a bedFile for this:
-        println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
-        createBedFileFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, contig, start, minCov,
-            minIdent, outputBedFile)
-    }
+//    "test getCoverageAndIdentity multiple MAF" {
+//
+//        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles/test_multipleMafs"
+//        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4.bed"
+//
+//        // Test again when only files in mafDir is "mixedSeqsWithEIQlines.maf"
+//        // That file has identical sequence to mixedSeqs.maf, but includes i, e and q lines among the "s" lines
+//        // That tests we are filtering these lines correctly.
+//        val contig = "B73.chr7"
+//        val start = 13
+//        val stop = 50
+//
+//        val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+//
+//        val minCov = 4
+//        val minIdent = 4
+//        // write a bedFile for this:
+//        println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
+//        val output2= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4multiThread.bed"
+//        createBedFileFromCoverageIdentity(covId.first, covId.second, contig, start, minCov,
+//            minIdent, output2)
+//    }
+//    "test getWiggleFiles from multiple MAF" {
+//
+//        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles/test_multipleMafs"
+//        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/multipleMAF_4and4.bed"
+//
+//        // Test again when only files in mafDir is "mixedSeqsWithEIQlines.maf"
+//        // That file has identical sequence to mixedSeqs.maf, but includes i, e and q lines among the "s" lines
+//        // That tests we are filtering these lines correctly.
+//        val contig = "B73.chr7"
+//        val start = 13
+//        val stop = 50
+//
+//        val covId = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+//
+//        println("\ncoverage/identity for original followed by multithreaded: size of array: ${covId.first.size}")
+//        val startStop = (13..50)
+//        for (idx in 0..startStop.count()-1) {
+//            println("${covId.first[idx]}/${covId.second[idx]} ${covId.first[idx]}/${covId.second[idx]}")
+//        }
+//
+//        val minCov = 4
+//        val minIdent = 4
+//        val wiggleContig = "chr7"
+//        // write the wig files for this:
+//        //println("\ncalling createWiggleFilesFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
+//        val outputDir= "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/"
+//        //createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, refStart:Int, outputDir:String)
+//        createWiggleFilesFromCoverageIdentity(covId.first, covId.second, wiggleContig, outputDir)
+//
+//    }
+//    "test Baoxing files: getCoverageAndIdentity multiple MAF" {
+//
+//        // This test is here to verify we can process larger MAF files.  Verification the functions
+//        // process correctly is done via the smaller test mafs where identify and coverage results
+//        // are easier to verify
+//        val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles"
+//        val outputBedFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/OH43_Ms71_CML247mafs_2and2.bed"
+//
+//        // Testing with just 3 files from Baoxing - can all be held in memory?
+//        // Contigs and start/stop must match what is in Baoxing's maf files
+//        // You don't want the full chrom -  pick some gene region from the GFF
+//        // file and use that as start/stop
+//
+//        // testing with these genes from the gff file: /Users/lcj34/notes_files/phg_2018/b73v5_gff/gff3NAM5_gene.txt
+//        //
+//        //chr6    NAM     gene    7078980 7082912 .       -       .       ID=gene:Zm00001e029135;biotype=protein_coding;logic_name=mikado_gene
+//        //chr6    NAM     gene    7084010 7089440 .       +       .       ID=gene:Zm00001e029136;biotype=protein_coding;logic_name=mikado_gene
+//        //chr6    NAM     gene    7089468 7091179 .       -       .       ID=gene:Zm00001e029137;biotype=protein_coding;logic_name=mikado_gene
+//        val contig = "B73.ref.fa.chr6"
+//        val start = 7078980
+//        val stop = 7091179
+//
+//        val coverageAndIdentity = GetCovIDFromMAFMultiThread().getCoverageAndIdentityFromMAFs(contig, start, stop, mafDir)
+//
+//        println("\ncoverage / identity for the array: size of array: ${coverageAndIdentity.first.size}")
+//
+//        val startStop = (start..stop)
+//        val testOutputArrayFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/Baoxing_chr6Test_covAndId.txt"
+//        println("writing output file to ${testOutputArrayFile}")
+//        File(testOutputArrayFile).bufferedWriter().use { out ->
+//            out.write("coverage\tidentity\n")
+//            for (idx in 0..startStop.count()-1) {
+//                val line = "${coverageAndIdentity.first[idx]}\t${coverageAndIdentity.second[idx]}\n"
+//                out.write(line)
+//            }
+//        }
+//
+//
+//        val minCov = 2
+//        val minIdent = 2
+//        // write a bedFile for this:
+//        println("\ncalling createBEdFileFromCoverageIdentity with minCov=${minCov} and minId = ${minIdent}")
+//        createBedFileFromCoverageIdentity(coverageAndIdentity.first, coverageAndIdentity.second, contig, start, minCov,
+//            minIdent, outputBedFile)
+//    }
     "test calculateCoverageAndIdentity - 13..50" {
         // This tests for accuracy when the user start/stop positions exactly match the maf alignment
         // block start/stop
@@ -302,20 +302,20 @@ class MAFProcessingUtilsTest : StringSpec({
             println("${coverage[idx]}  ${identity[idx]}")
         }
     }
-    "test mergeWiggleFiles" {
-
-        val mergeFile1 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile1_chr7.wig"
-        val mergeFile2 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile2_chr7.wig"
-        val mergeFile3 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile3_wrongLen.wig"
-
-        val outputFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergedFiles_chr7.wig"
-
-        println("Running good merge check - file lengths the same")
-        mergeWiggleFiles(mergeFile1, mergeFile2, "B73_chr7",  outputFile)
-
-        println("RUnning bad merge check - should be an exception thrown")
-        assertThrows<IllegalStateException>{mergeWiggleFiles(mergeFile1, mergeFile3, "B73_chr7",  outputFile)}
-
-    }
+//    "test mergeWiggleFiles" {
+//
+//        val mergeFile1 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile1_chr7.wig"
+//        val mergeFile2 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile2_chr7.wig"
+//        val mergeFile3 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile3_wrongLen.wig"
+//
+//        val outputFile = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergedFiles_chr7.wig"
+//
+//        println("Running good merge check - file lengths the same")
+//        mergeWiggleFiles(mergeFile1, mergeFile2, "B73_chr7",  outputFile)
+//
+//        println("RUnning bad merge check - should be an exception thrown")
+//        assertThrows<IllegalStateException>{mergeWiggleFiles(mergeFile1, mergeFile3, "B73_chr7",  outputFile)}
+//
+//    }
 
 })
