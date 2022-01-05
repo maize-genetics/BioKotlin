@@ -21,7 +21,7 @@ class MAFProcessingUtilsTest : StringSpec({
     mafAlignments.add("s  B97.chr4        81344243     40      +  187371129       -AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG")
 
 
-    "test getCoverageAndIdentity" {
+    "!test getCoverageAndIdentity" {
 
         // test this with mafDir having only file mixedSeqs.maf to match the calculateCoverageAndIdentity()
         // tests below
