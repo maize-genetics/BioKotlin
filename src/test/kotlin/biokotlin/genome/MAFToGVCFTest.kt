@@ -1,6 +1,5 @@
 package biokotlin.genome
 
-import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.core.spec.style.StringSpec
 import java.io.File
 
@@ -26,8 +25,10 @@ class MAFToGVCFTest : StringSpec({
     createTruthGVCFFile(truthGVCFFile)
 
     "test getCoverageAndIdentity" {
-        MAFToGVCF().getGVCFfromMAF(mafFile,refFile, outputFile, sampleName, false)
+        MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName, false)
         println("FInished, output gvcf written to: ${outputFile}")
+
+        // TODO: add verifications - can't use Position objects as is done in PHG, but verify the same stuff
 
 
     }

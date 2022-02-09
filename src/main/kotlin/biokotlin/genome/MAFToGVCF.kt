@@ -21,7 +21,7 @@ import java.io.File
  * Requirements:  Only 1 genome aligned to reference for this MAF file
  *    While MAF files may contain multiple records, for gvcf to MAF we need just 1.
  *    Multiple samples in the MAF record is much trickier processing as not every sample
- *    is necessarily in each alignment.
+ *    is necessarily in each alignment.  This class is not handling that scenario.
  */
 
 class MAFToGVCF {
@@ -36,19 +36,19 @@ class MAFToGVCF {
     val refDepth = intArrayOf(1,0)
     val altDepth = intArrayOf(0,1,0)
 
-    // Or should this just get the records that will be used to create the variants?
-    fun getGVCFfromMAF(
+    // Main function - calls other methods and outputs the gvcf file
+    fun createGVCFfromMAF(
         mafFile: String,
         referenceFile: String,
         gvcfOutput: String,
         sampleName: String,
-        fillGaps: Boolean
+        fillGaps: Boolean = false
     ) {
         val refSeqs = fastaToNucSeq(referenceFile)
         val regex = "\\s+".toRegex()
 
         val records = mutableListOf<MAFRecord>()
-        bufferedReader(mafFile.toString()).use { reader ->
+        bufferedReader(mafFile).use { reader ->
 
             var mafBlock = readMafBlock(reader)
             while (mafBlock != null) {
@@ -179,7 +179,7 @@ class MAFToGVCF {
                 if(currentAsmBlockBoundaries == Pair(-1,-1)) { //Check to see if its the first bp for the assembly blocks
                     currentAsmBlockBoundaries = Pair(currentASMBp, currentASMBp)
                 }
-                else { //If its existing, just update.
+                else { //If it exists, just update.
                     currentAsmBlockBoundaries = Pair(currentAsmBlockBoundaries.first, currentASMBp)
                 }
 
@@ -336,7 +336,7 @@ class MAFToGVCF {
     }
 
     /**
-     * Function to convert a multibp substitution into a series of SNPs.  This allows the GVCF to pass a vcf-validator.
+     * Function to convert a multi-bp substitution into a series of SNPs.  This allows the GVCF to pass a vcf-validator.
      */
     private fun processIdenticalLengthStrings(refString: String, altString: String, startPos: Int, chrom: String, refseq: Map<String,NucSeq>, assemblyChrom: String, asmStartPos : Int, asmStrand: String): List<AssemblyVariantInfo> {
         //consolidate ref blocks
@@ -483,6 +483,9 @@ class MAFToGVCF {
             altAlleles, true, altDepth , assemblyChrom, assemblyStart, assemblyEnd , assemblyStrand)
     }
 
+    /**
+     * Function to export a list of htsjdk VariantContext records to a gvcf formatted output file
+     */
     fun exportVariantContext(sampleName: String, variantContexts: List<VariantContext>,outputFileName: String, refGenomeSequence: Map<String,NucSeq>) {
         val writer = VariantContextWriterBuilder()
             .unsetOption(Options.INDEX_ON_THE_FLY)
@@ -512,6 +515,9 @@ class MAFToGVCF {
         vcfheader.setSequenceDictionary(SAMSequenceDictionary(sequenceRecordList))
     }
 
+    /**
+     * Function creates generic headers for a g/VCF file
+     */
     fun createGenericVCFHeaders(taxaNames:List<String>): VCFHeader {
         val headerLines = HashSet<VCFHeaderLine>()
         headerLines.add( VCFFormatHeaderLine("AD",3, VCFHeaderLineType.Integer,"Allelic depths for the ref and alt alleles in the order listed"))
