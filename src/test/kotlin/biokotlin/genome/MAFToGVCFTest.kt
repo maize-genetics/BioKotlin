@@ -30,7 +30,7 @@ class MAFToGVCFTest : StringSpec({
     //Create the known GVCF file:
     createTruthGVCFFile(truthGVCFFile)
 
-    "test getCoverageAndIdentity" {
+    "test MAFToGVCF" {
         MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName)
         println("FInished, output gvcf written to: ${outputFile}")
 
