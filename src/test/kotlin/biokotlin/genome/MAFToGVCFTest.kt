@@ -1,6 +1,10 @@
 package biokotlin.genome
 
+import htsjdk.variant.variantcontext.VariantContext
+import htsjdk.variant.vcf.VCFFileReader
+import io.kotest.assertions.fail
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 import java.io.File
 
 class MAFToGVCFTest : StringSpec({
@@ -29,6 +33,49 @@ class MAFToGVCFTest : StringSpec({
         println("FInished, output gvcf written to: ${outputFile}")
 
         // TODO: add verifications - can't use Position objects as is done in PHG, but verify the same stuff
+        //Load in the output GVCF  and the truth GVCF and verify that the output is correct
+        val truthVariantIterator = VCFFileReader(File(truthGVCFFile),false).iterator()
+        val truthVariants = mutableListOf<VariantContext>()
+        while(truthVariantIterator.hasNext()) {
+            truthVariants.add(truthVariantIterator.next())
+        }
+        val truthMap = truthVariants.associateBy { Pair<String,Int>(it.contig, it.start) }
+
+        val outputVariantIterator = VCFFileReader(File(outputFile), false).iterator()
+        val outputVariants = mutableListOf<VariantContext>()
+        while(outputVariantIterator.hasNext()) {
+            outputVariants.add(outputVariantIterator.next())
+        }
+        for(variant in outputVariants) {
+            if(!truthMap.containsKey(Pair<String,Int>(variant.contig, variant.start))) {
+                fail("No matching variant found: ${variant.contig}:${variant.start}")
+            }
+            val matchingTruth = truthMap[Pair<String,Int>(variant.contig, variant.start)]!!
+
+            //Check END
+            (matchingTruth.end == variant.end) shouldBe true
+
+            //Check alleles
+            matchingTruth.alleles.toTypedArray() contentEquals variant.alleles.toTypedArray() shouldBe true
+
+            //Check GT
+            (matchingTruth.getGenotype(0).genotypeString == variant.getGenotype(0).genotypeString) shouldBe true
+
+            //Check AD
+            (matchingTruth.getGenotype(0).ad contentEquals variant.getGenotype(0).ad) shouldBe true
+
+            //Check ASM Contig
+            (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
+
+            //Check ASM Start
+            (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
+
+            //Check ASM END
+            (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
+
+            //Check ASM Strand
+            (matchingTruth.getAttribute("ASM_Strand") == variant.getAttribute("ASM_Strand")) shouldBe true
+        }
 
 
     }
