@@ -23,13 +23,15 @@ class MAFToGVCFTest : StringSpec({
 
     //Create the ref File:
     createSimpleRef(refFile)
+
     //Create the MAF file:
     createMAFFile(mafFile)
+
     //Create the known GVCF file:
     createTruthGVCFFile(truthGVCFFile)
 
     "test getCoverageAndIdentity" {
-        MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName, false)
+        MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName)
         println("FInished, output gvcf written to: ${outputFile}")
 
         // TODO: add verifications - can't use Position objects as is done in PHG, but verify the same stuff
@@ -126,7 +128,7 @@ fun createMAFFile(outputFile: String) {
 /**
  * Function to create the truth GVCF file
  * Copied from PHG MAFToGVCFPluginTest
- * But ... added "chr" in front of chromosome name on beginning of lines.  PHG using the
+ * But ... added "chr" in front of chromosome name on beginning of lines.  PHG uses the
  * TASSEL Chromosome object, which strips off "chr" .  Biokotlin does not - the chr in
  * chr1 and chr7 will remain.
  */

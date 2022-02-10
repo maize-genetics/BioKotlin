@@ -16,7 +16,7 @@ import java.io.File
 
 /**
  * This class takes a UCSC MAF file, a reference fasta, and an output file name.
- * It creates a gvcf file from the MAF and refernce, writing the data to the output file.
+ * It creates a gvcf file from the MAF and reference, writing the data to the output file.
  *
  * Requirements:  Only 1 genome aligned to reference for this MAF file
  *    While MAF files may contain multiple records, for gvcf to MAF we need just 1.
@@ -66,7 +66,7 @@ class MAFToGVCF {
                 val refAlignment = AlignmentBlock(refAlignTokens[1], refAlignTokens[2].toInt()+1, refAlignTokens[3].toInt(), refAlignTokens[4], refAlignTokens[5].toInt(), refAlignTokens[6])
 
                 // Here, you can create the alignment records
-                // We are only handling 1 alignment for this method.
+                // We are only handling 1 alignment in this function.
                 val altData = filteredMafBlock.get(1).trim()
                 val altAlignTokens = altData.trim().split(regex)
                 val altAlignment = AlignmentBlock(altAlignTokens[1], altAlignTokens[2].toInt()+1, altAlignTokens[3].toInt(), altAlignTokens[4], altAlignTokens[5].toInt(), altAlignTokens[6])
