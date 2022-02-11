@@ -1,7 +1,6 @@
 package biokotlin.genome
 
 import biokotlin.seq.NucSeq
-import biokotlin.seqIO.SequenceIterator
 import biokotlin.util.bufferedReader
 import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.samtools.SAMSequenceRecord
@@ -17,6 +16,13 @@ import java.io.File
 /**
  * This class takes a UCSC MAF file, a reference fasta, and an output file name.
  * It creates a gvcf file from the MAF and reference, writing the data to the output file.
+ *
+ * Individual functions may be called:
+ *    createGVCFfromMAF() - takes a MAF file, outputs a gvcf file.
+ *    getVariantContextsfromMAF() - takes a MAF file, returns a list of htsjdk VariantContext
+ *      records created from the MAF file data.
+ *    exportVariantContext() - takes a list of htsjdk VariantContext records and exports them
+ *      to a gvcf formatted file.
  *
  * Requirements:  Only 1 genome aligned to reference for this MAF file
  *    While MAF files may contain multiple records, for gvcf to MAF we need just 1.
@@ -36,7 +42,9 @@ class MAFToGVCF {
     val refDepth = intArrayOf(1,0)
     val altDepth = intArrayOf(0,1,0)
 
-    // Main function - calls other methods and outputs the gvcf file
+    /**
+     * This method takes a mafFile and outputs a gvcf file to the specified path
+     */
     fun createGVCFfromMAF(
         mafFile: String,
         referenceFile: String,
@@ -44,6 +52,24 @@ class MAFToGVCF {
         sampleName: String,
         fillGaps: Boolean = false
     ) {
+
+        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName, fillGaps)
+        val refSeqs = fastaToNucSeq(referenceFile)
+
+        // Export to user supplied file
+        exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
+    }
+
+    /**
+     * This function creates a list of htsjdk VariantContext records which may be
+     * further processed by the calling routing
+     */
+    fun getVariantContextsfromMAF(
+        mafFile: String,
+        referenceFile: String,
+        sampleName: String,
+        fillGaps: Boolean = false
+    ): List<VariantContext> {
         val refSeqs = fastaToNucSeq(referenceFile)
         val regex = "\\s+".toRegex()
 
@@ -79,8 +105,8 @@ class MAFToGVCF {
             // build the variants for these alignments.
             val variants:List<VariantContext> = buildVariantsForAllAlignments(sampleName, sortedRecords,refSeqs,fillGaps )
 
-            // Export to user supplied file
-            exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
+            return variants
+
         }
     }
 

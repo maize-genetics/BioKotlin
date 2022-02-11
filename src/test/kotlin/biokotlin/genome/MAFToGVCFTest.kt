@@ -29,12 +29,27 @@ class MAFToGVCFTest : StringSpec({
 
     //Create the known GVCF file:
     createTruthGVCFFile(truthGVCFFile)
+    "test getMafBlocks" {
+        // This tests that maf blocks are correctly pulled from a MAF file
+        val mafBlocks = getMAFblocks(mafFile)
+        mafBlocks.size shouldBe 3 // 3 blocks in the MAF file
+        mafBlocks.get(0).size shouldBe 3 // entry 1 has 3 lines
 
-    "test MAFToGVCF" {
+        // Verify the e and q lines are not filtered
+        val mafEQoutputFile = "${testingDir}/B97eqLines.maf"
+        createMAFFileWithEIQlines(mafEQoutputFile)
+        val mafEQblocks = getMAFblocks(mafEQoutputFile)
+
+        mafEQblocks.size shouldBe 3 // 3 blocks in the MAF file
+        mafEQblocks.get(0).size shouldBe 4 // first entry 1 has 4 lines
+        mafEQblocks.get(1).size shouldBe 4 // second entry 2 has 4 lines
+
+    }
+
+    "test MAFToGVCF from createGVCF" {
         MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName)
-        println("FInished, output gvcf written to: ${outputFile}")
+        println("Finished, output gvcf written to: ${outputFile}")
 
-        // TODO: add verifications - can't use Position objects as is done in PHG, but verify the same stuff
         //Load in the output GVCF  and the truth GVCF and verify that the output is correct
         val truthVariantIterator = VCFFileReader(File(truthGVCFFile),false).iterator()
         val truthVariants = mutableListOf<VariantContext>()
@@ -78,10 +93,7 @@ class MAFToGVCFTest : StringSpec({
             //Check ASM Strand
             (matchingTruth.getAttribute("ASM_Strand") == variant.getAttribute("ASM_Strand")) shouldBe true
         }
-
-
     }
-
 })
 
 /**
@@ -117,6 +129,27 @@ fun createMAFFile(outputFile: String) {
         output.write("a\tscore=5062.0\n")
         output.write("s\tB73.chr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
         output.write("s\tB97.chr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n\n")
+
+        output.write("a\tscore=6636.0\n")
+        output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+        output.write("s\tB97.chr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n")
+
+    }
+}
+
+fun createMAFFileWithEIQlines(outputFile: String) {
+    File(outputFile).bufferedWriter().use {output ->
+        output.write("##maf version=1 scoring=Tba.v8\n\n")
+
+        output.write("a\tscore=23262.0\n")
+        output.write("s\tB73.chr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+        output.write("e\tB73.chr7\t8\t38\t+\t59\tI\n")
+        output.write("s\tB97.chr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+
+        output.write("a\tscore=5062.0\n")
+        output.write("s\tB73.chr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
+        output.write("s\tB97.chr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n")
+        output.write("q\tB97.chr4\t\t\t\t\t9933259999---\n\n")
 
         output.write("a\tscore=6636.0\n")
         output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")

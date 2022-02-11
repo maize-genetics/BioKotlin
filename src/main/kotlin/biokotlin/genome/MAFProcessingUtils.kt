@@ -155,6 +155,24 @@ fun createBedFileFromCoverageIdentity(coverage:IntArray, identity:IntArray, cont
 
 }
 
+/**
+ * This function splits a MAF file into a Set of Maf lines, where each entry in the set
+ * is a list<String> representing an individual maf block.  It is intended for programs
+ * that want to process each MAF block in some manner, perhaps looking for data from the
+ * "e", "i" or "q" lines.  No lines in the maf block are filtered.
+ */
+fun getMAFblocks (mafFile:String):List<List<String>> {
+    val mafBlocks = mutableListOf<List<String>>()
+    bufferedReader(mafFile).use { reader ->
+
+        var mafBlock = readMafBlock(reader)
+        while (mafBlock != null) {
+            mafBlocks.add(mafBlock)
+            mafBlock = readMafBlock(reader)
+        }
+    }
+    return mafBlocks
+}
 
 /**
  * function to read alignment block from the MAF file.
