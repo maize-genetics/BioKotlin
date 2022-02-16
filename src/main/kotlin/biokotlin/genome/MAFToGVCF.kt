@@ -1,5 +1,7 @@
 package biokotlin.genome
 
+import biokotlin.genome.SeqRangeSort.alphaThenNumberSort
+import biokotlin.genome.SeqRangeSort.numberThenAlphaSort
 import biokotlin.seq.NucSeq
 import biokotlin.util.bufferedReader
 import htsjdk.samtools.SAMSequenceDictionary
@@ -53,7 +55,7 @@ class MAFToGVCF {
         fillGaps: Boolean = false
     ) {
 
-        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName, fillGaps)
+        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName,  fillGaps)
         val refSeqs = fastaToNucSeq(referenceFile)
 
         // Export to user supplied file
@@ -100,7 +102,13 @@ class MAFToGVCF {
                 records += MAFRecord(score, refAlignment, altAlignment)
                 mafBlock = readMafBlock(reader)
             }
-            val sortedRecords = records.sortedWith(compareBy({ it.refRecord.chromName }, { it.refRecord.start }))
+
+            // NOTE: LCJ tested with values  ("1A","2A","10B", "10A", "2B","1B") and ("chr10", "chr2","chr4","chr1","chr5")
+            // using both alphaTHenNumberSort and numberThenAlphaSort and both comparators gave the correct response, i.e
+            // (1A 1B 2A 2B 10A 10B) and (chr1 chr2 chr4 chr5 chr10) so rather than adding a new user parameter,
+            // this code uses alphaThenNumberSort from SeqRangeSort.kt
+
+            val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
 
             // build the variants for these alignments.
             val variants:List<VariantContext> = buildVariantsForAllAlignments(sampleName, sortedRecords,refSeqs,fillGaps )
