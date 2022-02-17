@@ -103,8 +103,8 @@ class MAFToGVCF {
                 mafBlock = readMafBlock(reader)
             }
 
-            // NOTE: LCJ tested with values  ("1A","2A","10B", "10A", "2B","1B") and ("chr10", "chr2","chr4","chr1","chr5")
-            // using both alphaTHenNumberSort and numberThenAlphaSort and both comparators gave the correct response, i.e
+            // NOTE: tested with values  ("1A","2A","10B", "10A", "2B","1B") and ("chr10", "chr2","chr4","chr1","chr5")
+            // used both alphaThenNumberSort and numberThenAlphaSort and both comparators gave the correct response, i.e
             // (1A 1B 2A 2B 10A 10B) and (chr1 chr2 chr4 chr5 chr10) so rather than adding a new user parameter,
             // this code uses alphaThenNumberSort from SeqRangeSort.kt
 

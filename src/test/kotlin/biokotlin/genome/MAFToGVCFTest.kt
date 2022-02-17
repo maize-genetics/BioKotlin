@@ -27,6 +27,30 @@ class MAFToGVCFTest : StringSpec({
     //Create the MAF file:
     createMAFFile(mafFile)
 
+    "Test sorting alpha and numeric" {
+        //val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+        var records = mutableListOf<String>("1A","2A","10B", "10A", "2B","1B")
+        var sortedRecords = records.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){name:String -> name})
+        println("sorted records by alpha:")
+        println(sortedRecords.joinToString(" "))
+        println()
+        sortedRecords = records.sortedWith(compareBy(SeqRangeSort.numberThenAlphaSort){name:String -> name})
+        records = mutableListOf<String>("chr10", "chr2","chr4","chr1","chr5")
+        println("sorted records by number:")
+        println(sortedRecords.joinToString(" "))
+        println()
+
+        records = mutableListOf<String>("chr10", "chr2","chr4","chr1","chr5")
+        sortedRecords = records.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){name:String -> name})
+        println("sorted records by alpha:")
+        println(sortedRecords.joinToString(" "))
+        println()
+        sortedRecords = records.sortedWith(compareBy(SeqRangeSort.numberThenAlphaSort){name:String -> name})
+        records = mutableListOf<String>("chr10", "chr2","chr4","chr1","chr5")
+        println("sorted records by number:")
+        println(sortedRecords.joinToString(" "))
+        println()
+    }
     //Create the known GVCF file:
     createTruthGVCFFile(truthGVCFFile)
     "test getMafBlocks" {
@@ -111,6 +135,10 @@ fun createSimpleRef(outputFile : String) {
         output.write(">chr1\n")
         output.write("GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
 
+        // added chr10 to test sorting
+        output.write(">chr10\n")
+        output.write("GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+
     }
 }
 
@@ -132,6 +160,11 @@ fun createMAFFile(outputFile: String) {
 
         output.write("a\tscore=6636.0\n")
         output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+        output.write("s\tB97.chr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+
+        // we need a chr10 in here to test sorting the maf records
+        output.write("a\tscore=6636.0\n")
+        output.write("s\tB73.chr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
         output.write("s\tB97.chr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n")
 
     }
@@ -179,6 +212,7 @@ fun createTruthGVCFFile(outputFile: String) {
                 "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n" +
                 "##contig=<ID=chr7,length=461>\n" +
                 "##contig=<ID=chr1,length=40>\n" +
+                "##contig=<ID=chr10,length=40>\n" +
                 "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tB97\n" +
                 "chr1\t1\t.\tG\tAAAAAG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310103;ASM_Start=53310098;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
                 "chr1\t2\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310104;ASM_Start=53310104;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
@@ -193,7 +227,6 @@ fun createTruthGVCFFile(outputFile: String) {
                 "chr1\t13\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
                 "chr1\t14\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
                 "chr1\t15\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=40\tGT:AD:DP\t0:1,0:1\n" +
-
                 "chr7\t12\t.\tAA\tA,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
                 "chr7\t14\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344248;ASM_Start=81344244;ASM_Strand=+;END=18\tGT:AD:DP\t0:1,0:1\n" +
                 "chr7\t19\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344249;ASM_Start=81344249;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
@@ -219,6 +252,19 @@ fun createTruthGVCFFile(outputFile: String) {
                 "chr7\t458\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444254;ASM_Start=81444254;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
                 "chr7\t459\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444255;ASM_Start=81444255;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
                 "chr7\t460\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444256;ASM_Start=81444256;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
-                "chr7\t461\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444257;ASM_Start=81444257;ASM_Strand=+;END=461\tGT:AD:DP\t0:1,0:1\n")
+                "chr7\t461\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444257;ASM_Start=81444257;ASM_Strand=+;END=461\tGT:AD:DP\t0:1,0:1\n" +
+                "chr10\t1\t.\tG\tAAAAAG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310103;ASM_Start=53310098;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t2\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310104;ASM_Start=53310104;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t3\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310105;ASM_Start=53310105;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t4\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310106;ASM_Start=53310106;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t5\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310107;ASM_Start=53310107;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t6\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310108;ASM_Start=53310108;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t7\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310109;ASM_Start=53310109;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t8\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310110;ASM_Start=53310110;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t9\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310113;ASM_Start=53310111;ASM_Strand=+;END=11\tGT:AD:DP\t0:1,0:1\n" +
+                "chr10\t12\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310114;ASM_Start=53310114;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t13\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t14\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP\t1:0,1,0:1\n" +
+                "chr10\t15\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=40\tGT:AD:DP\t0:1,0:1\n")
     }
 }
