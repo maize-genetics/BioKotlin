@@ -56,7 +56,7 @@ class MAFToGVCFTest : StringSpec({
     "test getMafBlocks" {
         // This tests that maf blocks are correctly pulled from a MAF file
         val mafBlocks = getMAFblocks(mafFile)
-        mafBlocks.size shouldBe 3 // 3 blocks in the MAF file
+        mafBlocks.size shouldBe 4 // 3 blocks in the MAF file
         mafBlocks.get(0).size shouldBe 3 // entry 1 has 3 lines
 
         // Verify the e and q lines are not filtered
