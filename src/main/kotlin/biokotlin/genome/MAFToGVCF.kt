@@ -16,10 +16,20 @@ import htsjdk.variant.vcf.*
 import java.io.File
 
 /**
- * This class takes a UCSC MAF file, a reference fasta, and an output file name.
+ * This class takes a UCSC MAF file, a reference fasta, a sample name and an output file name.
  * It creates a gvcf file from the MAF and reference, writing the data to the output file.
  *
- * Individual functions may be called:
+ * There are 2 optional boolean parameters:  fillGaps and sortMaf
+ *  - fillGaps:  Defaults to false.  If true, and the maf file does not fully cover the reference genome, any gaps
+ *     in coverage will be filled in with reference blocks. This is necessary if the resulting GVCFs are to be combined.
+ *
+ *  - sortMaf:  Defaults to true.  When true, the MAF file entries are sorted based on the chromosome name.  This
+ *      is preferred when the GVCF will be used for programs e.g. PHG's LoadHaplotypesFromGVCFPlugin.
+ *      However, some use cases are best left with the GVCF un-sorted. An example is aligning the maize genome to
+ *      sorghum genome where there would be two sets of variants for each reference range.  If we sort variant records,
+ *      we would mix variants from maize two sub-genomes together.
+ *
+ * These individual functions may be called:
  *    createGVCFfromMAF() - takes a MAF file, outputs a gvcf file.
  *    getVariantContextsfromMAF() - takes a MAF file, returns a list of htsjdk VariantContext
  *      records created from the MAF file data.
