@@ -52,10 +52,11 @@ class MAFToGVCF {
         referenceFile: String,
         gvcfOutput: String,
         sampleName: String,
-        fillGaps: Boolean = false
+        fillGaps: Boolean = false,
+        sortMaf: Boolean = true
     ) {
 
-        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName,  fillGaps)
+        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName,  fillGaps, sortMaf)
         val refSeqs = fastaToNucSeq(referenceFile)
 
         // Export to user supplied file
@@ -70,7 +71,8 @@ class MAFToGVCF {
         mafFile: String,
         referenceFile: String,
         sampleName: String,
-        fillGaps: Boolean = false
+        fillGaps: Boolean = false,
+        sortMaf: Boolean = true
     ): List<VariantContext> {
         val refSeqs = fastaToNucSeq(referenceFile)
         val regex = "\\s+".toRegex()
@@ -108,13 +110,16 @@ class MAFToGVCF {
             // (1A 1B 2A 2B 10A 10B) and (chr1 chr2 chr4 chr5 chr10) so rather than adding a new user parameter,
             // this code uses alphaThenNumberSort from SeqRangeSort.kt
 
-            val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+
 
             // build the variants for these alignments.
-            val variants:List<VariantContext> = buildVariantsForAllAlignments(sampleName, sortedRecords,refSeqs,fillGaps )
+            if (sortMaf) {
+                val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+                return buildVariantsForAllAlignments(sampleName, sortedRecords,refSeqs,fillGaps )
+            }
 
-            return variants
-
+            // no sorting of the MAF file records
+            return buildVariantsForAllAlignments(sampleName, records,refSeqs,fillGaps )
         }
     }
 
