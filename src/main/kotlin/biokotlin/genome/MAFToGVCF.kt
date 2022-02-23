@@ -1,5 +1,7 @@
 package biokotlin.genome
 
+import biokotlin.genome.SeqRangeSort.alphaThenNumberSort
+import biokotlin.genome.SeqRangeSort.numberThenAlphaSort
 import biokotlin.seq.NucSeq
 import biokotlin.util.bufferedReader
 import htsjdk.samtools.SAMSequenceDictionary
@@ -14,10 +16,20 @@ import htsjdk.variant.vcf.*
 import java.io.File
 
 /**
- * This class takes a UCSC MAF file, a reference fasta, and an output file name.
+ * This class takes a UCSC MAF file, a reference fasta, a sample name and an output file name.
  * It creates a gvcf file from the MAF and reference, writing the data to the output file.
  *
- * Individual functions may be called:
+ * There are 2 optional boolean parameters:  fillGaps and sortMaf
+ *  - fillGaps:  Defaults to false.  If true, and the maf file does not fully cover the reference genome, any gaps
+ *     in coverage will be filled in with reference blocks. This is necessary if the resulting GVCFs are to be combined.
+ *
+ *  - sortMaf:  Defaults to true.  When true, the MAF file entries are sorted based on the chromosome name.  This
+ *      is preferred when the GVCF will be used for programs e.g. PHG's LoadHaplotypesFromGVCFPlugin.
+ *      However, some use cases are best left with the GVCF un-sorted. An example is aligning the maize genome to
+ *      sorghum genome where there would be two sets of variants for each reference range.  If we sort variant records,
+ *      we would mix variants from maize two sub-genomes together.
+ *
+ * These individual functions may be called:
  *    createGVCFfromMAF() - takes a MAF file, outputs a gvcf file.
  *    getVariantContextsfromMAF() - takes a MAF file, returns a list of htsjdk VariantContext
  *      records created from the MAF file data.
@@ -50,10 +62,11 @@ class MAFToGVCF {
         referenceFile: String,
         gvcfOutput: String,
         sampleName: String,
-        fillGaps: Boolean = false
+        fillGaps: Boolean = false,
+        sortMaf: Boolean = true
     ) {
 
-        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName, fillGaps)
+        val variants = getVariantContextsfromMAF(mafFile, referenceFile, sampleName,  fillGaps, sortMaf)
         val refSeqs = fastaToNucSeq(referenceFile)
 
         // Export to user supplied file
@@ -68,7 +81,8 @@ class MAFToGVCF {
         mafFile: String,
         referenceFile: String,
         sampleName: String,
-        fillGaps: Boolean = false
+        fillGaps: Boolean = false,
+        sortMaf: Boolean = true
     ): List<VariantContext> {
         val refSeqs = fastaToNucSeq(referenceFile)
         val regex = "\\s+".toRegex()
@@ -100,13 +114,22 @@ class MAFToGVCF {
                 records += MAFRecord(score, refAlignment, altAlignment)
                 mafBlock = readMafBlock(reader)
             }
-            val sortedRecords = records.sortedWith(compareBy({ it.refRecord.chromName }, { it.refRecord.start }))
+
+            // NOTE: tested with values  ("1A","2A","10B", "10A", "2B","1B") and ("chr10", "chr2","chr4","chr1","chr5")
+            // used both alphaThenNumberSort and numberThenAlphaSort and both comparators gave the correct response, i.e
+            // (1A 1B 2A 2B 10A 10B) and (chr1 chr2 chr4 chr5 chr10) so rather than adding a new user parameter,
+            // this code uses alphaThenNumberSort from SeqRangeSort.kt
+
+
 
             // build the variants for these alignments.
-            val variants:List<VariantContext> = buildVariantsForAllAlignments(sampleName, sortedRecords,refSeqs,fillGaps )
+            if (sortMaf) {
+                val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+                return buildVariantsForAllAlignments(sampleName, sortedRecords,refSeqs,fillGaps )
+            }
 
-            return variants
-
+            // no sorting of the MAF file records
+            return buildVariantsForAllAlignments(sampleName, records,refSeqs,fillGaps )
         }
     }
 
