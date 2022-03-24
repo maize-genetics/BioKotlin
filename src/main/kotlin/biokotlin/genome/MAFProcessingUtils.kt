@@ -1,6 +1,9 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
+import kotlinx.coroutines.runBlocking
+import krangl.DataFrame
+import krangl.asDataFrame
 import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.*
@@ -237,6 +240,7 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
  */
 fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, identityCnt:IntArray, startStop:ClosedRange<Int>) {
 
+    val regex = "\\s+".toRegex() // use this in split
     // sample MAF alignment block filtered to only contain the "s" lines: "words" are white-space delimited ( spaces or tabs)
     // The first "s" line should be the reference
     // s       B73.chr7        12      38      +       158545518       AAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG
@@ -281,7 +285,7 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
         arrayOffset = 0
     }
 
-    println("\ncalculateCoverageAndIdentity: numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
+    //println("\ncalculateCoverageAndIdentity: numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
 
     // Need to run through only the sequence covered by the user request  It may not
     // start at the beginning of the ref sequence and it may not end
@@ -321,4 +325,168 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
             if (counter == alignEnd) break; // that's the end of the overlapping alignment
         }
     }
+}
+
+//Gets a MAF record as defined in MAFToGVCF.kt
+fun getMAFRecord(mafBlock:List<String>): MAFToGVCF.MAFRecord {
+    val regex = "\\s+".toRegex()
+    val score = mafBlock.get(0).split(regex)[1].split("=")[1].toDouble()
+
+    // filter the strings, only keep the "s" lines
+    val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
+
+    // the first entry should be the ref
+    val refData = filteredMafBlock.get(0).trim()
+
+    // Maf files are white space separated - could be tabs or spaces
+    val refAlignTokens = refData.split(regex)
+    val refAlignment = MAFToGVCF.AlignmentBlock(
+        refAlignTokens[1],
+        refAlignTokens[2].toInt() + 1,
+        refAlignTokens[3].toInt(),
+        refAlignTokens[4],
+        refAlignTokens[5].toInt(),
+        refAlignTokens[6]
+    )
+
+    // Here, you can create the alignment records
+    // We are only handling 1 alignment in this function.
+    val altData = filteredMafBlock.get(1).trim()
+    val altAlignTokens = altData.trim().split(regex)
+    val altAlignment = MAFToGVCF.AlignmentBlock(
+        altAlignTokens[1],
+        altAlignTokens[2].toInt() + 1,
+        altAlignTokens[3].toInt(),
+        altAlignTokens[4],
+        altAlignTokens[5].toInt(),
+        altAlignTokens[6]
+    )
+
+    return MAFToGVCF.MAFRecord(score, refAlignment, altAlignment)
+}
+
+/**
+ * Function takes a MAF file, returns a DataFrame that
+ * has columns chrom, %cov, %id
+ * THis version is an attempt to use the MAFRecords defined in MAFToGVCF.
+ * But it doesn't allow for using the calculateCoverageAndIdentity() method
+ * above, as that expects just the actual MAF strings, not the MAFRecords
+ */
+fun getCoverageIdentityPercentForMAF1(mafFile:String):DataFrame? {
+    val records = mutableListOf<MAFToGVCF.MAFRecord>()
+    bufferedReader(mafFile).use { reader ->
+
+        var mafBlock = readMafBlock(reader)
+        while (mafBlock != null) {
+            records += getMAFRecord(mafBlock)
+            mafBlock = readMafBlock(reader)
+        }
+    }
+
+    val sortedRecords = records.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){ name: MAFToGVCF.MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+    val chromCovIdMap = mutableMapOf<String,Pair<Float,Float>>()
+
+    for (record in sortedRecords) {
+        // find coverage/id for that record
+    }
+    val frameObject = object {
+        var chrom = "1" // record.chrom
+        var percentCov = 0.9 // calculate this
+        var percentID = 0.6 // calculate this
+
+    }
+    // See Ranges.kt code for DataFrame example
+    return null
+}
+
+// TO use calculateCoverageAndIdentity(), I need the actual MAF lines.
+// ANd I need chromosome sizes, and a list of just those chromosomes
+// SO go through and create list of chrom names.  But should just
+// put the records in a map with chrom as the key.
+fun getCoverageIdentifyPercentForMAF(mafFile:String):DataFrame? {
+
+    val regex = "\\s+".toRegex()
+
+    val chromToMAFBlocks = mutableMapOf<String,ArrayList<List<String>>>()
+    val chromToSize = mutableMapOf<String,Int>()
+    // This loop reads the MAF file, and stores the records in a map keyed by chromosome
+    var beginTime = System.nanoTime()
+    bufferedReader(mafFile).use { reader ->
+
+        var mafBlock = readMafBlock(reader)
+        while (mafBlock != null) {
+            // filter the strings, only keep the "s" lines
+            val filteredMafBlock = mafBlock!!.filter { it.startsWith("s")}
+            // the first entry should be the ref
+            val refData = filteredMafBlock.get(0)
+            // Maf files are white space separated - could be tabs or spaces
+            val refSplitLine = refData.split(regex)
+            val alignContig = refSplitLine[1]
+            val contigSize = refSplitLine[5].toInt()
+            chromToSize.put(alignContig,contigSize)
+
+            var chromList = chromToMAFBlocks.get(alignContig)
+            if (chromList == null) {
+                chromList = ArrayList<List<String>>()
+            }
+            chromList.add(filteredMafBlock)
+            chromToMAFBlocks.put(alignContig,chromList)
+            mafBlock = readMafBlock(reader)
+        }
+    }
+
+    val totalReadTime = (System.nanoTime() - beginTime)/1e9
+    println("getCoverageIdentifyPercentForMAF: time to read MAF file to blocks:  ${totalReadTime} seconds")
+
+    // Chrom,%cov,%id is the triple
+    val chromPercentageArray = mutableListOf<Triple<String,Double,Double>>()
+
+    //Calculate coverage/id percentages for each chromosome
+    val chroms = chromToMAFBlocks.keys.sorted()
+    for (chrom in chroms) {
+
+        var startTime = System.nanoTime()
+        val chromSize = chromToSize[chrom]
+        val coverageArray = IntArray(chromSize!!)
+        val identityArray = IntArray(chromSize!!)
+
+        //  calculateCoverageAndIdentity works on a single MAF block.  ANd we need
+        // all the MAF blocks, and we need all for each chromosome.  How to parallelize it?
+        // COUld just do it on a per-chrom basis.
+        val mafBlocks = chromToMAFBlocks[chrom]
+        for (mafBlock in mafBlocks!!) {
+            // filter the strings, only keep the "s" lines
+            val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
+
+            // We are processing all positions
+            calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, 1..chromSize)
+        }
+
+        // now postprocess to get the percentages:
+        val numCovered = coverageArray.count{it > 0}
+        val numIdentity = identityArray.count{it > 0}
+
+        val percentCov = (numCovered.toDouble()/chromSize) * 100
+        val percentIdent = (numIdentity.toDouble()/chromSize) * 100
+
+        chromPercentageArray.add(Triple<String,Double,Double>(chrom,percentCov,percentIdent))
+        val totalTime = (System.nanoTime() - startTime)/1e9
+        println("getCoverageIdentifyPercentForMAF: time to process chrom ${chrom}: ${totalTime} seconds")
+    }
+
+     val chromPercentageResults = chromPercentageArray.map{ entry ->
+        val chrom = entry.first
+        val percentCov = entry.second
+        val percentID = entry.third
+
+        val frameObject = object {
+            var Contig = chrom
+            var PercentCoverage = percentCov
+            var PercentIdentity = percentID
+        }
+        frameObject
+    }
+
+    val df = chromPercentageResults.asDataFrame()
+    return df
 }

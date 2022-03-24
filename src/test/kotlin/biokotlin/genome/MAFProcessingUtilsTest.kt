@@ -1,7 +1,12 @@
 package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.maps.shouldContainValue
 import io.kotest.matchers.shouldBe
+import krangl.DataFrame
+import krangl.print
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.assertThrows
 import java.io.File
 
@@ -302,6 +307,31 @@ class MAFProcessingUtilsTest : StringSpec({
             println("${coverage[idx]}  ${identity[idx]}")
         }
     }
+
+    "test  getCoverageIdentifyPercentForMAF" {
+        println("BEgin ...")
+        val time = System.nanoTime()
+        // need a MAF file, the result is a Kotlin DataFrame
+//        val mafFile ="/Users/lcj34/notes_files/biokotlin/new_features/testFiles/LineA.maf"
+//        val covIdDF: DataFrame = getCoverageIdentifyPercentForMAF(mafFile)!!
+        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
+        val covIdDF: DataFrame = getCoverageIdentifyPercentForMAF(mafFileReal)!!
+
+        covIdDF.print()
+        val totalTime =  (System.nanoTime() - time)/1e9
+        println("Finished processing MAF in ${totalTime} seconds")
+        assertEquals(covIdDF.cols.size, 3)
+        assertEquals(covIdDF.rows.toList().size,10)
+
+        val row1 = covIdDF.rows.toList().get(0)
+        val row10 = covIdDF.rows.toList().get(9)
+        println("row0: $row1")
+        println("row9: $row10")
+        row1.shouldContainValue("B73.ref.fa.chr1")
+        row10.shouldContainValue("B73.ref.fa.chr9")
+
+    }
+
 //    "test mergeWiggleFiles" {
 //
 //        val mergeFile1 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile1_chr7.wig"
