@@ -328,82 +328,16 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
     }
 }
 
-//Gets a MAF record as defined in MAFToGVCF.kt
-fun getMAFRecord(mafBlock:List<String>): MAFToGVCF.MAFRecord {
-    val regex = "\\s+".toRegex()
-    val score = mafBlock.get(0).split(regex)[1].split("=")[1].toDouble()
-
-    // filter the strings, only keep the "s" lines
-    val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
-
-    // the first entry should be the ref
-    val refData = filteredMafBlock.get(0).trim()
-
-    // Maf files are white space separated - could be tabs or spaces
-    val refAlignTokens = refData.split(regex)
-    val refAlignment = MAFToGVCF.AlignmentBlock(
-        refAlignTokens[1],
-        refAlignTokens[2].toInt() + 1,
-        refAlignTokens[3].toInt(),
-        refAlignTokens[4],
-        refAlignTokens[5].toInt(),
-        refAlignTokens[6]
-    )
-
-    // Here, you can create the alignment records
-    // We are only handling 1 alignment in this function.
-    val altData = filteredMafBlock.get(1).trim()
-    val altAlignTokens = altData.trim().split(regex)
-    val altAlignment = MAFToGVCF.AlignmentBlock(
-        altAlignTokens[1],
-        altAlignTokens[2].toInt() + 1,
-        altAlignTokens[3].toInt(),
-        altAlignTokens[4],
-        altAlignTokens[5].toInt(),
-        altAlignTokens[6]
-    )
-
-    return MAFToGVCF.MAFRecord(score, refAlignment, altAlignment)
-}
-
 /**
- * Function takes a MAF file, returns a DataFrame that
- * has columns chrom, %cov, %id
- * THis version is an attempt to use the MAFRecords defined in MAFToGVCF.
- * But it doesn't allow for using the calculateCoverageAndIdentity() method
- * above, as that expects just the actual MAF strings, not the MAFRecords
+ * The getCoverageIdentityPercentForMAF takes a single UCSC MAF formatted
+ * file and for each contig represented, calculates the coverage and identity
+ * percentages as relates to the REF aligned against.
+ *
+ * Currently, all MAF positions are processed.  This could in the future
+ * be amended to process a user defined range of positions.
+ *
+ * It returns a Krangle DataFrame of Contig,  PercentCoverage,  PercentIdentity
  */
-fun getCoverageIdentityPercentForMAF1(mafFile:String):DataFrame? {
-    val records = mutableListOf<MAFToGVCF.MAFRecord>()
-    bufferedReader(mafFile).use { reader ->
-
-        var mafBlock = readMafBlock(reader)
-        while (mafBlock != null) {
-            records += getMAFRecord(mafBlock)
-            mafBlock = readMafBlock(reader)
-        }
-    }
-
-    val sortedRecords = records.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){ name: MAFToGVCF.MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
-    val chromCovIdMap = mutableMapOf<String,Pair<Float,Float>>()
-
-    for (record in sortedRecords) {
-        // find coverage/id for that record
-    }
-    val frameObject = object {
-        var chrom = "1" // record.chrom
-        var percentCov = 0.9 // calculate this
-        var percentID = 0.6 // calculate this
-
-    }
-    // See Ranges.kt code for DataFrame example
-    return null
-}
-
-// TO use calculateCoverageAndIdentity(), I need the actual MAF lines.
-// ANd I need chromosome sizes, and a list of just those chromosomes
-// SO go through and create list of chrom names.  But should just
-// put the records in a map with chrom as the key.
 fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
 
     val regex = "\\s+".toRegex()
@@ -453,6 +387,9 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
             val identityArray = IntArray(chromSize!!)
 
             val mafBlocks = chromToMAFBlocks[triple]
+            // Each call of calculateCoverageAndIdentity increments the
+            // array position for the basepair that was covered and/or had
+            // same identity as REF.
             for (mafBlock in mafBlocks!!) {
                 // filter the strings, only keep the "s" lines
                 val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
@@ -460,7 +397,7 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
                 // We are processing all positions for this function
                 calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, 1..chromSize)
             }
-            // now postprocess to get the percentages:
+            // postprocess to get the percentages:
             val numCovered = coverageArray.count{it > 0}
             val numIdentity = identityArray.count{it > 0}
 
@@ -469,9 +406,10 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
 
             println("finished chrom ${triple}")
             Triple<String,Double,Double>(triple,percentCov,percentIdent)
-           // chromPercentageArray.add(Triple<String,Double,Double>(chrom,percentCov,percentIdent)
+
         }.collect(Collectors.toList())
 
+    // Store the results in a DataFrame for user processing
      val chromPercentageResults = chromPercentageArray.map{ entry ->
         val chrom = entry.first
         val percentCov = entry.second
