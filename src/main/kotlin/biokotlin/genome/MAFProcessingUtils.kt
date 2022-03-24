@@ -1,7 +1,6 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
-import kotlinx.coroutines.runBlocking
 import krangl.DataFrame
 import krangl.asDataFrame
 import java.io.BufferedReader
