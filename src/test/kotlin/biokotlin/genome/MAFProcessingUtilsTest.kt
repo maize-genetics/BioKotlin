@@ -314,10 +314,10 @@ class MAFProcessingUtilsTest : StringSpec({
         // This is a MAF created in SmallSeq, added to the test  data folder here
         val workingDir = Paths.get(System.getProperty("user.dir"))
         val mafFileSmallSeq = "${workingDir}/src/test/kotlin/biokotlin/data/LineA.maf"
-        val covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileSmallSeq)!!
+        val covIdDF = getCoverageIdentityPercentForMAF(mafFileSmallSeq)
 
 
-        covIdDF.print()
+        covIdDF!!.print()
         val totalTime =  (System.nanoTime() - time)/1e9
         println("Finished processing MAF in ${totalTime} seconds")
         assertEquals(covIdDF.cols.size, 3)
@@ -330,12 +330,13 @@ class MAFProcessingUtilsTest : StringSpec({
         // This is a more real test run by Lynn, with a NAM MAF for better timing and results verification
 //        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
 //        val covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileReal)!!
+//        covIdDF!!.print()
 //        assertEquals(covIdDF.cols.size, 3)
 //        assertEquals(covIdDF.rows.toList().size,10)
 //
 //        val row1 = covIdDF.rows.toList().get(0)
 //        val row10 = covIdDF.rows.toList().get(9)
-//        println("row0: $row1")
+//        println("\nrow0: $row1")
 //        println("row9: $row10")
 //        row1.shouldContainValue("B73.ref.fa.chr1")
 //        row10.shouldContainValue("B73.ref.fa.chr9")
