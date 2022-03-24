@@ -6,9 +6,6 @@ import io.kotest.matchers.shouldBe
 import krangl.DataFrame
 import krangl.print
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.assertThrows
-import java.io.File
 
 class MAFProcessingUtilsTest : StringSpec({
     val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles"
@@ -308,14 +305,14 @@ class MAFProcessingUtilsTest : StringSpec({
         }
     }
 
-    "test  getCoverageIdentifyPercentForMAF" {
+    "test  getCoverageIdentityPercentForMAF" {
         println("BEgin ...")
         val time = System.nanoTime()
-        // need a MAF file, the result is a Kotlin DataFrame
+        // input a MAF file, the result is a Kotlin DataFrame
 //        val mafFile ="/Users/lcj34/notes_files/biokotlin/new_features/testFiles/LineA.maf"
 //        val covIdDF: DataFrame = getCoverageIdentifyPercentForMAF(mafFile)!!
         val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
-        val covIdDF: DataFrame = getCoverageIdentifyPercentForMAF(mafFileReal)!!
+        val covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileReal)!!
 
         covIdDF.print()
         val totalTime =  (System.nanoTime() - time)/1e9

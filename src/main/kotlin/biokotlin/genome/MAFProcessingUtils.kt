@@ -7,6 +7,7 @@ import krangl.asDataFrame
 import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.*
+import java.util.stream.Collectors
 
 /**
  * This file holds methods used to process MAF Files with the intent of
@@ -403,13 +404,14 @@ fun getCoverageIdentityPercentForMAF1(mafFile:String):DataFrame? {
 // ANd I need chromosome sizes, and a list of just those chromosomes
 // SO go through and create list of chrom names.  But should just
 // put the records in a map with chrom as the key.
-fun getCoverageIdentifyPercentForMAF(mafFile:String):DataFrame? {
+fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
 
     val regex = "\\s+".toRegex()
 
     val chromToMAFBlocks = mutableMapOf<String,ArrayList<List<String>>>()
     val chromToSize = mutableMapOf<String,Int>()
     // This loop reads the MAF file, and stores the records in a map keyed by chromosome
+    println("getCoverageIdentityPercentForMAF: begin reading MAF file into blocks ...")
     var beginTime = System.nanoTime()
     bufferedReader(mafFile).use { reader ->
 
@@ -438,41 +440,37 @@ fun getCoverageIdentifyPercentForMAF(mafFile:String):DataFrame? {
     val totalReadTime = (System.nanoTime() - beginTime)/1e9
     println("getCoverageIdentifyPercentForMAF: time to read MAF file to blocks:  ${totalReadTime} seconds")
 
-    // Chrom,%cov,%id is the triple
-    val chromPercentageArray = mutableListOf<Triple<String,Double,Double>>()
-
     //Calculate coverage/id percentages for each chromosome
     val chroms = chromToMAFBlocks.keys.sorted()
-    for (chrom in chroms) {
 
-        var startTime = System.nanoTime()
-        val chromSize = chromToSize[chrom]
-        val coverageArray = IntArray(chromSize!!)
-        val identityArray = IntArray(chromSize!!)
+    println("Processing the MAF blocks per-chrom")
+    // Create an array of Triples:  Chrom,%cov,%id is the triple
+    val chromPercentageArray = chroms.parallelStream()
+        .map {
+            triple ->
+            val chromSize = chromToSize[triple]
+            val coverageArray = IntArray(chromSize!!)
+            val identityArray = IntArray(chromSize!!)
 
-        //  calculateCoverageAndIdentity works on a single MAF block.  ANd we need
-        // all the MAF blocks, and we need all for each chromosome.  How to parallelize it?
-        // COUld just do it on a per-chrom basis.
-        val mafBlocks = chromToMAFBlocks[chrom]
-        for (mafBlock in mafBlocks!!) {
-            // filter the strings, only keep the "s" lines
-            val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
+            val mafBlocks = chromToMAFBlocks[triple]
+            for (mafBlock in mafBlocks!!) {
+                // filter the strings, only keep the "s" lines
+                val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
 
-            // We are processing all positions
-            calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, 1..chromSize)
-        }
+                // We are processing all positions for this function
+                calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, 1..chromSize)
+            }
+            // now postprocess to get the percentages:
+            val numCovered = coverageArray.count{it > 0}
+            val numIdentity = identityArray.count{it > 0}
 
-        // now postprocess to get the percentages:
-        val numCovered = coverageArray.count{it > 0}
-        val numIdentity = identityArray.count{it > 0}
+            val percentCov = (numCovered.toDouble()/chromSize) * 100
+            val percentIdent = (numIdentity.toDouble()/chromSize) * 100
 
-        val percentCov = (numCovered.toDouble()/chromSize) * 100
-        val percentIdent = (numIdentity.toDouble()/chromSize) * 100
-
-        chromPercentageArray.add(Triple<String,Double,Double>(chrom,percentCov,percentIdent))
-        val totalTime = (System.nanoTime() - startTime)/1e9
-        println("getCoverageIdentifyPercentForMAF: time to process chrom ${chrom}: ${totalTime} seconds")
-    }
+            println("finished chrom ${triple}")
+            Triple<String,Double,Double>(triple,percentCov,percentIdent)
+           // chromPercentageArray.add(Triple<String,Double,Double>(chrom,percentCov,percentIdent)
+        }.collect(Collectors.toList())
 
      val chromPercentageResults = chromPercentageArray.map{ entry ->
         val chrom = entry.first
