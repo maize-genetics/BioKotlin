@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import krangl.DataFrame
 import krangl.print
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.nio.file.Paths
 
 class MAFProcessingUtilsTest : StringSpec({
     val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles"
@@ -309,23 +310,35 @@ class MAFProcessingUtilsTest : StringSpec({
         println("BEgin ...")
         val time = System.nanoTime()
         // input a MAF file, the result is a Kotlin DataFrame
-//        val mafFile ="/Users/lcj34/notes_files/biokotlin/new_features/testFiles/LineA.maf"
-//        val covIdDF: DataFrame = getCoverageIdentifyPercentForMAF(mafFile)!!
-        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
-        val covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileReal)!!
+
+        // This is a MAF created in SmallSeq, added to the test  data folder here
+        val workingDir = Paths.get(System.getProperty("user.dir"))
+        val mafFileSmallSeq = "${workingDir}/src/test/kotlin/biokotlin/data/LineA.maf"
+        val covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileSmallSeq)!!
+
 
         covIdDF.print()
         val totalTime =  (System.nanoTime() - time)/1e9
         println("Finished processing MAF in ${totalTime} seconds")
         assertEquals(covIdDF.cols.size, 3)
-        assertEquals(covIdDF.rows.toList().size,10)
+        assertEquals(covIdDF.rows.toList().size,1)
 
         val row1 = covIdDF.rows.toList().get(0)
-        val row10 = covIdDF.rows.toList().get(9)
         println("row0: $row1")
-        println("row9: $row10")
-        row1.shouldContainValue("B73.ref.fa.chr1")
-        row10.shouldContainValue("B73.ref.fa.chr9")
+        row1.shouldContainValue("1")
+
+        // This is a more real test run by Lynn, with a NAM MAF for better timing and results verification
+//        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
+//        val covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileReal)!!
+//        assertEquals(covIdDF.cols.size, 3)
+//        assertEquals(covIdDF.rows.toList().size,10)
+//
+//        val row1 = covIdDF.rows.toList().get(0)
+//        val row10 = covIdDF.rows.toList().get(9)
+//        println("row0: $row1")
+//        println("row9: $row10")
+//        row1.shouldContainValue("B73.ref.fa.chr1")
+//        row10.shouldContainValue("B73.ref.fa.chr9")
 
     }
 
