@@ -21,6 +21,10 @@ import java.util.stream.Collectors
  *
  */
 
+// Data class to be used when creating a dataFrame for chrom percent coverage statistics
+// This may be used if can get Kotlin DataFrame vs Krangl DataFrame to work.
+data class ChromStats(val contig: String, val percCov: Double, val percId: Double)
+
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, outputDir:String) {
 
     // There will be 2 wiggle files created: 1 for identity and 1 for coverage
@@ -337,13 +341,26 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
  *
  * It returns a Krangle DataFrame of Contig,  PercentCoverage,  PercentIdentity
  */
-fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
+fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): DataFrame? {
 
     val regex = "\\s+".toRegex()
+
+    var userContig = "all"
+    var start = 1
+    var end = 100 // place holder - will be set correctly below
+    if (region != "all") {
+        val colonIdx = region.indexOf(":")
+        userContig = region.substring(0,colonIdx)
+        val dashIdx = region.indexOf("-")
+        start = region.substring(colonIdx+1,dashIdx).toInt()
+        end = region.substring(dashIdx+1).toInt()
+    }
 
     val chromToMAFBlocks = mutableMapOf<String,ArrayList<List<String>>>()
     val chromToSize = mutableMapOf<String,Int>()
     // This loop reads the MAF file, and stores the records in a map keyed by chromosome
+    // If the user specified a single region, percent cov/id will be based on the number
+    // of bps that fall within that region.
     println("getCoverageIdentityPercentForMAF: begin reading MAF file into blocks ...")
     var beginTime = System.nanoTime()
     bufferedReader(mafFile).use { reader ->
@@ -357,15 +374,28 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
             // Maf files are white space separated - could be tabs or spaces
             val refSplitLine = refData.split(regex)
             val alignContig = refSplitLine[1]
+            val refStart = refSplitLine[2].toInt()
+            val refSize = refSplitLine[3].toInt()
             val contigSize = refSplitLine[5].toInt()
             chromToSize.put(alignContig,contigSize)
 
-            var chromList = chromToMAFBlocks.get(alignContig)
-            if (chromList == null) {
-                chromList = ArrayList<List<String>>()
+            // Determine if the alignment ref contig matches the user specified contig,
+            // and if the alignment overlaps the user requested positions.
+            var skip = false
+            if ((userContig != "all") && ((!alignContig.equals(userContig)) || (refStart+1 > end) || (refStart + refSize < start) ) ) {
+     //       if ((!alignContig.equals(userContig)) || (refStart+1 > end) || (refStart + refSize < start) ) {
+                skip = true
             }
-            chromList.add(filteredMafBlock)
-            chromToMAFBlocks.put(alignContig,chromList)
+            if (!skip) {
+                // add the read data
+                var chromList = chromToMAFBlocks.get(alignContig)
+                if (chromList == null) {
+                    chromList = ArrayList<List<String>>()
+                }
+                chromList.add(filteredMafBlock)
+                chromToMAFBlocks.put(alignContig,chromList)
+            }
+
             mafBlock = readMafBlock(reader)
         }
     }
@@ -382,8 +412,10 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
         .map {
             triple ->
             val chromSize = chromToSize[triple]
-            val coverageArray = IntArray(chromSize!!)
-            val identityArray = IntArray(chromSize!!)
+
+            val userSpan = if (userContig== "all") (1..chromSize!!) else start..end
+            val coverageArray = IntArray(userSpan.count())
+            val identityArray = IntArray(userSpan.count())
 
             val mafBlocks = chromToMAFBlocks[triple]
             // Each call of calculateCoverageAndIdentity increments the
@@ -394,14 +426,14 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
                 val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
 
                 // We are processing all positions for this function
-                calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, 1..chromSize)
+                calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, userSpan)
             }
             // postprocess to get the percentages:
             val numCovered = coverageArray.count{it > 0}
             val numIdentity = identityArray.count{it > 0}
 
-            val percentCov = (numCovered.toDouble()/chromSize) * 100
-            val percentIdent = (numIdentity.toDouble()/chromSize) * 100
+            val percentCov = (numCovered.toDouble()/userSpan.count()) * 100
+            val percentIdent = (numIdentity.toDouble()/userSpan.count()) * 100
 
             println("finished chrom ${triple}")
             Triple<String,Double,Double>(triple,percentCov,percentIdent)
@@ -413,15 +445,24 @@ fun getCoverageIdentityPercentForMAF(mafFile:String):DataFrame? {
         val chrom = entry.first
         val percentCov = entry.second
         val percentID = entry.third
+         val numRegionBPs = if (region == "all") chromToSize[chrom] else (end - start + 1)
 
         val frameObject = object {
             var Contig = chrom
             var PercentCoverage = percentCov
             var PercentIdentity = percentID
+            var NumRegionBasePairs = numRegionBPs
         }
         frameObject
     }
 
     val df = chromPercentageResults.asDataFrame()
+// LCJ - how to make this work?  intellij doesn't like the .toDataFrame()
+//    val df = chromPercentageArray.map {
+//        ChromStats(it.first, it.second, it.third)
+//    }.toDataFrame()
+
+
     return df
 }
+
