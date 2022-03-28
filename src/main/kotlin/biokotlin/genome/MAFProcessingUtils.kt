@@ -383,7 +383,6 @@ fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): Dat
             // and if the alignment overlaps the user requested positions.
             var skip = false
             if ((userContig != "all") && ((!alignContig.equals(userContig)) || (refStart+1 > end) || (refStart + refSize < start) ) ) {
-     //       if ((!alignContig.equals(userContig)) || (refStart+1 > end) || (refStart + refSize < start) ) {
                 skip = true
             }
             if (!skip) {
