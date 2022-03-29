@@ -330,8 +330,14 @@ class MAFProcessingUtilsTest : StringSpec({
         covIdDF!!.print()
         val totalTime =  (System.nanoTime() - time)/1e9
         println("Finished processing MAF in ${totalTime} seconds")
+        // LCJ - use these assertions when we update Kotlin daatabrame to 0.8.0-dev 932 or later
+//        assertEquals(covIdDF.columns().size, 4)
+//        assertEquals(covIdDF.rowsCount(),1)
+//        val row1 = covIdDF.getRows(0..0)
+//        println("row-: ${row1[0]}")
         assertEquals(covIdDF.cols.size, 4)
         assertEquals(covIdDF.rows.toList().size,1)
+
 
         val row1 = covIdDF.rows.toList().get(0)
         println("row0: $row1")
@@ -367,9 +373,12 @@ class MAFProcessingUtilsTest : StringSpec({
         createCML103MAF(mafFile)
 
         val region = "B73.chr1:1-50"
-        var covIdDF:DataFrame? = getCoverageIdentityPercentForMAF(mafFile,region)
+        var covIdDF = getCoverageIdentityPercentForMAF(mafFile,region)
         covIdDF!!.print()
 
+        // lcj - use these lines when kotlinx dataframe is updated to 0.8.0-dev-932 or later
+//        val colPerCov = covIdDF.columns()[2]
+//        colPerCov[0] shouldBe 84
         val colPerCov = covIdDF!!.cols.toList().get(2)
         colPerCov.get(0) shouldBe 84
         val colPerId = covIdDF!!.cols.toList().get(3)

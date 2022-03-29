@@ -456,7 +456,7 @@ fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): Dat
     }
 
     val df = chromPercentageResults.asDataFrame()
-// LCJ - how to make this work?  intellij doesn't like the .toDataFrame()
+// LCJ - Switch to this an Kotlin DataFrame when we upgrade to kotlinx:dataframe 0.8.0-dev-932 or later
 //    val df = chromPercentageArray.map {
 //        ChromStats(it.first, it.second, it.third)
 //    }.toDataFrame()
