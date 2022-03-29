@@ -1,11 +1,24 @@
 package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.maps.shouldContainValue
 import io.kotest.matchers.shouldBe
-import org.junit.jupiter.api.assertThrows
+import krangl.DataFrame
+import krangl.print
+import org.junit.jupiter.api.Assertions.assertEquals
 import java.io.File
+import java.nio.file.Paths
 
 class MAFProcessingUtilsTest : StringSpec({
+
+    val userHome = System.getProperty("user.home")
+    val testingDir = "${userHome}/temp/MAFProcessingUtilsTests/"
+
+    File(testingDir).deleteRecursively()
+
+    //Make the dir first
+    File(testingDir).mkdirs()
+
     val mafDir = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/test_mafFiles"
     val contig = "B73.chr7"
 
@@ -302,6 +315,77 @@ class MAFProcessingUtilsTest : StringSpec({
             println("${coverage[idx]}  ${identity[idx]}")
         }
     }
+
+    "test  getCoverageIdentityPercentForMAF" {
+        println("BEgin ...")
+        val time = System.nanoTime()
+        // input a MAF file, the result is a Kotlin DataFrame
+
+        // This is a MAF created in SmallSeq, added to the test  data folder here
+        val workingDir = Paths.get(System.getProperty("user.dir"))
+        val mafFileSmallSeq = "${workingDir}/src/test/kotlin/biokotlin/data/LineA.maf"
+        val covIdDF = getCoverageIdentityPercentForMAF(mafFileSmallSeq)
+
+
+        covIdDF!!.print()
+        val totalTime =  (System.nanoTime() - time)/1e9
+        println("Finished processing MAF in ${totalTime} seconds")
+        // LCJ - use these assertions when we update Kotlin daatabrame to 0.8.0-dev 932 or later
+//        assertEquals(covIdDF.columns().size, 4)
+//        assertEquals(covIdDF.rowsCount(),1)
+//        val row1 = covIdDF.getRows(0..0)
+//        println("row-: ${row1[0]}")
+        assertEquals(covIdDF.cols.size, 4)
+        assertEquals(covIdDF.rows.toList().size,1)
+
+
+        val row1 = covIdDF.rows.toList().get(0)
+        println("row0: $row1")
+        row1.shouldContainValue("1")
+
+        // This is a more real test run by Lynn, with a NAM MAF for better timing and results verification
+//        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
+//        var covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileReal)!!
+//        covIdDF!!.print()
+//        assertEquals(covIdDF.cols.size, 4)
+//        assertEquals(covIdDF.rows.toList().size,10)
+//
+//        var row1 = covIdDF.rows.toList().get(0)
+//        var row10 = covIdDF.rows.toList().get(9)
+//        println("\nrow0: $row1")
+//        println("row9: $row10")
+//        row1.shouldContainValue("B73.ref.fa.chr1")
+//        row10.shouldContainValue("B73.ref.fa.chr9")
+//
+//        println("End test of full MAF")
+//
+//        println("\nBegin test of chrom 5 coverage")
+//        // Check just a single region - here it is a single chromosome
+//         var region = "B73.ref.fa.chr5:1-226353449"  // from the maf file
+//        covIdDF = getCoverageIdentityPercentForMAF(mafFileReal,region)!!
+//        covIdDF!!.print()
+    }
+    "test getCoverageIdentityPercentForMAF with region" {
+        val refFile = "${testingDir}/CMLTestRef.fa"
+        val mafFile = "${testingDir}/CMLTest.maf"
+
+        createRefFasta(refFile)
+        createCML103MAF(mafFile)
+
+        val region = "B73.chr1:1-50"
+        var covIdDF = getCoverageIdentityPercentForMAF(mafFile,region)
+        covIdDF!!.print()
+
+        // lcj - use these lines when kotlinx dataframe is updated to 0.8.0-dev-932 or later
+//        val colPerCov = covIdDF.columns()[2]
+//        colPerCov[0] shouldBe 84
+        val colPerCov = covIdDF!!.cols.toList().get(2)
+        colPerCov.get(0) shouldBe 84
+        val colPerId = covIdDF!!.cols.toList().get(3)
+        colPerId.get(0) shouldBe 62
+
+    }
+
 //    "test mergeWiggleFiles" {
 //
 //        val mergeFile1 = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/junit_output/mergeFile1_chr7.wig"
@@ -319,3 +403,53 @@ class MAFProcessingUtilsTest : StringSpec({
 //    }
 
 })
+
+fun createCML103MAF(outputFile: String) {
+
+    File(outputFile).bufferedWriter().use { output ->
+        output.write("##maf version=1 scoring=Tba.v8\n\n")
+
+        // chr1 entry
+        output.write("a\tscore=6636.0\n")
+        output.write("s\tB73.chr1\t0\t42\t+\t59\tAG---GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+        output.write("s\tCML103.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+
+        // 3 chrom 7 non-overlapping entries
+        output.write("a\tscore=23262.0\n")
+        output.write("s\tB73.chr7\t12\t38\t+\t461\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+        output.write("s\tCML103.chr4\t81344243\t41\t+\t187371129\t-AATGGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+
+        output.write("a\tscore=23260.0\n")
+        output.write("s\tB73.chr7\t51\t9\t+\t461\tACACTTGTA\n")
+        output.write("s\tCML103.chr4\t81344243\t8\t+\t560\tACAG-TGTA\n\n")
+
+        output.write("a\tscore=5062.0\n")
+        output.write("s\tB73.chr7\t450\t11\t+\t461\tTAAAGAT---GGGT\n")
+        output.write("s\tCML103.chr4\t81444246\t11\t+\t187371129\tTAAGGATCCCG--T\n\n")
+
+        // Add a chrom10 entry
+        output.write("a\tscore=6636.0\n")
+        output.write("s\tB73.chr10\t13\t38\t+\t59\tCAGTCAATCTTACACACTTGGGGCCTACTGGGCCTACT\n")
+        output.write("s\tCML103.chr6\t436789\t38\t + 151104725\tCACTGAAAATATCAATCTTACACACTTGGGGCCTATCT\n\n")
+
+    }
+}
+
+// The reference file below has sequence matching the MAF file created above
+fun createRefFasta(outputFile : String) {
+    File(outputFile).bufferedWriter().use { output ->
+        output.write(">chr1\n")
+        //output.write("GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n") // lcj - original. copied from simpleRef
+        output.write("AGGCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACTAAAAAATAAAGATGGGT\n") // matches the MAF until the AAAAAA...
+
+        output.write(">chr7\n")
+        output.write("${(0 until 12).map { "T" }.joinToString("")}")
+        output.write("AAAGGGAATGTTAACCAAATGAATTGTCTCTTACGGTGCACACTTGTA") // this matches the MAF CML103 diploid MAF file
+        output.write("${(0 until 390).map { "T" }.joinToString("")}")
+        output.write("TAAAGATGGGT\n")
+
+        // added chr10 to test sorting
+        output.write(">chr10\n")
+        output.write("AGGCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACTGGGCCTACTAAAAAAAA\n")
+    }
+}

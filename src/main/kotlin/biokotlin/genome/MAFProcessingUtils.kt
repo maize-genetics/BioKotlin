@@ -1,9 +1,12 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
+import krangl.DataFrame
+import krangl.asDataFrame
 import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.*
+import java.util.stream.Collectors
 
 /**
  * This file holds methods used to process MAF Files with the intent of
@@ -17,6 +20,10 @@ import java.lang.Math.*
  *    Words in a line are delimited by any white space.
  *
  */
+
+// Data class to be used when creating a dataFrame for chrom percent coverage statistics
+// This may be used if can get Kotlin DataFrame vs Krangl DataFrame to work.
+data class ChromStats(val contig: String, val percCov: Double, val percId: Double)
 
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, outputDir:String) {
 
@@ -237,6 +244,7 @@ fun readMafBlock (reader: BufferedReader): List<String>? {
  */
 fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, identityCnt:IntArray, startStop:ClosedRange<Int>) {
 
+    val regex = "\\s+".toRegex() // use this in split
     // sample MAF alignment block filtered to only contain the "s" lines: "words" are white-space delimited ( spaces or tabs)
     // The first "s" line should be the reference
     // s       B73.chr7        12      38      +       158545518       AAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG
@@ -281,7 +289,7 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
         arrayOffset = 0
     }
 
-    println("\ncalculateCoverageAndIdentity: numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
+    //println("\ncalculateCoverageAndIdentity: numBPs: $numBPs arrayOffset: $arrayOffset alignEnd: $alignEnd startDiff: $startDiff refSeqIdxStart: ${refSeqIdxStart}\n")
 
     // Need to run through only the sequence covered by the user request  It may not
     // start at the beginning of the ref sequence and it may not end
@@ -322,3 +330,138 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
         }
     }
 }
+
+/**
+ * The getCoverageIdentityPercentForMAF takes a single UCSC MAF formatted
+ * file and for each contig represented, calculates the coverage and identity
+ * percentages as relates to the REF aligned against.
+ *
+ * Currently, all MAF positions are processed.  This could in the future
+ * be amended to process a user defined range of positions.
+ *
+ * It returns a Krangle DataFrame of Contig,  PercentCoverage,  PercentIdentity
+ */
+fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): DataFrame? {
+
+    val regex = "\\s+".toRegex()
+
+    var userContig = "all"
+    var start = 1
+    var end = 100 // place holder - will be set correctly below
+    if (region != "all") {
+        val colonIdx = region.indexOf(":")
+        userContig = region.substring(0,colonIdx)
+        val dashIdx = region.indexOf("-")
+        start = region.substring(colonIdx+1,dashIdx).toInt()
+        end = region.substring(dashIdx+1).toInt()
+    }
+
+    val chromToMAFBlocks = mutableMapOf<String,ArrayList<List<String>>>()
+    val chromToSize = mutableMapOf<String,Int>()
+    // This loop reads the MAF file, and stores the records in a map keyed by chromosome
+    // If the user specified a single region, percent cov/id will be based on the number
+    // of bps that fall within that region.
+    println("getCoverageIdentityPercentForMAF: begin reading MAF file into blocks ...")
+    var beginTime = System.nanoTime()
+    bufferedReader(mafFile).use { reader ->
+
+        var mafBlock = readMafBlock(reader)
+        while (mafBlock != null) {
+            // filter the strings, only keep the "s" lines
+            val filteredMafBlock = mafBlock!!.filter { it.startsWith("s")}
+            // the first entry should be the ref
+            val refData = filteredMafBlock.get(0)
+            // Maf files are white space separated - could be tabs or spaces
+            val refSplitLine = refData.split(regex)
+            val alignContig = refSplitLine[1]
+            val refStart = refSplitLine[2].toInt()
+            val refSize = refSplitLine[3].toInt()
+            val contigSize = refSplitLine[5].toInt()
+            chromToSize.put(alignContig,contigSize)
+
+            // Determine if the alignment ref contig matches the user specified contig,
+            // and if the alignment overlaps the user requested positions.
+            var skip = false
+            if ((userContig != "all") && ((!alignContig.equals(userContig)) || (refStart+1 > end) || (refStart + refSize < start) ) ) {
+                skip = true
+            }
+            if (!skip) {
+                // add the read data
+                var chromList = chromToMAFBlocks.get(alignContig)
+                if (chromList == null) {
+                    chromList = ArrayList<List<String>>()
+                }
+                chromList.add(filteredMafBlock)
+                chromToMAFBlocks.put(alignContig,chromList)
+            }
+
+            mafBlock = readMafBlock(reader)
+        }
+    }
+
+    val totalReadTime = (System.nanoTime() - beginTime)/1e9
+    println("getCoverageIdentifyPercentForMAF: time to read MAF file to blocks:  ${totalReadTime} seconds")
+
+    //Calculate coverage/id percentages for each chromosome
+    val chroms = chromToMAFBlocks.keys.sorted()
+
+    println("Processing the MAF blocks per-chrom")
+    // Create an array of Triples:  Chrom,%cov,%id is the triple
+    val chromPercentageArray = chroms.parallelStream()
+        .map {
+            triple ->
+            val chromSize = chromToSize[triple]
+
+            val userSpan = if (userContig== "all") (1..chromSize!!) else start..end
+            val coverageArray = IntArray(userSpan.count())
+            val identityArray = IntArray(userSpan.count())
+
+            val mafBlocks = chromToMAFBlocks[triple]
+            // Each call of calculateCoverageAndIdentity increments the
+            // array position for the basepair that was covered and/or had
+            // same identity as REF.
+            for (mafBlock in mafBlocks!!) {
+                // filter the strings, only keep the "s" lines
+                val filteredMafBlock = mafBlock.filter { it.startsWith("s")}
+
+                // We are processing all positions for this function
+                calculateCoverageAndIdentity(filteredMafBlock, coverageArray, identityArray, userSpan)
+            }
+            // postprocess to get the percentages:
+            val numCovered = coverageArray.count{it > 0}
+            val numIdentity = identityArray.count{it > 0}
+
+            val percentCov = (numCovered.toDouble()/userSpan.count()) * 100
+            val percentIdent = (numIdentity.toDouble()/userSpan.count()) * 100
+
+            println("finished chrom ${triple}")
+            Triple<String,Double,Double>(triple,percentCov,percentIdent)
+
+        }.collect(Collectors.toList())
+
+    // Store the results in a DataFrame for user processing
+     val chromPercentageResults = chromPercentageArray.map{ entry ->
+        val chrom = entry.first
+        val percentCov = entry.second
+        val percentID = entry.third
+         val numRegionBPs = if (region == "all") chromToSize[chrom] else (end - start + 1)
+
+        val frameObject = object {
+            var Contig = chrom
+            var PercentCoverage = percentCov
+            var PercentIdentity = percentID
+            var NumRegionBasePairs = numRegionBPs
+        }
+        frameObject
+    }
+
+    val df = chromPercentageResults.asDataFrame()
+// LCJ - Switch to this an Kotlin DataFrame when we upgrade to kotlinx:dataframe 0.8.0-dev-932 or later
+//    val df = chromPercentageArray.map {
+//        ChromStats(it.first, it.second, it.third)
+//    }.toDataFrame()
+
+
+    return df
+}
+
