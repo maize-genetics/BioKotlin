@@ -1,8 +1,8 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
-import krangl.DataFrame
-import krangl.asDataFrame
+import org.jetbrains.dataframe.DataFrame
+import org.jetbrains.dataframe.toDataFrameByProperties
 import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.*
@@ -23,7 +23,7 @@ import java.util.stream.Collectors
 
 // Data class to be used when creating a dataFrame for chrom percent coverage statistics
 // This may be used if can get Kotlin DataFrame vs Krangl DataFrame to work.
-data class ChromStats(val contig: String, val percCov: Double, val percId: Double)
+data class ChromStats(val contig: String, val numRegionBPs: Int, val percentCov: Double, val percentId: Double)
 
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, outputDir:String) {
 
@@ -341,7 +341,7 @@ fun calculateCoverageAndIdentity(alignments:List<String>, coverageCnt:IntArray, 
  *
  * It returns a Krangle DataFrame of Contig,  PercentCoverage,  PercentIdentity
  */
-fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): DataFrame? {
+fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): DataFrame<ChromStats>? {
 
     val regex = "\\s+".toRegex()
 
@@ -440,27 +440,11 @@ fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): Dat
         }.collect(Collectors.toList())
 
     // Store the results in a DataFrame for user processing
-     val chromPercentageResults = chromPercentageArray.map{ entry ->
-        val chrom = entry.first
-        val percentCov = entry.second
-        val percentID = entry.third
-         val numRegionBPs = if (region == "all") chromToSize[chrom] else (end - start + 1)
 
-        val frameObject = object {
-            var Contig = chrom
-            var PercentCoverage = percentCov
-            var PercentIdentity = percentID
-            var NumRegionBasePairs = numRegionBPs
-        }
-        frameObject
-    }
-
-    val df = chromPercentageResults.asDataFrame()
-// LCJ - Switch to this an Kotlin DataFrame when we upgrade to kotlinx:dataframe 0.8.0-dev-932 or later
-//    val df = chromPercentageArray.map {
-//        ChromStats(it.first, it.second, it.third)
-//    }.toDataFrame()
-
+    val df = chromPercentageArray.map {
+        val numRegionBPs = if (region == "all") chromToSize[it.first] else (end - start + 1)
+        ChromStats(it.first, numRegionBPs!!,it.second, it.third)
+    }.toDataFrameByProperties() as DataFrame<ChromStats>
 
     return df
 }

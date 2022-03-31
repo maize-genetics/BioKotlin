@@ -1,10 +1,10 @@
 package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.maps.shouldContainValue
+
 import io.kotest.matchers.shouldBe
-import krangl.DataFrame
-import krangl.print
+import org.jetbrains.dataframe.io.writeCSV
+import org.jetbrains.dataframe.print
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.io.File
 import java.nio.file.Paths
@@ -321,7 +321,7 @@ class MAFProcessingUtilsTest : StringSpec({
         val time = System.nanoTime()
         // input a MAF file, the result is a Kotlin DataFrame
 
-        // This is a MAF created in SmallSeq, added to the test  data folder here
+        // This is a MAF created in SmallSeq, added to the test's data folder here
         val workingDir = Paths.get(System.getProperty("user.dir"))
         val mafFileSmallSeq = "${workingDir}/src/test/kotlin/biokotlin/data/LineA.maf"
         val covIdDF = getCoverageIdentityPercentForMAF(mafFileSmallSeq)
@@ -330,33 +330,37 @@ class MAFProcessingUtilsTest : StringSpec({
         covIdDF!!.print()
         val totalTime =  (System.nanoTime() - time)/1e9
         println("Finished processing MAF in ${totalTime} seconds")
-        // LCJ - use these assertions when we update Kotlin daatabrame to 0.8.0-dev 932 or later
-//        assertEquals(covIdDF.columns().size, 4)
-//        assertEquals(covIdDF.rowsCount(),1)
-//        val row1 = covIdDF.getRows(0..0)
-//        println("row-: ${row1[0]}")
-        assertEquals(covIdDF.cols.size, 4)
-        assertEquals(covIdDF.rows.toList().size,1)
 
+        assertEquals(covIdDF.columns().size, 4)
+        assertEquals(covIdDF.rows().count(),1)
+        val row1 = covIdDF.getRows(0..0)
+        println("row-: ${row1[0]}")
 
-        val row1 = covIdDF.rows.toList().get(0)
-        println("row0: $row1")
-        row1.shouldContainValue("1")
+        // print to csv
+        val csvOutputFile = "${workingDir}/src/test/kotlin/biokotlin/testData/testChromStats_smallSeq.csv"
+        covIdDF!!.writeCSV(csvOutputFile)
 
-        // This is a more real test run by Lynn, with a NAM MAF for better timing and results verification
+         //This is a more real test run by Lynn, with a NAM MAF for better timing and results verification
 //        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
-//        var covIdDF: DataFrame = getCoverageIdentityPercentForMAF(mafFileReal)!!
+//        var covIdDF = getCoverageIdentityPercentForMAF(mafFileReal)!!
 //        covIdDF!!.print()
-//        assertEquals(covIdDF.cols.size, 4)
-//        assertEquals(covIdDF.rows.toList().size,10)
+//        assertEquals(covIdDF.columns().size, 4)
+//        assertEquals(covIdDF.rows().count(),10)
 //
-//        var row1 = covIdDF.rows.toList().get(0)
-//        var row10 = covIdDF.rows.toList().get(9)
+//        var rows = covIdDF.rows()
+//        var rowSize = rows.count()
+//        println("rowSize = ${rowSize}")
+//        var row1 = covIdDF.getRows(0..0)
+//        var row10 = covIdDF.getRows(9..9)
 //        println("\nrow0: $row1")
 //        println("row9: $row10")
-//        row1.shouldContainValue("B73.ref.fa.chr1")
-//        row10.shouldContainValue("B73.ref.fa.chr9")
+//        println("Size of rows: ${rowSize}")
+//        for (row in rows) {
+//            println(row)
+//        }
 //
+//        val csvOutputFile = "${workingDir}/src/test/kotlin/biokotlin/testData/testChromStats_smallSeq.csv"
+//        covIdDF!!.writeCSV(csvOutputFile)
 //        println("End test of full MAF")
 //
 //        println("\nBegin test of chrom 5 coverage")
@@ -377,13 +381,10 @@ class MAFProcessingUtilsTest : StringSpec({
         covIdDF!!.print()
 
         // lcj - use these lines when kotlinx dataframe is updated to 0.8.0-dev-932 or later
-//        val colPerCov = covIdDF.columns()[2]
-//        colPerCov[0] shouldBe 84
-        val colPerCov = covIdDF!!.cols.toList().get(2)
-        colPerCov.get(0) shouldBe 84
-        val colPerId = covIdDF!!.cols.toList().get(3)
-        colPerId.get(0) shouldBe 62
-
+        val colPerCov = covIdDF!!.columns()[2]
+        colPerCov[0] shouldBe 84
+        val colPerId = covIdDF!!.columns()[3]
+        colPerId[0] shouldBe 62
     }
 
 //    "test mergeWiggleFiles" {
