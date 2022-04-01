@@ -68,7 +68,7 @@ dependencies {
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("de.mpicbg.scicomp:krangl:0.13")
-    implementation("org.jetbrains.kotlinx:dataframe:0.8.0-dev-321")
+    implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support

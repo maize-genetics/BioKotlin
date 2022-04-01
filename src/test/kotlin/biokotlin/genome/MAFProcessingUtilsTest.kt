@@ -3,8 +3,10 @@ package biokotlin.genome
 import io.kotest.core.spec.style.StringSpec
 
 import io.kotest.matchers.shouldBe
-import org.jetbrains.dataframe.io.writeCSV
-import org.jetbrains.dataframe.print
+import org.jetbrains.kotlinx.dataframe.api.getRows
+import org.jetbrains.kotlinx.dataframe.api.print
+import org.jetbrains.kotlinx.dataframe.api.rows
+import org.jetbrains.kotlinx.dataframe.io.writeCSV
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.io.File
 import java.nio.file.Paths
@@ -341,7 +343,7 @@ class MAFProcessingUtilsTest : StringSpec({
         covIdDF!!.writeCSV(csvOutputFile)
 
          //This is a more real test run by Lynn, with a NAM MAF for better timing and results verification
-//        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
+        val mafFileReal = "/Users/lcj34/notes_files/phg_2018/new_features/anchorWave_refRanges_biokotlin/mafFiles/Oh43.maf"
 //        var covIdDF = getCoverageIdentityPercentForMAF(mafFileReal)!!
 //        covIdDF!!.print()
 //        assertEquals(covIdDF.columns().size, 4)
