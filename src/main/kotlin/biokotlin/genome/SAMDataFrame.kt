@@ -4,10 +4,7 @@ package biokotlin.genome
 
 import java.io.File
 import htsjdk.samtools.*
-import org.jetbrains.dataframe.*
 import org.jetbrains.kotlinx.dataframe.ColumnsContainer
-//import org.jetbrains.dataframe.annotations.DataSchema
-//import org.jetbrains.dataframe.columns.DataColumn
 import org.jetbrains.kotlinx.dataframe.DataColumn
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.DataRow

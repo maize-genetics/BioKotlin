@@ -2,8 +2,6 @@ package biokotlin.genome
 
 import biokotlin.util.bufferedReader
 import org.jetbrains.kotlinx.dataframe.DataFrame
-//import org.jetbrains.dataframe.DataFrame
-//import org.jetbrains.dataframe.toDataFrameByProperties
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.BufferedReader
 import java.io.File
