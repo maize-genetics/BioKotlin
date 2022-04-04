@@ -10,8 +10,8 @@ import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.SeqRecord
 import com.google.common.collect.*
-import krangl.DataFrame
-import krangl.asDataFrame
+import org.jetbrains.kotlinx.dataframe.DataFrame
+import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
@@ -606,7 +606,8 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
  *
  * Is there a better way to create this dataFrame?
  */
-fun SRangeSet.toDataFrame():DataFrame {
+data class RangeDataFrame(val ID: String, val start: Int, val end: Int, val range: IntRange)
+fun SRangeSet.toDataFrame(): DataFrame<RangeDataFrame> {
 
     // This returns a list of objects, which is converted to
     // a dataFrame, then returned.
@@ -616,17 +617,11 @@ fun SRangeSet.toDataFrame():DataFrame {
         val start = range.start.site
         val end = range.endInclusive.site
         val frameRange = start..end
-        val frameObject = object {
-            var ID = id
-            var start = start
-            var end = end
-            val range = frameRange
-        }
-        frameObject
-    }
 
-    val df = rangesWithStartEnd.asDataFrame()
-    return df
+        RangeDataFrame(id,start,end,frameRange)
+    }.toDataFrame()
+
+    return rangesWithStartEnd
 }
 
 /**
