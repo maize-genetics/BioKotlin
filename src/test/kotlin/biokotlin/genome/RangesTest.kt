@@ -8,6 +8,8 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import krangl.*
+import org.jetbrains.kotlinx.dataframe.api.print
+import org.jetbrains.kotlinx.dataframe.api.rows
 import java.util.*
 
 class RangesTest: StringSpec({
@@ -522,19 +524,19 @@ class RangesTest: StringSpec({
             println(range)
         }
     }
-    "Test Krangl DataFrames " {
+    "Test Kotlin DataFrames " {
 
         val srSet1 = nonCoalescingSetOf(SeqRangeSort.by(SeqRangeSort.numberThenAlphaSort, SeqRangeSort.leftEdge), sr1,sr2,sr3,sr5,sr4)
-        val df:DataFrame = srSet1.toDataFrame()
+        val df = srSet1.toDataFrame()
         df.print()
 
-        df.nrow shouldBe 5
-        df.ncol shouldBe 4
+        df.rows().count() shouldBe 5
+        df.columns().size shouldBe 4
 
-        println(df.cols)
-        df.names.contains("start") shouldBe true
-        df.names.contains("end") shouldBe true
-        df.names.size shouldBe 4
+        println(df.columns())
+        df.columnNames().contains("start") shouldBe true
+        df.columnNames().contains("end") shouldBe true
+        df.columnNames().size shouldBe 4
 
     }
 

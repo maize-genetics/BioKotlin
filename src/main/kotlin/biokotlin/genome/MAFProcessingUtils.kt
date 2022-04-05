@@ -1,8 +1,8 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
-import org.jetbrains.dataframe.DataFrame
-import org.jetbrains.dataframe.toDataFrameByProperties
+import org.jetbrains.kotlinx.dataframe.DataFrame
+import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.BufferedReader
 import java.io.File
 import java.lang.Math.*
@@ -444,8 +444,7 @@ fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): Dat
     val df = chromPercentageArray.map {
         val numRegionBPs = if (region == "all") chromToSize[it.first] else (end - start + 1)
         ChromStats(it.first, numRegionBPs!!,it.second, it.third)
-    }.toDataFrameByProperties() as DataFrame<ChromStats>
-
+    }.toDataFrame()
     return df
 }
 
