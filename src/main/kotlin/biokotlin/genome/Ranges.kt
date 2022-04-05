@@ -606,8 +606,8 @@ fun IntRange.flankBoth(count: Int): Set<IntRange> {
  *
  * Is there a better way to create this dataFrame?
  */
-data class RangeDataFrame(val ID: String, val start: Int, val end: Int, val range: IntRange)
-fun SRangeSet.toDataFrame(): DataFrame<RangeDataFrame> {
+data class SRangeDataRow(val ID: String, val start: Int, val end: Int, val range: IntRange)
+fun SRangeSet.toDataFrame(): DataFrame<SRangeDataRow> {
 
     // This returns a list of objects, which is converted to
     // a dataFrame, then returned.
@@ -618,7 +618,7 @@ fun SRangeSet.toDataFrame(): DataFrame<RangeDataFrame> {
         val end = range.endInclusive.site
         val frameRange = start..end
 
-        RangeDataFrame(id,start,end,frameRange)
+        SRangeDataRow(id,start,end,frameRange)
     }.toDataFrame()
 
     return rangesWithStartEnd
