@@ -1,16 +1,15 @@
 package biokotlin.genome
 
 
-import biokotlin.util.bufferedReader
 import org.jetbrains.kotlinx.dataframe.DataFrame
-import org.jetbrains.kotlinx.dataframe.api.toDataFrame
+import org.jetbrains.kotlinx.dataframe.api.*
 import java.io.File
 
 class GenomicFeatures(val gffFile:String) {
 
     data class exonDataRow(val name:String, val chrom:String, val start:Int, val end:Int, val strand:String, val rank:Int, val transcript:String)
     data class cdsDataRow(val name:String, val chrom:String, val start:Int, val end:Int, val strand:String, val phase:Int, val transcript:String)
-    data class geneDataRow(val name:String, val chrom:String)
+    data class geneDataRow(val name:String, val chrom:String, val start:Int, val end:Int, val strand:String)
     data class chromDataRow(val name:String, val length:Int)
     data class fivePrimeDataRow(val chrom:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     data class threePrimeDataRow(val chrom:String, val start:Int, val end:Int, val strand:String, val transcript:String)
@@ -36,7 +35,7 @@ class GenomicFeatures(val gffFile:String) {
     fun readGffToDFs(gffFile:String) {
         val exonList = ArrayList<String>() // string=${name}:${chrom}:${start}:${end}:${strand}:${rank}
         val cdsList = ArrayList<String>() // String=${name}:${chrom}:${start}:${end}:${strand}:${phase}
-        val geneList = ArrayList<String>() // String=${name}:${chrom}
+        val geneList = ArrayList<String>() // String=${name}:${chrom}:${start}:${end}:${strand}
         val transcriptList = ArrayList<String>() // String=${name}:${type}:${chrom}:${start}:${end}:${strand}
         val chromList = ArrayList<String>() // String=${name}:${length}
         val fivePrimeList = ArrayList<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
@@ -134,6 +133,9 @@ class GenomicFeatures(val gffFile:String) {
                 }
                 "gene" -> {
                     val chrom = line.substring(0, firstTabIndex)
+                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
+                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
+                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
                     val attributes = line.substring(eightTabIndex + 1).split(";")
                     val nameString = attributes.first { it.startsWith("ID") }
                     var name = "NONE"
@@ -142,7 +144,7 @@ class GenomicFeatures(val gffFile:String) {
                         name = nameString.substring(equalIndex + 1).replace("gene:","")
                     }
 
-                    geneList.add("${name}:${chrom}")
+                    geneList.add("${name}:${chrom}:${start}:${end}:${strand}")
                 }
                 "exon" -> {
                     //val exonData = parseExon((lineTokens.toTypedArray()))
@@ -232,7 +234,7 @@ class GenomicFeatures(val gffFile:String) {
 
         geneDF = geneList.map{ entry ->
             val fields = entry.split(":")
-            geneDataRow(fields[0],fields[1])
+            geneDataRow(fields[0],fields[1], fields[2].toInt(),fields[3].toInt(), fields[4])
         }.toDataFrame()
 
         transcriptDF = transcriptList.map{ entry ->
@@ -243,4 +245,42 @@ class GenomicFeatures(val gffFile:String) {
     }
 
 
+    data class featureRangeDataRow(val chrom:String, val start:Int, val end:Int, val strand:String, val type:String)
+    fun getFeaturesInRange(chr:String, range:IntRange): DataFrame<featureRangeDataRow>? {
+        print("getFeaturesInRange")
+
+        val fullFeatureList = mutableListOf<featureRangeDataRow>()
+        // hmmm ... we read all the dataframes that we think we need.  Or maybe, we create new df's
+        // for each by filtering each one.  Then we read the frames and put them all into a new frame?
+
+        // THis gets us multiple lists which we could potentially add together, but they are each
+        // lists of a specific type of DataFrame
+        val exonFilteredDRList = exonDF!!.filter{it["chrom"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+            .select{it["chrom"] and it["start"] and it["end"] and it["strand"]}.add("type") {"exon"}
+            .toListOf<featureRangeDataRow>()
+        fullFeatureList.addAll(exonFilteredDRList)
+
+        val cdsFilteredDR = cdsDF!!.filter{it["chrom"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+            .select{it["chrom"] and it["start"] and it["end"] and it["strand"]}.add("type") {"cds"}
+            .toListOf<featureRangeDataRow>()
+        fullFeatureList.addAll(cdsFilteredDR)
+
+        val geneFilteredDR = cdsDF!!.filter{it["chrom"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+            .select{it["chrom"] and it["start"] and it["end"] and it["strand"]}.add("type") {"gene"}
+            .toListOf<featureRangeDataRow>()
+        fullFeatureList.addAll(geneFilteredDR)
+
+        val transcriptFilteredDR = cdsDF!!.filter{it["chrom"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+            .select{it["chrom"] and it["start"] and it["end"] and it["strand"]}.add("type") {"transcript"}
+            .toListOf<featureRangeDataRow>()
+        fullFeatureList.addAll(transcriptFilteredDR)
+
+        // Now, put all values from the 4 filteredDRs above into a single dataframe, with "type" prepended as first item.
+        // Do these need to go to a list first? Cna w append to a dataframe?
+
+        var featuresInRangeDF = fullFeatureList.toDataFrame()
+
+        return featuresInRangeDF.sortBy{it["start"]}
+
+    }
 }
