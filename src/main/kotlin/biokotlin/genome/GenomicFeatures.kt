@@ -12,6 +12,8 @@ class GenomicFeatures(val gffFile:String) {
     data class cdsDataRow(val name:String, val chrom:String, val start:Int, val end:Int, val strand:String, val phase:Int, val transcript:String)
     data class geneDataRow(val name:String, val chrom:String)
     data class chromDataRow(val name:String, val length:Int)
+    data class fivePrimeDataRow(val chrom:String, val start:Int, val end:Int, val strand:String, val transcript:String)
+    data class threePrimeDataRow(val chrom:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     data class transcriptDataRow(val name:String, val type: String, val chrom:String, val start:Int, val end:Int, val strand:String)
 
     var exonDF: DataFrame<exonDataRow>? = null
@@ -19,6 +21,8 @@ class GenomicFeatures(val gffFile:String) {
     var geneDF: DataFrame<geneDataRow>? = null
     var chromDF: DataFrame<chromDataRow>? = null
     var transcriptDF: DataFrame<transcriptDataRow>? = null
+    var fivePrimeDF: DataFrame<fivePrimeDataRow>? = null
+    var threePrimeDF: DataFrame<threePrimeDataRow>? = null
 
     //The intent is Key=transcrip, Value = Map<type,value>, e.g. exon=id, CDS=name, chr=chr1, etc
     val transcriptMap = HashMap<String,Map<String,String>>()
@@ -35,6 +39,8 @@ class GenomicFeatures(val gffFile:String) {
         val geneList = ArrayList<String>() // String=${name}:${chrom}
         val transcriptList = ArrayList<String>() // String=${name}:${type}:${chrom}:${start}:${end}:${strand}
         val chromList = ArrayList<String>() // String=${name}:${length}
+        val fivePrimeList = ArrayList<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
+        val threePrimeList = ArrayList<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
 
         var totalCount = 0
         var batchCount = 0
@@ -93,6 +99,38 @@ class GenomicFeatures(val gffFile:String) {
                     }
 
                     cdsList.add("${name}:${chrom}:${start}:${end}:${strand}:${phase}:${transcript}")
+                }
+                "five_prime_UTR" -> {
+                    val chrom = line.substring(0, firstTabIndex)
+                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
+                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
+                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
+                    val attributes = line.substring(eightTabIndex + 1).split(";")
+
+                    val transcriptString = attributes.first {it.startsWith("Parent")}
+                    var transcript = "NONE"
+                    if (transcriptString != null)  {
+                        val equalIndex = transcriptString.indexOf("=")
+                        transcript = transcriptString.substring(equalIndex+1).replace("transcript:","")
+                    }
+
+                    fivePrimeList.add("${chrom}:${start}:${end}:${strand}:${transcript}")
+                }
+                "three_prime_UTR" -> {
+                    val chrom = line.substring(0, firstTabIndex)
+                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
+                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
+                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
+                    val attributes = line.substring(eightTabIndex + 1).split(";")
+
+                    val transcriptString = attributes.first {it.startsWith("Parent")}
+                    var transcript = "NONE"
+                    if (transcriptString != null)  {
+                        val equalIndex = transcriptString.indexOf("=")
+                        transcript = transcriptString.substring(equalIndex+1).replace("transcript:","")
+                    }
+
+                    threePrimeList.add("${chrom}:${start}:${end}:${strand}:${transcript}")
                 }
                 "gene" -> {
                     val chrom = line.substring(0, firstTabIndex)
@@ -180,6 +218,16 @@ class GenomicFeatures(val gffFile:String) {
         exonDF = exonList.map{ entry ->
             val fields = entry.split(":")
             exonDataRow(fields[0],fields[1],fields[2].toInt(),fields[3].toInt(),fields[4],fields[5].toInt(),fields[6])
+        }.toDataFrame()
+
+        fivePrimeDF = fivePrimeList.map { entry ->
+            val fields = entry.split(":")
+            fivePrimeDataRow(fields[0],fields[1].toInt(),fields[2].toInt(),fields[3],fields[4])
+        }.toDataFrame()
+
+        threePrimeDF = threePrimeList.map { entry ->
+            val fields = entry.split(":")
+            threePrimeDataRow(fields[0],fields[1].toInt(),fields[2].toInt(),fields[3],fields[4])
         }.toDataFrame()
 
         geneDF = geneList.map{ entry ->
