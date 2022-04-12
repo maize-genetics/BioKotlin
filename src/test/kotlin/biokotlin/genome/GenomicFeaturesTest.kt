@@ -1,7 +1,6 @@
 package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
-import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.*
 import org.jetbrains.kotlinx.dataframe.size
 
@@ -13,40 +12,54 @@ class GenomicFeaturesTest : StringSpec({
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF)
-        println("myGF chromDF size: ${myGF.chromDF?.size()}")
-
+        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
-        val myExonDF = myGF.exonDF
         println("exonDF with transcript=Zm00001e000002_T001")
-        myGF.exonDF!!.filter{it["transcript"] == "Zm00001e000002_T001"}.print()
+        myGF.getExons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
 
         println("exonDF is:")
-        myGF.exonDF!!.print()
+        myGF.getExons().print()
 
         println("exonDF where rank=1 and chrom=chr1 is:")
-        myGF.exonDF!!.filter{it["rank"] == 1}.filter{it["chrom"] == "chr1"}.print()
+        myGF.getExons().filter{it["rank"] == 1}.filter{it["seqname"] == "chr1"}.print()
 
+        println("Select only the chrom, start and end columns of exonDF")
+        myGF.getExons().select{it["seqname"] and it["start"] and it["end"]}.print()
 
-        println("Select only the chrom, start and end columns")
-        myGF.exonDF!!.select{it["chrom"] and it["start"] and it["end"]}.print()
+        val featuresFilteredByChrom = myGF.getFeaturesByRange("chr1",34617..40204)
 
-//        println("Printing a filtered exon value") // this works, it adds "type" at the end
-//        val exonFilteredDR = myGF.exonDF!!.filter{it["chrom"] == "chr1"}.filter{(it["start"] as Int <= 40204) && it["end"] as Int >= 34617}
-//            .select{it["chrom"] and it["start"] and it["end"] and it["strand"]}.add("type") {"exon"}
-//            .toListOf<GenomicFeatures.featureRangeDataRow>()
-//
-//        print(exonFilteredDR)
-
-        val featuresFilteredByChrom = myGF.getFeaturesInRange("chr1",34617..40204)
-
-        println("\nprinting from my getFeaturesInRange")
-        featuresFilteredByChrom!!.print()
+        println("\nprinting from my getFeaturesByRange")
+        if (featuresFilteredByChrom != null) {
+            featuresFilteredByChrom.print()
+        }
 
         println("End of test")
-        // see what this list looks like:
 
+    }
+    "test GFF file with just cds data" {
+        // THis test verifies the program doesn't throw an exception when
+        // the gff file is missing features.  It instead prints justs the header
+        // line but no data for the dataframe
+        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/gff3NAM5_CDS.txt"
+        val time = System.nanoTime()
+        // Create an instance of the class so we have access to the lists that are
+        // created on the read.
+        val myGF = GenomicFeatures(b73GFF_cds)
+        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+
+        val readingTime = (System.nanoTime() - time)/1e9
+        println("Reading/parsing GFF file took ${readingTime} seconds")
+
+        println("exonDF with transcript=Zm00001e000002_T001")
+        myGF.getExons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
+
+        println("exonDF is:")
+        myGF.getExons().print()
+
+        println("cdsDF is :")
+        myGF.getCDS().print()
     }
 })
