@@ -2,6 +2,7 @@ package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
 import org.jetbrains.kotlinx.dataframe.api.*
+import org.jetbrains.kotlinx.dataframe.io.writeCSV
 import org.jetbrains.kotlinx.dataframe.size
 
 class GenomicFeaturesTest : StringSpec({
@@ -61,5 +62,70 @@ class GenomicFeaturesTest : StringSpec({
 
         println("cdsDF is :")
         myGF.getCDS().print()
+    }
+    "test getFeaturesByRange" {
+        // THis test verifies the program doesn't throw an exception when
+        // the gff file is missing features.  It instead prints just the header
+        // line but no data for the dataframe
+        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val time = System.nanoTime()
+        // Create an instance of the class so we have access to the lists that are
+        // created on the read.
+        val myGF = GenomicFeatures(b73GFF_cds)
+        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+
+        val readingTime = (System.nanoTime() - time)/1e9
+        println("Reading/parsing GFF file took ${readingTime} seconds")
+
+        val featuresFilteredByChrom = myGF.getFeaturesByRange("chr1",34617..40204)
+
+        println("\nprinting from my getFeaturesByRange")
+        val outputFile = "/Users/lcj34/notes_files/biokotlin/new_features/brandon_gff_parsing/testing/featuresFilteredByChrom.csv"
+        if (featuresFilteredByChrom != null) {
+            featuresFilteredByChrom.print()
+            featuresFilteredByChrom.writeCSV(outputFile)
+
+        }
+
+        var justUTRS = featuresFilteredByChrom?.filter {it["type"] == "five_prime_UTR" || it["type"] == "three_prime_UTR"}
+        println("\njust UTRS by filtering after getFeaturesByRange")
+        if (justUTRS != null) {
+            justUTRS.print()
+        }
+
+        // justUTRS by specifying this in creation
+        justUTRS = myGF.getFeaturesByRange("chr1",34617..40204,"threePrimeUTR,fivePrimeUTR")
+        println("\njust UTRS by parameter to getFeaturesByRange")
+        if (justUTRS != null) {
+            justUTRS.print()
+        }
+
+
+    }
+    "test dataframe specifics" {
+        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val time = System.nanoTime()
+        // Create an instance of the class so we have access to the lists that are
+        // created on the read.
+        val myGF = GenomicFeatures(b73GFF_cds)
+        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+
+        val readingTime = (System.nanoTime() - time)/1e9
+        println("Reading/parsing GFF file took ${readingTime} seconds")
+
+        println("\nprinting the columns from exonDF via: myGF.getExons().columnNames().jointToString(...)")
+        val exonColumns = myGF.getExons().columnNames()
+        println("Exon column names:\n ${exonColumns.joinToString(",")}")
+
+        var columnNames = myGF.getColumnNames("exon")
+        println("\nexon column names from getColumnNames:\n${columnNames}")
+
+        columnNames = myGF.getColumnNames("gene")
+        println("\ngene column names from getColumnNames:\n${columnNames}")
+
+        columnNames = myGF.getColumnNames("CDS")
+        println("\nCDS column names from getColumnNames:\n${columnNames}")
+
+        println("number of exon rows: ${myGF.getExons().rowsCount()}")
     }
 })

@@ -5,23 +5,34 @@ import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.*
 import java.io.File
 
+/**
+ * The GenomicFeatures class processes data from a GFF formatted file.
+ * Internally it stores the GFF features in Kotlin dataframes.  THis allows quicker access
+ * than using an internal database.  The Kotlin dataframe object also allows for
+ * filtering based on columns, metrics for columns and rows.
+ *
+ * This class also provides functions that can filter and combine data from
+ * different feature groups into a single dataframe for user perusal.
+ */
 class GenomicFeatures(val gffFile:String) {
 
     data class exonDataRow(val name:String, val seqname:String, val start:Int, val end:Int,  val strand:String, val rank:Int, val transcript:String)
     data class cdsDataRow(val name:String, val seqname:String, val start:Int, val end:Int, val strand:String, val phase:Int, val transcript:String)
-    data class geneDataRow(val name:String, val seqname:String, val start:Int, val end:Int, val strand:String)
+    data class geneDataRow(val name:String, val seqname:String, val start:Int, val end:Int, val strand:String, val biotype:String, val logic_name:String)
     data class chromDataRow(val seqname:String, val length:Int)
     data class fivePrimeDataRow(val seqname:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     data class threePrimeDataRow(val seqname:String, val start:Int, val end:Int, val strand:String, val transcript:String)
-    data class transcriptDataRow(val name:String, val type: String, val seqname:String, val start:Int, val end:Int, val strand:String)
+    // "transcript" here is "mRNA" in gff filw
+    data class transcriptDataRow(val name:String, val biotype: String, val seqname:String, val start:Int, val end:Int, val strand:String)
 
+    enum class FEATURE_TYPE {CDS, chromosome, exon, five_prime_UTR, gene, three_prime_UTR, mRNA, ALL}
     // Initialize the individual feature dataframes.  They will be populated with data from the GFF
     // when init{} is run below.
     var exonDF: DataFrame<exonDataRow> = ArrayList<exonDataRow>().toDataFrame()
     var cdsDF: DataFrame<cdsDataRow> = ArrayList<cdsDataRow>().toDataFrame()
     var geneDF: DataFrame<geneDataRow> = ArrayList<geneDataRow>().toDataFrame()
     var chromDF: DataFrame<chromDataRow> = ArrayList<chromDataRow>().toDataFrame()
-    var transcriptDF: DataFrame<transcriptDataRow> = ArrayList<transcriptDataRow>().toDataFrame()
+    var transcriptDF: DataFrame<transcriptDataRow> = ArrayList<transcriptDataRow>().toDataFrame() // this is mRNA
     var fivePrimeDF: DataFrame<fivePrimeDataRow> = ArrayList<fivePrimeDataRow>().toDataFrame()
     var threePrimeDF: DataFrame<threePrimeDataRow> = ArrayList<threePrimeDataRow>().toDataFrame()
 
@@ -146,7 +157,20 @@ class GenomicFeatures(val gffFile:String) {
                         name = nameString.substring(equalIndex + 1).replace("gene:","")
                     }
 
-                    geneList.add("${name}:${chrom}:${start}:${end}:${strand}")
+                    val typeString = attributes.first { it.startsWith("biotype") }
+                    var type = "NONE"
+                    if (typeString != null) {
+                        val equalIndex = typeString.indexOf("=")
+                        type = typeString.substring(equalIndex + 1)
+                    }
+
+                    val logicString = attributes.first { it.startsWith("logic_name") }
+                    var logicname = "NONE"
+                    if (logicString != null) {
+                        val equalIndex = logicString.indexOf("=")
+                        logicname = logicString.substring(equalIndex + 1).replace("logic_name:","")
+                    }
+                    geneList.add("${name}:${chrom}:${start}:${end}:${strand}:${type}:${logicname}")
                 }
                 "exon" -> {
                     //val exonData = parseExon((lineTokens.toTypedArray()))
@@ -236,7 +260,7 @@ class GenomicFeatures(val gffFile:String) {
 
         geneDF = geneList.map{ entry ->
             val fields = entry.split(":")
-            geneDataRow(fields[0],fields[1], fields[2].toInt(),fields[3].toInt(), fields[4])
+            geneDataRow(fields[0],fields[1], fields[2].toInt(),fields[3].toInt(), fields[4],fields[5],fields[6])
         }.toDataFrame()
 
         transcriptDF = transcriptList.map{ entry ->
@@ -247,6 +271,7 @@ class GenomicFeatures(val gffFile:String) {
     }
 
 
+    // Functions to get a full list for individual feature types
     fun getExons():DataFrame<exonDataRow> {
         return exonDF
     }
@@ -269,40 +294,110 @@ class GenomicFeatures(val gffFile:String) {
         return threePrimeDF
     }
 
-    data class featureRangeDataRow(val seqname:String, val start:Int, val end:Int,  val strand:String, val type:String)
-    //data class featureRangeDataRow(val seqname:String, val start:Int, val end:Int,  val strand:String, val type:String, val data:String)
-    fun getFeaturesByRange(chr:String, range:IntRange): DataFrame<featureRangeDataRow>? {
+
+    // Generic functions to run on all
+
+    // get columns names for dataframe
+    fun getColumnNames(type:String):String {
+
+        if (type == FEATURE_TYPE.CDS.name) {
+            return cdsDF.columnNames().joinToString(",")
+        }
+        if (type == FEATURE_TYPE.chromosome.name) {
+            return chromDF.columnNames().joinToString(",")
+        }
+        if (type == FEATURE_TYPE.exon.name) {
+            return exonDF.columnNames().joinToString(",")
+        }
+        if (type == FEATURE_TYPE.five_prime_UTR.name) {
+            return fivePrimeDF.columnNames().joinToString(",")
+        }
+        if (type == FEATURE_TYPE.gene.name) {
+            return geneDF.columnNames().joinToString(",")
+        }
+        if (type == FEATURE_TYPE.three_prime_UTR.name) {
+            return threePrimeDF.columnNames().joinToString(",")
+        }
+        if (type == FEATURE_TYPE.mRNA.name) {
+            return transcriptDF.columnNames().joinToString(",")
+        }
+
+        return ("")
+    }
+
+    // This function loads to a dataframe data for all features that overlap a specific chrom/range
+    // Need a function to grab data only for specific types of features.
+    data class featureRangeDataRow(val seqname:String, val start:Int, val end:Int,  val strand:String, val type:String, val data:String)
+
+    // This function will retrieve feature lines based on those that over lap the specified
+    // chrom and positions.  The default is to get all GFF entries within the specifid range.
+    // IF the "features" string is specified, only those features with overlapping values
+    // will be returned.
+    // If present, the features string should be a comma separated list containing any of the values
+    // from the FEATURES_ENUM class above: CDS, chromosome, exon, fivePrimeUTR, gene, threePrimeUTR, mRNA, ALL
+    fun getFeaturesByRange( chr:String, range:IntRange, features:String = "ALL"): DataFrame<featureRangeDataRow> {
         print("getFeaturesInRange")
 
         val fullFeatureList = mutableListOf<featureRangeDataRow>()
-        // hmmm ... we read all the dataframes that we think we need.  Or maybe, we create new df's
-        // for each by filtering each one.  Then we read the frames and put them all into a new frame?
-
         // THis gets us multiple lists which we could potentially add together. All dataframes are transformed
         // to the featureRangeDataRow type for consistency with the final DataFrame to be returned.
 
-        // How to add the final "data" to the featureRangeDataRow?  The expectation is that the "data"
-        // field would be different for each feature type.  FOr exon, it would include rank and transcript.
-        val exonFilteredDRList = exonDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
-            .select{it["seqname"] and it["start"] and it["end"] and it["strand"]}.add("type") {"exon"}
-            .add("data") {}
-            .toListOf<featureRangeDataRow>()
-        fullFeatureList.addAll(exonFilteredDRList)
+        // Pull the common fields from each dataFrame, then create a "type" and "data" column which
+        // will be different for each feature.  Example: fro exon, we include rank and transcript.
 
-        val cdsFilteredDR = cdsDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
-            .select{it["seqname"] and it["start"] and it["end"] and it["strand"]}.add("type") {"cds"}
-            .toListOf<featureRangeDataRow>()
-        fullFeatureList.addAll(cdsFilteredDR)
+        if (features.contains("exon") || features.contains("ALL")) {
+            val exonFilteredDRList = exonDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+                .add("data") {"rank:${it["rank"]};transcript:${it["transcript"]}"}
+                .add("type") {"exon"}
+                .select{it["seqname"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .toListOf<featureRangeDataRow>()
+            fullFeatureList.addAll(exonFilteredDRList)
+        }
 
-        val geneFilteredDR = cdsDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
-            .select{it["seqname"] and it["start"] and it["end"] and it["strand"]}.add("type") {"gene"}
-            .toListOf<featureRangeDataRow>()
-        fullFeatureList.addAll(geneFilteredDR)
+        if (features.contains("CDS") || features.contains("ALL")) {
+            val cdsFilteredDR = cdsDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+                .add("data") {"phase:${it["phase"]};transcript:${it["transcript"]}"}
+                .add("type") {"cds"}
+                .select{it["seqname"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .toListOf<featureRangeDataRow>()
+            fullFeatureList.addAll(cdsFilteredDR)
+        }
 
-        val transcriptFilteredDR = cdsDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
-            .select{it["seqname"] and it["start"] and it["end"] and it["strand"]}.add("type") {"transcript"}
-            .toListOf<featureRangeDataRow>()
-        fullFeatureList.addAll(transcriptFilteredDR)
+        if (features.contains("fivePrimeUTR") || features.contains("ALL")) {
+            val fivePrimeFilteredDR = fivePrimeDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+                .add("data") {"transcript:${it["transcript"]}"}
+                .add("type") {"five_prime_UTR"}
+                .select{it["seqname"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .toListOf<featureRangeDataRow>()
+            fullFeatureList.addAll(fivePrimeFilteredDR)
+        }
+
+        if (features.contains("threePrimeUTR") || features.contains("ALL")) {
+            val threePrimeFilteredDR = threePrimeDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+                .add("data") {"transcript:${it["transcript"]}"}
+                .add("type") {"three_prime_UTR"}
+                .select{it["seqname"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .toListOf<featureRangeDataRow>()
+            fullFeatureList.addAll(threePrimeFilteredDR)
+        }
+
+        if (features.contains("gene") || features.contains("ALL")) {
+            val geneFilteredDR = geneDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+                .add("data") {"name:${it["name"]};biotype:${it["biotype"]};logic_name:${it["logic_name"]}"}
+                .add("type") {"gene"}
+                .select{it["seqname"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .toListOf<featureRangeDataRow>()
+            fullFeatureList.addAll(geneFilteredDR)
+        }
+
+        if (features.contains("mRNA") || features.contains("ALL")) {
+            val transcriptFilteredDR = transcriptDF.filter{it["seqname"] == chr}.filter{(it["start"] as Int <= range.last.toInt()) && it["end"] as Int >= range.first}
+                .add("type") {"transcript"}
+                .add("data") {"name:${it["name"]};biotype:${it["biotype"]}"}
+                .select{it["seqname"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .toListOf<featureRangeDataRow>()
+            fullFeatureList.addAll(transcriptFilteredDR)
+        }
 
         // Now, put all values from the 4 filteredDRs above into a single dataframe, with "type" prepended as first item.
         // Do these need to go to a list first? Cna w append to a dataframe?
@@ -313,5 +408,4 @@ class GenomicFeatures(val gffFile:String) {
 
     }
 
-    //fun subsetByOverlaps(feature:String, range:Pair<String,IntRange>):DataFrame<>
 }
