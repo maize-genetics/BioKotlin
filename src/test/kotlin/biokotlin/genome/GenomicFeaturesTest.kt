@@ -16,9 +16,11 @@ class GenomicFeaturesTest : StringSpec({
         println("myGF chromDF size: ${myGF.getChromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
-        println("Reading/parsing GFF file took ${readingTime} seconds")
+        println("Reading/parsing GFF file took ${readingTime} seconds\n")
 
-        println("exonDF with transcript=Zm00001e000002_T001")
+        myGF.listFunctions()
+
+        println("\nexonDF with transcript=Zm00001e000002_T001")
         myGF.getExons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
 
         println("exonDF is:")
@@ -37,7 +39,11 @@ class GenomicFeaturesTest : StringSpec({
             featuresFilteredByChrom.print()
         }
 
-        println("End of test")
+        // print cds df column names
+        val cdsColNames = myGF.getColumnNames("CDS")
+        println("CDS column names:\n${cdsColNames}")
+
+        println("\nEnd of test")
 
     }
     "test GFF file with just cds data" {
@@ -77,27 +83,28 @@ class GenomicFeaturesTest : StringSpec({
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
-        val featuresFilteredByChrom = myGF.getFeaturesByRange("chr1",34617..40204)
+        // Two ways to filter
+        val featuresByRange = myGF.getFeaturesByRange("chr1",34617..40204)
 
         println("\nprinting from my getFeaturesByRange")
         val outputFile = "/Users/lcj34/notes_files/biokotlin/new_features/brandon_gff_parsing/testing/featuresFilteredByChrom.csv"
-        if (featuresFilteredByChrom != null) {
-            featuresFilteredByChrom.print()
-            featuresFilteredByChrom.writeCSV(outputFile)
+        if (featuresByRange != null) {
+            featuresByRange.print()
+            featuresByRange.writeCSV(outputFile)
 
         }
 
-        var justUTRS = featuresFilteredByChrom?.filter {it["type"] == "five_prime_UTR" || it["type"] == "three_prime_UTR"}
+        var justUTRSbyRange = featuresByRange.filter {it["type"] == "five_prime_UTR" || it["type"] == "three_prime_UTR"}
         println("\njust UTRS by filtering after getFeaturesByRange")
-        if (justUTRS != null) {
-            justUTRS.print()
+        if (justUTRSbyRange != null) {
+            justUTRSbyRange.print()
         }
 
         // justUTRS by specifying this in creation
-        justUTRS = myGF.getFeaturesByRange("chr1",34617..40204,"threePrimeUTR,fivePrimeUTR")
+        justUTRSbyRange = myGF.getFeaturesByRange("chr1",34617..40204,"threePrimeUTR,fivePrimeUTR")
         println("\njust UTRS by parameter to getFeaturesByRange")
-        if (justUTRS != null) {
-            justUTRS.print()
+        if (justUTRSbyRange != null) {
+            justUTRSbyRange.print()
         }
 
 
@@ -126,6 +133,35 @@ class GenomicFeaturesTest : StringSpec({
         columnNames = myGF.getColumnNames("CDS")
         println("\nCDS column names from getColumnNames:\n${columnNames}")
 
-        println("number of exon rows: ${myGF.getExons().rowsCount()}")
+        println("number of exon rows: ${myGF.getExons().rowsCount()}\n")
+
+        var cdsFilteredRange = myGF.getCDS().filter{it["seqname"] == "chr1" && it["start"] as Int <= 40204 && it["end"] as Int >= 34617}
+        cdsFilteredRange.print()
+    }
+    "test getFeaturesWithTranscript" {
+        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val time = System.nanoTime()
+        // Create an instance of the class so we have access to the lists that are
+        // created on the read.
+        val myGF = GenomicFeatures(b73GFF_cds)
+        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+
+        val readingTime = (System.nanoTime() - time)/1e9
+        println("Reading/parsing GFF file took ${readingTime} seconds")
+
+        val transcriptEntries = myGF.getFeaturesWithTranscript("Zm00001e000002_T001")
+        transcriptEntries.print()
+    }
+    "test listFunctions" {
+        // verify printing of all available functions
+        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+
+        // Create an instance of the class so we have access to the lists that are
+        // created on the read.
+        val myGF = GenomicFeatures(b73GFF_cds)
+        myGF.listFunctions()
+
+        val exonsSortedByTranscript = myGF.getExons().sortBy {it["strand"]}
+        exonsSortedByTranscript.print()
     }
 })
