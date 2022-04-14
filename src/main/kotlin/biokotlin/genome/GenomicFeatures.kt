@@ -270,7 +270,7 @@ class GenomicFeatures(val gffFile:String) {
 
     // FUnction to print a list of functions
 
-    fun listFunctions() {
+    fun help() {
         println("\nAvailable Biokotlin GenomicFeature functions:")
         println("  getCDS() - returns a DataFrame of GFF CDS entries")
         println("  getChromosomes() - returns a DataFrame of GFF chromosome entries")
@@ -282,7 +282,7 @@ class GenomicFeatures(val gffFile:String) {
         println("  getTranscripts() - returns a DataFrame of GFF mRNA entries")
         println("  getFeaturesByRange( chr:String, range:IntRange, features:String = \"ALL\")\n      - returns a DataFrame containing all feature entries filtered by chromosome, range and requested feature types.\n      The \"features\" parameter must be a comma-separated list containing 1 or more features from the list below:\n        CDS, chromosome, exon, gene, three_prime_UTR, five_prime_UTR or mRNA\n      If the features parameter is not specified, entries for all are returned.")
         println("  getFeaturesWithTranscript(searchTranscript:String)\n      - returns a DataFrame containing all GFF entries relating to the specified transcript")
-        println("  listFunctions() - returns a list of functions that may be run against a GenomicFeatures object")
+        println("  help() - returns a list of functions that may be run against a GenomicFeatures object")
     }
 
     // Functions to get a full list for individual feature types
@@ -477,7 +477,6 @@ class GenomicFeatures(val gffFile:String) {
 
         var featuresInRangeDF = fullFeatureList.toDataFrame()
         return featuresInRangeDF.sortBy{it["start"]}
-
     }
 
 }

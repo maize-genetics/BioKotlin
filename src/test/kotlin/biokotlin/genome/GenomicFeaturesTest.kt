@@ -18,7 +18,7 @@ class GenomicFeaturesTest : StringSpec({
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds\n")
 
-        myGF.listFunctions()
+        myGF.help()
 
         println("\nexonDF with transcript=Zm00001e000002_T001")
         myGF.getExons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
@@ -159,7 +159,7 @@ class GenomicFeaturesTest : StringSpec({
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF_cds)
-        myGF.listFunctions()
+        myGF.help()
 
         val exonsSortedByTranscript = myGF.getExons().sortBy {it["strand"]}
         exonsSortedByTranscript.print()
