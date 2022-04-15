@@ -15,7 +15,7 @@ class GenomicFeaturesTest : StringSpec({
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF)
-        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+        println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds\n")
@@ -23,18 +23,18 @@ class GenomicFeaturesTest : StringSpec({
         myGF.help()
 
         println("\nexonDF with transcript=Zm00001e000002_T001")
-        myGF.getExons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
+        myGF.exons().filter{transcript == "Zm00001e000002_T001"}.print()
 
         println("exonDF is:")
-        myGF.getExons().print()
+        myGF.exons().print()
 
         println("exonDF where rank=1 and chrom=chr1 is:")
-        myGF.getExons().filter{it["rank"] == 1}.filter{it["seqid"] == "chr1"}.print()
+        myGF.exons().filter{rank == 1}.filter{seqid == "chr1"}.print()
 
         println("Select only the chrom, start and end columns of exonDF")
-        myGF.getExons().select{it["seqid"] and it["start"] and it["end"]}.print()
+        myGF.exons().select{seqid and start and end}.print()
 
-        val featuresFilteredByChrom = myGF.getFeaturesByRange("chr1",34617..40204)
+        val featuresFilteredByChrom = myGF.featuresByRange("chr1",34617..40204)
 
         println("\nprinting from my getFeaturesByRange")
         if (featuresFilteredByChrom != null) {
@@ -42,7 +42,7 @@ class GenomicFeaturesTest : StringSpec({
         }
 
         // print cds df column names
-        val cdsColNames = myGF.getColumnNames("CDS")
+        val cdsColNames = myGF.columnNames("CDS")
         println("CDS column names:\n${cdsColNames}")
 
         println("\nEnd of test")
@@ -57,19 +57,19 @@ class GenomicFeaturesTest : StringSpec({
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF_cds)
-        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+        println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
         println("exonDF with transcript=Zm00001e000002_T001")
-        myGF.getExons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
+        myGF.exons().filter{it["transcript"] == "Zm00001e000002_T001"}.print()
 
         println("exonDF is:")
-        myGF.getExons().print()
+        myGF.exons().print()
 
         println("cdsDF is :")
-        myGF.getCDS().print()
+        myGF.cds().print()
     }
     "test getFeaturesByRange" {
         // THis test verifies the program doesn't throw an exception when
@@ -80,13 +80,13 @@ class GenomicFeaturesTest : StringSpec({
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF_cds)
-        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+        println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
         // Two ways to filter
-        val featuresByRange = myGF.getFeaturesByRange("chr1",34617..40204)
+        val featuresByRange = myGF.featuresByRange("chr1",34617..40204)
 
         println("\nprinting from my getFeaturesByRange")
         val outputFile = "/Users/lcj34/notes_files/biokotlin/new_features/brandon_gff_parsing/testing/featuresFilteredByChrom.csv"
@@ -96,14 +96,14 @@ class GenomicFeaturesTest : StringSpec({
 
         }
 
-        var justUTRSbyRange = featuresByRange.filter {it["type"] == "five_prime_UTR" || it["type"] == "three_prime_UTR"}
+        var justUTRSbyRange = featuresByRange.filter {type == "five_prime_UTR" || type == "three_prime_UTR"}
         println("\njust UTRS by filtering after getFeaturesByRange")
         if (justUTRSbyRange != null) {
             justUTRSbyRange.print()
         }
 
         // justUTRS by specifying this in creation
-        justUTRSbyRange = myGF.getFeaturesByRange("chr1",34617..40204,"threePrimeUTR,fivePrimeUTR")
+        justUTRSbyRange = myGF.featuresByRange("chr1",34617..40204,"threePrimeUTR,fivePrimeUTR")
         println("\njust UTRS by parameter to getFeaturesByRange")
         if (justUTRSbyRange != null) {
             justUTRSbyRange.print()
@@ -117,44 +117,44 @@ class GenomicFeaturesTest : StringSpec({
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF_cds)
-        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+        println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
         println("\nprinting the columns from exonDF via: myGF.getExons().columnNames().jointToString(...)")
-        val exonColumns = myGF.getExons().columnNames()
+        val exonColumns = myGF.exons().columnNames()
         println("Exon column names:\n ${exonColumns.joinToString(",")}")
 
-        var columnNames = myGF.getColumnNames("exon")
+        var columnNames = myGF.columnNames("exon")
         println("\nexon column names from getColumnNames:\n${columnNames}")
 
-        columnNames = myGF.getColumnNames("gene")
+        columnNames = myGF.columnNames("gene")
         println("\ngene column names from getColumnNames:\n${columnNames}")
 
-        columnNames = myGF.getColumnNames("CDS")
+        columnNames = myGF.columnNames("CDS")
         println("\nCDS column names from getColumnNames:\n${columnNames}")
 
-        println("number of exon rows: ${myGF.getExons().rowsCount()}\n")
+        println("number of exon rows: ${myGF.exons().rowsCount()}\n")
 
-        var cdsFilteredRange = myGF.getCDS().filter{it["seqid"] == "chr1" && it["start"] as Int <= 40204 && it["end"] as Int >= 34617}
+        var cdsFilteredRange = myGF.cds().filter{seqid == "chr1" && start  <= 40204 && end >= 34617}
         cdsFilteredRange.print()
     }
-    "test getFeaturesWithTranscript" {
+    "test featuresWithTranscript" {
         val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
         val myGF = GenomicFeatures(b73GFF_cds)
-        println("myGF chromDF size: ${myGF.getChromosomes().size()}")
+        println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
-        val transcriptEntries = myGF.getFeaturesWithTranscript("Zm00001e000002_T001")
+        val transcriptEntries = myGF.featuresWithTranscript("Zm00001e000002_T001")
         transcriptEntries.print()
     }
-    "test listFunctions" {
+    "test help function" {
         // verify printing of all available functions
         val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
 
@@ -163,7 +163,8 @@ class GenomicFeaturesTest : StringSpec({
         val myGF = GenomicFeatures(b73GFF_cds)
         myGF.help()
 
-        val exonsSortedByTranscript = myGF.getExons().sortBy {it["strand"]}
+       // val exonsSortedByTranscript = myGF.getExons().sortBy {it["strand"]}
+        val exonsSortedByTranscript = myGF.exons().sortBy {name}
         exonsSortedByTranscript.print()
     }
     "test DataFrame read() instead of ours" {

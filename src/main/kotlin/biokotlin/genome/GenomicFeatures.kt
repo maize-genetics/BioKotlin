@@ -33,7 +33,7 @@ class GenomicFeatures(val gffFile:String) {
     data class fivePrimeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     data class threePrimeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     // "transcript" here is "mRNA" in gff filw,  Maybe add "Parent" which is gene (same as transcript but without the _T000X
-    data class transcriptDataRow(val name:String, val biotype: String, val seqid:String, val start:Int, val end:Int, val strand:String)
+    data class transcriptDataRow(val name:String,  val seqid:String, val start:Int, val end:Int, val strand:String, val biotype: String)
     data class gffDataRow(val seqId:String, val source:String, val type:String, val start:Int, val end:Int, val score:Float, val strand:String, val phase:Int, val attributes:String)
 
     enum class FEATURE_TYPE {CDS, chromosome, exon, five_prime_UTR, gene, three_prime_UTR, mRNA, ALL}
@@ -233,7 +233,7 @@ class GenomicFeatures(val gffFile:String) {
                         val equalIndex = typeString.indexOf("=")
                         type = typeString.substring(equalIndex + 1)
                     }
-                    transcriptList.add("${name}:${type}:${chrom}:${start}:${end}:${strand}")
+                    transcriptList.add("${name}:${chrom}:${start}:${end}:${strand}:${type}")
                 }
             } // end when type
         }
@@ -277,7 +277,7 @@ class GenomicFeatures(val gffFile:String) {
 
         transcriptDF = transcriptList.map{ entry ->
             val fields = entry.split(":")
-            transcriptDataRow(fields[0],fields[1],fields[2],fields[3].toInt(),fields[4].toInt(),fields[5])
+            transcriptDataRow(fields[0],fields[1],fields[2].toInt(),fields[3].toInt(),fields[4],fields[5])
         }.toDataFrame()
 
     }
@@ -286,39 +286,39 @@ class GenomicFeatures(val gffFile:String) {
 
     fun help() {
         println("\nAvailable Biokotlin GenomicFeature functions:")
-        println("  getCDS() - returns a DataFrame of GFF CDS entries")
-        println("  getChromosomes() - returns a DataFrame of GFF chromosome entries")
-        println("  getColumnNames(type:String) - returns a list of DataFrame columns for the specified feature.\n      The \"type\" parameter must be one of the following:\n      CDS, chromosome, exon, gene, three_prime_UTR, five_prime_UTR or mRNA")
-        println("  getExons() - returns a DataFrame of GFF exon entries")
-        println("  getGenes() - returns a DataFrame of GFF gene entries")
-        println("  get3primeUTRs() - returns a DataFrame of GFF three_prime_UTR entries")
-        println("  get5primeUTRs() - returns a DataFrame of GFF five_prime_UTR entries")
-        println("  getTranscripts() - returns a DataFrame of GFF mRNA entries")
-        println("  getFeaturesByRange( chr:String, range:IntRange, features:String = \"ALL\")\n      - returns a DataFrame containing all feature entries filtered by chromosome, range and requested feature types.\n      The \"features\" parameter must be a comma-separated list containing 1 or more features from the list below:\n        CDS, chromosome, exon, gene, three_prime_UTR, five_prime_UTR or mRNA\n      If the features parameter is not specified, entries for all are returned.")
-        println("  getFeaturesWithTranscript(searchTranscript:String)\n      - returns a DataFrame containing all GFF entries relating to the specified transcript")
+        println("  cds() - returns a DataFrame of GFF CDS entries")
+        println("  chromosomes() - returns a DataFrame of GFF chromosome entries")
+        println("  columnNames(type:String) - returns a list of DataFrame columns for the specified feature.\n      The \"type\" parameter must be one of the following:\n      CDS, chromosome, exon, gene, three_prime_UTR, five_prime_UTR or mRNA")
+        println("  exons() - returns a DataFrame of GFF exon entries")
+        println("  genes() - returns a DataFrame of GFF gene entries")
+        println("  threePrimeUTRs() - returns a DataFrame of GFF three_prime_UTR entries")
+        println("  fivePrimeUTRs() - returns a DataFrame of GFF five_prime_UTR entries")
+        println("  transcripts() - returns a DataFrame of GFF mRNA entries")
+        println("  featuresByRange( chr:String, range:IntRange, features:String = \"ALL\")\n      - returns a DataFrame containing all feature entries filtered by chromosome, range and requested feature types.\n      The \"features\" parameter must be a comma-separated list containing 1 or more features from the list below:\n        CDS, chromosome, exon, gene, three_prime_UTR, five_prime_UTR or mRNA\n      If the features parameter is not specified, entries for all are returned.")
+        println("  featuresWithTranscript(searchTranscript:String)\n      - returns a DataFrame containing all GFF entries relating to the specified transcript")
         println("  help() - returns a list of functions that may be run against a GenomicFeatures object")
     }
 
     // Functions to get a full list for individual feature types
-    fun getExons():DataFrame<exonDataRow> {
+    fun exons():DataFrame<exonDataRow> {
         return exonDF
     }
-    fun getGenes():DataFrame<geneDataRow> {
+    fun genes():DataFrame<geneDataRow> {
         return geneDF
     }
-    fun getCDS():DataFrame<cdsDataRow> {
+    fun cds():DataFrame<cdsDataRow> {
         return cdsDF
     }
-    fun getTranscripts():DataFrame<transcriptDataRow> {
+    fun transcripts():DataFrame<transcriptDataRow> {
         return transcriptDF
     }
-    fun getChromosomes():DataFrame<chromDataRow> {
+    fun chromosomes():DataFrame<chromDataRow> {
         return chromDF
     }
-    fun get5primeUTRs():DataFrame<fivePrimeDataRow> {
+    fun fivePrimeUTRs():DataFrame<fivePrimeDataRow> {
         return fivePrimeDF
     }
-    fun get3primeUTRs():DataFrame<threePrimeDataRow> {
+    fun threePrimeUTRs():DataFrame<threePrimeDataRow> {
         return threePrimeDF
     }
 
@@ -326,7 +326,7 @@ class GenomicFeatures(val gffFile:String) {
     // Generic functions to run on all feature DataFrames
 
     // get columns names for dataframe
-    fun getColumnNames(type:String):String {
+    fun columnNames(type:String):String {
 
         if (type == FEATURE_TYPE.CDS.name) {
             return cdsDF.columnNames().joinToString(",")
@@ -364,7 +364,7 @@ class GenomicFeatures(val gffFile:String) {
     // If present, the features string should be a comma separated list containing any of the values
     // from the FEATURES_ENUM class above: CDS, chromosome, exon, five_prime_UTR, gene, three_prime_UTR, mRNA, ALL
     // The feature names match valid entries for the "type" field in a GFF file.
-    fun getFeaturesByRange( chr:String, range:IntRange, features:String = "ALL"): DataFrame<featureRangeDataRow> {
+    fun featuresByRange(chr:String, range:IntRange, features:String = "ALL"): DataFrame<featureRangeDataRow> {
 
         val fullFeatureList = mutableListOf<featureRangeDataRow>()
         // THis gets us multiple lists which we could potentially add together. All dataframes are transformed
@@ -374,51 +374,51 @@ class GenomicFeatures(val gffFile:String) {
         // will be different for each feature.  Example: fro exon, we include rank and transcript.
 
         if (features.contains("exon") || features.contains("ALL")) {
-            val exonFilteredDRList = exonDF.filter{it["seqid"] == chr}
-                .filter{(it["start"] as Int <= range.last) && it["end"] as Int >= range.first}
-                .add("data") {"rank:${it["rank"]};transcript:${it["transcript"]}"}
+            val exonFilteredDRList = exonDF.filter{seqid == chr}
+                .filter{(start  <= range.last) && end >= range.first}
+                .add("data") {"rank:${rank};transcript:${transcript}"}
                 .add("type") {"exon"}
-                .select{it["seqid"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .select{seqid and start and end and strand and it["type"] and it["data"]}
                 .toListOf<featureRangeDataRow>()
             fullFeatureList.addAll(exonFilteredDRList)
         }
 
         if (features.contains("CDS") || features.contains("ALL")) {
             val cdsFilteredDR = cdsDF.filter{it["seqid"] == chr}
-                .filter{(it["start"] as Int <= range.last) && it["end"] as Int >= range.first}
-                .add("data") {"phase:${it["phase"]};transcript:${it["transcript"]}"}
+                .filter{(start  <= range.last) && end >= range.first}
+                .add("data") {"phase:${phase};transcript:${transcript}"}
                 .add("type") {"cds"}
-                .select{it["seqid"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .select{ seqid and start and end and strand and it["type"] and it["data"]}
                 .toListOf<featureRangeDataRow>()
             fullFeatureList.addAll(cdsFilteredDR)
         }
 
         if (features.contains("five_prime_UTR") || features.contains("ALL")) {
-            val fivePrimeFilteredDR = fivePrimeDF.filter{it["seqid"] == chr}
-                .filter{(it["start"] as Int <= range.last) && it["end"] as Int >= range.first}
+            val fivePrimeFilteredDR = fivePrimeDF.filter{seqid == chr}
+                .filter{(start <= range.last) && end >= range.first}
                 .add("data") {"transcript:${it["transcript"]}"}
                 .add("type") {"five_prime_UTR"}
-                .select{it["seqid"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .select{seqid and start and end and strand and it["type"] and it["data"]}
                 .toListOf<featureRangeDataRow>()
             fullFeatureList.addAll(fivePrimeFilteredDR)
         }
 
         if (features.contains("three_prime_UTR") || features.contains("ALL")) {
             val threePrimeFilteredDR = threePrimeDF.filter{it["seqid"] == chr}
-                .filter{(it["start"] as Int <= range.last) && it["end"] as Int >= range.first}
+                .filter{(start <= range.last) && end >= range.first}
                 .add("data") {"transcript:${it["transcript"]}"}
                 .add("type") {"three_prime_UTR"}
-                .select{it["seqid"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .select{seqid and start and end and strand and it["type"] and it["data"]}
                 .toListOf<featureRangeDataRow>()
             fullFeatureList.addAll(threePrimeFilteredDR)
         }
 
         if (features.contains("gene") || features.contains("ALL")) {
             val geneFilteredDR = geneDF.filter{it["seqid"] == chr}
-                .filter{(it["start"] as Int <= range.last) && it["end"] as Int >= range.first}
-                .add("data") {"name:${it["name"]};biotype:${it["biotype"]};logic_name:${it["logic_name"]}"}
+                .filter{(start <= range.last) && end >= range.first}
+                .add("data") {"name:${name};biotype:${biotype};logic_name:${logic_name}"}
                 .add("type") {"gene"}
-                .select{it["seqid"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .select{seqid and start and end and strand and it["type"] and it["data"]}
                 .toListOf<featureRangeDataRow>()
             fullFeatureList.addAll(geneFilteredDR)
         }
@@ -427,8 +427,8 @@ class GenomicFeatures(val gffFile:String) {
             val transcriptFilteredDR = transcriptDF.filter{it["seqid"] == chr}
                 .filter{(it["start"] as Int <= range.last) && it["end"] as Int >= range.first}
                 .add("type") {"transcript"}
-                .add("data") {"name:${it["name"]};biotype:${it["biotype"]}"}
-                .select{it["seqid"] and it["start"] and it["end"] and it["strand"] and it["type"] and it["data"]}
+                .add("data") {"name:${name};biotype:${biotype}"}
+                .select{seqid and start and end and strand and it["type"] and it["data"]}
                 .toListOf<featureRangeDataRow>()
             fullFeatureList.addAll(transcriptFilteredDR)
         }
@@ -441,7 +441,7 @@ class GenomicFeatures(val gffFile:String) {
 
     }
 
-    fun getFeaturesWithTranscript( searchTranscript:String): DataFrame<featureRangeDataRow> {
+    fun featuresWithTranscript(searchTranscript:String): DataFrame<featureRangeDataRow> {
 
         val fullFeatureList = mutableListOf<featureRangeDataRow>()
         // THis gets us multiple lists which we could potentially add together. All dataframes are transformed
@@ -492,8 +492,109 @@ class GenomicFeatures(val gffFile:String) {
         var featuresInRangeDF = fullFeatureList.toDataFrame()
         return featuresInRangeDF.sortBy{it["start"]}
     }
-
-    val ColumnsContainer<exonDataRow>.name: DataColumn<String> @JvmName("exonDataRow_name") get() = this["name"] as DataColumn<String>
-    val DataRow<exonDataRow>.name: String @JvmName("exonDataRow_name") get() = this["name"] as String
-
 }
+
+//These definitions must occur outside the class to be seen
+// These allow the user to write:
+//    myGF.getExons().sortBy {name}
+// instead of
+//    myGF.getExons().sortBy {it["name"]}
+val ColumnsContainer<GenomicFeatures.exonDataRow>.name: DataColumn<String> @JvmName("exonDataRow_name") get() = this["name"] as DataColumn<String>
+val DataRow<GenomicFeatures.exonDataRow>.name: String @JvmName("exonDataRow_name") get() = this["name"] as String
+val ColumnsContainer<GenomicFeatures.exonDataRow>.seqid: DataColumn<String> @JvmName("exonDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.exonDataRow>.seqid: String @JvmName("exonDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.exonDataRow>.start: DataColumn<Int> @JvmName("exonDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.exonDataRow>.start: Int @JvmName("exonDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.exonDataRow>.end: DataColumn<Int> @JvmName("exonDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.exonDataRow>.end: Int @JvmName("exonDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.exonDataRow>.strand: DataColumn<String> @JvmName("exonDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.exonDataRow>.strand: String @JvmName("exonDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.exonDataRow>.rank: DataColumn<Int> @JvmName("exonDataRow_rank") get() = this["rank"] as DataColumn<Int>
+val DataRow<GenomicFeatures.exonDataRow>.rank: Int @JvmName("exonDataRow_rank") get() = this["rank"] as Int
+val ColumnsContainer<GenomicFeatures.exonDataRow>.transcript: DataColumn<String> @JvmName("exonDataRow_transcript") get() = this["transcript"] as DataColumn<String>
+val DataRow<GenomicFeatures.exonDataRow>.transcript: String @JvmName("exonDataRow_transcript") get() = this["transcript"] as String
+
+
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.name: DataColumn<String> @JvmName("cdsDataRow_name") get() = this["name"] as DataColumn<String>
+val DataRow<GenomicFeatures.cdsDataRow>.name: String @JvmName("cdsDataRow_name") get() = this["name"] as String
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.seqid: DataColumn<String> @JvmName("cdsDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.cdsDataRow>.seqid: String @JvmName("cdsDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.start: DataColumn<Int> @JvmName("cdsDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.cdsDataRow>.start: Int @JvmName("cdsDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.end: DataColumn<Int> @JvmName("cdsDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.cdsDataRow>.end: Int @JvmName("cdsDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.strand: DataColumn<String> @JvmName("cdsDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.cdsDataRow>.strand: String @JvmName("cdsDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.phase: DataColumn<Int> @JvmName("cdsDataRow_phase") get() = this["phase"] as DataColumn<Int>
+val DataRow<GenomicFeatures.cdsDataRow>.phase: Int @JvmName("cdsDataRow_phase") get() = this["phase"] as Int
+val ColumnsContainer<GenomicFeatures.cdsDataRow>.transcript: DataColumn<String> @JvmName("cdsDataRow_transcript") get() = this["transcript"] as DataColumn<String>
+val DataRow<GenomicFeatures.cdsDataRow>.transcript: String @JvmName("cdsDataRow_transcript") get() = this["transcript"] as String
+
+val ColumnsContainer<GenomicFeatures.geneDataRow>.name: DataColumn<String> @JvmName("geneDataRow_name") get() = this["name"] as DataColumn<String>
+val DataRow<GenomicFeatures.geneDataRow>.name: String @JvmName("geneDataRow_name") get() = this["name"] as String
+val ColumnsContainer<GenomicFeatures.geneDataRow>.seqid: DataColumn<String> @JvmName("geneDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.geneDataRow>.seqid: String @JvmName("geneDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.geneDataRow>.start: DataColumn<Int> @JvmName("geneDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.geneDataRow>.start: Int @JvmName("geneDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.geneDataRow>.end: DataColumn<Int> @JvmName("geneDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.geneDataRow>.end: Int @JvmName("geneDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.geneDataRow>.strand: DataColumn<String> @JvmName("geneDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.geneDataRow>.strand: String @JvmName("geneDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.geneDataRow>.biotype: DataColumn<String> @JvmName("geneDataRow_biotype") get() = this["biotype"] as DataColumn<String>
+val DataRow<GenomicFeatures.geneDataRow>.biotype: String @JvmName("geneDataRow_biotype") get() = this["biotype"] as String
+val ColumnsContainer<GenomicFeatures.geneDataRow>.logic_name: DataColumn<String> @JvmName("geneDataRow_logic_name") get() = this["logic_name"] as DataColumn<String>
+val DataRow<GenomicFeatures.geneDataRow>.logic_name: String @JvmName("geneDataRow_logic_name") get() = this["logic_name"] as String
+
+val ColumnsContainer<GenomicFeatures.chromDataRow>.seqid: DataColumn<String> @JvmName("chromDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.chromDataRow>.seqid: String @JvmName("chromDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.chromDataRow>.length: DataColumn<Int> @JvmName("chromDataRow_length") get() = this["length"] as DataColumn<Int>
+val DataRow<GenomicFeatures.chromDataRow>.length: Int @JvmName("chromDataRow_length") get() = this["length"] as Int
+
+val ColumnsContainer<GenomicFeatures.fivePrimeDataRow>.seqid: DataColumn<String> @JvmName("fivePrimeDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.fivePrimeDataRow>.seqid: String @JvmName("fivePrimeDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.fivePrimeDataRow>.start: DataColumn<Int> @JvmName("fivePrimeDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.fivePrimeDataRow>.start: Int @JvmName("fivePrimeDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.fivePrimeDataRow>.end: DataColumn<Int> @JvmName("fivePrimeDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.fivePrimeDataRow>.end: Int @JvmName("fivePrimeDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.fivePrimeDataRow>.strand: DataColumn<String> @JvmName("fivePrimeDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.fivePrimeDataRow>.strand: String @JvmName("fivePrimeDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.fivePrimeDataRow>.transcript: DataColumn<String> @JvmName("fivePrimeDataRow_transcript") get() = this["transcript"] as DataColumn<String>
+val DataRow<GenomicFeatures.fivePrimeDataRow>.transcript: String @JvmName("fivePrimeDataRow_transcript") get() = this["transcript"] as String
+
+val ColumnsContainer<GenomicFeatures.threePrimeDataRow>.seqid: DataColumn<String> @JvmName("threePrimeDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.threePrimeDataRow>.seqid: String @JvmName("threePrimeDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.threePrimeDataRow>.start: DataColumn<Int> @JvmName("threePrimeDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.threePrimeDataRow>.start: Int @JvmName("threePrimeDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.threePrimeDataRow>.end: DataColumn<Int> @JvmName("threePrimeDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.threePrimeDataRow>.end: Int @JvmName("threePrimeDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.threePrimeDataRow>.strand: DataColumn<String> @JvmName("threePrimeDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.threePrimeDataRow>.strand: String @JvmName("threePrimeDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.threePrimeDataRow>.transcript: DataColumn<String> @JvmName("threePrimeDataRow_transcript") get() = this["transcript"] as DataColumn<String>
+val DataRow<GenomicFeatures.threePrimeDataRow>.transcript: String @JvmName("threePrimeDataRow_transcript") get() = this["transcript"] as String
+
+val ColumnsContainer<GenomicFeatures.transcriptDataRow>.name: DataColumn<String> @JvmName("transcriptDataRow_name") get() = this["name"] as DataColumn<String>
+val DataRow<GenomicFeatures.transcriptDataRow>.name: String @JvmName("transcriptDataRow_name") get() = this["name"] as String
+val ColumnsContainer<GenomicFeatures.transcriptDataRow>.seqid: DataColumn<String> @JvmName("transcriptDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.transcriptDataRow>.seqid: String @JvmName("transcriptDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.transcriptDataRow>.start: DataColumn<Int> @JvmName("transcriptDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.transcriptDataRow>.start: Int @JvmName("transcriptDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.transcriptDataRow>.end: DataColumn<Int> @JvmName("transcriptDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.transcriptDataRow>.end: Int @JvmName("transcriptDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.transcriptDataRow>.strand: DataColumn<String> @JvmName("transcriptDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.transcriptDataRow>.strand: String @JvmName("transcriptDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.transcriptDataRow>.biotype: DataColumn<String> @JvmName("transcriptDataRow_biotype") get() = this["biotype"] as DataColumn<String>
+val DataRow<GenomicFeatures.transcriptDataRow>.biotype: String @JvmName("transcriptDataRow_biotype") get() = this["biotype"] as String
+
+val ColumnsContainer<GenomicFeatures.featureRangeDataRow>.seqid: DataColumn<String> @JvmName("featureRangeDataRow_seqid") get() = this["seqid"] as DataColumn<String>
+val DataRow<GenomicFeatures.featureRangeDataRow>.seqid: String @JvmName("featureRangeDataRow_seqid") get() = this["seqid"] as String
+val ColumnsContainer<GenomicFeatures.featureRangeDataRow>.start: DataColumn<Int> @JvmName("featureRangeDataRow_start") get() = this["start"] as DataColumn<Int>
+val DataRow<GenomicFeatures.featureRangeDataRow>.start: Int @JvmName("featureRangeDataRow_start") get() = this["start"] as Int
+val ColumnsContainer<GenomicFeatures.featureRangeDataRow>.end: DataColumn<Int> @JvmName("featureRangeDataRow_end") get() = this["end"] as DataColumn<Int>
+val DataRow<GenomicFeatures.featureRangeDataRow>.end: Int @JvmName("featureRangeDataRow_end") get() = this["end"] as Int
+val ColumnsContainer<GenomicFeatures.featureRangeDataRow>.strand: DataColumn<String> @JvmName("featureRangeDataRow_strand") get() = this["strand"] as DataColumn<String>
+val DataRow<GenomicFeatures.featureRangeDataRow>.strand: String @JvmName("featureRangeDataRow_strand") get() = this["strand"] as String
+val ColumnsContainer<GenomicFeatures.featureRangeDataRow>.type: DataColumn<String> @JvmName("featureRangeDataRow_type") get() = this["type"] as DataColumn<String>
+val DataRow<GenomicFeatures.featureRangeDataRow>.type: String @JvmName("featureRangeDataRow_type") get() = this["type"] as String
+val ColumnsContainer<GenomicFeatures.featureRangeDataRow>.data: DataColumn<String> @JvmName("featureRangeDataRow_data") get() = this["data"] as DataColumn<String>
+val DataRow<GenomicFeatures.featureRangeDataRow>.data: String @JvmName("featureRangeDataRow_data") get() = this["data"] as String
+
