@@ -142,11 +142,11 @@ class GenomicFeaturesTest : StringSpec({
         cdsFilteredRange.print()
     }
     "test featuresWithTranscript" {
-        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73GFF_full = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
-        val myGF = GenomicFeatures(b73GFF_cds)
+        val myGF = GenomicFeatures(b73GFF_full)
         println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
@@ -182,5 +182,42 @@ class GenomicFeaturesTest : StringSpec({
         val refFasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
         val refNucSeqFasta = NucSeqIO(refFasta).readAll()
         println(" key size: ${refNucSeqFasta.keys.size}")
+    }
+    "test GenomicFeatures with fasta" {
+        val b73GFF_full = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73Fasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
+        val time = System.nanoTime()
+        // Create an instance of the class so we have access to the lists that are
+        // created on the read.
+        val myGF = GenomicFeatures(b73GFF_full,b73Fasta)
+
+        val readingTime = (System.nanoTime() - time)/1e9
+        println("Reading/parsing GFF and ref fasta files took ${readingTime} seconds")
+
+        println("myGF chromDF size: ${myGF.chromosomes().size()}")
+        val nucSeqList = myGF.refNucSeqFasta
+        val numContigs = nucSeqList!!.keys.size
+
+        val chr5GeneSRangeSet = mutableSetOf<SRange>()
+
+        // Things to note here:  BOth SRanges and the GFF and 1-based physical positions
+        //  that are inclusive/inclusive. So moving between them will remain consistent.
+        // If you pull sequence based on the range, it will be correctly adjusted for that
+        // (because sequence is stored as 0-based)
+        myGF.genes().filter{seqid == "chr5"}.select{start and end}.forEachRow {
+            val record = nucSeqList["chr5"]!!.range(start..end)
+            chr5GeneSRangeSet.add(record)
+        }
+
+        // You now have a rangeSet - you can pull sequence from the NucSeqRecords in the
+        // chr5GeneSRangeSet.
+        // You can also perform any operations on this SRange set now - flanking, shift, sequence,
+        // complement, intersections, overlaps, or get a dataFrame from the SRange set.
+
+        // Not clear why SRange.toDataFrame() does both individual start and end coordinates as well as the range.
+        // seems redundant - don't recall the use case for both.
+        val rangeDF = chr5GeneSRangeSet.toDataFrame()
+
+        rangeDF.print()
     }
 })

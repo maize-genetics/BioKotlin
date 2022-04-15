@@ -25,7 +25,8 @@ import java.io.File
  *  necessary to allow the DataFrame code to access the columns by name vs it["<columnName>"]
  *
  *  The refFasta is optional.  IF it exists, it will be used to link gff ranges with reference
- *  sequence.
+ *  sequence.  See examples of how this in GenomicFeatureTest:"test GenomicFeatures with fasta"
+ *  Work needs to be done here to create functions for combining them based on user requests.
  */
 class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
 
@@ -39,6 +40,7 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
     data class threePrimeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     // "transcript" here is "mRNA" in gff filw,  Maybe add "Parent" which is gene (same as transcript but without the _T000X)?
     data class transcriptDataRow(val name:String,  val seqid:String, val start:Int, val end:Int, val strand:String, val biotype: String)
+    // gffDataRow isn't used at this point.
     data class gffDataRow(val seqId:String, val source:String, val type:String, val start:Int, val end:Int, val score:Float, val strand:String, val phase:Int, val attributes:String)
 
     enum class FEATURE_TYPE {CDS, chromosome, exon, five_prime_UTR, gene, three_prime_UTR, mRNA, ALL}
@@ -54,9 +56,16 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
     var threePrimeDF: DataFrame<threePrimeDataRow> = ArrayList<threePrimeDataRow>().toDataFrame()
 
     var testDR: DataFrame<gffDataRow> = ArrayList<gffDataRow>().toDataFrame()
-    var gffDF = AnyFrame  // this type is returned from csv.kt: DataFrame.read()
+
 
     // This also gets populated when init is run (if a reference fasta was supplied)
+    // It is a map of the contig (seqid) name to a NucSeqRecord, the latter contains
+    // (among other things) the sequence.  Users may find ranges for transcripts,
+    // or exons, etc by searching the gff.  Then use the refNucSeqFasta below to
+    // pull sequence based on the GFF coordinates.
+
+    // See examples of using the GFF and ref Fasta data together in the GenomicFeaturesTest.kt,
+    // test case "test GenomicFeatures with fasta"
     var refNucSeqFasta: Map<String, NucSeqRecord>? = null
 
     init {
