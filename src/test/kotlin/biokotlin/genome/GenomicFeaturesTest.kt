@@ -1,7 +1,9 @@
 package biokotlin.genome
 
 import io.kotest.core.spec.style.StringSpec
+import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.*
+import org.jetbrains.kotlinx.dataframe.io.read
 import org.jetbrains.kotlinx.dataframe.io.writeCSV
 import org.jetbrains.kotlinx.dataframe.size
 
@@ -27,10 +29,10 @@ class GenomicFeaturesTest : StringSpec({
         myGF.getExons().print()
 
         println("exonDF where rank=1 and chrom=chr1 is:")
-        myGF.getExons().filter{it["rank"] == 1}.filter{it["seqname"] == "chr1"}.print()
+        myGF.getExons().filter{it["rank"] == 1}.filter{it["seqid"] == "chr1"}.print()
 
         println("Select only the chrom, start and end columns of exonDF")
-        myGF.getExons().select{it["seqname"] and it["start"] and it["end"]}.print()
+        myGF.getExons().select{it["seqid"] and it["start"] and it["end"]}.print()
 
         val featuresFilteredByChrom = myGF.getFeaturesByRange("chr1",34617..40204)
 
@@ -135,7 +137,7 @@ class GenomicFeaturesTest : StringSpec({
 
         println("number of exon rows: ${myGF.getExons().rowsCount()}\n")
 
-        var cdsFilteredRange = myGF.getCDS().filter{it["seqname"] == "chr1" && it["start"] as Int <= 40204 && it["end"] as Int >= 34617}
+        var cdsFilteredRange = myGF.getCDS().filter{it["seqid"] == "chr1" && it["start"] as Int <= 40204 && it["end"] as Int >= 34617}
         cdsFilteredRange.print()
     }
     "test getFeaturesWithTranscript" {
@@ -163,5 +165,15 @@ class GenomicFeaturesTest : StringSpec({
 
         val exonsSortedByTranscript = myGF.getExons().sortBy {it["strand"]}
         exonsSortedByTranscript.print()
+    }
+    "test DataFrame read() instead of ours" {
+        val b73GFF_noHeaders = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.noHeaders.gff3"
+
+        val gffDF = DataFrame.read(b73GFF_noHeaders)
+        val numColumns = gffDF.columnNames().count()
+        println("Number of columns: ${numColumns}")
+        val colNames = gffDF.columnNames().joinToString(",")
+        println("Column names: ${colNames}")
+
     }
 })
