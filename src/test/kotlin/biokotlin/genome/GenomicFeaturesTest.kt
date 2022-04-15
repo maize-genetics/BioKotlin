@@ -1,5 +1,6 @@
 package biokotlin.genome
 
+import biokotlin.seqIO.NucSeqIO
 import io.kotest.core.spec.style.StringSpec
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.*
@@ -176,5 +177,10 @@ class GenomicFeaturesTest : StringSpec({
         val colNames = gffDF.columnNames().joinToString(",")
         println("Column names: ${colNames}")
 
+    }
+    " test reading fasta to NucSeqRecords" {
+        val refFasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
+        val refNucSeqFasta = NucSeqIO(refFasta).readAll()
+        println(" key size: ${refNucSeqFasta.keys.size}")
     }
 })

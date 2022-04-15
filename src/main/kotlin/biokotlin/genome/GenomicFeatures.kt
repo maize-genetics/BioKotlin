@@ -1,6 +1,8 @@
 package biokotlin.genome
 
 
+import biokotlin.seq.NucSeqRecord
+import biokotlin.seqIO.NucSeqIO
 import org.jetbrains.kotlinx.dataframe.*
 import org.jetbrains.kotlinx.dataframe.api.*
 import java.io.File
@@ -21,18 +23,21 @@ import java.io.File
  *       the first line is the column headers.
  *  Based on above, we create the data frames programmatically, the add the "getter" lines
  *  necessary to allow the DataFrame code to access the columns by name vs it["<columnName>"]
+ *
+ *  The refFasta is optional.  IF it exists, it will be used to link gff ranges with reference
+ *  sequence.
  */
-class GenomicFeatures(val gffFile:String) {
+class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
 
     // Exon - add ensembl_phase and ensembl_end_phase?
     data class exonDataRow(val name:String, val seqid:String, val start:Int, val end:Int, val strand:String, val rank:Int, val transcript:String)
-    // CDS - add protein id? SEems to be same as name
+    // CDS - add protein id? Seems to be same as name
     data class cdsDataRow(val name:String, val seqid:String, val start:Int, val end:Int, val strand:String, val phase:Int, val transcript:String)
     data class geneDataRow(val name:String, val seqid:String, val start:Int, val end:Int, val strand:String, val biotype:String, val logic_name:String)
     data class chromDataRow(val seqid:String, val length:Int)
     data class fivePrimeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val transcript:String)
     data class threePrimeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val transcript:String)
-    // "transcript" here is "mRNA" in gff filw,  Maybe add "Parent" which is gene (same as transcript but without the _T000X
+    // "transcript" here is "mRNA" in gff filw,  Maybe add "Parent" which is gene (same as transcript but without the _T000X)?
     data class transcriptDataRow(val name:String,  val seqid:String, val start:Int, val end:Int, val strand:String, val biotype: String)
     data class gffDataRow(val seqId:String, val source:String, val type:String, val start:Int, val end:Int, val score:Float, val strand:String, val phase:Int, val attributes:String)
 
@@ -47,15 +52,26 @@ class GenomicFeatures(val gffFile:String) {
     var transcriptDF: DataFrame<transcriptDataRow> = ArrayList<transcriptDataRow>().toDataFrame() // this is mRNA
     var fivePrimeDF: DataFrame<fivePrimeDataRow> = ArrayList<fivePrimeDataRow>().toDataFrame()
     var threePrimeDF: DataFrame<threePrimeDataRow> = ArrayList<threePrimeDataRow>().toDataFrame()
+
     var testDR: DataFrame<gffDataRow> = ArrayList<gffDataRow>().toDataFrame()
     var gffDF = AnyFrame  // this type is returned from csv.kt: DataFrame.read()
 
-    //The intent is Key=transcrip, Value = Map<type,value>, e.g. exon=id, CDS=name, chr=chr1, etc
-    val transcriptMap = HashMap<String,Map<String,String>>()
+    // This also gets populated when init is run (if a reference fasta was supplied)
+    var refNucSeqFasta: Map<String, NucSeqRecord>? = null
 
     init {
         // This populates the data frame objects declared above
         readGffToDFs(gffFile)
+        if (refFasta != null) {
+            loadRefFastaToNucSeqIO(refFasta)
+        }
+
+    }
+
+    // Not sure yet what we're doing with this.  I assume we want the map version
+    // so we can associate fasta chroms with gff chroms to pull sequence
+    fun loadRefFastaToNucSeqIO( refFasta:String) {
+        refNucSeqFasta = NucSeqIO(refFasta).readAll()
     }
 
     // THis method reads the file and populates the lists above
