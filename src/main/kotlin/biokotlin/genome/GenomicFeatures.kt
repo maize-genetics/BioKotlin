@@ -43,6 +43,9 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
     // gffDataRow isn't used at this point.
     data class gffDataRow(val seqId:String, val source:String, val type:String, val start:Int, val end:Int, val score:Float, val strand:String, val phase:Int, val attributes:String)
 
+    // Define a data class generic enough to hold combined data from different GenomicFeatures DataFrame types
+    data class featureRangeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val type:String, val data:String)
+
     enum class FEATURE_TYPE {CDS, chromosome, exon, five_prime_UTR, gene, three_prime_UTR, mRNA, ALL}
 
     // Initialize the individual feature dataframes.  They will be populated with data from the GFF
@@ -321,6 +324,7 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
         println("  transcripts() - returns a DataFrame of GFF mRNA entries")
         println("  featuresByRange( chr:String, range:IntRange, features:String = \"ALL\")\n      - returns a DataFrame containing all feature entries filtered by chromosome, range and requested feature types.\n      The \"features\" parameter must be a comma-separated list containing 1 or more features from the list below:\n        CDS, chromosome, exon, gene, three_prime_UTR, five_prime_UTR or mRNA\n      If the features parameter is not specified, entries for all are returned.")
         println("  featuresWithTranscript(searchTranscript:String)\n      - returns a DataFrame containing all GFF entries relating to the specified transcript")
+        println("  sequenceForChrRange(chr:String, positions:IntRange) - returns the sequence as a String for the specified chr/range.\n      If fasta is not present, or chr doesn't exist in the fasta, null is returned")
         println("  help() - returns a list of functions that may be run against a GenomicFeatures object")
     }
 
@@ -379,8 +383,7 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
         return ("")
     }
 
-    // Define a data class generic enough to hold combined data from different GenomicFeatures DataFrame types
-    data class featureRangeDataRow(val seqid:String, val start:Int, val end:Int, val strand:String, val type:String, val data:String)
+
 
     // This function will retrieve feature lines based on those that over lap the specified
     // chrom and positions.  The default is to get all GFF entries within the specifid range.
@@ -516,6 +519,21 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
 
         var featuresInRangeDF = fullFeatureList.toDataFrame()
         return featuresInRangeDF.sortBy{it["start"]}
+    }
+
+    // Return sequence for specified chr/range
+    fun sequenceForChrRange(chr:String, positions:IntRange):String? {
+        if (refNucSeqFasta != null) {
+            if (refNucSeqFasta!!.keys.contains(chr)) {
+                val record = refNucSeqFasta!![chr]!!.range(positions)
+                return record.sequence()
+            } else {
+                println("GenomicFeatures:sequenceForChrRange:  seqId ${chr} not present in fasta data")
+            }
+        } else {
+            println("GenomicFeatures:sequenceForChrRange:  no fasta data stored in class")
+        }
+        return null
     }
 }
 

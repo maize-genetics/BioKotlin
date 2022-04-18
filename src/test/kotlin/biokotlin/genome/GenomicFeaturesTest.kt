@@ -7,6 +7,7 @@ import org.jetbrains.kotlinx.dataframe.api.*
 import org.jetbrains.kotlinx.dataframe.io.read
 import org.jetbrains.kotlinx.dataframe.io.writeCSV
 import org.jetbrains.kotlinx.dataframe.size
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class GenomicFeaturesTest : StringSpec({
 
@@ -200,7 +201,7 @@ class GenomicFeaturesTest : StringSpec({
 
         val chr5GeneSRangeSet = mutableSetOf<SRange>()
 
-        // Things to note here:  BOth SRanges and the GFF and 1-based physical positions
+        // Things to note here:  Both SRanges and the GFF are 1-based physical positions
         //  that are inclusive/inclusive. So moving between them will remain consistent.
         // If you pull sequence based on the range, it will be correctly adjusted for that
         // (because sequence is stored as 0-based)
@@ -219,5 +220,16 @@ class GenomicFeaturesTest : StringSpec({
         val rangeDF = chr5GeneSRangeSet.toDataFrame()
 
         rangeDF.print()
+
+        // Get sequence for a specific chromosome/range:
+        val chr5seq = myGF.sequenceForChrRange("chr5",1..50)
+        println(chr5seq)
+
+        assertEquals(chr5seq, "CTAAACCTAAACATCGACACTAAAGGATTTTAGTGTCGAAACCATGGTAA")
+
+        val fakeChrSeq = myGF.sequenceForChrRange("fakeChr", 1..60)
+        assertEquals(fakeChrSeq,null)
+
     }
+
 })
