@@ -155,6 +155,7 @@ class GenomicFeaturesTest : StringSpec({
 
         val transcriptEntries = myGF.featuresWithTranscript("Zm00001e000002_T001")
         transcriptEntries.print()
+
     }
     "test help function" {
         // verify printing of all available functions
@@ -210,6 +211,7 @@ class GenomicFeaturesTest : StringSpec({
             chr5GeneSRangeSet.add(record)
         }
 
+
         // You now have a rangeSet - you can pull sequence from the NucSeqRecords in the
         // chr5GeneSRangeSet.
         // You can also perform any operations on this SRange set now - flanking, shift, sequence,
@@ -223,6 +225,7 @@ class GenomicFeaturesTest : StringSpec({
 
         // Get sequence for a specific chromosome/range:
         val chr5seq = myGF.sequenceForChrRange("chr5",1..50)
+        println("Sequence for chr5, 1..50")
         println(chr5seq)
 
         assertEquals(chr5seq, "CTAAACCTAAACATCGACACTAAAGGATTTTAGTGTCGAAACCATGGTAA")
