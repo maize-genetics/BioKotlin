@@ -109,31 +109,23 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                 //println("readGffToLists: processed ${totalCount} lines")
                 batchCount = 0
             }
-            val firstTabIndex = line.indexOf("\t")
-            val secondTabIndex = line.indexOf("\t", firstTabIndex + 1)
-            val thirdTabIndex = line.indexOf("\t", secondTabIndex + 1)
-            val fourthTabIndex = line.indexOf("\t", thirdTabIndex + 1)
-            val fifthTabIndex = line.indexOf("\t", fourthTabIndex + 1)
-            val sixthTabIndex = line.indexOf("\t", fifthTabIndex + 1)
-            val seventhTabIndex = line.indexOf("\t", sixthTabIndex + 1)
-            val eightTabIndex = line.indexOf("\t", seventhTabIndex + 1)
 
-            //val lineTokens = line.split("\t")
-            val type = line.substring(secondTabIndex+1,thirdTabIndex)
-            // for now, only processing chromosome, exon, CDS, gene.
+            val lineTokens = line.split("\t")
+            val type = lineTokens[2]
+            //  process chromosome, exon, CDS, gene, 3primeUTR, 4primeUTR, mRNA (= transcript)
             when (type) {
                 "chromosome" -> {
-                    val name = line.substring(0, firstTabIndex)
-                    val length = line.substring(fourthTabIndex + 1, fifthTabIndex)
+                    val name = lineTokens[0]
+                    val length = lineTokens[4]
                     chromList.add("${name}:${length}")
                 }
                 "CDS" -> {
-                    val chrom = line.substring(0, firstTabIndex)
-                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
-                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
-                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
-                    val phase = line.substring(seventhTabIndex + 1, eightTabIndex)
-                    val attributes = line.substring(eightTabIndex + 1).split(";")
+                    val chrom = lineTokens[0]
+                    val start = lineTokens[3]
+                    val end = lineTokens[4]
+                    val strand = lineTokens[6]
+                    val phase = lineTokens[7]
+                    val attributes = lineTokens[8].split(";")
                     val nameString = attributes.firstOrNull() { it.startsWith("ID") }
                     var name = "NONE"
                     if (nameString != null) {
@@ -151,11 +143,11 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                     cdsList.add("${name}:${chrom}:${start}:${end}:${strand}:${phase}:${transcript}")
                 }
                 "five_prime_UTR" -> {
-                    val chrom = line.substring(0, firstTabIndex)
-                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
-                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
-                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
-                    val attributes = line.substring(eightTabIndex + 1).split(";")
+                    val chrom = lineTokens[0]
+                    val start = lineTokens[3]
+                    val end = lineTokens[4]
+                    val strand = lineTokens[6]
+                    val attributes = lineTokens[8].split(";")
 
                     val transcriptString = attributes.firstOrNull() {it.startsWith("Parent")}
                     var transcript = "NONE"
@@ -167,11 +159,11 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                     fivePrimeList.add("${chrom}:${start}:${end}:${strand}:${transcript}")
                 }
                 "three_prime_UTR" -> {
-                    val chrom = line.substring(0, firstTabIndex)
-                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
-                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
-                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
-                    val attributes = line.substring(eightTabIndex + 1).split(";")
+                    val chrom = lineTokens[0]
+                    val start = lineTokens[3]
+                    val end = lineTokens[4]
+                    val strand = lineTokens[6]
+                    val attributes = lineTokens[8].split(";")
 
                     val transcriptString = attributes.firstOrNull() {it.startsWith("Parent")}
                     var transcript = "NONE"
@@ -183,11 +175,11 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                     threePrimeList.add("${chrom}:${start}:${end}:${strand}:${transcript}")
                 }
                 "gene" -> {
-                    val chrom = line.substring(0, firstTabIndex)
-                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
-                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
-                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
-                    val attributes = line.substring(eightTabIndex + 1).split(";")
+                    val chrom = lineTokens[0]
+                    val start = lineTokens[3]
+                    val end = lineTokens[4]
+                    val strand = lineTokens[6]
+                    val attributes = lineTokens[8].split(";")
                     val nameString = attributes.firstOrNull() { it.startsWith("ID") }
                     var name = "NONE"
                     if (nameString != null) {
@@ -211,11 +203,11 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                     geneList.add("${name}:${chrom}:${start}:${end}:${strand}:${type}:${logicname}")
                 }
                 "exon" -> {
-                    val chrom = line.substring(0, firstTabIndex)
-                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
-                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
-                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
-                    val attributes = line.substring(eightTabIndex + 1).split(";")
+                    val chrom = lineTokens[0]
+                    val start = lineTokens[3]
+                    val end = lineTokens[4]
+                    val strand = lineTokens[6]
+                    val attributes = lineTokens[8].split(";")
                     val nameString = attributes.firstOrNull() { it.startsWith("Name") }
                     var name = "NONE"
                     if (nameString != null) {
@@ -239,12 +231,12 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                 }
                 "mRNA" -> {
 
-                    val chrom = line.substring(0, firstTabIndex)
-                    val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
-                    val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
-                    val strand = line.substring(sixthTabIndex + 1, seventhTabIndex)
+                    val chrom = lineTokens[0]
+                    val start = lineTokens[3]
+                    val end = lineTokens[4]
+                    val strand = lineTokens[6]
 
-                    val attributes = line.substring(eightTabIndex + 1).split(";")
+                    val attributes = lineTokens[8].split(";")
                     val nameString = attributes.firstOrNull() { it.startsWith("ID") }
                     var name = "NONE"
                     if (nameString != null) {
