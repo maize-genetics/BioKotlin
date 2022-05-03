@@ -50,15 +50,13 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
 
     // Initialize the individual feature dataframes.  They will be populated with data from the GFF
     // when init{} is run below.
-    var exonDF: DataFrame<exonDataRow> = ArrayList<exonDataRow>().toDataFrame()
-    var cdsDF: DataFrame<cdsDataRow> = ArrayList<cdsDataRow>().toDataFrame()
-    var geneDF: DataFrame<geneDataRow> = ArrayList<geneDataRow>().toDataFrame()
-    var chromDF: DataFrame<chromDataRow> = ArrayList<chromDataRow>().toDataFrame()
-    var transcriptDF: DataFrame<transcriptDataRow> = ArrayList<transcriptDataRow>().toDataFrame() // this is mRNA
-    var fivePrimeDF: DataFrame<fivePrimeDataRow> = ArrayList<fivePrimeDataRow>().toDataFrame()
-    var threePrimeDF: DataFrame<threePrimeDataRow> = ArrayList<threePrimeDataRow>().toDataFrame()
-
-    var testDR: DataFrame<gffDataRow> = ArrayList<gffDataRow>().toDataFrame()
+    var exonDF: DataFrame<exonDataRow> = mutableListOf<exonDataRow>().toDataFrame()
+    var cdsDF: DataFrame<cdsDataRow> = mutableListOf<cdsDataRow>().toDataFrame()
+    var geneDF: DataFrame<geneDataRow> = mutableListOf<geneDataRow>().toDataFrame()
+    var chromDF: DataFrame<chromDataRow> = mutableListOf<chromDataRow>().toDataFrame()
+    var transcriptDF: DataFrame<transcriptDataRow> = mutableListOf<transcriptDataRow>().toDataFrame() // this is mRNA
+    var fivePrimeDF: DataFrame<fivePrimeDataRow> = mutableListOf<fivePrimeDataRow>().toDataFrame()
+    var threePrimeDF: DataFrame<threePrimeDataRow> = mutableListOf<threePrimeDataRow>().toDataFrame()
 
 
     // This also gets populated when init is run (if a reference fasta was supplied)
@@ -89,13 +87,13 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
     // THis method reads the file and populates the lists above
     // If this is too slow, try reading into htsjdk GFF3 and pulling from them
     fun readGffToDFs(gffFile:String) {
-        val exonList = ArrayList<String>() // string=${name}:${chrom}:${start}:${end}:${strand}:${rank}
-        val cdsList = ArrayList<String>() // String=${name}:${chrom}:${start}:${end}:${strand}:${phase}
-        val geneList = ArrayList<String>() // String=${name}:${chrom}:${start}:${end}:${strand}
-        val transcriptList = ArrayList<String>() // String=${name}:${type}:${chrom}:${start}:${end}:${strand}
-        val chromList = ArrayList<String>() // String=${name}:${length}
-        val fivePrimeList = ArrayList<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
-        val threePrimeList = ArrayList<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
+        val exonList = mutableListOf<String>() // string=${name}:${chrom}:${start}:${end}:${strand}:${rank}
+        val cdsList = mutableListOf<String>() // String=${name}:${chrom}:${start}:${end}:${strand}:${phase}
+        val geneList = mutableListOf<String>() // String=${name}:${chrom}:${start}:${end}:${strand}
+        val transcriptList = mutableListOf<String>() // String=${name}:${type}:${chrom}:${start}:${end}:${strand}
+        val chromList = mutableListOf<String>() // String=${name}:${length}
+        val fivePrimeList = mutableListOf<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
+        val threePrimeList = mutableListOf<String>() // String=${chrom}:${start}:${end}:${strand}:${transcript}
 
         var totalCount = 0
         var batchCount = 0
@@ -213,7 +211,6 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
                     geneList.add("${name}:${chrom}:${start}:${end}:${strand}:${type}:${logicname}")
                 }
                 "exon" -> {
-                    //val exonData = parseExon((lineTokens.toTypedArray()))
                     val chrom = line.substring(0, firstTabIndex)
                     val start = line.substring(thirdTabIndex + 1, fourthTabIndex)
                     val end = line.substring(fourthTabIndex + 1, fifthTabIndex)
