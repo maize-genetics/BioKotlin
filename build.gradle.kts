@@ -1,5 +1,4 @@
 import org.gradle.api.JavaVersion.VERSION_11
-import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // Note Kotlin version needs to be updated in both the buildscript and plugins.
@@ -23,6 +22,7 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         classpath(kotlin("serialization", version = kotlinVersion))
+        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.6.21")
     }
 }
 
@@ -39,13 +39,14 @@ plugins {
     //https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
-    id("org.jetbrains.dokka") version "0.10.1"
+    id("org.jetbrains.dokka") version "1.6.21"
     `java-library`
     `maven-publish`
     signing
 }
 apply {
     plugin("kotlinx-serialization")
+    plugin("org.jetbrains.dokka")
 }
 
 
@@ -119,26 +120,16 @@ tasks.withType<KotlinCompile>().configureEach {
 
 tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
-    val dokka by getting(DokkaTask::class) {
-        //outputFormat = "html"
-        outputFormat = "gfm"
-        outputDirectory = "$buildDir/dokka"
-        configuration {
-            includes = listOf("/Users/edbuckler/Code/biokotlin/src/main/kotlin/biokotlin/packages.md")
-        }
-    }
 }
 
-val dokkaJavadoc = tasks.register<DokkaTask>("dokkaJavadoc") {
-    outputFormat = "javadoc"
-    outputDirectory = "$buildDir/dokkaJavadoc"
-}
+val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
 
 val dokkaJar by tasks.creating(Jar::class) {
+    dependsOn(dokkaHtml)
     group = JavaBasePlugin.DOCUMENTATION_GROUP
     description = "BioKotlin: ${property("version")}"
     archiveClassifier.set("javadoc")
-    from(dokkaJavadoc)
+    from(dokkaHtml.outputDirectory)
 }
 
 tasks.test {
