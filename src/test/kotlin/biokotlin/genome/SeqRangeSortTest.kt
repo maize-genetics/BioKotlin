@@ -10,6 +10,7 @@ import biokotlin.seq.NucSeqRecord
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
+@Suppress("NAME_SHADOWING")
 class SeqRangeSortTest: StringSpec({
     val chr1A = "ACGTGGTGAATATATATGCGCGCGTGCGTGGATCAGTCAGTCATGCATGCATGTGTGTACACACATGTGATCGTAGCTAGCTAGCTGACTGACTAGCTGAC"
     val chr2A = "ACGTGGTGAATATATATGCGCGCGTGCGTGGACGTACGTACGTACGTATCAGTCAGCTGAC"

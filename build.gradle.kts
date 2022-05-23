@@ -35,6 +35,10 @@ plugins {
     // Shadow allows for the creation of fat jars (all dependencies)
     id("com.github.johnrengelman.shadow") version "5.2.0"
 
+    //This is used for code generation for DataFrame Schema, however, it does not work
+    //https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
+    //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
+
     id("org.jetbrains.dokka") version "0.10.1"
     `java-library`
     `maven-publish`
@@ -43,6 +47,7 @@ plugins {
 apply {
     plugin("kotlinx-serialization")
 }
+
 
 repositories {
     mavenCentral()
@@ -63,10 +68,11 @@ dependencies {
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("de.mpicbg.scicomp:krangl:0.13")
+    implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
-    implementation("com.github.samtools:htsjdk:2.21.3")
+    implementation("com.github.samtools:htsjdk:2.24.1")
 
     // implementation("org.jetbrains.bio:bioinf-commons:0.0.9")
 
@@ -79,16 +85,16 @@ dependencies {
     // implementation("org.biojava:biojava:5.3.0")
     // implementation("org.biojava:biojava-genome:5.3.0")
 
-    implementation("org.graalvm.sdk:graal-sdk:20.0.0")
+    implementation("org.graalvm.sdk:graal-sdk:21.2.0")
     implementation("org.apache.commons:commons-csv:1.8")
-    implementation("khttp:khttp:1.0.0")
+    implementation("io.ktor:ktor-client-core:1.6.3")
+    implementation("io.ktor:ktor-client-cio:1.6.3")
 
+    implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
+    implementation("org.jgrapht:jgrapht-core:1.5.1")
 
-    implementation("com.google.guava:guava:29.0-jre")
-    implementation("org.apache.tinkerpop:gremlin-core:3.4.8")
-    implementation("org.jgrapht:jgrapht-core:1.5.0")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
     val kotestVersion = "4.2.6"
     listOf("runner-junit5", "assertions-core", "property").forEach {
@@ -97,6 +103,9 @@ dependencies {
     //consider adding Kotlintest
     //mockk
 }
+//This is used for code generation for DataFrame Schema, however, it does not work
+//https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
+//kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
     sourceCompatibility = VERSION_11

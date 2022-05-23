@@ -67,7 +67,7 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
                     if (convertStates) {
                         for (i in seqB.indices) seqB[i] = allStatesToValidStates[seqB[i].toInt()]
                     } else {
-                        throw IllegalStateException("Illegal characters for 2 bit sequence: observed char are: ${obsChars.map { it.toChar() }}")
+                        throw IllegalStateException("Illegal characters for 2 bit sequence: observed char are: ${obsChars.map { it }}")
                     }
                 }
             }
@@ -102,7 +102,7 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
         private val validByte = (NUC.DNA + NUC.N + NUC.U).map { it.utf8 }.toSet()
         /**Array for rapidly converted ambiguous state to [NUC.N]*/
         private val allStatesToValidStates: ByteArray = ByteArray(128) { i: Int ->
-            if (i.toChar().toUpperCase().toByte() in validByte) i.toChar().toUpperCase().toByte()
+            if (i.toChar().uppercaseChar().code.toByte() in validByte) i.toChar().uppercaseChar().code.toByte()
             else NUC.N.utf8
         }
         /**Determines the UTF8 bytes present in the String*/
@@ -244,15 +244,15 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
         val pB = ByteArray(size = size() / 3)
         for (i in 0 until (size() - 2) step 3) {
             pB[i / 3] = table.nucByteToCodonByte(getUTF8(i), getUTF8(i + 1), getUTF8(i + 2))
-            if (cds && i == 0 && pB[0] != AminoAcid.M.char.toByte()) {
+            if (cds && i == 0 && pB[0] != AminoAcid.M.char.code.toByte()) {
                 val startCodon = Codon[getUTF8(i), getUTF8(i + 1), getUTF8(i + 2)]
-                if (table.start_codons.contains(startCodon)) pB[0] = AminoAcid.M.char.toByte()
+                if (table.start_codons.contains(startCodon)) pB[0] = AminoAcid.M.char.code.toByte()
                 else throw IllegalStateException("Sequence does not with valid start codon")
             }
         }
-        if (cds && pB[pB.lastIndex] != AminoAcid.STOP.char.toByte()) throw IllegalStateException("Sequence does end with valid stop codon")
+        if (cds && pB[pB.lastIndex] != AminoAcid.STOP.char.code.toByte()) throw IllegalStateException("Sequence does end with valid stop codon")
         val proStr = if (to_stop || cds) {
-            val stopIndex = pB.indexOf(AminoAcid.stopChar.toByte())
+            val stopIndex = pB.indexOf(AminoAcid.stopChar.code.toByte())
             if (stopIndex < 0) String(pB) else String(pB.sliceArray(0..(stopIndex - 1)))
         } else {
             String(pB)

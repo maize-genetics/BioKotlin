@@ -20,7 +20,7 @@ class FastaIOTest : StringSpec({
     "iterateFile" {
 
         var numSeqs = 0
-        fasta.forEachIndexed { index, record ->
+        fasta.forEach { record ->
             numSeqs++
             record.sequence.size() shouldBe seqLengths[record.id]
         }
@@ -105,7 +105,7 @@ fun simpleCheck(filename: String, format: SeqFormat = SeqFormat.fasta, type: Seq
     println("checking filename: $filename")
 
     val titleSeq = readTitleAndSeq(filename)
-    val idnNameDesc = titleToIds(titleSeq.first)
+    //val idnNameDesc = titleToIds(titleSeq.first)
 
     val record = when (type) {
         SeqType.nucleotide -> NucSeqIO(filename, format).read()!!

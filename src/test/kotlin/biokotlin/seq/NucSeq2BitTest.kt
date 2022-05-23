@@ -40,8 +40,7 @@ class NucSeq2BitTest : StringSpec({
         val decodeTimes = mutableListOf<Long>()
         repeat (15) {
             val bigSeq = RandomNucSeq(seqSize, seed = System.currentTimeMillis().toInt())
-            val someSeq=bigSeq[0..7].copyOfBytes()
-            var big2BitSeq : Nuc2BitArray = Nuc2BitArray(someSeq)
+            var big2BitSeq : Nuc2BitArray
             val time = measureTimeMillis { big2BitSeq=Nuc2BitArray(bigSeq.copyOfBytes()) }
             println("Encoding of ${bigSeq.size() / 1E6}Mb took $time ms")
             encodeTimes+=time
@@ -93,7 +92,7 @@ class NucSeq2BitTest : StringSpec({
     "copyOfBytes for SeqByte should be simple UTF-8" {
         dnaSeq.copyOfBytes() shouldBe dnaString.toByteArray(Charsets.UTF_8)
         rnaSeq.copyOfBytes() shouldNotBe rnaString.toByteArray()  //the byte array has U -> T
-        rnaSeq.copyOfBytes()[3] shouldBe 'T'.toByte()  //the byte array has U -> T
+        rnaSeq.copyOfBytes()[3] shouldBe 'T'.code.toByte()  //the byte array has U -> T
     }
 
     "Test of transcription and equality" {
