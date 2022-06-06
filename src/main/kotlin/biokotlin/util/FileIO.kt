@@ -25,7 +25,7 @@ fun bufferedReader(filename: String): BufferedReader {
     }
 }
 
-fun bufferedWriter(filename: String, append: Boolean): BufferedWriter {
+fun bufferedWriter(filename: String, append: Boolean = false): BufferedWriter {
     return try {
         if (filename.endsWith(".gz")) {
             BufferedWriter(OutputStreamWriter(GZIPOutputStream(FileOutputStream(filename, append))))
