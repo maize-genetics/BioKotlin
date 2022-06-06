@@ -11,11 +11,13 @@ fun bedToGff3(bedfile: String, gffFile: String) {
        1: chromStart (starts at 0)
        2: chromEnd (EXCLUSIVE)
        3: name
-       5: score
-       6: strand
+       4: score
+       5: strand
        */
         bufferedReader(bedfile).forEachLine { line ->
+            println(line)
             val split = line.split("\t")
+            println(split)
             //Ignore comments and headers
             if (!(line.startsWith("#") || line.startsWith("browser") || line.startsWith("track"))) {
                 /*
@@ -41,10 +43,10 @@ fun bedToGff3(bedfile: String, gffFile: String) {
                 }
                 writer.write(split[1] + 1 + "\t")
                 writer.write(split[1] + "\t")
+                writer.write(split[4] + "\t")
                 writer.write(split[5] + "\t")
-                writer.write(split[6] + "\t")
-                writer.write(".")
-                writer.write(".")
+                writer.write(".\t")
+                writer.write(".\t\n")
             }
         }
     }
