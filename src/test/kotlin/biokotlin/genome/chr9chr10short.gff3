@@ -1,0 +1,49 @@
+##gff-version	3
+##sequence-region	chr10	1	1441
+##sequence-region	chr9	1	1921
+###
+chr10	assembly	chromosome	1	1441	.	.	.	ID=10;Name=chromosome:Zm-B73-REFERENCE-NAM-5.0:10:1:1441:1
+###
+chr10	NAM	gene	296	316	.	-	.	ID=gene:Zm00001e039158;biotype=protein_coding;logic_name=mikado_gene
+chr10	NAM	mRNA	296	316	.	-	.	ID=transcript:Zm00001e039158_T001;Parent=gene:Zm00001e039158;biotype=protein_coding;transcript_id=Zm00001e039158_T001;canonical_transcript=1;_AED=0.27;_QI=320|-1|0|1|-1|0|1|770|320
+chr10	NAM	three_prime_UTR	296	300	.	-	.	Parent=transcript:Zm00001e039158_T001
+chr10	NAM	exon	296	316	.	-	.	Parent=transcript:Zm00001e039158_T001;Name=Zm00001e039158_T001.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001e039158_T001.exon.1;rank=1
+chr10	NAM	CDS	301	313	.	-	0	ID=CDS:Zm00001e039158_P001;Parent=transcript:Zm00001e039158_T001;protein_id=Zm00001e039158_P001
+chr10	NAM	five_prime_UTR	314	316	.	-	.	Parent=transcript:Zm00001e039158_T001
+###
+chr10	NAM	gene	496	516	.	-	.	ID=gene:Zm00001e039160;biotype=protein_coding;logic_name=mikado_gene
+chr10	NAM	mRNA	496	516	.	-	.	ID=transcript:Zm00001e039160_T001;Parent=gene:Zm00001e039160;biotype=protein_coding;transcript_id=Zm00001e039160_T001;canonical_transcript=1;_AED=0.00;_QI=1|-1|0|1|-1|0|1|258|528;Dbxref=InterPro:IPR001128,Pfam:PF00067;Ontology_term=GO:0005506,GO:0016705,GO:0020037,GO:0055114
+chr10	NAM	three_prime_UTR	496	500	.	-	.	Parent=transcript:Zm00001e039160_T001
+chr10	NAM	exon	496	516	.	-	.	Parent=transcript:Zm00001e039160_T001;Name=Zm00001e039160_T001.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001e039160_T001.exon.1;rank=1
+chr10	NAM	CDS	501	513	.	-	0	ID=CDS:Zm00001e039160_P001;Parent=transcript:Zm00001e039160_T001;protein_id=Zm00001e039160_P001
+chr10	NAM	five_prime_UTR	514	516	.	-	.	Parent=transcript:Zm00001e039160_T001
+###
+chr10	NAM	gene	696	716	.	-	.	ID=gene:Zm00001e039162;biotype=protein_coding;logic_name=mikado_gene
+chr10	NAM	mRNA	696	716	.	-	.	ID=transcript:Zm00001e039162_T001;Parent=gene:Zm00001e039162;biotype=protein_coding;transcript_id=Zm00001e039162_T001;canonical_transcript=1;_AED=0.04;_QI=61|-1|0|1|-1|0|1|202|527;Dbxref=InterPro:IPR001128,Pfam:PF00067;Ontology_term=GO:0005506,GO:0016705,GO:0020037,GO:0055114
+chr10	NAM	three_prime_UTR	696	700	.	-	.	Parent=transcript:Zm00001e039162_T001
+chr10	NAM	exon	696	716	.	-	.	Parent=transcript:Zm00001e039162_T001;Name=Zm00001e039162_T001.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001e039162_T001.exon.1;rank=1
+chr10	NAM	CDS	701	713	.	-	0	ID=CDS:Zm00001e039162_P001;Parent=transcript:Zm00001e039162_T001;protein_id=Zm00001e039162_P001
+chr10	NAM	five_prime_UTR	714	716	.	-	.	Parent=transcript:Zm00001e039162_T001
+###
+chr9	assembly	chromosome	1	1921	.	.	.	ID=9;Name=chromosome:Zm-B73-REFERENCE-NAM-5.0:9:1:1921:1
+###
+chr9	NAM	gene	165	265	.	+	.	ID=gene:Zm00001e036007;biotype=protein_coding;logic_name=mikado_gene
+chr9	NAM	mRNA	165	265	.	+	.	ID=transcript:Zm00001e036007_T001;Parent=gene:Zm00001e036007;biotype=protein_coding;transcript_id=Zm00001e036007_T001;canonical_transcript=1;_AED=1.00;_QI=0|-1|0|0|-1|0|1|1|108
+chr9	NAM	CDS	165	264	.	+	0	ID=CDS:Zm00001e036007_P001;Parent=transcript:Zm00001e036007_T001;protein_id=Zm00001e036007_P001
+chr9	NAM	exon	165	265	.	+	.	Parent=transcript:Zm00001e036007_T001;Name=Zm00001e036007_T001.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001e036007_T001.exon.1;rank=1
+chr9	NAM	three_prime_UTR	265	265	.	+	.	Parent=transcript:Zm00001e036007_T001
+###
+chr9	NAM	gene	1029	1178	.	-	.	ID=gene:Zm00001e036012;biotype=protein_coding;logic_name=mikado_gene
+chr9	NAM	mRNA	1029	1178	.	-	.	ID=transcript:Zm00001e036012_T001;Parent=gene:Zm00001e036012;biotype=protein_coding;transcript_id=Zm00001e036012_T001;canonical_transcript=1;_AED=0.28;_QI=228|-1|0|1|-1|0|1|265|125
+chr9	NAM	three_prime_UTR	1029	1078	.	-	.	Parent=transcript:Zm00001e036012_T001
+chr9	NAM	exon	1029	1178	.	-	.	Parent=transcript:Zm00001e036012_T001;Name=Zm00001e036012_T001.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001e036012_T001.exon.1;rank=1
+chr9	NAM	CDS	1079	1122	.	-	0	ID=CDS:Zm00001e036012_P001;Parent=transcript:Zm00001e036012_T001;protein_id=Zm00001e036012_P001
+chr9	NAM	five_prime_UTR	1123	1178	.	-	.	Parent=transcript:Zm00001e036012_T001
+###
+chr9	NAM	gene	1521	1834	.	-	.	ID=gene:Zm00001e036022;biotype=protein_coding;logic_name=mikado_gene
+chr9	NAM	mRNA	1521	1834	.	-	.	ID=transcript:Zm00001e036022_T001;Parent=gene:Zm00001e036022;biotype=protein_coding;transcript_id=Zm00001e036022_T001;canonical_transcript=1;_AED=0.01;_QI=1|-1|0|1|-1|0|1|362|1208;Dbxref=InterPro:IPR000967,Pfam:PF01422;Ontology_term=GO:0003700,GO:0005634,GO:0006355,GO:0008270
+chr9	NAM	three_prime_UTR	1521	1600	.	-	.	Parent=transcript:Zm00001e036022_T001
+chr9	NAM	exon	1521	1834	.	-	.	Parent=transcript:Zm00001e036022_T001;Name=Zm00001e036022_T001.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001e036022_T001.exon.1;rank=1
+chr9	NAM	CDS	1601	1799	.	-	0	ID=CDS:Zm00001e036022_P001;Parent=transcript:Zm00001e036022_T001;protein_id=Zm00001e036022_P001
+chr9	NAM	five_prime_UTR	1800	11834	.	-	.	Parent=transcript:Zm00001e036022_T001
+###

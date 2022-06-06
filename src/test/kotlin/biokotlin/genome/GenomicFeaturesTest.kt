@@ -9,10 +9,18 @@ import org.jetbrains.kotlinx.dataframe.io.writeCSV
 import org.jetbrains.kotlinx.dataframe.size
 import org.junit.jupiter.api.Assertions.assertEquals
 
+/**
+ * These test cases were originally run using the full B73 fasta gff3 files.
+ * THose have since been commented out and smaller fasta/gff3 files that can
+ * be stored in the repository are used.  The original lines are kept but
+ * commented out to facilitate full genome testing again.  Testers can change
+ * to their own folders that hold the full genomes if appropriate.
+ */
 class GenomicFeaturesTest : StringSpec({
 
     "test GenomicFeatures reading GFF" {
-        val b73GFF = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        //val b73GFF = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73GFF =  "src/test/kotlin/biokotlin/genome/chr9chr10short.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
@@ -24,19 +32,20 @@ class GenomicFeaturesTest : StringSpec({
 
         myGF.help()
 
-        println("\nexonDF with transcript=Zm00001e000002_T001")
-        myGF.exons().filter{transcript == "Zm00001e000002_T001"}.print()
+        println("\nexonDF with transcript=Zm00001e039158_T001")
+        myGF.exons().filter{transcript == "Zm00001e039158_T001"}.print()
 
         println("exonDF is:")
         myGF.exons().print()
 
-        println("exonDF where rank=1 and chrom=chr1 is:")
-        myGF.exons().filter{rank == 1}.filter{seqid == "chr1"}.print()
+        println("exonDF where rank=1 and chrom=chr10 is:")
+        myGF.exons().filter{rank == 1}.filter{seqid == "chr10"}.print()
 
         println("Select only the chrom, start and end columns of exonDF")
         myGF.exons().select{seqid and start and end}.print()
 
-        val featuresFilteredByChrom = myGF.featuresByRange("chr1",34617..40204)
+        //val featuresFilteredByChrom = myGF.featuresByRange("chr1",34617..40204)
+        val featuresFilteredByChrom = myGF.featuresByRange("chr10",200..450)
 
         println("\nprinting from my getFeaturesByRange")
         if (featuresFilteredByChrom != null) {
@@ -52,9 +61,10 @@ class GenomicFeaturesTest : StringSpec({
     }
     "test GFF file with just cds data" {
         // THis test verifies the program doesn't throw an exception when
-        // the gff file is missing features.  It instead prints justs the header
+        // the gff file is missing features.  It instead prints just the header
         // line but no data for the dataframe
-        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/gff3NAM5_CDS.txt"
+        //val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/gff3NAM5_CDS.txt"
+        val b73GFF_cds = "src/test/kotlin/biokotlin/genome/chr9chr10short_cds.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
@@ -74,24 +84,26 @@ class GenomicFeaturesTest : StringSpec({
         myGF.cds().print()
     }
     "test getFeaturesByRange" {
-        // THis test verifies the program doesn't throw an exception when
-        // the gff file is missing features.  It instead prints just the header
-        // line but no data for the dataframe
-        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        // THis tests the featresByRange functionality
+        //val b73GFF = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73GFF =  "src/test/kotlin/biokotlin/genome/chr9chr10short.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
-        val myGF = GenomicFeatures(b73GFF_cds)
+        val myGF = GenomicFeatures(b73GFF)
         println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
         // Two ways to filter
-        val featuresByRange = myGF.featuresByRange("chr1",34617..40204)
+        //val featuresByRange = myGF.featuresByRange("chr1",34617..40204)
+        val featuresByRange = myGF.featuresByRange("chr9",1000..1900)
 
         println("\nprinting from my getFeaturesByRange")
-        val outputFile = "/Users/lcj34/notes_files/biokotlin/new_features/brandon_gff_parsing/testing/featuresFilteredByChrom.csv"
+        val userHome = System.getProperty("user.home")
+        val outputDir = "$userHome/"
+        val outputFile = "${outputDir}/featuresFilteredByChrom.csv"
         if (featuresByRange != null) {
             featuresByRange.print()
             featuresByRange.writeCSV(outputFile)
@@ -114,11 +126,12 @@ class GenomicFeaturesTest : StringSpec({
 
     }
     "test dataframe specifics" {
-        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        //val b73GFF = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73GFF =  "src/test/kotlin/biokotlin/genome/chr9chr10short.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
-        val myGF = GenomicFeatures(b73GFF_cds)
+        val myGF = GenomicFeatures(b73GFF)
         println("myGF chromDF size: ${myGF.chromosomes().size()}")
 
         val readingTime = (System.nanoTime() - time)/1e9
@@ -139,11 +152,13 @@ class GenomicFeaturesTest : StringSpec({
 
         println("number of exon rows: ${myGF.exons().rowsCount()}\n")
 
-        var cdsFilteredRange = myGF.cds().filter{seqid == "chr1" && start  <= 40204 && end >= 34617}
+        //var cdsFilteredRange = myGF.cds().filter{seqid == "chr1" && start  <= 40204 && end >= 34617}
+        var cdsFilteredRange = myGF.cds().filter{seqid == "chr10" && start  <= 714 && end >= 499}
         cdsFilteredRange.print()
     }
     "test featuresWithTranscript" {
-        val b73GFF_full = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+       // val b73GFF_full = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73GFF_full =  "src/test/kotlin/biokotlin/genome/chr9chr10short.gff3"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
@@ -153,41 +168,38 @@ class GenomicFeaturesTest : StringSpec({
         val readingTime = (System.nanoTime() - time)/1e9
         println("Reading/parsing GFF file took ${readingTime} seconds")
 
-        val transcriptEntries = myGF.featuresWithTranscript("Zm00001e000002_T001")
+        //val transcriptEntries = myGF.featuresWithTranscript("Zm00001e000002_T001")
+        val transcriptEntries = myGF.featuresWithTranscript("Zm00001e036012_T001")
         transcriptEntries.print()
 
     }
     "test help function" {
         // verify printing of all available functions
-        val b73GFF_cds = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        //val b73GFF = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        val b73GFF =  "src/test/kotlin/biokotlin/genome/chr9chr10short.gff3"
 
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
-        val myGF = GenomicFeatures(b73GFF_cds)
+
+        val myGF = GenomicFeatures(b73GFF)
         myGF.help()
 
        // val exonsSortedByTranscript = myGF.getExons().sortBy {it["strand"]}
         val exonsSortedByTranscript = myGF.exons().sortBy {name}
         exonsSortedByTranscript.print()
     }
-    "test DataFrame read() instead of ours" {
-        val b73GFF_noHeaders = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.noHeaders.gff3"
-
-        val gffDF = DataFrame.read(b73GFF_noHeaders)
-        val numColumns = gffDF.columnNames().count()
-        println("Number of columns: ${numColumns}")
-        val colNames = gffDF.columnNames().joinToString(",")
-        println("Column names: ${colNames}")
-
-    }
     " test reading fasta to NucSeqRecords" {
-        val refFasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
+        //val refFasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
+        val refFasta = "src/test/kotlin/biokotlin/genome/chr9chr10short.fa"
         val refNucSeqFasta = NucSeqIO(refFasta).readAll()
         println(" key size: ${refNucSeqFasta.keys.size}")
     }
     "test GenomicFeatures with fasta" {
-        val b73GFF_full = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
-        val b73Fasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
+        //val b73GFF_full = "/Users/lcj34/notes_files/phg_2018/b73v5_gff/Zm-B73-REFERENCE-NAM-5.0_Zm00001e.1.gff3"
+        //val b73Fasta = "/Users/lcj34/notes_files/phg_2018/genomes/Zm-B73-REFERENCE-NAM-5.0.fa"
+
+        val b73GFF_full =  "src/test/kotlin/biokotlin/genome/chr9chr10short.gff3"
+        val b73Fasta = "src/test/kotlin/biokotlin/genome/chr9chr10short.fa"
         val time = System.nanoTime()
         // Create an instance of the class so we have access to the lists that are
         // created on the read.
@@ -206,8 +218,8 @@ class GenomicFeaturesTest : StringSpec({
         //  that are inclusive/inclusive. So moving between them will remain consistent.
         // If you pull sequence based on the range, it will be correctly adjusted for that
         // (because sequence is stored as 0-based)
-        myGF.genes().filter{seqid == "chr5"}.select{start and end}.forEachRow {
-            val record = nucSeqList["chr5"]!!.range(start..end)
+        myGF.genes().filter{seqid == "chr9"}.select{start and end}.forEachRow {
+            val record = nucSeqList["chr9"]!!.range(start..end)
             chr5GeneSRangeSet.add(record)
         }
 
@@ -225,10 +237,12 @@ class GenomicFeaturesTest : StringSpec({
 
         // Get sequence for a specific chromosome/range:
         val chr5seq = myGF.sequenceForChrRange("chr5",1..50)
-        println("Sequence for chr5, 1..50")
-        println(chr5seq)
+        val chr9seq = myGF.sequenceForChrRange("chr9",1..50)
+        println("Sequence for chr9, 1..50")
+        println(chr9seq)
 
-        assertEquals(chr5seq, "CTAAACCTAAACATCGACACTAAAGGATTTTAGTGTCGAAACCATGGTAA")
+        //assertEquals(chr5seq, "CTAAACCTAAACATCGACACTAAAGGATTTTAGTGTCGAAACCATGGTAA")
+        assertEquals(chr9seq, "GTCGCTCATGGCTATTTTCAAGGTCGCTCATGGCTATTTTCATAAAAAAT")
 
         val fakeChrSeq = myGF.sequenceForChrRange("fakeChr", 1..60)
         assertEquals(fakeChrSeq,null)
