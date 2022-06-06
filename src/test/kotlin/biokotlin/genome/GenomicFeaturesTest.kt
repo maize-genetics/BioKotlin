@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 /**
  * These test cases were originally run using the full B73 fasta gff3 files.
  * THose have since been commented out and smaller fasta/gff3 files that can
- * be stored in the repository are used.  THe original lines are kept but
+ * be stored in the repository are used.  The original lines are kept but
  * commented out to facilitate full genome testing again.  Testers can change
  * to their own folders that hold the full genomes if appropriate.
  */
@@ -101,7 +101,9 @@ class GenomicFeaturesTest : StringSpec({
         val featuresByRange = myGF.featuresByRange("chr9",1000..1900)
 
         println("\nprinting from my getFeaturesByRange")
-        val outputFile = "/Users/lcj34/notes_files/biokotlin/new_features/brandon_gff_parsing/testing/featuresFilteredByChrom.csv"
+        val userHome = System.getProperty("user.home")
+        val outputDir = "$userHome/"
+        val outputFile = "${outputDir}/featuresFilteredByChrom.csv"
         if (featuresByRange != null) {
             featuresByRange.print()
             featuresByRange.writeCSV(outputFile)
