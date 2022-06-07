@@ -42,7 +42,44 @@ data class BedFeatures(
     val chromEnd: Int,
     val name: String,
     val strand: Char
-)
+    )
+
+/**
+ * Data class for GFF columns (descriptions from https://useast.ensembl.org/info/website/upload/gff3.html)
+ *  * seqid - name of the chromosome or scaffold
+ *  * source - name of the program that generated this feature, or the data source (database/project name)
+ *  * type - type of feature //TODO check which types our features can be (presumably only a subset of all possible types)
+ *  * start - start position (STARTS COUNTING AT 1)
+ *  * end - end position (STARTS COUNTING AT 1, INCLUSIVE)
+ *  * score - floating point value
+ *  * strand - '+', '-', or '.'
+ *  * phase - One of '0', '1' or '2'. '0' indicates that the first base of the feature is the first base of a codon,
+ *      '1' that the second base is the first base of a codon, and so on..
+ *  * attributes - a map of tag-value pairs. Attribute tags with special meanings found at http://gmod.org/wiki/GFF3#GFF3_Format
+ *      * key attributes: Parent, ID, Name (can be same as ID)
+ */
+data class GffFeatures(
+    val seqid: String,
+    val source: String,
+    val type: String,
+    val start: Int,
+    val end: Int,
+    val score: Double,
+    val strand: Char,
+    val phase: Int,
+    val attributes: Map<String, String>,
+) {
+    /**
+     * Converts this GffFeature into a GFF column
+     */
+    fun asColumn(): String {
+        val sb = StringBuilder()
+        for ((tag, value) in attributes) {
+            sb.append("$tag=$value;")
+        }
+        return "$seqid\t$source\t$type\t$start\t$end\t$score\t$strand\t$phase\t$sb\n"
+    }
+}
 
 // ZACK FUNCTIONS ----
 
@@ -314,6 +351,75 @@ fun writeBedFile(samFile: String, outputFile: String, taxaId: String, minAlignme
                 val bedStats = buildFeatureRanges(currentRecord, taxaId) // make BED ranges
                 val transId = "${currentRecord.referenceName}\t${currentRecord.alignmentStart - 1}\t${currentRecord.alignmentEnd}\t${taxaId}_${currentRecord.readName.substringBefore(":")}\t0\t${bedStats[0].strand}\n"
                 bw.write(transId)
+                bedStats.forEach {
+                    bw.write("${it.chrom}\t${it.chromStart}\t${it.chromEnd}\t${it.name}\t0\t${it.strand}\n")
+                }
+            }
+
+        }
+    }
+    bw.close()
+
+    // Get time stats ----
+    val timeEnd = System.currentTimeMillis() - timeStart
+    println("Elapsed BED creation time: $timeEnd ms")
+}
+
+/**
+ * Writes a GFF file based on the SAM file.
+ * @param samFile A String object referring to a SAM file
+ * @param outputFile A String object referring to the output BED file
+ * @param taxaId What reference assembly was this aligned to?
+ * @param minQuality Percent match threshold to alignment region.
+ * @param maxNumber //TODO how to define this?
+ */
+fun writeGffFile(samFile: String, outputFile: String, taxaId: String, minQuality: Double = 0.90, maxNumber: Int = 1) {
+    // Read in SAM and creater iterator object ----
+    println("Processing $taxaId ...")
+    val timeStartRead = System.currentTimeMillis()
+    val samIterator = SamReaderFactory.makeDefault()
+        .validationStringency(ValidationStringency.SILENT)
+        .setOption(SamReaderFactory.Option.CACHE_FILE_BASED_INDEXES, false)
+        .setOption(SamReaderFactory.Option.EAGERLY_DECODE, false)
+        .setOption(SamReaderFactory.Option.INCLUDE_SOURCE_IN_RECORDS, false)
+        .setOption(SamReaderFactory.Option.VALIDATE_CRC_CHECKSUMS, false)
+        .open(File(samFile))
+        .iterator()
+    val timeEndRead = System.currentTimeMillis() - timeStartRead
+    println("Elapsed read time: $timeEndRead ms")
+
+    // Make buffered reader and write to file ----
+    val timeStart = System.currentTimeMillis()
+    val bw = bufferedWriter(outputFile)
+    while(samIterator.hasNext()) {
+        val currentRecord = samIterator.next()
+
+        // Check for secondary, supplementary, or unmapped reads ----
+        if (!currentRecord.isSecondaryOrSupplementary && !currentRecord.readUnmappedFlag) {
+
+            // Check for minimum alignment % ----
+            val exonBoundaries = parseExonBoundaries(currentRecord.readName)
+            val cdsBoundaries = computeCDSPositions(exonBoundaries)
+            val stats = buildTranscriptBpAlignmentStats(currentRecord)
+            val numMapping = stats.xOrEqArray.slice(cdsBoundaries.first .. cdsBoundaries.second).sum()
+            val alignmentPercentage = (numMapping.toDouble() / (cdsBoundaries.second - cdsBoundaries.first + 1))
+            if (alignmentPercentage >= minQuality) {
+                val bedStats = buildFeatureRanges(currentRecord, taxaId) // make BED ranges //TODO make these GFF
+
+                //TODO does this parent represent mRNA?
+                val mRNA = GffFeatures(
+                    currentRecord.referenceName,
+                    "SOURCE",
+                    "mRNA",
+                    currentRecord.alignmentStart,
+                    currentRecord.alignmentEnd,
+                    0.0,
+                    bedStats[0].strand,
+
+                )
+                val transId = "${currentRecord.referenceName}\t${currentRecord.alignmentStart - 1}\t${currentRecord.alignmentEnd}\t${taxaId}_${currentRecord.readName.substringBefore(":")}\t0\t${bedStats[0].strand}\n"
+                bw.write(transId)
+                //TODO key line to change
                 bedStats.forEach {
                     bw.write("${it.chrom}\t${it.chromStart}\t${it.chromEnd}\t${it.name}\t0\t${it.strand}\n")
                 }
