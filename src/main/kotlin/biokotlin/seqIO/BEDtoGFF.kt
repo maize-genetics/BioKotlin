@@ -4,9 +4,11 @@ package biokotlin.seqIO
 
 import biokotlin.util.*
 
+//TODO how do we make this more generalized?
+//TODO test GFF outputs with GFF tools to see if they parse it correctly
 fun bedToGff3(bedfile: String, gffFile: String) {
     bufferedWriter(gffFile, false).use{ writer ->
-       /*
+       /* BED FORMAT
        0: chrom
        1: chromStart (starts at 0)
        2: chromEnd (EXCLUSIVE)
@@ -15,12 +17,10 @@ fun bedToGff3(bedfile: String, gffFile: String) {
        5: strand
        */
         bufferedReader(bedfile).forEachLine { line ->
-            println(line)
             val split = line.split("\t")
-            println(split)
             //Ignore comments and headers
             if (!(line.startsWith("#") || line.startsWith("browser") || line.startsWith("track"))) {
-                /*
+                /* GFF FORMAT
                 0: seqid (equivalent to chrom)
                 1: source (leave as .)
                 2: type (comes from name)
@@ -41,10 +41,10 @@ fun bedToGff3(bedfile: String, gffFile: String) {
                 } else {
                     writer.write("gene\t")
                 }
-                writer.write(split[1] + 1 + "\t")
-                writer.write(split[1] + "\t")
-                writer.write(split[4] + "\t")
-                writer.write(split[5] + "\t")
+                writer.write("${split[1].toInt() + 1}\t")
+                writer.write("${split[1]}\t")
+                writer.write("${split[4]}\t")
+                writer.write("${split[5]}\t")
                 writer.write(".\t")
                 writer.write(".\t\n")
             }
