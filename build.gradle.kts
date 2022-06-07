@@ -95,6 +95,10 @@ dependencies {
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
+    //Multidimensional matrices
+    implementation("org.jetbrains.kotlinx:multik-api:0.1.1")
+    implementation("org.jetbrains.kotlinx:multik-default:0.1.1")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
     val kotestVersion = "4.2.6"

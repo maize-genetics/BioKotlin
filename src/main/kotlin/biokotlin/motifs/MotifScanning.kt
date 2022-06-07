@@ -6,7 +6,8 @@ class MotifScanning {
 // Given a GFF and a genome fasta, use GenomicFeatures functions to pull sequences
 // a given distance upstream and downstream of the transcriptional start site
 fun pullPromoters(genomeFasta:String, gffFile:String):List<String>{
-
+    val aList = listOf ("ACGT")
+    return aList
 }
 
 
@@ -27,7 +28,8 @@ fun scanForMotifs(querySequenceFile:String, motifFile:String):List<String>{
     // Filter out overlapping hits
 
     // Return a list of non-overlapping hits with species and gene IDs
-    return(hitList)
+    //return(hitList)
+    return listOf ("ACGT")
 }
 
 // Given a motif position weight matrix and a query sequence,
@@ -41,5 +43,6 @@ fun calculatePSSMscore(querySequence:String, motifPWM:Double):Double{
 
     // Return PSSM score
 
-    return(PSSMscore)
+    //return(PSSMscore)
+    return -1.0
 }
