@@ -53,7 +53,7 @@ data class BedFeatures(
  *  * end - end position (STARTS COUNTING AT 1, INCLUSIVE)
  *  * score - floating point value
  *  * strand - '+', '-', or '.'
- *  * phase - One of '0', '1' or '2'. '0' indicates that the first base of the feature is the first base of a codon,
+ *  * phase - One of '.', '0', '1' or '2'. '0' indicates that the first base of the feature is the first base of a codon,
  *      '1' that the second base is the first base of a codon, and so on..
  *  * attributes - a map of tag-value pairs. Attribute tags with special meanings found at http://gmod.org/wiki/GFF3#GFF3_Format
  *      * key attributes: Parent, ID, Name (can be same as ID)
@@ -64,15 +64,15 @@ data class GffFeatures(
     val type: String,
     val start: Int,
     val end: Int,
-    val score: Double,
+    val score: String,
     val strand: Char,
-    val phase: Int,
+    val phase: Char,
     val attributes: Map<String, String>,
 ) {
     /**
-     * Converts this GffFeature into a GFF column
+     * Converts this GffFeature into a GFF row
      */
-    fun asColumn(): String {
+    fun asRow(): String {
         val sb = StringBuilder()
         for ((tag, value) in attributes) {
             sb.append("$tag=$value;")
@@ -406,19 +406,21 @@ fun writeGffFile(samFile: String, outputFile: String, taxaId: String, minQuality
             if (alignmentPercentage >= minQuality) {
                 val bedStats = buildFeatureRanges(currentRecord, taxaId) // make BED ranges //TODO make these GFF
 
+                val topID = "${taxaId}_${currentRecord.readName.substringBefore(":")}";
                 //TODO does this parent represent mRNA?
+                //TODO fill in the values
                 val mRNA = GffFeatures(
                     currentRecord.referenceName,
                     "SOURCE",
                     "mRNA",
                     currentRecord.alignmentStart,
                     currentRecord.alignmentEnd,
-                    0.0,
+                    ".",
                     bedStats[0].strand,
-
+                    '.',
+                    mapOf("ID" to topID, "Name" to topID)
                 )
-                val transId = "${currentRecord.referenceName}\t${currentRecord.alignmentStart - 1}\t${currentRecord.alignmentEnd}\t${taxaId}_${currentRecord.readName.substringBefore(":")}\t0\t${bedStats[0].strand}\n"
-                bw.write(transId)
+                bw.write(mRNA.asRow())
                 //TODO key line to change
                 bedStats.forEach {
                     bw.write("${it.chrom}\t${it.chromStart}\t${it.chromEnd}\t${it.name}\t0\t${it.strand}\n")
