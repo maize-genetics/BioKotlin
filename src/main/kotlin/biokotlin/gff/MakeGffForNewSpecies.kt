@@ -1,4 +1,4 @@
-package biokotlin.seqIO
+package biokotlin.gff
 
 import biokotlin.util.bufferedWriter
 import htsjdk.samtools.CigarOperator
