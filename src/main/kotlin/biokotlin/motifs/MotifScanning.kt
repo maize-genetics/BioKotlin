@@ -1,6 +1,7 @@
 package biokotlin.motifs
 
 import biokotlin.seq.Seq
+import biokotlin.genome.GenomicFeatures
 
 class MotifScanning {
 }
@@ -23,12 +24,26 @@ fun scanSequenceForMotifs(querySequence:Seq, motifFile:String):List<String>{
 
     // Read in motif position weight matrix (in MEME or JASPAR format)
 
-    // Compute reverse complement of motif PWM
-
     // Define window size as motif length
 
-    // Iterate through windows in query sequence, calculating position score for each window
+    // Iterate through windows in query sequence, calculating position score for each window,
+    // for both forward and reverse complements. Store strand with higher score
     val queryLength = len(querySequence)
+    var num_windows = queryLength - motif.length + 1
+    var unfilteredPositionScores = arrayOfNulls<String>(num_windows) // Initialize an empty array to store position scores for each window
+    // 0-based indexing in Kotlin, inclusive/inclusive?
+    for (i in 0..num_windows - 1) {
+        var start_pos = i
+        var end_pos = i + motif.length
+        var currentWindowForward = querySequence[start_pos..end_pos] //Pull out sequence window given start and end coordinates
+        var currentWindowReverse = currentWindowForward.complement()
+        var forwardScore = calculatePSSMscore(currentWindowForward, motif)
+        var reverseScore = calculatePSSMscore(currentWindowReverse, motif)
+        //store higher strand score
+        if (forwardScore > reverseScore){
+            unfilteredPositionScores[i]
+        }
+    }
 
 
     // Keep all hits with scores above some threshold
@@ -40,7 +55,8 @@ fun scanSequenceForMotifs(querySequence:Seq, motifFile:String):List<String>{
     // only report the match for the strand with the higher score
 
 
-    // Return a list of non-overlapping hits with species and gene ID
+    // Return a list of non-overlapping hits with sequence ID, motif name,
+    // and relative start and end coordinates (will need to adjust to actual coordinates)
     return(hitList)
 }
 
