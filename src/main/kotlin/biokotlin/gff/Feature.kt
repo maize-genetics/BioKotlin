@@ -62,4 +62,26 @@ abstract class Feature(
 
     fun attribute(key: String) = attributes[key]
 
+    fun parent() = attributes["Parent"]
+
+    fun id() = attributes["ID"]
+
+    fun name() = attributes["Name"]
+
+    fun alias() = attributes["Alias"]
+
+    fun target() = attributes["Target"]
+
+    fun gap() = attributes["Gap"]
+
+    fun derivesFrom() = attributes["Derives_from"]
+
+    fun note() = attributes["Note"]
+
+    fun dbxref() = attributes["Dbxref"]
+
+    fun ontologyTerm() = attributes["Ontology_term"]
+
+    fun isCircular() = attributes["Is_circular"]
+
 }
