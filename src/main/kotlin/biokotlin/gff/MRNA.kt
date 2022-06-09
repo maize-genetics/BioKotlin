@@ -5,15 +5,15 @@ package biokotlin.gff
  */
 class MRNA(
     seqid: String,
+    source: String,
     start: Int,
     end: Int,
-    source: String? = null,
     score: Double = 0.0,
     strand: String = "+",
     phase: String = ".",
     attributes: Map<String, String> = emptyMap(),
     children: List<Feature> = emptyList()
-) : Feature(seqid, start, end, source, score, strand, phase, attributes, children) {
+) : Feature(seqid, source, start, end, score, strand, phase, attributes, children) {
 
     override fun type(): FeatureType = FeatureType.mRNA
 
@@ -39,9 +39,10 @@ class MRNA(
             .filter { it.size == 2 }
             .map {
                 val seqid = it[0].seqid
+                val source = it[0].source
                 val start = it[0].end
                 val end = it[1].start
-                Intron(seqid, start, end)
+                Intron(seqid, source, start, end)
             }
     }
 
