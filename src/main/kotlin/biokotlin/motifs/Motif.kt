@@ -2,18 +2,9 @@ package biokotlin.motifs
 
 import biokotlin.seq.BioSet
 import biokotlin.seq.NucSeq
-import biokotlin.seq.Seq
-import org.jetbrains.kotlinx.multik.api.Multik
-import org.jetbrains.kotlinx.multik.api.NativeEngineType
-import org.jetbrains.kotlinx.multik.api.mk
-import org.jetbrains.kotlinx.multik.api.ndarray
-import org.jetbrains.kotlinx.multik.ndarray.data.D2
-import org.jetbrains.kotlinx.multik.ndarray.data.DataType
-import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
-import org.jetbrains.kotlinx.multik.ndarray.data.get
+import org.jetbrains.kotlinx.multik.api.*
+import org.jetbrains.kotlinx.multik.ndarray.data.*
 import org.jetbrains.kotlinx.multik.ndarray.operations.*
-import java.util.DoubleSummaryStatistics
-import java.util.SortedMap
 import java.util.TreeMap
 import kotlin.math.log
 
@@ -40,6 +31,25 @@ fun main() {
     println(bMotif.pwm())
 
     println(bMotif.pssm)
+
+//    val reflect = mk.ndarray(mk[
+//            mk[-1.0,0.0,0.0,0.0],
+//        mk[0.0,-1.0,0.0,0.0],
+//        mk[0.0,0.0,-1.0,0.0],
+//        mk[0.0,0.0,0.0,-1.0]
+//    ])
+    val reflect = mk.identity<Double>(6).transpose()
+//    val reflect = mk.ndarray(mk[
+//            mk[0.0,0.0,0.0,1.0],
+//            mk[0.0,0.0,1.0,0.0],
+//            mk[0.0,1.0,0.0,0.0],
+//            mk[1.0,0.0,0.0,0.0]
+//    ])
+    println(reflect)
+   // println(bMotif.pssm.dot())
+    val revArr = bMotif.pssm.toDoubleArray().reversedArray()
+    println(revArr)
+    println(mk.ndarray(revArr,4,6))
 }
 
 data class Motif(
@@ -52,13 +62,17 @@ data class Motif(
 
     val length: Int = counts.shape[1]
     val numObservations: Int = counts.sum() / length
+    /*Position specific scoring matrix\*/
     val pssm: NDArray<Double, D2> =
         pwm().asType<Double>(DataType.DoubleDataType)
             .mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
+    /*Position specific scoring matrix - reverse complement*/
+    val pssmRC: NDArray<Double, D2> = mk.ndarray(pssm.toDoubleArray().reversedArray(),4,length)
+
 
 
     /*
-    pwm is the position weight matrix, which is proportion of each base observed.  If pseudocounts are used,
+    Position Weight Matrix, which is proportion of each base observed.  If pseudocounts are used,
     they are added to all counts, and then proportion are calculated
      */
     fun pwm(): NDArray<Double, D2> {
@@ -72,32 +86,26 @@ data class Motif(
                 "counts=\n$counts)"
     }
 
-    fun search(seq: NucSeq, threshold:Double =3.0): Map<Int, Double> {
+    fun search(seq: NucSeq, threshold:Double =3.0, bothStrands:Boolean = true): Map<Int, Double> {
         val hits = TreeMap<Int,Double>()
+        //a simple array is about 2X faster to access
+        val forwardPSSM = pssm.toDoubleArray()
+        val reversePSSM = pssmRC.toDoubleArray()
+        //go through the entire sequence
         for (i in 0..(seq.size() - length)) {
-            var pssmSum=0.0
+            var forwardPssmSum=0.0
+            var reversePssmSum=0.0
+            //evaluate the motif
             for (j in 0 until length) {
-                pssmSum += pssm.get(seq[i + j].fourBit.toInt(), j)
+                val b= (seq[i + j].fourBit.toInt()*length)+j
+                forwardPssmSum += forwardPSSM[b]
+                if(bothStrands) reversePssmSum += reversePSSM[b]
             }
-            if(pssmSum>threshold) hits.put(i,pssmSum)
+            if(forwardPssmSum>threshold || reversePssmSum>threshold) {
+                if(forwardPssmSum > reversePssmSum) hits.put(i,forwardPssmSum) else hits.put(-i,reversePssmSum)
+            }
         }
         return hits
-    }
-
-    fun search2(seq: NucSeq, threshold:Double =3.0): Map<Int, Double> {
-        var hits = 0
-        val arr = pssm.toDoubleArray()
-        for (i in 0..(seq.size() - length)) {
-            var pssmSum=0.0
-            for (j in 0 until length) {
-                println("i=$i j=$j")
-                println((seq[i + j].fourBit.toInt()*length)+j)
-                println(arr[(seq[i + j].fourBit.toInt()*length)+j])
-                pssmSum += arr[(seq[i + j].fourBit.toInt()*length)+j]
-            }
-            if(pssmSum>threshold) hits++
-        }
-        return mapOf(hits to 10.0)
     }
 
 }
