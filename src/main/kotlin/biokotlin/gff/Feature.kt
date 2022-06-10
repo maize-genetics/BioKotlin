@@ -1,6 +1,6 @@
 package biokotlin.gff
 
-enum class FeatureType { Gene, Exon, Leader, Terminator, Coding, mRNA, Intron, Chromosome }
+enum class FeatureType { Gene, Exon, Leader, Terminator, Coding, mRNA, Intron, Chromosome, Scaffold }
 
 /**
  * @param seqid The ID of the landmark used to establish the coordinate system for the current feature. IDs may contain

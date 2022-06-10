@@ -36,6 +36,7 @@ class FeatureBuilder(
             FeatureType.mRNA -> MRNA(seqid, source, start, end, score, strand, phase, attributes, children)
             FeatureType.Intron -> Intron(seqid, source, start, end)
             FeatureType.Chromosome -> Chromosome(seqid, source, start, end, attributes, children)
+            FeatureType.Scaffold -> Scaffold(seqid, source, start, end, attributes, children)
         }
 
     }
