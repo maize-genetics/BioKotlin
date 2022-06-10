@@ -5,7 +5,8 @@ import biokotlin.util.bufferedReader
 import org.jetbrains.kotlinx.dataframe.DataRow
 import org.jetbrains.kotlinx.dataframe.api.*
 /**
- * Parses a GFF and returns a list of top-level features in order of their start
+ * Parses a GFF and returns a list of top-level features sorted alphabetically by their seqid and then numerically
+ * by their start
  * @param gff Path to gff file
  */
 fun parseGff(gff: String): List<Feature> {
@@ -76,7 +77,20 @@ fun parseGff(gff: String): List<Feature> {
     }
 
     println("Time: ${System.currentTimeMillis() - startTime}ms")
-    return roots.sortedBy { it.start } .map { it.build() }
+
+    class RootSorter: Comparator<FeatureBuilder> {
+        override fun compare(p0: FeatureBuilder?, p1: FeatureBuilder?): Int {
+            if (p0 == null || p1 == null) return 0
+            return if (p0.seqid == p1.seqid) {
+                p0.start - p1.start
+            } else {
+                p0.seqid.compareTo(p1.seqid)
+            }
+        }
+
+    }
+
+    return roots.sortedWith(RootSorter()).map { it.build() }
 }
 
 fun main() {
