@@ -45,15 +45,26 @@ class MotifTest : StringSpec({
 
     "Read from MEME file" {
         val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
-        motifs.forEach{println(it)}
+        motifs.forEach { println(it) }
 
         motifs.size shouldBe 3
         with(motifs[0]) {
             name shouldBe "MA0004.1"
             numObservations shouldBe 20
-            pwm()[0,0] shouldBe 0.200
+            pwm()[0, 0] shouldBe 0.200
         }
+    }
 
+    "Read from JASPAR file" {
+        val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt")
+        motifs.forEach{println(it)}
+
+        motifs.size shouldBe 3
+        with(motifs[0]) {
+            name shouldBe "MA0020.1"
+            numObservations shouldBe 21
+            pwm()[0,0] shouldBe 1
+        }
     }
 
 //    test("numObservations") { }
