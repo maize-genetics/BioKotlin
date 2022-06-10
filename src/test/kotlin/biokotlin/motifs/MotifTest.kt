@@ -3,6 +3,7 @@ package biokotlin.motifs
 import biokotlin.seq.BioSet
 import biokotlin.seq.NucSeq
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
@@ -44,7 +45,7 @@ class MotifTest : StringSpec({
     }
 
     "Read from MEME file" {
-        val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+        val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
         motifs.forEach { println(it) }
 
         motifs.size shouldBe 3
@@ -58,12 +59,12 @@ class MotifTest : StringSpec({
             name shouldBe "MA0006.1"
             numObservations shouldBe 24
             pwm()[0, 0] shouldBe 0.125
-            pwm()[2, 2] shouldBe 0.125
+            pwm()[1, 2] shouldBe 0.958333.plusOrMinus(0.001)
         }
     }
 
     "Read from JASPAR file" {
-        val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt")
+        val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt")
         motifs.forEach{println(it)}
 
         motifs.size shouldBe 3

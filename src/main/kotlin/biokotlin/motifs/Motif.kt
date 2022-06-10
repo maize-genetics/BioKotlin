@@ -135,7 +135,7 @@ data class Motif(
 //    return motifs
 //}
 
-fun readMotifs(fileName: String): List<Motif> {
+fun readMotifs2(fileName: String): List<Motif> {
     val motifs = mutableListOf<Motif>()
     val block = mutableListOf<String>()
     val file = File(fileName)
@@ -174,7 +174,30 @@ fun readMotifs(fileName: String): List<Motif> {
     return motifs
 }
 
-private fun processMEMEBlock  (motifBlock: List<String>): Motif {
+fun readMotifs(fileName: String): List<Motif> {
+    val motifs = mutableListOf<Motif>()
+    val block = mutableListOf<String>()
+    var lines:List<String> = File(fileName).readLines()
+    val isJASPAR = lines[0].startsWith(">")
+    val blockDelimiter = if(isJASPAR) ">" else "MOTIF"
+  //  val processorFunction:Function<List<String>,Motif> = if(isJASPAR) processMEMEBlock else processJASPARBlock
+    lines.forEach {
+        if (it.startsWith(blockDelimiter)) {
+            if(block[0].startsWith(blockDelimiter)) motifs.add(if(isJASPAR) processJASPARBlock(block) else processMEMEBlock(block))
+            block.clear()
+            block.add(it)
+        } else {
+            block.add(it)
+        }
+    }
+    if(block.isNotEmpty()) motifs.add(if(isJASPAR) processJASPARBlock(block) else processMEMEBlock(block))
+//    else{
+//        print("Error: Motif file must be in MEME or JASPAR format")
+//    }
+    return motifs
+}
+
+private fun processMEMEBlock(motifBlock: List<String>): Motif {
     val name = motifBlock[0].split(" ")[1]
     val header = motifBlock[1].split("[:=\\s]+".toRegex()) //Regex is on (: or = or white-space) with greedy accumulation
     val alength = header[3].toInt() //alphabet size (e.g. DNA = 4)
@@ -183,7 +206,7 @@ private fun processMEMEBlock  (motifBlock: List<String>): Motif {
     val counts: List<Int> = motifBlock.subList(2,2+w)
             .flatMap{it.trim().split("\\s+".toRegex())}
             .map{freq -> (freq.toDouble() * nsites).roundToInt()}
-    return Motif(name, mk.ndarray(counts,alength,w))
+    return Motif(name, mk.ndarray(counts,w,alength).transpose())
 }
 
 /**

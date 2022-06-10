@@ -7,7 +7,7 @@ import java.lang.Math.abs
 
 fun main() {
     val fasta = NucSeqIO("src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa", SeqFormat.fasta)
-    val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
     val outFile = "myoutfile.txt"
 
     fasta.forEach{nucSeqRecord ->
