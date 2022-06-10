@@ -7,12 +7,14 @@ import org.jetbrains.kotlinx.multik.ndarray.data.*
 import org.jetbrains.kotlinx.multik.ndarray.operations.*
 import java.io.File
 import java.util.TreeMap
+import java.util.stream.IntStream
 import kotlin.math.log
 import kotlin.math.roundToInt
 
 
 fun main() {
-    readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+    val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+    motifs.forEach{println(it)}
 
     Multik.setEngine(NativeEngineType)
     val cnt = mk.ndarray(
@@ -116,30 +118,31 @@ data class Motif(
 
 fun readMotifsFromJASPAR(fileName: String): List<Motif> = TODO()
 
+
 fun readMotifsFromMEME(fileName: String): List<Motif> {
-    val lines = File(fileName).readLines()
     val motifs = mutableListOf<Motif>()
-    var i=0
-    while(i < lines.size){
-        if(lines[i].startsWith("MOTIF")) {
-            val name = lines[i++].split(" ")[1]
-            val header = lines[i++].split(" ",":","=")
-            val alength = header[5].toInt()
-            val w =header[8].toInt()
-            val nsites = header[11].toInt()
-            println(header)
-            println("name = ${name}")
-            println("w = [${w}]")
-            val counts = mutableListOf<Int>()
-            for (siteIndex in 0 until w) {
-                //println(lines[i++].trim().split("\\s+".toRegex()))
-                lines[i++].trim().split("\\s+".toRegex())
-                    .forEach{freq -> counts.add((freq.toDouble() * nsites).roundToInt())}
-            }
-            val countsMat = mk.ndarray(counts,alength,w)
-            motifs.add(Motif(name,countsMat))
+    val block = mutableListOf<String>()
+    File(fileName).forEachLine {
+        if (it.startsWith("MOTIF")) {
+            if(block[0].startsWith("MOTIF")) motifs.add(processMEMEBlock(block))
+            block.clear()
+            block.add(it)
+        } else {
+            block.add(it)
         }
-        i++
     }
+    if(block.isNotEmpty()) motifs.add(processMEMEBlock(block))
     return motifs
+}
+
+private fun processMEMEBlock  (motifBlock: List<String>): Motif {
+    val name = motifBlock[0].split(" ")[1]
+    val header = motifBlock[1].split("[:=\\s]+".toRegex()) //Regex is on (: or = or white-space) with greedy accumulation
+    val alength = header[3].toInt() //alphabet size (e.g. DNA = 4)
+    val w =header[5].toInt()  //motif width
+    val nsites = header[7].toInt() //number of sites the motif is based on
+    val counts: List<Int> = motifBlock.subList(2,2+w)
+            .flatMap{it.trim().split("\\s+".toRegex())}
+            .map{freq -> (freq.toDouble() * nsites).roundToInt()}
+    return Motif(name, mk.ndarray(counts,alength,w))
 }

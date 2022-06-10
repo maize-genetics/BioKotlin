@@ -6,6 +6,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
+import org.jetbrains.kotlinx.multik.ndarray.data.D2
+import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
+import org.jetbrains.kotlinx.multik.ndarray.data.get
 import kotlin.system.measureNanoTime
 import kotlin.time.measureTime
 
@@ -38,6 +41,19 @@ class MotifTest : StringSpec({
         }
         println("length = ${aSeq.size()*genesToTest}bp Time = $time ns Rate = ${aSeq.size().toDouble()*genesToTest/time} bp/nanoSec")
         println("Time = ${time.toDouble()/1e9} sec TotalHits = $totalHits")
+    }
+
+    "Read from MEME file" {
+        val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+        motifs.forEach{println(it)}
+
+        motifs.size shouldBe 3
+        with(motifs[0]) {
+            name shouldBe "MA0004.1"
+            numObservations shouldBe 20
+            pwm()[0,0] shouldBe 0.200
+        }
+
     }
 
 //    test("numObservations") { }
