@@ -17,6 +17,7 @@ enum class FeatureType {
                 "mrna" -> mRNA
                 "intron" -> Intron
                 "chromosome" -> Chromosome
+                "scaffold" -> Scaffold
                 else -> throw Exception("Feature $gffString is not supported")
             }
         }
@@ -105,4 +106,70 @@ abstract class Feature(
 
     fun isCircular() = attributes["Is_circular"]
 
+    /**
+     * Converts to a DOT file (without header), for graph visualization
+     */
+    fun toDot(): String {
+        val sb = StringBuilder()
+        for (child in children) {
+            sb.append("\"$this\" -> \"$child\"\n")
+            sb.append(child.toDot())
+        }
+        sb.append("\"$this\"[label = \"$seqid: ${type()} $start-$end\"]")
+        return sb.toString()
+    }
+
+    /**
+     * Compares if this and other have the same String representation, and recurisvely checks that for the children.
+     * It is possible for two things to be equal even if their children are not in the same order (sometimes non-equal
+     * children have the same start so they get sorted arbitrarily).
+     */
+    fun lazyEquals(other: Feature): Boolean {
+        val equalOnThisLevel = seqid == other.seqid &&
+                source == other.source &&
+                start == other.start &&
+                end == other.end &&
+                strand == other.strand &&
+                phase == other.phase &&
+                id() == other.id() &&
+                parent() == other.parent()
+        if (!equalOnThisLevel) {
+            return false
+        } else if (children.isEmpty() && other.children.isEmpty()){
+            return true
+        }
+        else {
+            val aggregatedChildren = children.map { it.toString() }.reduce{ acc, string -> acc + string }
+            val aggregatedOtherChildren = other.children.map  { it.toString() }.reduce{ acc, string -> acc + string }
+            for (i in children.indices) {
+                if (!aggregatedOtherChildren.contains(children[i].toString())) {
+                    return false
+                }
+            }
+            for (i in other.children.indices) {
+                if(!aggregatedChildren.contains(other.children[i].toString())) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    /**
+     * Returns the feature as a string representing row in a GFF file
+     */
+    override fun toString(): String {
+        val scoreString = if (score.isNaN()) {
+            "."
+        } else {
+            score.toString()
+        }
+
+        val attributesString = StringBuilder()
+        for ((tag, value) in attributes) {
+            attributesString.append("$tag:$value;")
+        }
+
+        return "$seqid\t$source\t${type()}\t$start\t$end\t$scoreString\t$strand\t$phase\t${attributesString}\n"
+    }
 }
