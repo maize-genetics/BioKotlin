@@ -6,7 +6,7 @@ class Gene(
     source: String,
     start: Int,
     end: Int,
-    score: Double = 0.0,
+    score: Double = Double.NaN,
     strand: String = "+",
     phase: String = ".",
     attributes: Map<String, String> = emptyMap(),

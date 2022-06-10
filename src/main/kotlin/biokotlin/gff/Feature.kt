@@ -46,7 +46,7 @@ abstract class Feature(
     val source: String,
     val start: Int,
     val end: Int,
-    val score: Double = 0.0,
+    val score: Double = Double.NaN,
     val strand: String = "+",
     val phase: String = ".",
     var attributes: Map<String, String> = emptyMap(),
