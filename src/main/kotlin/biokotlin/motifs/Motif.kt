@@ -13,7 +13,7 @@ import kotlin.math.roundToInt
 
 
 fun main() {
-    val motifs = readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
     motifs.forEach{println(it)}
 
     Multik.setEngine(NativeEngineType)
@@ -116,22 +116,61 @@ data class Motif(
 
 }
 
-fun readMotifsFromJASPAR(fileName: String): List<Motif> = TODO()
 
 
-fun readMotifsFromMEME(fileName: String): List<Motif> {
+
+//fun readMotifsFromMEME(fileName: String): List<Motif> {
+//    val motifs = mutableListOf<Motif>()
+//    val block = mutableListOf<String>()
+//    File(fileName).forEachLine {
+//        if (it.startsWith("MOTIF")) {
+//            if(block[0].startsWith("MOTIF")) motifs.add(processMEMEBlock(block))
+//            block.clear()
+//            block.add(it)
+//        } else {
+//            block.add(it)
+//        }
+//    }
+//    if(block.isNotEmpty()) motifs.add(processMEMEBlock(block))
+//    return motifs
+//}
+
+fun readMotifs(fileName: String): List<Motif> {
     val motifs = mutableListOf<Motif>()
     val block = mutableListOf<String>()
-    File(fileName).forEachLine {
-        if (it.startsWith("MOTIF")) {
-            if(block[0].startsWith("MOTIF")) motifs.add(processMEMEBlock(block))
-            block.clear()
-            block.add(it)
-        } else {
-            block.add(it)
+    val file = File(fileName)
+    var lines:List<String> = file.readLines()
+    if (lines[0].startsWith(">")) { // Check whether motif file is in JASPAR format
+        file.forEachLine {
+            if (it.startsWith(">")) {
+                if(block.isNotEmpty()) {
+                    motifs.add(processJASPARBlock(block))
+                }
+                block.clear()
+                block.add(it)
+            } else {
+                block.add(it)
+            }
         }
+        if(block.isNotEmpty()) motifs.add(processJASPARBlock(block))
     }
-    if(block.isNotEmpty()) motifs.add(processMEMEBlock(block))
+    else if (lines[0].startsWith("MEME")) { // Check whether motif file is in MEME format
+        File(fileName).forEachLine {
+            if (it.startsWith("MOTIF")) {
+                if(block[0].startsWith("MOTIF")) motifs.add(processMEMEBlock(block))
+                block.clear()
+                block.add(it)
+            } else {
+                block.add(it)
+            }
+        }
+        if(block.isNotEmpty()) motifs.add(processMEMEBlock(block))
+    }
+
+    else{
+        print("Error: Motif file must be in MEME or JASPAR format")
+    }
+
     return motifs
 }
 
@@ -144,5 +183,29 @@ private fun processMEMEBlock  (motifBlock: List<String>): Motif {
     val counts: List<Int> = motifBlock.subList(2,2+w)
             .flatMap{it.trim().split("\\s+".toRegex())}
             .map{freq -> (freq.toDouble() * nsites).roundToInt()}
+    return Motif(name, mk.ndarray(counts,alength,w))
+}
+
+/**
+ * >MA0551.1	MA0551.1.HY5
+A  [   103    108     52      9    150      0    310      3      1      0      2      4     24    183     94     89 ]
+C  [    60     56     55      8    165    317      1    311      5      9      1      1    279     30     62     68 ]
+G  [    68     62     30    279      1      1      9      5    311      1    317    165      8     55     56     60 ]
+T  [    89     94    183     24      4      2      0      1      3    310      0    150      9     52    108    103 ]
+ */
+private fun processJASPARBlock  (motifBlock: List<String>): Motif {
+    val name = motifBlock[0].split("[>\\s]+".toRegex())[1]
+    println(name)
+    val alength = motifBlock.size - 1 // get alphabet size (e.g. DNA = 4)
+    val w = motifBlock[1].split("\\s+".toRegex()).size - 3 // get motif width
+    val counts: List<Int> = motifBlock.subList(1,1+alength)
+//        .map { it.split("[\\[\\]]")}
+        .map{ it.substringAfter("[").substringBeforeLast("]").trim()}
+//        .map { it.trim().drop(4).dropLast(1) }
+        .flatMap{it.trim().split("\\s+".toRegex())}
+        .onEach { println("after: $it") }
+        .map{count -> count.toInt()}
+
+
     return Motif(name, mk.ndarray(counts,alength,w))
 }
