@@ -5,11 +5,15 @@ import biokotlin.seq.NucSeq
 import org.jetbrains.kotlinx.multik.api.*
 import org.jetbrains.kotlinx.multik.ndarray.data.*
 import org.jetbrains.kotlinx.multik.ndarray.operations.*
+import java.io.File
 import java.util.TreeMap
 import kotlin.math.log
+import kotlin.math.roundToInt
 
 
 fun main() {
+    readMotifsFromMEME("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+
     Multik.setEngine(NativeEngineType)
     val cnt = mk.ndarray(
         mk[
@@ -112,4 +116,30 @@ data class Motif(
 
 fun readMotifsFromJASPAR(fileName: String): List<Motif> = TODO()
 
-fun readMotifsFromMEME(fileName: String): List<Motif> = TODO()
+fun readMotifsFromMEME(fileName: String): List<Motif> {
+    val lines = File(fileName).readLines()
+    val motifs = mutableListOf<Motif>()
+    var i=0
+    while(i < lines.size){
+        if(lines[i].startsWith("MOTIF")) {
+            val name = lines[i++].split(" ")[1]
+            val header = lines[i++].split(" ",":","=")
+            val alength = header[5].toInt()
+            val w =header[8].toInt()
+            val nsites = header[11].toInt()
+            println(header)
+            println("name = ${name}")
+            println("w = [${w}]")
+            val counts = mutableListOf<Int>()
+            for (siteIndex in 0 until w) {
+                //println(lines[i++].trim().split("\\s+".toRegex()))
+                lines[i++].trim().split("\\s+".toRegex())
+                    .forEach{freq -> counts.add((freq.toDouble() * nsites).roundToInt())}
+            }
+            val countsMat = mk.ndarray(counts,alength,w)
+            motifs.add(Motif(name,countsMat))
+        }
+        i++
+    }
+    return motifs
+}
