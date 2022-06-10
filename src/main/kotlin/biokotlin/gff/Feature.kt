@@ -167,7 +167,7 @@ abstract class Feature(
 
         val attributesString = StringBuilder()
         for ((tag, value) in attributes) {
-            attributesString.append("$tag:$value;")
+            attributesString.append("$tag=$value;")
         }
 
         return "$seqid\t$source\t${type()}\t$start\t$end\t$scoreString\t$strand\t$phase\t${attributesString}\n"
