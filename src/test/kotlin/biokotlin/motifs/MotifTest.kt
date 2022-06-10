@@ -53,6 +53,13 @@ class MotifTest : StringSpec({
             numObservations shouldBe 20
             pwm()[0, 0] shouldBe 0.200
         }
+
+        with(motifs[1]) {
+            name shouldBe "MA0006.1"
+            numObservations shouldBe 24
+            pwm()[0, 0] shouldBe 0.125
+            pwm()[2, 2] shouldBe 0.125
+        }
     }
 
     "Read from JASPAR file" {
