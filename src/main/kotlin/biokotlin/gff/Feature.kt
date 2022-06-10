@@ -1,6 +1,27 @@
 package biokotlin.gff
 
-enum class FeatureType { Gene, Exon, Leader, Terminator, Coding, mRNA, Intron, Chromosome }
+enum class FeatureType {
+    Gene, Exon, Leader, Terminator, Coding, mRNA, Intron, Chromosome;
+
+    companion object {
+        /**
+         * Converts from standard names in GFF files to a FeatureType. Case-insensitive
+         */
+        fun fromGffString(gffString: String): FeatureType {
+            return when (gffString.lowercase()) {
+                "gene" -> Gene
+                "exon" -> Exon
+                "five_prime_utr" -> Leader
+                "three_prime_utr" -> Terminator
+                "cds" -> Coding
+                "mrna" -> mRNA
+                "intron" -> Intron
+                "chromosome" -> Chromosome
+                else -> throw Exception("Feature $gffString is not supported")
+            }
+        }
+    }
+}
 
 /**
  * @param seqid The ID of the landmark used to establish the coordinate system for the current feature. IDs may contain
