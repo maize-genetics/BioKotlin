@@ -180,17 +180,18 @@ fun readMotifs(fileName: String): List<Motif> {
     var lines:List<String> = File(fileName).readLines()
     val isJASPAR = lines[0].startsWith(">")
     val blockDelimiter = if(isJASPAR) ">" else "MOTIF"
-  //  val processorFunction:Function<List<String>,Motif> = if(isJASPAR) processMEMEBlock else processJASPARBlock
+    val processBlock: (List<String>) -> Motif = if(isJASPAR) ::processJASPARBlock else ::processMEMEBlock
+    //var processorFunction:List<String> -> Motif> = if(isJASPAR) ::processMEMEBlock else ::processJASPARBlock
     lines.forEach {
         if (it.startsWith(blockDelimiter)) {
-            if(block[0].startsWith(blockDelimiter)) motifs.add(if(isJASPAR) processJASPARBlock(block) else processMEMEBlock(block))
+            if(block.isNotEmpty() && block[0].startsWith(blockDelimiter)) motifs.add(processBlock(block))
             block.clear()
             block.add(it)
         } else {
             block.add(it)
         }
     }
-    if(block.isNotEmpty()) motifs.add(if(isJASPAR) processJASPARBlock(block) else processMEMEBlock(block))
+    if(block.isNotEmpty()) motifs.add(processBlock(block))
 //    else{
 //        print("Error: Motif file must be in MEME or JASPAR format")
 //    }
