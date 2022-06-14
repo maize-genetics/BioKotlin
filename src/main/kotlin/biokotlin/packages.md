@@ -1,4 +1,5 @@
-# Module appliedcentraldogma
+# Module biokotlin
+
 BioKotlin is a port and adaptation of [BioPython](https://biopython.org) to Kotlin with tools to work with 
 [Htsjdk](https://samtools.github.io/htsjdk/)
 
