@@ -122,7 +122,13 @@ tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
 }
 
-val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
+val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
+    dokkaSourceSets {
+        configureEach {
+            includes.from("src/main/kotlin/biokotlin/packages.md")
+        }
+    }
+}
 
 val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
