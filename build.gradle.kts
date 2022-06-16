@@ -16,7 +16,6 @@ buildscript {
     repositories {
         mavenCentral()
         gradlePluginPortal()
-        maven("https://dl.bintray.com/kotlin/kotlin-eap")
     }
 
     dependencies {
@@ -68,7 +67,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
-    implementation("de.mpicbg.scicomp:krangl:0.13")
+    implementation("com.github.holgerbrandl:krangl:0.18")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
 
     // Biology possible dependencies
@@ -126,7 +125,13 @@ tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
 }
 
-val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class)
+val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
+    dokkaSourceSets {
+        configureEach {
+            includes.from("src/main/kotlin/biokotlin/packages.md")
+        }
+    }
+}
 
 val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
