@@ -1,5 +1,10 @@
 package biokotlin.gff
 
+//TODO add pointer to parent(s)
+/**
+ * A mutable representation of a genetic feature that can be built into a [Feature].
+ * @see Feature
+ */
 class FeatureBuilder(
     val seqid: String,
     val source: String,
@@ -12,10 +17,6 @@ class FeatureBuilder(
     var attributes: Map<String, String> = emptyMap()
 ) {
 
-    init {
-        id()?.let { builderMap[it] = this }
-    }
-
     val children = mutableListOf<FeatureBuilder>()
 
     fun id() = attributes["ID"]
@@ -24,6 +25,11 @@ class FeatureBuilder(
         children.add(child)
     }
 
+    /**
+     * Builds this feature and its children, recursively.
+     * @return An immutable [Feature] with the properties of this [FeatureBuilder] and whose children are built
+     * versions of the this [FeatureBuilder]'s children, sorted by [FeatureComparator].
+     */
     fun build(): Feature {
 
         val children = children.map { it.build() }
@@ -42,7 +48,3 @@ class FeatureBuilder(
     }
 
 }
-
-private val builderMap = mutableMapOf<String, FeatureBuilder>()
-
-fun featureBuilder(id: String) = builderMap[id]

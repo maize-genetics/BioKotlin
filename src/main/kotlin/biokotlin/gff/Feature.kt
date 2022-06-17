@@ -61,7 +61,8 @@ enum class FeatureType {
  * by semicolons. URL escaping rules are used for tags or values containing the following characters: ",=;". Spaces
  * are allowed in this field, but tabs must be replaced with the %09 URL escape. Attribute values do not need to be
  * and should not be quoted. The quotes should be included as part of the value by parsers and not stripped.
- * @param children
+ * @param children TODO
+ * @see FeatureBuilder
  */
 abstract class Feature(
     val seqid: String,
@@ -77,14 +78,15 @@ abstract class Feature(
 
     init {
         attributes = attributes.toMap()
-        children = children.toList().sortedBy { it.start }
+        children = children.sortedWith(FeatureComparator())
     }
 
     abstract fun type(): FeatureType
 
     fun attribute(key: String) = attributes[key]
 
-    fun parent() = attributes["Parent"]
+    //TODO make this an actual pointer and handle multiple parents
+    fun parent(): Feature = TODO()
 
     fun id() = attributes["ID"]
 
@@ -107,54 +109,21 @@ abstract class Feature(
     fun isCircular() = attributes["Is_circular"]
 
     /**
-     * Converts to a DOT file (without header), for graph visualization
+     * Compares this to [other] alphabetically by seqid, then by start, then by end position.
+     * Returns zero if this and [other] are equal in ordering, a negative number if this is less
+     * than [other], or a positive number if this is greater than [other].
      */
-    fun toDot(): String {
-        val sb = StringBuilder()
-        for (child in children) {
-            sb.append("\"$this\" -> \"$child\"\n")
-            sb.append(child.toDot())
-        }
-        sb.append("\"$this\"[label = \"$seqid: ${type()} $start-$end\"]")
-        return sb.toString()
-    }
-
-    /**
-     * Compares if this and other have the same String representation, and recurisvely checks that for the children.
-     * It is possible for two things to be equal even if their children are not in the same order (sometimes non-equal
-     * children have the same start so they get sorted arbitrarily).
-     */
-    fun lazyEquals(other: Feature): Boolean {
-        val equalOnThisLevel = seqid == other.seqid &&
-                source == other.source &&
-                start == other.start &&
-                end == other.end &&
-                strand == other.strand &&
-                phase == other.phase &&
-                id() == other.id() &&
-                parent() == other.parent()
-        if (!equalOnThisLevel) {
-            return false
-        } else if (children.isEmpty() && other.children.isEmpty()){
-            return true
-        }
-        else {
-            val aggregatedChildren = children.map { it.toString() }.reduce{ acc, string -> acc + string }
-            val aggregatedOtherChildren = other.children.map  { it.toString() }.reduce{ acc, string -> acc + string }
-            for (i in children.indices) {
-                if (!aggregatedOtherChildren.contains(children[i].toString())) {
-                    return false
-                }
+    fun compareTo(other: Feature): Int {
+        return if (seqid.compareTo(other.seqid) == 0) {
+            if (start.compareTo(other.start) == 0) {
+                end.compareTo(other.end)
+            } else {
+                start.compareTo(other.start)
             }
-            for (i in other.children.indices) {
-                if(!aggregatedChildren.contains(other.children[i].toString())) {
-                    return false
-                }
-            }
+        } else {
+            seqid.compareTo(other.seqid)
         }
-        return true
     }
-
     /**
      * Returns the feature as a string representing row in a GFF file
      */
@@ -171,5 +140,19 @@ abstract class Feature(
         }
 
         return "$seqid\t$source\t${type()}\t$start\t$end\t$scoreString\t$strand\t$phase\t${attributesString}\n"
+    }
+}
+
+/**
+ * Provides ordering for feature
+ */
+class FeatureComparator: Comparator<Feature> {
+    /**
+     * Returns the same result as [p0].compareTo([p1]) unless one of the arguments is null, in which case it returns 0.
+     */
+    override fun compare(p0: Feature?, p1: Feature?): Int {
+        if (p0 == null || p1 == null) return 0
+
+        return p0.compareTo(p1)
     }
 }
