@@ -135,7 +135,7 @@ data class Motif(
 //    return motifs
 //}
 
-fun readMotifs2(fileName: String): List<Motif> {
+/*fun readMotifs2(fileName: String): List<Motif> {
     val motifs = mutableListOf<Motif>()
     val block = mutableListOf<String>()
     val file = File(fileName)
@@ -172,7 +172,7 @@ fun readMotifs2(fileName: String): List<Motif> {
     }
 
     return motifs
-}
+}*/
 
 fun readMotifs(fileName: String): List<Motif> {
     val motifs = mutableListOf<Motif>()
