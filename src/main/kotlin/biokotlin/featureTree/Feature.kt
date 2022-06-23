@@ -1,7 +1,35 @@
-package biokotlin.gff
+package biokotlin.featureTree
 
+import kotlin.jvm.Throws
+
+/**
+ * @see Feature
+ */
 enum class FeatureType {
-    Gene, Exon, Leader, Terminator, Coding, mRNA, Intron, Chromosome, Scaffold;
+    Gene,
+    Exon,
+    /**
+     * AKA 5' UTR
+     */
+    Leader,
+
+    /**
+     * AKA 3' UTR
+     */
+    Terminator,
+
+    /**
+     * AKA CDS
+     */
+    Coding,
+
+    /**
+     * AKA transcript
+     */
+    mRNA,
+    Intron,
+    Chromosome,
+    Scaffold;
 
     companion object {
         /**
@@ -32,6 +60,7 @@ enum class FeatureType {
  * generated this feature. Typically this is the name of a piece of software, such as "Genescan" or a database name,
  * such as "Genbank." In effect, the source is used to extend the feature ontology by adding a qualifier to the type
  * creating a new composite type that is a subclass of the type in the type column.
+ * @param type TODO
  * @param start The start and end coordinates of the feature are given in positive 1-based integer coordinates, relative
  * to the landmark given in column one. Start is always less than or equal to end. For features that cross the origin
  * of a circular feature (e.g. most bacterial genomes, plasmids, and some viral genomes), the requirement for start to
@@ -42,7 +71,8 @@ enum class FeatureType {
  * be less than or equal to end is satisfied by making end = the position of the end + the length of the landmark feature.
  * @param score The score of the feature, a floating point number. As in earlier versions of the format, the semantics
  * of the score are ill-defined. It is strongly recommended that E-values be used for sequence similarity features,
- * and that P-values be used for ab initio gene prediction features.
+ * and that P-values be used for ab initio gene prediction features. Represented by Double.NaN when no score exists
+ * for a particular feature.
  * @param strand The strand of the feature. + for positive strand (relative to the landmark), - for minus strand,
  * and . for features that are not stranded. In addition, ? can be used for features whose strandedness is relevant,
  * but unknown.
@@ -60,45 +90,79 @@ enum class FeatureType {
  * @param attributes A list of feature attributes in the format tag=value. Multiple tag=value pairs are separated
  * by semicolons. URL escaping rules are used for tags or values containing the following characters: ",=;". Spaces
  * are allowed in this field, but tabs must be replaced with the %09 URL escape. Attribute values do not need to be
- * and should not be quoted. The quotes should be included as part of the value by parsers and not stripped.
+ * and should not be quoted. The quotes should be included as part of the value by parsers and not stripped. When there
+ * are multiple values for the same tag, they are separated by a comma.
  * @param children TODO
  * @see FeatureBuilder
  */
-abstract class Feature(
+class Feature(
     val seqid: String,
     val source: String,
+    val type: FeatureType,
     val start: Int,
     val end: Int,
     val score: Double = Double.NaN,
     val strand: String = "+",
     val phase: String = ".",
-    var attributes: Map<String, String> = emptyMap(),
-    var children: List<Feature> = emptyList()
-) {
+    val attributes: Map<String, Set<String>> = emptyMap(),
+    children: List<Feature> = emptyList(),
+): FeatureTree(children) {
 
-    init {
-        attributes = attributes.toMap()
-        children = children.sortedWith(FeatureComparator())
+    private val parents = mutableListOf<FeatureTree>()
+
+    /**
+     * Adds a parent. ONLY FOR USE IN BUILDERS!
+     */
+    internal fun addParent(parent: FeatureTree) {
+        parents.add(parent)
     }
 
-    abstract fun type(): FeatureType
+    /**
+     * @return one of the parents of this [Feature] that is an instance of [Feature] or null if no such parent exists.
+     * This function is to provide convenience for features that are known to only have one parent. To prevent excessive
+     * casts, this function cannot access a top-level [FeatureTree] parent that is not an instance of [Feature]. To
+     * access this top level container, use [root].
+     * @see root
+     * @see parents
+     */
+    fun parent(): Feature? {
+        return parents.find{ it is Feature } as? Feature
+    }
 
-    fun attribute(key: String) = attributes[key]
+    /**
+     * @return The parents of this [Feature] that are instances of [Feature] or an empty list if no such parents
+     * exist. To access a top-level [FeatureTree] that is not a [Feature], use [root].
+     * @see root
+     * @see parent
+     */
+    fun parents(): List<Feature> {
+        return parents.filterIsInstance<Feature>().sortedWith(FeatureComparator())
+    }
 
-    //TODO make this an actual pointer and handle multiple parents
-    fun parent(): Feature = TODO()
+    /**
+     * @return the top-level container that is an ancestor of this [Feature].
+      */
+    fun root(): FeatureTree {
+        for (feature in ancestors()) {
+            if (feature.parents.isEmpty()) return this
+            if (feature.parents[0] !is Feature) return feature.parents[0]
+        }
+        throw Exception("Malformed FeatureTree. Could not find root.")
+    }
 
-    fun id() = attributes["ID"]
+    //Some attributes cannot have multiple values, so the .first() calls allows for more convenience
 
-    fun name() = attributes["Name"]
+    fun id() = attributes["ID"]?.first()
+
+    fun name() = attributes["Name"]?.first()
 
     fun alias() = attributes["Alias"]
 
-    fun target() = attributes["Target"]
+    fun target() = attributes["Target"]?.first()
 
-    fun gap() = attributes["Gap"]
+    fun gap() = attributes["Gap"]?.first()
 
-    fun derivesFrom() = attributes["Derives_from"]
+    fun derivesFrom() = attributes["Derives_from"]?.first()
 
     fun note() = attributes["Note"]
 
@@ -106,7 +170,7 @@ abstract class Feature(
 
     fun ontologyTerm() = attributes["Ontology_term"]
 
-    fun isCircular() = attributes["Is_circular"]
+    fun isCircular() = attributes["Is_circular"]?.first()
 
     /**
      * Compares this to [other] alphabetically by seqid, then by start, then by end position.
@@ -124,8 +188,9 @@ abstract class Feature(
             seqid.compareTo(other.seqid)
         }
     }
+
     /**
-     * Returns the feature as a string representing row in a GFF file
+     * @return The feature as a string representing row in a GFF file.
      */
     override fun toString(): String {
         val scoreString = if (score.isNaN()) {
@@ -135,12 +200,85 @@ abstract class Feature(
         }
 
         val attributesString = StringBuilder()
-        for ((tag, value) in attributes) {
-            attributesString.append("$tag=$value;")
+        for ((tag, set) in attributes) {
+            attributesString.append(tag).append("=")
+            for (value in set) {
+                attributesString.append(value).append(",")
+            }
         }
-
-        return "$seqid\t$source\t${type()}\t$start\t$end\t$scoreString\t$strand\t$phase\t${attributesString}\n"
+        //TODO naively doing type will not line up properly with the gff name
+        return "$seqid\t$source\t${type}\t$start\t$end\t$scoreString\t$strand\t$phase\t${attributesString}\n"
     }
+
+    /**
+     * @return a list containing this [Feature] and ancestors of this feature. The ordering is depth-first,
+     * left-to-right. Ancestors that are not instances of [Feature] are ignored.
+     */
+    fun ancestors(): List<Feature> {
+        val ancestors = mutableListOf<Feature>()
+        ancestors.add(this)
+        for (parent in parents()) {
+            println(parent)
+            ancestors.addAll(parent.ancestors())
+        }
+        return ancestors
+    }
+
+    /**
+     * @return the first exon in this [Feature]'s ancestors, or null if there are none.
+     */
+    fun exon(): Feature? {
+        return ancestors().find { it.type == FeatureType.Exon }
+    }
+
+    /**
+     * @return the first gene in this [Feature]'s ancestors, or null if there are none.
+     */
+    fun gene(): Feature? {
+        return ancestors().find { it.type == FeatureType.Gene }
+    }
+
+    /**
+     * @return the first transcript in this [Feature]'s ancestors, or null if there are none.
+     */
+    fun transcript(): Feature? {
+        return ancestors().find { it.type == FeatureType.mRNA }
+    }
+
+    /**
+     * @return the first scaffold in this [Feature]'s ancestors, or null if there are none.
+     */
+    fun scaffold(): Feature? {
+        return ancestors().find { it.type == FeatureType.Scaffold }
+    }
+
+    /**
+     * @return the first chromosome in this [Feature]'s ancestors, or null if there are none.
+     */
+    fun chromosome(): Feature? {
+        return ancestors().find { it.type == FeatureType.Chromosome }
+    }
+
+    /**
+     * @return the first contig in this [Feature]'s ancestors, or null if there are none.
+     */
+    fun contig(): Feature? {
+        return ancestors().find { it.type == FeatureType.Scaffold || it.type == FeatureType.Chromosome }
+    }
+
+    override fun nonRecursiveDot(): java.lang.StringBuilder {
+        val sb = StringBuilder()
+        if (id() != null) sb.append("\"${hashCode()}\" [label=\"${id()}\\n$type $start-$end\" color = ${typeToColor(type)}]\n")
+        else sb.append("\"${hashCode()}\" [label=\"$type $start-$end\" color = ${typeToColor(type)}]\n")
+        for (child in children) sb.append("${hashCode()} -> ${child.hashCode()}\n")
+        for (parent in parents) sb.append("${hashCode()} -> ${parent.hashCode()}\n")
+        return sb
+    }
+
+    private fun typeToColor(type: FeatureType): Int {
+        return type.ordinal % 11 + 1
+    }
+
 }
 
 /**
@@ -152,7 +290,17 @@ class FeatureComparator: Comparator<Feature> {
      */
     override fun compare(p0: Feature?, p1: Feature?): Int {
         if (p0 == null || p1 == null) return 0
-
         return p0.compareTo(p1)
     }
+}
+
+fun invariantBroken(culprit: Any, number: Int) {
+    println("=========================================================================")
+    println("Invariant $number broken for class ${culprit::class}. culprit.toString():")
+    println(culprit.toString())
+}
+
+fun main() {
+    val tree = FeatureTree.fromGff("/home/jeff/Buckler/Biokotlin/biokotlin/src/test/resources/biokotlin/featureTree/b73_shortened.gff")
+    println(tree.toDot())
 }

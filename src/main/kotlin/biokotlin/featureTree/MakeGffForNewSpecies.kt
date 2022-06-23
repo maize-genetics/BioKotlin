@@ -1,4 +1,4 @@
-package biokotlin.gff
+package biokotlin.featureTree
 
 import biokotlin.util.bufferedWriter
 import htsjdk.samtools.CigarOperator
