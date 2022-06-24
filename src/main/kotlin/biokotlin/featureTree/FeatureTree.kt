@@ -1,7 +1,6 @@
 package biokotlin.featureTree
 
 import biokotlin.util.bufferedReader
-import htsjdk.samtools.util.SequenceUtil.a
 
 /**
  * The root of a tree of GFF Features. Contains useful methods for parsing down a tree of such features.
@@ -32,11 +31,13 @@ open class FeatureTree (children: List<Feature>): Iterable<Feature> {
                     continue
                 }
 
+                println(line)
                 val split = line.split("\t")
                 val attributes = split[8].split(";")
                 val attributeMap = HashMap<String, Set<String>>(0)
-                attributes.forEach {
-                    val tagValue = it.split("=")
+                for (attribute in attributes) {
+                    val tagValue = attribute.split("=")
+                    if (tagValue.size != 2) continue
                     val tag = tagValue[0]
                     val values = tagValue[1].split(",")
                     attributeMap[tag] = values.toSet()
@@ -65,7 +66,7 @@ open class FeatureTree (children: List<Feature>): Iterable<Feature> {
                         if (registry.contains(parent)) {
                             registry[parent]?.addChild(featureBuilder)
                         } else {
-                            TODO("Please use a well-formed GFF (meaning parents occur before all their children)")
+                            TODO("Poor ordering not yet supported. List parents before their children.")
                         }
                     }
                 } else {
@@ -206,17 +207,7 @@ open class FeatureTree (children: List<Feature>): Iterable<Feature> {
      */
     val byGap: Map<String, List<Feature>> by lazy { groupBy {it.gap()} }
 
-    val size = toList().size
-
-    val list: List<Feature> by lazy {
-        val list = mutableListOf<Feature>()
-        if (this is Feature) list.add(this)
-
-        for (child in children) {
-            list.addAll(child.toList())
-        }
-        list
-    }
+    fun size() = toList().size
 
     /**
      * Represents this FeatureTree as a GFF.
@@ -238,10 +229,18 @@ open class FeatureTree (children: List<Feature>): Iterable<Feature> {
 
     /**
      * Converts the [FeatureTree] representation to a list in depth-first order. Elements that are not instances of
-     * [Feature] are ignored.
+     * [Feature] are ignored. When an element has multiple parents, it is only listed the first time that it is
+     * encountered in a depth-first traversal and ignored subsequently.
      */
     fun toList(): List<Feature> {
-        return list
+        val list = mutableListOf<Feature>()
+        if (this is Feature) list.add(this)
+
+        for (child in children) {
+            list.addAll(child.toList())
+        }
+        //.distinct() is needed in case of multiple children. Somewhat significantly worsens asymptotic complexity.
+        return list.distinct()
     }
 
     /**
@@ -429,70 +428,70 @@ open class FeatureTree (children: List<Feature>): Iterable<Feature> {
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are scaffolds or chromosomes
      */
     fun contigs(): List<Feature> {
-        return filteredList { it.type == FeatureType.Scaffold || it.type == FeatureType.Chromosome }
+        return filteredList { it.type == FeatureType.SCAFFOLD || it.type == FeatureType.CHROMOSOME }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are scaffolds
      */
     fun scaffolds(): List<Feature> {
-        return filteredList { it.type == FeatureType.Scaffold }
+        return filteredList { it.type == FeatureType.SCAFFOLD }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are chromosomes
      */
     fun chromosomes(): List<Feature> {
-        return filteredList { it.type == FeatureType.Chromosome }
+        return filteredList { it.type == FeatureType.CHROMOSOME }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are genes
      */
     fun genes(): List<Feature> {
-        return filteredList { it.type == FeatureType.Gene }
+        return filteredList { it.type == FeatureType.GENE }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are transcripts
      */
     fun transcripts(): List<Feature> {
-        return filteredList { it.type == FeatureType.mRNA }
+        return filteredList { it.type == FeatureType.TRANSCRIPT }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are exons
      */
     fun exons(): List<Feature> {
-        return filteredList { it.type == FeatureType.Exon }
+        return filteredList { it.type == FeatureType.EXON }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are introns
      */
     fun introns(): List<Feature> {
-        return filteredList { it.type == FeatureType.Intron }
+        return filteredList { it.type == FeatureType.INTRON }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are CDS
      */
     fun codingSequences(): List<Feature> {
-        return filteredList { it.type == FeatureType.Coding }
+        return filteredList { it.type == FeatureType.CDS }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are leaders
      */
     fun leaders(): List<Feature> {
-        return filteredList { it.type == FeatureType.Leader }
+        return filteredList { it.type == FeatureType.LEADER }
     }
 
     /**
      * @return A list of all elements in the tree rooted at this [FeatureTree] that are terminators
      */
     fun terminators(): List<Feature> {
-        return filteredList { it.type == FeatureType.Terminator }
+        return filteredList { it.type == FeatureType.TERMINATOR }
     }
 
     /**
@@ -524,7 +523,7 @@ open class FeatureTree (children: List<Feature>): Iterable<Feature> {
         sb.append("digraph {\n")
         sb.append("rank = source\n")
         sb.append("ordering = out\n")
-        sb.append("node[shape = box style = filled colorscheme = set311]\n")
+        sb.append("node[shape = box style = filled colorscheme = set312]\n")
 
         if (this !is Feature) sb.append(nonRecursiveDot())
 

@@ -1,35 +1,33 @@
 package biokotlin.featureTree
 
-import kotlin.jvm.Throws
-
 /**
  * @see Feature
  */
 enum class FeatureType {
-    Gene,
-    Exon,
+    GENE,
+    EXON,
     /**
      * AKA 5' UTR
      */
-    Leader,
+    LEADER,
 
     /**
      * AKA 3' UTR
      */
-    Terminator,
+    TERMINATOR,
 
     /**
-     * AKA CDS
+     * AKA CoDing Sequence
      */
-    Coding,
+    CDS,
 
     /**
-     * AKA transcript
+     * AKA mRNA
      */
-    mRNA,
-    Intron,
-    Chromosome,
-    Scaffold;
+    TRANSCRIPT,
+    INTRON,
+    CHROMOSOME,
+    SCAFFOLD;
 
     companion object {
         /**
@@ -37,15 +35,15 @@ enum class FeatureType {
          */
         fun fromGffString(gffString: String): FeatureType {
             return when (gffString.lowercase()) {
-                "gene" -> Gene
-                "exon" -> Exon
-                "five_prime_utr" -> Leader
-                "three_prime_utr" -> Terminator
-                "cds" -> Coding
-                "mrna" -> mRNA
-                "intron" -> Intron
-                "chromosome" -> Chromosome
-                "scaffold" -> Scaffold
+                "gene" -> GENE
+                "exon" -> EXON
+                "five_prime_utr" -> LEADER
+                "three_prime_utr" -> TERMINATOR
+                "cds" -> CDS
+                "mrna" -> TRANSCRIPT
+                "intron" -> INTRON
+                "chromosome" -> CHROMOSOME
+                "scaffold" -> SCAFFOLD
                 else -> throw Exception("Feature $gffString is not supported")
             }
         }
@@ -218,7 +216,6 @@ class Feature(
         val ancestors = mutableListOf<Feature>()
         ancestors.add(this)
         for (parent in parents()) {
-            println(parent)
             ancestors.addAll(parent.ancestors())
         }
         return ancestors
@@ -228,55 +225,55 @@ class Feature(
      * @return the first exon in this [Feature]'s ancestors, or null if there are none.
      */
     fun exon(): Feature? {
-        return ancestors().find { it.type == FeatureType.Exon }
+        return ancestors().find { it.type == FeatureType.EXON }
     }
 
     /**
      * @return the first gene in this [Feature]'s ancestors, or null if there are none.
      */
     fun gene(): Feature? {
-        return ancestors().find { it.type == FeatureType.Gene }
+        return ancestors().find { it.type == FeatureType.GENE }
     }
 
     /**
      * @return the first transcript in this [Feature]'s ancestors, or null if there are none.
      */
     fun transcript(): Feature? {
-        return ancestors().find { it.type == FeatureType.mRNA }
+        return ancestors().find { it.type == FeatureType.TRANSCRIPT }
     }
 
     /**
      * @return the first scaffold in this [Feature]'s ancestors, or null if there are none.
      */
     fun scaffold(): Feature? {
-        return ancestors().find { it.type == FeatureType.Scaffold }
+        return ancestors().find { it.type == FeatureType.SCAFFOLD }
     }
 
     /**
      * @return the first chromosome in this [Feature]'s ancestors, or null if there are none.
      */
     fun chromosome(): Feature? {
-        return ancestors().find { it.type == FeatureType.Chromosome }
+        return ancestors().find { it.type == FeatureType.CHROMOSOME }
     }
 
     /**
      * @return the first contig in this [Feature]'s ancestors, or null if there are none.
      */
     fun contig(): Feature? {
-        return ancestors().find { it.type == FeatureType.Scaffold || it.type == FeatureType.Chromosome }
+        return ancestors().find { it.type == FeatureType.SCAFFOLD || it.type == FeatureType.CHROMOSOME }
     }
 
     override fun nonRecursiveDot(): java.lang.StringBuilder {
         val sb = StringBuilder()
-        if (id() != null) sb.append("\"${hashCode()}\" [label=\"${id()}\\n$type $start-$end\" color = ${typeToColor(type)}]\n")
-        else sb.append("\"${hashCode()}\" [label=\"$type $start-$end\" color = ${typeToColor(type)}]\n")
+        if (id() != null) sb.append("\"${hashCode()}\" [label=\"${id()}\\n$type\\n$start-$end\" color = ${typeToColor(type)}]\n")
+        else sb.append("\"${hashCode()}\" [label=\"$type\\n$start-$end\" color = ${typeToColor(type)}]\n")
         for (child in children) sb.append("${hashCode()} -> ${child.hashCode()}\n")
-        for (parent in parents) sb.append("${hashCode()} -> ${parent.hashCode()}\n")
+        for (parent in parents) sb.append("${hashCode()} -> ${parent.hashCode()} [color = steelblue]\n")
         return sb
     }
 
     private fun typeToColor(type: FeatureType): Int {
-        return type.ordinal % 11 + 1
+        return type.ordinal % 12 + 1
     }
 
 }
@@ -294,13 +291,7 @@ class FeatureComparator: Comparator<Feature> {
     }
 }
 
-fun invariantBroken(culprit: Any, number: Int) {
-    println("=========================================================================")
-    println("Invariant $number broken for class ${culprit::class}. culprit.toString():")
-    println(culprit.toString())
-}
-
 fun main() {
-    val tree = FeatureTree.fromGff("/home/jeff/Buckler/Biokotlin/biokotlin/src/test/resources/biokotlin/featureTree/b73_shortened.gff")
-    println(tree.toDot())
+    val tree = FeatureTree.fromGff("/home/jeff/Buckler/Biokotlin/b73.gff")
+    println(tree.genes()[0].toDot())
 }
