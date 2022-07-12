@@ -16,7 +16,11 @@ fun main() {
         motifNames.add(motif.name)
     }
     //Create output file to write to
+    //Option 1: separate file for each sequence (for Taylor's model)
     val outputFile = "src/test/kotlin/biokotlin/testMotifOutput.txt"
+    //Option 2: single aggregated file summing up motif counts across all sequences
+    val aggregatedOutputFile = "src/test/kotlin/biokotlin/testMotifOutput2.txt"
+
     File(outputFile).bufferedWriter().use { writer ->
         // Write headers for motif count matrix (motif counts for each seq)
         val headers = "SeqID\t${motifNames.joinToString("\t") }\n"
@@ -39,7 +43,7 @@ fun main() {
                 print("\t")
                 val count = countScoreAtThreshold(motifScores[motif]!!, threshold)
                 print(count)
-                writer.write(count)
+                writer.write(count.toString())
             }
             writer.write("\n")
             print("\n")
@@ -48,11 +52,4 @@ fun main() {
     }
 }
 
-fun countScoreAtThreshold(bytes:ByteArray, threshold:Int):Int {
-    // Will eventually want to add a filter for overlapping motifs
-    // Count "first" sequence exceeding threshold, or seq with highest score?
-    val count: Int = bytes.filter{it >= threshold}
-        .count()
-    return count
-}
 

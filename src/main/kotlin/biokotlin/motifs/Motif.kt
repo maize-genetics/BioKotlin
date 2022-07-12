@@ -116,64 +116,6 @@ data class Motif(
 
 }
 
-
-
-
-//fun readMotifsFromMEME(fileName: String): List<Motif> {
-//    val motifs = mutableListOf<Motif>()
-//    val block = mutableListOf<String>()
-//    File(fileName).forEachLine {
-//        if (it.startsWith("MOTIF")) {
-//            if(block[0].startsWith("MOTIF")) motifs.add(processMEMEBlock(block))
-//            block.clear()
-//            block.add(it)
-//        } else {
-//            block.add(it)
-//        }
-//    }
-//    if(block.isNotEmpty()) motifs.add(processMEMEBlock(block))
-//    return motifs
-//}
-
-/*fun readMotifs2(fileName: String): List<Motif> {
-    val motifs = mutableListOf<Motif>()
-    val block = mutableListOf<String>()
-    val file = File(fileName)
-    var lines:List<String> = file.readLines()
-    if (lines[0].startsWith(">")) { // Check whether motif file is in JASPAR format
-        file.forEachLine {
-            if (it.startsWith(">")) {
-                if(block.isNotEmpty()) {
-                    motifs.add(processJASPARBlock(block))
-                }
-                block.clear()
-                block.add(it)
-            } else {
-                block.add(it)
-            }
-        }
-        if(block.isNotEmpty()) motifs.add(processJASPARBlock(block))
-    }
-    else if (lines[0].startsWith("MEME")) { // Check whether motif file is in MEME format
-        File(fileName).forEachLine {
-            if (it.startsWith("MOTIF")) {
-                if(block[0].startsWith("MOTIF")) motifs.add(processMEMEBlock(block))
-                block.clear()
-                block.add(it)
-            } else {
-                block.add(it)
-            }
-        }
-        if(block.isNotEmpty()) motifs.add(processMEMEBlock(block))
-    }
-
-    else{
-        print("Error: Motif file must be in MEME or JASPAR format")
-    }
-
-    return motifs
-}*/
-
 fun readMotifs(fileName: String): List<Motif> {
     val motifs = mutableListOf<Motif>()
     val block = mutableListOf<String>()

@@ -4,6 +4,7 @@ import biokotlin.seq.BioSet
 import biokotlin.seq.NucSeq
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
@@ -87,4 +88,15 @@ class MotifTest : StringSpec({
 //
 //    test("pseudocounts") { }
 
+    "Count total number of windows exceeding threshold, both including and excluding overlaps within window size "{
+        val testArray = byteArrayOf(0,3,0,0,4,0,1,2)
+        val threshold = 2
+        val motifLength = 4
+        countScoreAtThreshold(testArray, threshold) shouldBe 3
+        countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 2
+    }
+
+    "Count non-overlapping windows exceeding threshold for a given sequence and motif"{
+
+    }
 })
