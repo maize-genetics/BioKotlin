@@ -4,6 +4,7 @@ import biokotlin.seqIO.NucSeqIO
 import biokotlin.seqIO.SeqFormat
 import java.io.File
 
+// No longer need this file, will delete
 fun main() {
     // Set threshold for motif detection
     val threshold = 1
