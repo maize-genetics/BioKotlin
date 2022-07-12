@@ -45,17 +45,21 @@ fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Int, motifLen
  * for a given sequence and each column corresponding to a particular motif.
  *
 Sample output:
-SeqID	Motif1	Motif2	Motif3
+FastaID	SeqID	MA0004.1	MA0006.1	MA0010.1
 
-B73V4_ctg182	0	0	1
-B73V4_ctg31	0	0	0
-B73V4_ctg14	0	1	1
-B73V4_ctg42	0	0	0
-B73V4_ctg58	0	0	0
-B73V4_ctg43	0	3	1
+B73_Ref_Subset	B73V4_ctg182	0	0	1
+B73_Ref_Subset	B73V4_ctg31	0	0	0
+B73_Ref_Subset	B73V4_ctg14	0	1	1
+B73_Ref_Subset	B73V4_ctg42	0	0	0
+B73_Ref_Subset	B73V4_ctg58	0	0	0
+B73_Ref_Subset	B73V4_ctg43	0	3	1
  */
 
-fun writeMotifHits(fasta:NucSeqIO, motifs:List<Motif>, threshold:Int, outputPath:String, nonOverlapping:Boolean = true) {
+fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Int, outputPath:String, nonOverlapping:Boolean = true) {
+    val fasta = NucSeqIO(fastaPath, SeqFormat.fasta)
+    val motifs = readMotifs(motifPath)
+    val fastaName = fastaPath.substringAfterLast("/").substringBeforeLast(".")
+
     // Make list of motif names
     val motifNames: MutableList<String> = mutableListOf()
     motifs.forEach { motif ->
@@ -63,7 +67,7 @@ fun writeMotifHits(fasta:NucSeqIO, motifs:List<Motif>, threshold:Int, outputPath
     }
     File(outputPath).bufferedWriter().use { writer ->
         // Write headers for motif count matrix (motif counts for each seq)
-        val headers = "SeqID\t${motifNames.joinToString("\t")}\n"
+        val headers = "FastaName\tSeqID\t${motifNames.joinToString("\t")}\n"
         writer.write(headers)
         writer.write("\n")
 
@@ -72,6 +76,9 @@ fun writeMotifHits(fasta:NucSeqIO, motifs:List<Motif>, threshold:Int, outputPath
             val seqID = seq.id
             // Calculate PSSM scores for each motif across sequence windows
             val motifScores = makeBillboard(motifs, seq.sequence)
+            //write fasta name
+            writer.write(fastaName)
+            writer.write("\t")
             //write seqID
             writer.write(seqID)
             // For each motif, count number of windows exceeding threshold

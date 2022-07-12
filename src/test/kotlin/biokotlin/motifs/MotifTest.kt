@@ -105,10 +105,10 @@ class MotifTest : StringSpec({
 
     "Count non-overlapping windows exceeding threshold for a given sequence and motif and write to file" {
         val threshold = 1
-        val fasta = NucSeqIO("src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa", SeqFormat.fasta)
-        val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+        val fastaPath = "src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa"
+        val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
         val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
-        writeMotifHits(fasta, motifs, threshold, outputPath)
+        writeMotifHits(fastaPath, motifPath, threshold, outputPath)
         var lines: List<String> = File(outputPath).readLines()
         lines.forEach { println(it) }
     }
