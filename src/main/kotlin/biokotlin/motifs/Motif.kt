@@ -12,58 +12,63 @@ import kotlin.math.log
 import kotlin.math.roundToInt
 
 
-fun main() {
-    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
-    motifs.forEach{println(it)}
+//fun main() {
+//    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+//    motifs.forEach{println(it)}
+//
+//    Multik.setEngine(NativeEngineType)
+//    val cnt = mk.ndarray(
+//        mk[
+//                mk[4, 19, 0, 0, 0, 0],
+//                mk[16, 0, 20, 0, 0, 0],
+//                mk[0, 1, 0, 20, 0, 20],
+//                mk[0, 0, 0, 0, 20, 0]
+//        ]
+//    )
+//    println(cnt)
+//
+//    val aMotif = Motif("MA0004.1", cnt)
+//    println(aMotif)
+//    println(aMotif.length)
+//    println(aMotif.pwm())
+//    println(aMotif.pssm)
+//
+//    val bMotif = Motif("MA0004.1", cnt, pseudocounts = 1.0)
+//    println(bMotif.pwm())
+//
+//    println(bMotif.pssm)
+//
+////    val reflect = mk.ndarray(mk[
+////            mk[-1.0,0.0,0.0,0.0],
+////        mk[0.0,-1.0,0.0,0.0],
+////        mk[0.0,0.0,-1.0,0.0],
+////        mk[0.0,0.0,0.0,-1.0]
+////    ])
+//    val reflect = mk.identity<Double>(6).transpose()
+////    val reflect = mk.ndarray(mk[
+////            mk[0.0,0.0,0.0,1.0],
+////            mk[0.0,0.0,1.0,0.0],
+////            mk[0.0,1.0,0.0,0.0],
+////            mk[1.0,0.0,0.0,0.0]
+////    ])
+//    println(reflect)
+//   // println(bMotif.pssm.dot())
+//    val revArr = bMotif.pssm.toDoubleArray().reversedArray()
+//    println(revArr)
+//    println(mk.ndarray(revArr,4,6))
+//}
 
-    Multik.setEngine(NativeEngineType)
-    val cnt = mk.ndarray(
-        mk[
-                mk[4, 19, 0, 0, 0, 0],
-                mk[16, 0, 20, 0, 0, 0],
-                mk[0, 1, 0, 20, 0, 20],
-                mk[0, 0, 0, 0, 20, 0]
-        ]
-    )
-    println(cnt)
-
-    val aMotif = Motif("MA0004.1", cnt)
-    println(aMotif)
-    println(aMotif.length)
-    println(aMotif.pwm())
-    println(aMotif.pssm)
-
-    val bMotif = Motif("MA0004.1", cnt, pseudocounts = 1.0)
-    println(bMotif.pwm())
-
-    println(bMotif.pssm)
-
-//    val reflect = mk.ndarray(mk[
-//            mk[-1.0,0.0,0.0,0.0],
-//        mk[0.0,-1.0,0.0,0.0],
-//        mk[0.0,0.0,-1.0,0.0],
-//        mk[0.0,0.0,0.0,-1.0]
-//    ])
-    val reflect = mk.identity<Double>(6).transpose()
-//    val reflect = mk.ndarray(mk[
-//            mk[0.0,0.0,0.0,1.0],
-//            mk[0.0,0.0,1.0,0.0],
-//            mk[0.0,1.0,0.0,0.0],
-//            mk[1.0,0.0,0.0,0.0]
-//    ])
-    println(reflect)
-   // println(bMotif.pssm.dot())
-    val revArr = bMotif.pssm.toDoubleArray().reversedArray()
-    println(revArr)
-    println(mk.ndarray(revArr,4,6))
-}
-
+/**
+ * The Motif class stores a count matrix or position weight matrix and associated attributes, including a
+ * position specific scoring matrices (PSSM) for forward and reverse complements, given some background nucleotide
+ * frequency. An associated search function calculates PSSM scores for an input sequence.
+ */
 data class Motif(
     val name: String,
     val counts: NDArray<Int, D2>,
     val bioSet: BioSet = BioSet.DNA,
-    val pseudocounts: Double = 0.0,
-    val background: List<Double> = listOf(0.25,0.25,0.25,0.25)
+    val pseudocounts: Double = 0.0, // Modify this?
+    val background: List<Double> = listOf(0.25,0.25,0.25,0.25) // Provide user an option to modify this
 ) {
 
     val length: Int = counts.shape[1]
@@ -91,26 +96,31 @@ data class Motif(
         return "Motif(name='$name', bioSet=$bioSet, pseudocounts=$pseudocounts, length=$length, numObservations=$numObservations\n" +
                 "counts=\n$counts)"
     }
-
-    fun search(seq: NucSeq, threshold:Double =3.0, bothStrands:Boolean = true): Map<Int, Double> {
+    /*
+            This function iterates through a NucSeq object and calculates forward and reverse PSSM scores for each
+            window (window size = motif length). Scores are stored in a map of indices and scores.
+            Forward and reverse scores are compared and the higher score is stored. Index output is negative if the
+            reverse strand had a higher score.
+         */
+    fun search(seq: NucSeq, bothStrands:Boolean = true): Map<Int, Double> {
         val hits = TreeMap<Int,Double>()
         //a simple array is about 2X faster to access
         val forwardPSSM = pssm.toDoubleArray()
         val reversePSSM = pssmRC.toDoubleArray()
-        //go through the entire sequence
+        //go through the entire sequence, iterating through sliding windows one bp apart (# windows = seq size - motif length)
         for (i in 0..(seq.size() - length)) {
             var forwardPssmSum=0.0
             var reversePssmSum=0.0
-            //evaluate the motif
+            // Calculate PSSM scores for current window, both forward and reverse unless bothStrands = false
             for (j in 0 until length) {
                 val b= (seq[i + j].fourBit.toInt()*length)+j
                 forwardPssmSum += forwardPSSM[b]
                 if(bothStrands) reversePssmSum += reversePSSM[b]
             }
-            if(forwardPssmSum>threshold || reversePssmSum>threshold) {
-                if(forwardPssmSum > reversePssmSum) hits.put(i,forwardPssmSum) else hits.put(-i,reversePssmSum)
+            // Store forward or reverse PSSM score, whichever is higher
+            if(forwardPssmSum > reversePssmSum) hits.put(i,forwardPssmSum) else hits.put(-i,reversePssmSum)
             }
-        }
+
         return hits
     }
 

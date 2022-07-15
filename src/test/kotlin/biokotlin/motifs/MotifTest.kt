@@ -35,21 +35,29 @@ class MotifTest : StringSpec({
     "BioSet should be DNA" { aMotif.bioSet shouldBe BioSet.DNA }
 
     "Search small seq" {
-        //val aSeq = NucSeq("CACGTTaAACGTG")
-        val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
+        val aSeq = NucSeq("CACGTTaAACGTG")
+        //val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
+        val searchResult = aMotif.search(aSeq)
+        print(searchResult)
+        searchResult.size shouldBe aSeq.size() - aMotif.length + 1
+        //TODO: test whether individual scores are correct and that the higher of the forward and reverse PSSM scores is output
         val genesToTest = 30_000
         var totalHits = 0
         val time = measureNanoTime {
             repeat(genesToTest) {
-                totalHits += aMotif.search(aSeq, 3.0).size
+                totalHits += aMotif.search(aSeq).size
             }
         }
         println(
-            "length = ${aSeq.size() * genesToTest}bp Time = $time ns Rate = ${
+            "Time = $time ns Rate = ${
                 aSeq.size().toDouble() * genesToTest / time
             } bp/nanoSec"
         )
         println("Time = ${time.toDouble() / 1e9} sec TotalHits = $totalHits")
+    }
+
+    "Scan sequence for multiple motifs" {
+        TODO()
     }
 
     "Read from MEME file" {
