@@ -213,8 +213,6 @@ fun parseLink(path: String, text: String): String {
 
     val regex = Regex(regexString)
     val matches = regex.findAll(text)
-    println("==============")
-    matches.forEach { println(it.value) }
 
     val functions = matches.asSequence().filter { it.value.contains("#") }
     val nonFunctions = matches.asSequence().filter { !it.value.contains("#") }
