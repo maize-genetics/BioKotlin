@@ -96,7 +96,7 @@ dependencies {
 
     //Multidimensional matrices
     implementation("org.jetbrains.kotlinx:multik-api:0.1.1")
-    implementation("org.jetbrains.kotlinx:multik-default:0.1.1")
+    implementation("org.jetbrains.kotlinx:multik-jvm:0.1.1")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 

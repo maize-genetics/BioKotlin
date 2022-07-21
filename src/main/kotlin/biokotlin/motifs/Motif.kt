@@ -126,15 +126,18 @@ data class Motif(
 
 }
 
+/**
+ * This function reads a JASPAR or MEME file containing one more motifs and returns a list of motif objects
+ */
 fun readMotifs(fileName: String): List<Motif> {
-    val motifs = mutableListOf<Motif>()
-    val block = mutableListOf<String>()
-    var lines:List<String> = File(fileName).readLines()
-    val isJASPAR = lines[0].startsWith(">")
-    val blockDelimiter = if(isJASPAR) ">" else "MOTIF"
+    val motifs = mutableListOf<Motif>() // Initialize empty list of motif objects
+    val block = mutableListOf<String>() // Initialize variable to store motif blocks when reading from file
+    var lines:List<String> = File(fileName).readLines() // Read from motif file
+    val isJASPAR = lines[0].startsWith(">") // Determine whether file is in JASPAR format (otherwise MEME)
+    val blockDelimiter = if(isJASPAR) ">" else "MOTIF" // Set the appropriate block delimiter
     val processBlock: (List<String>) -> Motif = if(isJASPAR) ::processJASPARBlock else ::processMEMEBlock
     //var processorFunction:List<String> -> Motif> = if(isJASPAR) ::processMEMEBlock else ::processJASPARBlock
-    lines.forEach {
+    lines.forEach {// Iterate over each line in motif file
         if (it.startsWith(blockDelimiter)) {
             if(block.isNotEmpty() && block[0].startsWith(blockDelimiter)) motifs.add(processBlock(block))
             block.clear()
@@ -150,19 +153,21 @@ fun readMotifs(fileName: String): List<Motif> {
     return motifs
 }
 
+/** This function reads a motif in MEME format into a motif object
+*/
 private fun processMEMEBlock(motifBlock: List<String>): Motif {
-    val name = motifBlock[0].split(" ")[1]
+    val name = motifBlock[0].split(" ")[1] // Capture motif name
     val header = motifBlock[1].split("[:=\\s]+".toRegex()) //Regex is on (: or = or white-space) with greedy accumulation
     val alength = header[3].toInt() //alphabet size (e.g. DNA = 4)
     val w =header[5].toInt()  //motif width
     val nsites = header[7].toInt() //number of sites the motif is based on
-    val counts: List<Int> = motifBlock.subList(2,2+w)
+    val counts: List<Int> = motifBlock.subList(2,2+w) // Convert site frequencies to counts
             .flatMap{it.trim().split("\\s+".toRegex())}
             .map{freq -> (freq.toDouble() * nsites).roundToInt()}
     return Motif(name, mk.ndarray(counts,w,alength).transpose())
 }
 
-/**
+/** This function reads a motif in JASPAR format into a motif object
  * >MA0551.1	MA0551.1.HY5
 A  [   103    108     52      9    150      0    310      3      1      0      2      4     24    183     94     89 ]
 C  [    60     56     55      8    165    317      1    311      5      9      1      1    279     30     62     68 ]
@@ -170,18 +175,14 @@ G  [    68     62     30    279      1      1      9      5    311      1    317
 T  [    89     94    183     24      4      2      0      1      3    310      0    150      9     52    108    103 ]
  */
 private fun processJASPARBlock  (motifBlock: List<String>): Motif {
-    val name = motifBlock[0].split("[>\\s]+".toRegex())[1]
-    println(name)
+    val name = motifBlock[0].split("[>\\s]+".toRegex())[1] // Capture motif name
     val alength = motifBlock.size - 1 // get alphabet size (e.g. DNA = 4)
     val w = motifBlock[1].split("\\s+".toRegex()).size - 3 // get motif width
-    val counts: List<Int> = motifBlock.subList(1,1+alength)
-//        .map { it.split("[\\[\\]]")}
+    val counts: List<Int> = motifBlock.subList(1,1+alength) // Capture counts
         .map{ it.substringAfter("[").substringBeforeLast("]").trim()}
-//        .map { it.trim().drop(4).dropLast(1) }
         .flatMap{it.trim().split("\\s+".toRegex())}
         .onEach { println("after: $it") }
         .map{count -> count.toInt()}
-
 
     return Motif(name, mk.ndarray(counts,alength,w))
 }
