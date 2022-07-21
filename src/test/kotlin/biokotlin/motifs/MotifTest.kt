@@ -56,9 +56,9 @@ class MotifTest : StringSpec({
         println("Time = ${time.toDouble() / 1e9} sec TotalHits = $totalHits")
     }
 
-    "Scan sequence for multiple motifs" {
-        TODO()
-    }
+//    "Scan sequence for multiple motifs" {
+//        TODO()
+//    }
 
     "Read from MEME file" {
         val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
