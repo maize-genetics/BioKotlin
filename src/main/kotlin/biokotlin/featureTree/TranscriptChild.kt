@@ -1,5 +1,9 @@
 package biokotlin.featureTree
 
+/**
+ * The direct children of a transcript. Contains a pointer to the transcript. Indicated in green:
+ * <img src="feature_tree/child_groupings.svg" style="display: block; margin-left: auto; margin-right: auto">
+ */
 sealed class TranscriptChild(
     seqid: String,
     source: String,
@@ -29,7 +33,7 @@ sealed class TranscriptChild(
 }
 
 /**
- * Represents a leader (AKA 5' UTR) in the [biokotlin.featureTree] framework.
+ * Represents a leader (AKA 5' UTR) in a GFF file.
  */
 class Leader internal constructor(
     seqid: String,
@@ -46,7 +50,7 @@ class Leader internal constructor(
 }
 
 /**
- * Represents an exon in the [biokotlin.featureTree] framework.
+ * Represents an exon in a GFF file.
  */
 class Exon internal constructor(
     seqid: String,
@@ -63,7 +67,7 @@ class Exon internal constructor(
 }
 
 /**
- * Represents a coding sequence (AKA CDS) in the [biokotlin.featureTree] framework.
+ * Represents a coding sequence (AKA CDS) in a GFF file.
  */
 class CodingSequence internal constructor(
     seqid: String,
@@ -80,7 +84,7 @@ class CodingSequence internal constructor(
 }
 
 /**
- * Represents a terminator (AKA 3' UTR) in the [biokotlin.featureTree] framework.
+ * Represents a terminator (AKA 3' UTR) in a GFF file.
  */
 class Terminator internal constructor(
     seqid: String,

@@ -1,7 +1,9 @@
 package biokotlin.featureTree
 
 /**
- * Represents a transcript (mRNA) in a GFF file.
+ * Represents a transcript (mRNA) in a GFF file. All direct children are [TranscriptChild], indicated in green:
+ * <img src="feature_tree/child_groupings.svg" style="display: block; margin-left: auto; margin-right: auto">
+ * Contains a pointer to its parent gene.
  */
 class Transcript internal constructor(
     seqid: String,
@@ -24,9 +26,9 @@ class Transcript internal constructor(
 
     /**
      * The exons, leaders, coding sequences, and terminators that are direct children of
-     * this transcript, ordered by [FeatureComparator].
+     * this transcript, ordered by [Feature.compareTo].
      */
-    val children = children.sortedWith(FeatureComparator())
+    val children = children.sorted()
 
     /**
      * Creates a [Protein] object that contains pointers to this [Transcript] and to the [CodingSequence]
@@ -57,33 +59,43 @@ class Transcript internal constructor(
     override fun children() = children as List<Feature>
 
     /**
-     * Returns the exons of this transcript, ordered by [FeatureComparator].
+     * Returns the exons of this transcript, ordered by [Feature.compareTo].
      */
     fun exons() = children.filterIsInstance<Exon>()
 
     /**
-     * Returns the leaders (aka 5' UTRs) of this transcript, ordered by [FeatureComparator].
+     * Equivalent to exons()[[index]].
+     */
+    fun exon(index: Int) = exons()[index]
+
+    /**
+     * Returns the leaders (aka 5' UTRs) of this transcript, ordered by [Feature.compareTo].
      */
     fun leaders() = children.filterIsInstance<Leader>()
 
     /**
-     * Returns the coding sequences of this transcript, ordered by [FeatureComparator].
+     * Equivalent to leaders()[[index]].
+     */
+    fun leader(index: Int) = leaders()[index]
+
+    /**
+     * Returns the coding sequences of this transcript, ordered by [Feature.compareTo].
      */
     fun codingSequences() = children.filterIsInstance<CodingSequence>()
 
     /**
-     * Returns the terminators (aka 3' UTRs) of this transcript, ordered by [FeatureComparator].
+     * Equivalent to codingSequences()[[index]].
+     */
+    fun codingSequence(index: Int) = codingSequences()[index]
+
+    /**
+     * Returns the terminators (aka 3' UTRs) of this transcript, ordered by [Feature.compareTo].
      */
     fun terminators() = children.filterIsInstance<Terminator>()
 
     /**
-     * Returns true if this transcript is canonical, false otherwise.
-     *
-     * For this to return true, the GFF must specify canonical transcripts in a
-     * canonical_transcript attribute.
-     * TODO how is this specified?
+     * Equivalent to terminators()[[index]].
      */
-    fun isCanonical(): Boolean {
-        TODO()
-    }
+    fun terminator(index: Int) = terminators()[index]
+
 }

@@ -1,12 +1,15 @@
 package biokotlin.featureTree
 
+import biokotlin.genome.GenomicFeatures
 import io.ktor.util.pipeline.*
-import org.jetbrains.kotlinx.dataframe.api.CellAttributes
 
 /**
- * Represents a genomic feature in a GFF file as part of the [biokotlin.featureTree] framework.
+ * Represents a genomic feature in a GFF file as part of the [biokotlin.featureTree] framework. The properties of this
+ * class and the [type] function represent the nine columns of data in a GFF file.
  * Descriptions for the properties of this class are taken from
  * [the specification of the GFF format](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md).
+ * Subtypes of this within the feature tree framework class are circled:
+ * <img src="feature_tree/features.svg" style="display: block; margin-left: auto; margin-right: auto">
  *
  * All subtypes may only be instantiated through [FeatureBuilder].
  *
@@ -56,8 +59,8 @@ sealed class Feature(
     /**
      * A list of feature attributes in the format tag=value. Multiple tag=value pairs are separated by semicolons. URL escaping rules are used for tags or values containing the following characters: ",=;". Spaces are allowed in this field, but tabs must be replaced with the %09 URL escape. Attribute values do not need to be and should not be quoted. The quotes should be included as part of the value by parsers and not stripped.
      *
-     * Note that the [biokotlin.featureTree] framework will treat tags with multiple comma-seperated values as a single
-     * value that contains literal commas.
+     * Within the [biokotlin.featureTree] framework, atrributes are represented as map where the key is the tag and the value is the value.
+    Note that tags with multiple comma-seperated values as a single will be treated as a single value that contains literal commas.
 
     These tags have predefined meanings:
 
@@ -83,10 +86,9 @@ sealed class Feature(
 
     Is_circular - A flag to indicate whether a feature is circular. See extended discussion below.
 
-     Within the [biokotlin.featureTree] framework, atrributes are represented as map where the key is the tag and the value is the value.
      */
     val attributes: Map<String, String>
-) {
+): Comparable<Feature> {
     /**
      * The type of this instance of [Feature].
      */
@@ -101,20 +103,40 @@ sealed class Feature(
         val phaseString = if (phase < 0) "." else phase.toString()
 
         val attributesString = StringBuilder()
-        for ((tag, set) in attributes) {
-            attributesString.append(tag).append("=")
-            for (value in set) {
-                attributesString.append(value).append(",")
-            }
+        for ((tag, value) in attributes) {
+            attributesString.append(tag).append("=").append(value).append(";")
+
         }
         return "$seqid\t$source\t${type().gffName}\t$start\t$end\t$scoreString\t$strand\t$phaseString\t${attributesString}\n"
     }
+
+    /**
+     * Compares this and [other] for order. Returns zero if they are equal,
+     * a negative number if this is less than [other], or a positive number if this is greater than [other].
+     *
+     * Will first sort alphabetically by seqid. Breaks ties as follows:
+     * 1. Earlier start is first.
+     * 2. Later end is first.
+     * 3. [Exon] comes before [CodingSequence], [Leader], and [Terminator]. [Chromosome], [Scaffold], and [Contig]
+     * come before [Gene].
+     */
+    override fun compareTo(other: Feature): Int {
+        if (seqid.compareTo(other.seqid) != 0) return seqid.compareTo(other.seqid)
+        if (start.compareTo(other.start) != 0) return start.compareTo(other.start)
+        if (other.end.compareTo(end) != 0) return other.end.compareTo(end)
+        if (this is Exon && (other is CodingSequence || other is Leader || other is Terminator)) return -1
+        if (other is Exon && (this is CodingSequence || this is Leader || this is Terminator)) return 1
+        if ((this is Chromosome || this is Scaffold || this is Contig) && other is Gene) return -1
+        if ((other is Chromosome || other is Scaffold || other is Contig) && this is Gene) return 1
+        return 0
+    }
+
 }
 
 /**
  * Enumerates the types of [Feature] that can exist. This class also stores the
- * names of the types as they appear in GFF files and provides a method
- * for converting from the GFF name to a [FeatureType].
+ * names of the types as they appear in GFF files. Use [convert] to convert from the name
+ * as it appears in a GFF to a [FeatureType].
  */
 enum class FeatureType(
     /**
@@ -137,6 +159,10 @@ enum class FeatureType(
      */
     LEADER("five_prime_UTR"),
     EXON("exon"),
+
+    /**
+     * AKA CDS
+     */
     CODING_SEQUENCE("CDS"),
 
     /**
@@ -149,41 +175,7 @@ enum class FeatureType(
             for (type in values()) {
                 if (gffString == type.gffName) return type
             }
-            throw Exception("Could not parse provided GFF type into a FeatureType")
+            throw IllegalArgumentException("Could not parse provided type \"$gffString\" into a FeatureType.")
         }
     }
-}
-
-/**
- * Compares instances of [Feature].
- */
-class FeatureComparator: Comparator<Feature> {
-    /**
-     * Compares its two arguments for order. Returns zero if the arguments are equal,
-     * a negative number if the first argument is less than the second, or a positive number if the
-     * first argument is greater than the second. A null value in either position will return 0.
-     *
-     * Will first sort alphabetically by seqid. Breaks ties as follows:
-     * 1. Earlier start is first.
-     * 2. Later end is first.
-     * 3. [Exon] comes before [CodingSequence], [Leader], and [Terminator]. [Chromosome], [Scaffold], and [Contig]
-     * come before [Gene].
-     */
-    override fun compare(p0: Feature?, p1: Feature?): Int {
-        if (p0 == null || p1 == null) return 0
-
-        if (p0.seqid.compareTo(p1.seqid) != 0) return p0.seqid.compareTo(p1.seqid)
-        if (p0.start.compareTo(p1.start) != 0) return p0.start.compareTo(p1.start)
-        if (p1.end.compareTo(p0.end) != 0) return p1.end.compareTo(p0.end)
-        if (p0 is Exon && (p1 is CodingSequence || p1 is Leader || p1 is Terminator)) return -1
-        if (p1 is Exon && (p0 is CodingSequence || p0 is Leader || p0 is Terminator)) return 1
-        if ((p0 is Chromosome || p0 is Scaffold || p0 is Contig) && p1 is Gene) return -1
-        if ((p1 is Chromosome || p1 is Scaffold || p1 is Contig) && p0 is Gene) return 1
-        return 0
-    }
-
-}
-
-fun main() {
-    println(Genome.fromGFF("/home/jeff/Buckler/Biokotlin/b73_shortened.gff").visualize())
 }

@@ -21,11 +21,9 @@ To use BioKotlin with JupyterLab:
 3. Install the Kotlin kernel with 'conda install -c jetbrains kotlin-jupyter-kernel'
 4. Install [JupyterLab](https://jupyter.org/install)
 
-To use BioKotlin in a Kotlin project:
-1. TODO
-
 ## Introductory Tutorials
 ### Basic sequence manipulation in JupyterLab
+
 !tutorial basic_sequence
 
 # Package biokotlin.seq
@@ -73,3 +71,57 @@ val protein = ProteinSeq("TGWR")
 You will typically use Bio.SeqIO to read in sequences from files as
 SeqRecord objects, whose sequence will be exposed as a Seq object via
 the seq property.
+
+# Package biokotlin.featureTree
+The featureTree package is used to represent the features of a [GFF file](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md)
+as a tree, using the Parent attribute of the file to create parent/child relationships. To ensure that the parsed tree is
+meaningful, the package imposes limitations on the structure of the resulting tree, which is modelled after the standard
+structure used by genome databases, such as [maizeGDB](https://www.maizegdb.org/genome/assembly/Zm-B73-REFERENCE-NAM-5.0).
+The resulting tree must adhere to the parent/child relationships in this diagram:
+<img src="feature_tree/feature_tree_structure.svg" style="display: block; margin-left: auto; margin-right: auto">
+Note that the package generally avoids acronyms: 5' UTRs are referred to as leaders, 3' as terminators, and CDS as coding
+sequences. The tree structure allows for intuitive parsing up and down the tree. To avoid subtle errors, navigating
+to a different location in the tree generally requires "knowing where you are," that is, to find the [Gene] parent
+of a transcript, you must know that it is a transcript.
+
+Parsing a GFF file to a tree requires only a single line:
+```kotlin
+val genome = Genome.fromGFF("pathname.gff")
+```
+
+GFFs that do not adhere to the structure will crash. Those that contain feature types that are not currently
+supported will have those features skipped but will otherwise parse normally. Parsing works irrespective of the
+ordering of the features in the file. The representation is totally immutable. Moreover, nodes may only
+be instantiated through [GenomeBuilder], though it is recommended to only create trees from parsing GFF files. 
+
+## Understanding the tree structure
+### Features
+The class [Feature] contains the data of the nine columns of a GFF file, 
+such as [Feature.start], [Feature.seqid], etc. 
+The only member of the  tree that is not a [Feature] is the [Genome], 
+which can be thought of as a container representing the entire file.
+<img src="feature_tree/features.svg" style="display: block; margin-left: auto; margin-right: auto">
+
+### Child grouping
+To ensure that the tree has the proper parent/child relationships, children are generally subtypes
+of a child group class, which supplies the pointer to their parent. For example, any direct child of
+the genome can call [GenomeChild.genome] to access the genome. Children can be accessed as instances
+of their child group through the children property of the parent, or as more specific instances through
+methods such as [Genome.chromosomes], [Transcript.exons], etc.
+
+<img src="feature_tree/child_groupings.svg" style="display: block; margin-left: auto; margin-right: auto">
+
+### AssemblyUnits
+While [Chromosome], [Scaffold], and [Contig] do not list genes as their children, they do provide the [AssemblyUnit.genes]
+method, which can access the genes within the genome that have the same seqid as the [AssemblyUnit].
+
+<img src="feature_tree/assembly_unit.svg" style="display: block; margin-left: auto; margin-right: auto">
+
+### Ancestors
+All nodes on the tree that have descendants implement the [Ancestor] interface. This interface gives
+access to the [Ancestor.flatten] method, which collapses the tree representation into a list, allowing
+you to take advantage of the powerful [Kotlin collections framework](https://kotlinlang.org/docs/collections-overview.html). 
+A related method, [Ancestor.within], will output a list of descendant features within a range of start 
+and end points.
+
+<img src="feature_tree/ancestors.svg" style="display: block; margin-left: auto; margin-right: auto">
