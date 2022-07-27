@@ -11,7 +11,6 @@ import java.io.File
 import biokotlin.featureTree.FeatureType.*
 import biokotlin.genome.GenomicFeatures
 
-//TODO document better
 class FeatureTreeTesting : StringSpec({
     val setUpListener = listener(SystemOutWireListener(true))
     val b73_shortened = Genome.fromGFF("src/test/kotlin/biokotlin/featureTree/gffs/b73_shortened.gff") //This is a valid tree, for reference
@@ -198,6 +197,20 @@ class FeatureTreeTesting : StringSpec({
         protein.proteinID shouldBe "Zm00001eb000010_P001"
         protein.transcript shouldBe transcript
         protein.codingSequences shouldBe transcript.codingSequences()
+    }
+
+    "introns" {
+        val transcript = b73_shortened.gene(0).transcript(0)
+        val introns = transcript.introns
+        introns.size shouldBe 8
+        introns[0].intRange() shouldBe 35318 + 1..36037 - 1
+        introns[1].intRange() shouldBe 36174 + 1..36259 - 1
+        introns[2].intRange() shouldBe 36504 + 1..36600 - 1
+        introns[3].intRange() shouldBe 36713 + 1..36822 - 1
+        introns[4].intRange() shouldBe 37004 + 1..37416 - 1
+        introns[5].intRange() shouldBe 37633 + 1..38021 - 1
+        introns[6].intRange() shouldBe 38482 + 1..38571 - 1
+        introns[7].intRange() shouldBe 39618 + 1..39701 - 1
     }
 
     /*

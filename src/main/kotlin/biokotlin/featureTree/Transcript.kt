@@ -40,6 +40,18 @@ class Transcript internal constructor(
     }
 
     /**
+     * Imputes the introns of this transcript by finding the gaps between the exons, then stores them lazily.
+     * If there are no introns, then this returns an empty list.
+     */
+    val introns: List<Intron> by lazy {
+        val introns = mutableListOf<Intron>()
+        for (exonIndex in 0 until exons().size - 1) {
+            introns.add(Intron(exon(exonIndex), exon(exonIndex + 1), this))
+        }
+        introns
+    }
+
+    /**
      * The gene that is the direct parent of this [Transcript].
      */
     fun gene() = geneField
