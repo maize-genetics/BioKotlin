@@ -3,7 +3,7 @@ package biokotlin.featureTree
 /**
  * Represents a protein. Can ony be instantiated through [Transcript.protein].
  */
-class Protein internal constructor(
+data class Protein internal constructor(
     /**
      * The transcript that encodes this protein
      */
