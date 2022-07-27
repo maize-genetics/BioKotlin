@@ -95,6 +95,16 @@ sealed class Feature(
     abstract fun type(): FeatureType
 
     /**
+     * The length of this [Feature]
+     */
+    val length = end - start + 1
+
+    /**
+     * [start] and [end] as an [IntRange].
+     */
+    fun intRange(): IntRange = start..end
+
+    /**
      * Returns the [Feature] as it would appear as a row in a GFF file.
      */
     override fun toString(): String {
@@ -117,17 +127,19 @@ sealed class Feature(
      * Will first sort alphabetically by seqid. Breaks ties as follows:
      * 1. Earlier start is first.
      * 2. Later end is first.
-     * 3. [Exon] comes before [CodingSequence], [Leader], and [Terminator]. [Chromosome], [Scaffold], and [Contig]
-     * come before [Gene].
+     * 3. Features are ordered by type:
+     * [Chromosome], [Scaffold], and [Contig] -> [Gene] -> [Transcript] -> [Exon] -> [Leader], [CodingSequence], and [Terminator]
+     *
+     * This means that generally features will be sorted before the features they contain.
      */
     override fun compareTo(other: Feature): Int {
         if (seqid.compareTo(other.seqid) != 0) return seqid.compareTo(other.seqid)
         if (start.compareTo(other.start) != 0) return start.compareTo(other.start)
         if (other.end.compareTo(end) != 0) return other.end.compareTo(end)
-        if (this is Exon && (other is CodingSequence || other is Leader || other is Terminator)) return -1
-        if (other is Exon && (this is CodingSequence || this is Leader || this is Terminator)) return 1
-        if ((this is Chromosome || this is Scaffold || this is Contig) && other is Gene) return -1
-        if ((other is Chromosome || other is Scaffold || other is Contig) && this is Gene) return 1
+        if (this is AssemblyUnit && other !is AssemblyUnit) return -1
+        if (this is Gene && other !is Gene) return -1
+        if (this is Transcript && other !is Transcript) return -1
+        if (this is Exon && other !is Exon) return -1
         return 0
     }
 

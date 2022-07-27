@@ -61,7 +61,7 @@ sealed interface Ancestor {
      * or if start is greater than end.
      * @throws [IndexOutOfBoundsException] if start or end are non-positive.
      */
-    fun within(start: Int, end: Int, seqid: String? = null, direct: Boolean = false): List<Feature> {
+    fun within(start: Int = 1, end: Int = Int.MAX_VALUE, seqid: String? = null, direct: Boolean = false): List<Feature> {
         val correctedSeqid = seqid
             ?: if (this is Feature) this.seqid
             else throw IllegalArgumentException("Instances of ${this::class} cannot receive calls of within without specifying the seqid.")
@@ -75,6 +75,13 @@ sealed interface Ancestor {
         } else {
             flatten().filter { it.start >= start && it.end <= end && it.seqid == correctedSeqid }
         }
+    }
+
+    /**
+     * Equivalent to within(intRange.first, intRange.last, seqid, direct)
+     */
+    fun within(intRange: IntRange, seqid: String? = null, direct: Boolean = false): List<Feature> {
+        return within(intRange.first, intRange.last, seqid, direct)
     }
 
     /**
