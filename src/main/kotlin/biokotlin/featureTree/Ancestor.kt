@@ -118,8 +118,6 @@ sealed interface Ancestor {
                 is GenomeChild -> descendant.genome()
                 is Transcript -> descendant.gene()
                 is TranscriptChild -> descendant.transcript()
-                else -> throw Exception() //unusual, the IDE doesn't yell at me but the compiler does. The above
-                //should be exhaustive because Feature is sealed, but the compiler seems to not recognize this?
             }
             sb.append("\"${descendant.hashCode()}\" -> \"${parent.hashCode()}\"\n")
 

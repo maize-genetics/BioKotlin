@@ -321,13 +321,13 @@ fun recursivelyInjectImages(file: File, depth: Int) {
  */
 val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    description = "BioKotlin: ${property("version")}"
+    archiveClassifier.set("javadoc")
+    from(dokkaHtml.outputDirectory)
     doLast {
         tutorialInjector()
         imageInjector()
-        group = JavaBasePlugin.DOCUMENTATION_GROUP
-        description = "BioKotlin: ${property("version")}"
-        archiveClassifier.set("javadoc")
-        from(dokkaHtml.outputDirectory)
     }
 }
 
