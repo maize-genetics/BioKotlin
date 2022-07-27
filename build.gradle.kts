@@ -126,6 +126,10 @@ val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
             includes.from("src/main/kotlin/biokotlin/packages.md")
         }
     }
+    doLast {
+        tutorialInjector()
+        imageInjector()
+    }
 }
 
 /**
@@ -290,7 +294,7 @@ fun imageInjector() {
     val html = File("${rootProject.projectDir}/build/dokka/html")
     val documentationImages = File("${rootProject.projectDir}/build/dokka/html/documentation_images")
     documentationImages.mkdirs()
-    images.copyRecursively(documentationImages)
+    images.copyRecursively(documentationImages, overwrite = true)
     recursivelyInjectImages(html, -1)
 }
 
@@ -316,19 +320,13 @@ fun recursivelyInjectImages(file: File, depth: Int) {
     }
 }
 
-/**
- * You must run clean before this.
- */
 val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
+    mustRunAfter(dokkaHtml)
     group = JavaBasePlugin.DOCUMENTATION_GROUP
     description = "BioKotlin: ${property("version")}"
     archiveClassifier.set("javadoc")
     from(dokkaHtml.outputDirectory)
-    doLast {
-        tutorialInjector()
-        imageInjector()
-    }
 }
 
 tasks.test {
