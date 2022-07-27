@@ -443,3 +443,8 @@ tasks.jar {
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
+
+tasks.publish {
+    dependsOn(dokkaJar)
+    mustRunAfter(dokkaJar)
+}
