@@ -200,6 +200,8 @@ class FeatureTreeTesting : StringSpec({
         protein.codingSequences shouldBe transcript.codingSequences()
     }
 
+    /*
+    These metrics are dependent on data that is too large for git, so they have been commented out.
     "performance metrics" {
         val initialMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
         val initialTime = System.nanoTime()
@@ -217,7 +219,7 @@ class FeatureTreeTesting : StringSpec({
         println("DataFrame parse time: ${dataFrameTime / 1e9}")
         println("Tree parse time: ${treeTime / 1e9}")
 
-    }
+    }*/
 })
 
 /**
