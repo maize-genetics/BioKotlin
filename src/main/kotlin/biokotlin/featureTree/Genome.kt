@@ -19,6 +19,8 @@ class Genome internal constructor(children: List<GenomeChild>): Ancestor {
     /**
      * A map where the keys are the IDs of features within this [Genome] and the values
      * are the features. Initialized lazily.
+     *
+     * If multiple features share an ID, the last feature in the list will be used (per their ordering in [flatten]).
      */
     val byID by lazy {
         flatten().associateBy { it.attributes["ID"] }
