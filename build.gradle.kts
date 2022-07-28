@@ -120,6 +120,10 @@ tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
 }
 
+/**
+ * Generates HTML files based on Javadoc-style comments. Supports automatic insertion of Jupyter notebook tutorials,
+ * (see [tutorialInjector] for details). Supports insertion of images (see [imageInjector] for details).
+ */
 val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
     dokkaSourceSets {
         configureEach {
@@ -133,11 +137,12 @@ val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
 }
 
 /**
- * Replaces instance of !tutorial tutorial_name with a link to the tutorial.
+ * Replaces occurences of ```!tutorial tutorial_name``` within the Javadocs with am embedded tutorial.
  *
- * !tutorial tutorial_name must be on its own line, surrounded by a blank line on either side.
+ * ```!tutorial tutorial_name``` must be on its own line, surrounded by a blank line on either side.
  *
- * Do not include the file extension in tutorial_name.
+ * Do not include the file extension in tutorial_name. The tutorial must be present in documentation_resources/raw_tutorials
+ * as a Jupyter notebook file.
  */
 fun tutorialInjector() {
     //Convert raw notebooks into HTML files
