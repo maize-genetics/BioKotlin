@@ -3,13 +3,12 @@ package biokotlin.featureTree
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.extensions.system.SystemOutWireListener
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEmpty
 import io.kotest.matchers.string.shouldContain
 import java.io.File
 import biokotlin.featureTree.FeatureType.*
-import biokotlin.genome.GenomicFeatures
+import io.kotest.matchers.types.shouldBeInstanceOf
 
 class FeatureTreeTesting : StringSpec({
     val setUpListener = listener(SystemOutWireListener(true))
@@ -72,25 +71,40 @@ class FeatureTreeTesting : StringSpec({
     }
 
     //Defines expected value of exceptions for files with illegal parenting relationships
-    data class IllegalParent(val file: String, val parentType: FeatureType?, val childType: FeatureType?)
+    data class IllegalParentChildTestCase(val file: String, val childType: FeatureType, val parentType: FeatureType?)
 
-    val illegalParentTestCases = listOf(
-        IllegalParent("b73_transcript_orphaned.gff", null, FeatureType.TRANSCRIPT),
-        IllegalParent("b73_exon_orphaned.gff", null, FeatureType.EXON),
-        IllegalParent("b73_chrom_gene.gff", FeatureType.GENE, FeatureType.CHROMOSOME),
-        IllegalParent("b73_chrom_transcript.gff", FeatureType.TRANSCRIPT, FeatureType.CHROMOSOME),
-        IllegalParent("b73_transcript_chrom.gff", FeatureType.CHROMOSOME, null),
-        IllegalParent("b73_terminator_chrom.gff", FeatureType.CHROMOSOME, null),
-        IllegalParent("b73_gene_chrom.gff", FeatureType.CHROMOSOME, null),
+    val illegalParentChildTestCases = listOf(
+        IllegalParentChildTestCase("b73_transcript_orphaned.gff", TRANSCRIPT, null),
+        IllegalParentChildTestCase("b73_exon_orphaned.gff", EXON, null),
+        IllegalParentChildTestCase("b73_chrom_gene.gff", CHROMOSOME, GENE),
+        IllegalParentChildTestCase("b73_chrom_transcript.gff", CHROMOSOME, TRANSCRIPT),
     )
 
-    for (testCase in illegalParentTestCases) {
-        "testing case $testCase" {
-            val exception = shouldThrow<IllegalFeatureTreeException> {
+    for (testCase in illegalParentChildTestCases) {
+        "IllegalParentChild test case $testCase" {
+            val exception = shouldThrow<IllegalParentChild> {
                 visualizeToFile(Genome.fromGFF("src/test/kotlin/biokotlin/featureTree/gffs/${testCase.file}"), "$testCase")
             }
-            exception.parentType.shouldBe(testCase.parentType)
-            exception.child?.type().shouldBe(testCase.childType)
+            val parentType = exception.parent?.type
+            parentType.shouldBe(testCase.parentType)
+            exception.child.type.shouldBe(testCase.childType)
+        }
+    }
+
+    val illegalChildTestCases = listOf(
+        IllegalParentChildTestCase("b73_transcript_chrom.gff", TRANSCRIPT, CHROMOSOME),
+        IllegalParentChildTestCase("b73_terminator_chrom.gff", TERMINATOR, CHROMOSOME),
+        IllegalParentChildTestCase("b73_gene_chrom.gff", GENE, CHROMOSOME),
+    )
+
+    for (testCase in illegalChildTestCases) {
+        "IllegalChild testing case $testCase" {
+            val exception = shouldThrow<IllegalChild> {
+                visualizeToFile(Genome.fromGFF("src/test/kotlin/biokotlin/featureTree/gffs/${testCase.file}"), "$testCase")
+            }
+            val parentType = exception.parent?.type
+            parentType.shouldBe(testCase.parentType)
+            exception.child.type.shouldBe(testCase.childType)
         }
     }
 
@@ -213,6 +227,42 @@ class FeatureTreeTesting : StringSpec({
         introns[7].intRange() shouldBe 39618 + 1..39701 - 1
     }
 
+    //TODO malformed custom feature builders
+
+    "parents without IDs should cause ParentWithoutID exception" {
+        val genomeBuilder = GenomeBuilder()
+        val parent = FeatureBuilder("", "", GENE, 1, 2, Double.NaN, '+', 0, mutableMapOf())
+        val child = FeatureBuilder("", "", TRANSCRIPT, 1, 2, Double.NaN, '+', 0, mutableMapOf())
+        parent.addChild(child)
+        genomeBuilder.addChild(parent)
+        val exception = shouldThrow<ParentWithoutID> {
+            genomeBuilder.build()
+        }
+        exception.parent.shouldBe(parent)
+        exception.child.shouldBe(child)
+    }
+
+    val genomeChildWithParentAttributeListener = listener(SystemOutWireListener(true))
+    "direct children of the genome having a Parent attribute should print a warning" {
+        val warning = "is a direct child of the genome, but it has a Parent attribute. The attribute will be ignored"
+        val genomeBuilder = GenomeBuilder()
+        val gene = FeatureBuilder("", "", GENE, 1, 2, Double.NaN, '+', 0, mutableMapOf("Parent" to "00001"))
+        genomeBuilder.addChild(gene)
+        visualizeToFile(genomeBuilder.build(), "genome_child_with_parent_attribute")
+        genomeChildWithParentAttributeListener.output().shouldContain(warning)
+    }
+
+    val childWithIncorrectParentAttributeListener = listener(SystemOutWireListener(true))
+    "children with a Parent attribute that does not list the ID of their parent should print a warning" {
+        val warning = "This will be overwritten with the proper parent in the built version, without modifying the builder"
+        val genomeBuilder = GenomeBuilder()
+        val gene = FeatureBuilder("", "", GENE, 1, 2, Double.NaN, '+', 0, mutableMapOf("ID" to "00001"))
+        val transcript = FeatureBuilder("", "", TRANSCRIPT, 1, 2, Double.NaN, '+', 0, mutableMapOf("Parent" to "00002"))
+        gene.addChild(transcript)
+        genomeBuilder.addChild(gene)
+        visualizeToFile(genomeBuilder.build(), "child_with_incorrect_parent_attribute")
+        childWithIncorrectParentAttributeListener.output().shouldContain(warning)
+    }
     /*
     These metrics are dependent on data that is too large for git, so they have been commented out.
     "performance metrics" {
