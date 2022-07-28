@@ -8,23 +8,30 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import org.jetbrains.kotlinx.multik.api.mk
-import org.jetbrains.kotlinx.multik.api.ndarray
-import org.jetbrains.kotlinx.multik.ndarray.data.D2
-import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
-import org.jetbrains.kotlinx.multik.ndarray.data.get
+//import org.jetbrains.kotlinx.multik.api.mk
+//import org.jetbrains.kotlinx.multik.api.ndarray
+//import org.jetbrains.kotlinx.multik.ndarray.data.D2
+//import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
+//import org.jetbrains.kotlinx.multik.ndarray.data.get
 import java.io.File
 import kotlin.system.measureNanoTime
 import kotlin.time.measureTime
+import kotlin.math.log
 
 class MotifTest : StringSpec({
-    val cnt = mk.ndarray(
-        mk[
-                mk[4, 19, 0, 0, 0, 0],
-                mk[16, 0, 20, 0, 0, 0],
-                mk[0, 1, 0, 20, 0, 0],
-                mk[0, 0, 0, 0, 20, 20]
-        ]
+//    val cnt = mk.ndarray(
+//        mk[
+//                mk[4, 19, 0, 0, 0, 0],
+//                mk[16, 0, 20, 0, 0, 0],
+//                mk[0, 1, 0, 20, 0, 0],
+//                mk[0, 0, 0, 0, 20, 20]
+//        ]
+//    )
+    val cnt = listOf(
+        listOf(4, 19, 0, 0, 0, 0),
+        listOf(16, 0, 20, 0, 0, 0),
+        listOf(0, 1, 0, 20, 0, 20),
+        listOf(0, 0, 0, 0, 20, 0)
     )
     val aMotif = Motif("MA0004.1", cnt, pseudocounts = 0.1)
 
@@ -34,13 +41,24 @@ class MotifTest : StringSpec({
 
     "BioSet should be DNA" { aMotif.bioSet shouldBe BioSet.DNA }
 
+    "Check pwm values with pseudocounts " {
+        aMotif.pwm()[3][5] shouldBe 0.1/20.4
+        aMotif.pwm()[0][0] shouldBe 4.1/20.4}
+
+    "Check forward and reverse PSSM values" {
+        aMotif.pssm[3][5] shouldBe 2 * log(((0.1/20.4)/0.25), 2.0)
+        aMotif.pssmRC[0][0] shouldBe 2 * log(((0.1/20.4)/0.25), 2.0)
+    }
     "Search small seq" {
         val aSeq = NucSeq("CACGTTaAACGTG")
+        val currentNuc= (aSeq[0].fourBit.toInt())
+        print(currentNuc)
         //val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
         val searchResult = aMotif.search(aSeq)
         print(searchResult)
         searchResult.size shouldBe aSeq.size() - aMotif.length + 1
         //TODO: test whether individual scores are correct and that the higher of the forward and reverse PSSM scores is output
+        //searchResult[0]
         val genesToTest = 30_000
         var totalHits = 0
         val time = measureNanoTime {
@@ -68,14 +86,14 @@ class MotifTest : StringSpec({
         with(motifs[0]) {
             name shouldBe "MA0004.1"
             numObservations shouldBe 20
-            pwm()[0, 0] shouldBe 0.200
+            pwm()[0][0] shouldBe 0.200
         }
 
         with(motifs[1]) {
             name shouldBe "MA0006.1"
             numObservations shouldBe 24
-            pwm()[0, 0] shouldBe 0.125
-            pwm()[1, 2] shouldBe 0.958333.plusOrMinus(0.001)
+            pwm()[0][0] shouldBe 0.125
+            pwm()[1][2] shouldBe 0.958333.plusOrMinus(0.001)
         }
     }
 
@@ -87,20 +105,11 @@ class MotifTest : StringSpec({
         with(motifs[0]) {
             name shouldBe "MA0020.1"
             numObservations shouldBe 21
-            pwm()[0, 0] shouldBe 1
+            pwm()[0][0] shouldBe 1
         }
     }
 
-//    test("numObservations") { }
-//
-//    test("pwm") { }
-//
-//    test("name") { }
-//
-//    test("counts") { }
-//
-//    test("bioSet") { }
-//
+
 //    test("pseudocounts") { }
 
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
@@ -117,7 +126,7 @@ class MotifTest : StringSpec({
         val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
         val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
         writeMotifHits(fastaPath, motifPath, threshold, outputPath)
-        var lines: List<String> = File(outputPath).readLines()
+        val lines: List<String> = File(outputPath).readLines()
         lines.forEach { println(it) }
     }
 })

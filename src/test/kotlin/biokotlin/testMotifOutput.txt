@@ -1,8 +1,8 @@
 FastaName	SeqID	MA0004.1	MA0006.1	MA0010.1
 
-B73_Ref_Subset	B73V4_ctg182	0	3	2
+B73_Ref_Subset	B73V4_ctg182	0	1	2
 B73_Ref_Subset	B73V4_ctg31	0	0	0
-B73_Ref_Subset	B73V4_ctg14	0	1	3
-B73_Ref_Subset	B73V4_ctg42	0	1	1
-B73_Ref_Subset	B73V4_ctg58	0	5	0
-B73_Ref_Subset	B73V4_ctg43	0	3	2
+B73_Ref_Subset	B73V4_ctg14	0	2	2
+B73_Ref_Subset	B73V4_ctg42	0	1	0
+B73_Ref_Subset	B73V4_ctg58	0	2	0
+B73_Ref_Subset	B73V4_ctg43	0	3	1

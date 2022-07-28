@@ -2,21 +2,22 @@ package biokotlin.motifs
 
 import biokotlin.seq.BioSet
 import biokotlin.seq.NucSeq
-import org.jetbrains.kotlinx.multik.api.*
-import org.jetbrains.kotlinx.multik.ndarray.data.*
-import org.jetbrains.kotlinx.multik.ndarray.operations.*
+import org.apache.poi.ss.formula.functions.Na
+//import org.jetbrains.kotlinx.multik.api.*
+//import org.jetbrains.kotlinx.multik.ndarray.data.*
+//import org.jetbrains.kotlinx.multik.ndarray.operations.*
 import java.io.File
 import java.util.TreeMap
 import java.util.stream.IntStream
+import javax.print.attribute.standard.MediaSize.NA
 import kotlin.math.log
 import kotlin.math.roundToInt
 
+fun main() {
+    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+    motifs.forEach{println(it)}
 
-//fun main() {
-//    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
-//    motifs.forEach{println(it)}
-//
-//    Multik.setEngine(NativeEngineType)
+//    Multik.setEngine(JvmEngineType)
 //    val cnt = mk.ndarray(
 //        mk[
 //                mk[4, 19, 0, 0, 0, 0],
@@ -25,38 +26,47 @@ import kotlin.math.roundToInt
 //                mk[0, 0, 0, 0, 20, 0]
 //        ]
 //    )
-//    println(cnt)
-//
-//    val aMotif = Motif("MA0004.1", cnt)
-//    println(aMotif)
-//    println(aMotif.length)
-//    println(aMotif.pwm())
-//    println(aMotif.pssm)
-//
-//    val bMotif = Motif("MA0004.1", cnt, pseudocounts = 1.0)
-//    println(bMotif.pwm())
-//
-//    println(bMotif.pssm)
-//
-////    val reflect = mk.ndarray(mk[
-////            mk[-1.0,0.0,0.0,0.0],
-////        mk[0.0,-1.0,0.0,0.0],
-////        mk[0.0,0.0,-1.0,0.0],
-////        mk[0.0,0.0,0.0,-1.0]
-////    ])
-//    val reflect = mk.identity<Double>(6).transpose()
-////    val reflect = mk.ndarray(mk[
-////            mk[0.0,0.0,0.0,1.0],
-////            mk[0.0,0.0,1.0,0.0],
-////            mk[0.0,1.0,0.0,0.0],
-////            mk[1.0,0.0,0.0,0.0]
-////    ])
-//    println(reflect)
-//   // println(bMotif.pssm.dot())
-//    val revArr = bMotif.pssm.toDoubleArray().reversedArray()
-//    println(revArr)
-//    println(mk.ndarray(revArr,4,6))
-//}
+    val cnt = listOf(
+        listOf(4, 19, 0, 0, 0, 0),
+        listOf(16, 0, 20, 0, 0, 0),
+        listOf(0, 1, 0, 20, 0, 20),
+        listOf(0, 0, 0, 0, 20, 0)
+    )
+    println(cnt)
+
+    val cnts = listOf(1,1,1,2,2,2,3,3,3)
+
+    val aMotif = Motif("MA0004.1", cnt)
+    println(aMotif)
+    println(aMotif.length)
+    println(aMotif.pwm())
+    println(aMotif.pssm)
+
+    val bMotif = Motif("MA0004.1", cnt, pseudocounts = 1.0)
+    println(bMotif.pwm())
+
+    println(bMotif.pssm)
+
+//    val reflect = mk.ndarray(mk[
+//            mk[-1.0,0.0,0.0,0.0],
+//        mk[0.0,-1.0,0.0,0.0],
+//        mk[0.0,0.0,-1.0,0.0],
+//        mk[0.0,0.0,0.0,-1.0]
+//    ])
+    //val reflect = mk.identity<Double>(6).transpose()
+//    val reflect = mk.ndarray(mk[
+//            mk[0.0,0.0,0.0,1.0],
+//            mk[0.0,0.0,1.0,0.0],
+//            mk[0.0,1.0,0.0,0.0],
+//            mk[1.0,0.0,0.0,0.0]
+//    ])
+    //println(reflect)
+   // println(bMotif.pssm.dot())
+    val revArr = bMotif.pssm.reversed()
+    //val revArr = bMotif.pssm.toDoubleArray().reversedArray()
+    println(revArr)
+    println(revArr[3][5])
+}
 
 /**
  * The Motif class stores a count matrix or position weight matrix and associated attributes, including a
@@ -65,20 +75,27 @@ import kotlin.math.roundToInt
  */
 data class Motif(
     val name: String,
-    val counts: NDArray<Int, D2>,
+    val counts: List<List<Int>>,
+    //val counts: NDArray<Int, D2>,
     val bioSet: BioSet = BioSet.DNA,
-    val pseudocounts: Double = 0.0, // Modify this?
-    val background: List<Double> = listOf(0.25,0.25,0.25,0.25) // Provide user an option to modify this
+    val pseudocounts: Double = 0.0,
+    val background: List<Double> = listOf(0.25,0.25,0.25,0.25)
 ) {
-
-    val length: Int = counts.shape[1]
-    val numObservations: Int = counts.sum() / length
+    val length: Int = counts[0].size // test this
+    val numObservations: Int = counts.flatten().sum() / length
+    val pssm: List<List<Double>> =
+        //pwm().asType<Double>(DataType.DoubleDataType)
+        pwm().mapIndexed{ index, list -> list.map{ value -> 2.0 * log(value / background[index], 2.0)}}
+            //.mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
+    //val length: Int = counts.shape[1]
+    //val numObservations: Int = counts.sum() / length
     /*Position specific scoring matrix\*/
-    val pssm: NDArray<Double, D2> =
-        pwm().asType<Double>(DataType.DoubleDataType)
-            .mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
+//    val pssm: NDArray<Double, D2> =
+//        pwm().asType<Double>(DataType.DoubleDataType)
+//            .mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
     /*Position specific scoring matrix - reverse complement*/
-    val pssmRC: NDArray<Double, D2> = mk.ndarray(pssm.toDoubleArray().reversedArray(),4,length)
+    val pssmRC: List<List<Double>> = pssm.reversed()
+    //val pssmRC: NDArray<Double, D2> = mk.ndarray(pssm.toDoubleArray().reversedArray(),4,length)
 
 
 
@@ -86,11 +103,18 @@ data class Motif(
     Position Weight Matrix, which is proportion of each base observed.  If pseudocounts are used,
     they are added to all counts, and then proportion are calculated
      */
-    fun pwm(): NDArray<Double, D2> {
-        val x: NDArray<Double, D2> = counts.asType(DataType.DoubleDataType)
-        val y = (x + pseudocounts) / (numObservations.toDouble() + (pseudocounts * bioSet.set.size))
+    fun pwm(): List<List<Double>> {
+        val x: List<List<Double>> = counts
+            .map{innerList -> innerList.map{count -> count.toDouble()}} // Convert values to double
+        val y = x.map{ innerList -> innerList // Convert counts matrix to position weight matrix
+            .map{count -> (count + pseudocounts) / (numObservations.toDouble() + (pseudocounts * bioSet.set.size))}}
         return y
     }
+//    fun pwm(): NDArray<Double, D2> {
+//        val x: NDArray<Double, D2> = counts.asType(DataType.DoubleDataType)
+//        val y = (x + pseudocounts) / (numObservations.toDouble() + (pseudocounts * bioSet.set.size))
+//        return y
+//    }
 
     override fun toString(): String {
         return "Motif(name='$name', bioSet=$bioSet, pseudocounts=$pseudocounts, length=$length, numObservations=$numObservations\n" +
@@ -104,23 +128,36 @@ data class Motif(
          */
     fun search(seq: NucSeq, bothStrands:Boolean = true): Map<Int, Double> {
         val hits = TreeMap<Int,Double>()
-        //a simple array is about 2X faster to access
-        val forwardPSSM = pssm.toDoubleArray()
-        val reversePSSM = pssmRC.toDoubleArray()
         //go through the entire sequence, iterating through sliding windows one bp apart (# windows = seq size - motif length)
-        for (i in 0..(seq.size() - length)) {
+        for (windowStartPos in 0..(seq.size() - length)) {
             var forwardPssmSum=0.0
             var reversePssmSum=0.0
             // Calculate PSSM scores for current window, both forward and reverse unless bothStrands = false
-            for (j in 0 until length) {
-                val b= (seq[i + j].fourBit.toInt()*length)+j
-                forwardPssmSum += forwardPSSM[b]
-                if(bothStrands) reversePssmSum += reversePSSM[b]
+            for (relativeNucPos in 0 until length) {
+                val currentNuc= (seq[windowStartPos + relativeNucPos] // Get nucleotide at absolute sequence position
+                    .fourBit.toInt()) // Convert NUC object to nucleotide index
+                forwardPssmSum += pssm[currentNuc][relativeNucPos] // Add forward position-specific score for nucleotide
+                if(bothStrands) reversePssmSum += pssmRC[currentNuc][relativeNucPos] // Add reverse position-specific score
+//                forwardPssmSum += forwardPSSM[b]
+//                if(bothStrands) reversePssmSum += reversePSSM[b]
             }
             // Store forward or reverse PSSM score, whichever is higher
-            if(forwardPssmSum > reversePssmSum) hits.put(i,forwardPssmSum) else hits.put(-i,reversePssmSum)
-            }
-
+            if(forwardPssmSum > reversePssmSum) hits.put(windowStartPos,forwardPssmSum) else hits.put(-windowStartPos,reversePssmSum)
+        }
+//        val forwardPSSM = pssm.toDoubleArray()
+//        val reversePSSM = pssmRC.toDoubleArray()
+    //        for (i in 0..(seq.size() - length)) {
+    //            var forwardPssmSum=0.0
+    //            var reversePssmSum=0.0
+    //            // Calculate PSSM scores for current window, both forward and reverse unless bothStrands = false
+    //            for (j in 0 until length) {
+    //                val b= (seq[i + j].fourBit.toInt()*length)+j
+    //                forwardPssmSum += forwardPSSM[b]
+    //                if(bothStrands) reversePssmSum += reversePSSM[b]
+    //            }
+    //            // Store forward or reverse PSSM score, whichever is higher
+    //            if(forwardPssmSum > reversePssmSum) hits.put(i,forwardPssmSum) else hits.put(-i,reversePssmSum)
+    //            }
         return hits
     }
 
@@ -132,7 +169,7 @@ data class Motif(
 fun readMotifs(fileName: String): List<Motif> {
     val motifs = mutableListOf<Motif>() // Initialize empty list of motif objects
     val block = mutableListOf<String>() // Initialize variable to store motif blocks when reading from file
-    var lines:List<String> = File(fileName).readLines() // Read from motif file
+    val lines:List<String> = File(fileName).readLines() // Read from motif file
     val isJASPAR = lines[0].startsWith(">") // Determine whether file is in JASPAR format (otherwise MEME)
     val blockDelimiter = if(isJASPAR) ">" else "MOTIF" // Set the appropriate block delimiter
     val processBlock: (List<String>) -> Motif = if(isJASPAR) ::processJASPARBlock else ::processMEMEBlock
@@ -158,13 +195,22 @@ fun readMotifs(fileName: String): List<Motif> {
 private fun processMEMEBlock(motifBlock: List<String>): Motif {
     val name = motifBlock[0].split(" ")[1] // Capture motif name
     val header = motifBlock[1].split("[:=\\s]+".toRegex()) //Regex is on (: or = or white-space) with greedy accumulation
-    val alength = header[3].toInt() //alphabet size (e.g. DNA = 4)
-    val w =header[5].toInt()  //motif width
-    val nsites = header[7].toInt() //number of sites the motif is based on
-    val counts: List<Int> = motifBlock.subList(2,2+w) // Convert site frequencies to counts
+    val aLength = header[3].toInt() //alphabet size (e.g. DNA = 4)
+    val width =header[5].toInt()  //motif width
+    val nSites = header[7].toInt() //number of sites the motif is based on
+    val counts: List<Int> = motifBlock.subList(2,2+width) // Convert site frequencies to counts and put in list
             .flatMap{it.trim().split("\\s+".toRegex())}
-            .map{freq -> (freq.toDouble() * nsites).roundToInt()}
-    return Motif(name, mk.ndarray(counts,w,alength).transpose())
+            .map{freq -> (freq.toDouble() * nSites).roundToInt()}
+    //return Motif(name, mk.ndarray(counts,w,alength).transpose())
+    // Now we will "unflatten" the counts list into a nested list with the appropriate dimensions
+    val nestedCountsList:MutableList<MutableList<Int>> = MutableList(aLength) { MutableList(width){ 0 } } // Initialize list
+    for (pos in 0 until width) { // iterate over each position in motif
+        for (nuc in 0 until aLength) { // iterate over each nucleotide
+            val countIndex = pos * 4 + nuc // Get corresponding index in counts list
+            nestedCountsList[nuc][pos] = counts[countIndex] // Store corresponding count in nested counts list
+        }
+    }
+    return Motif(name, nestedCountsList)
 }
 
 /** This function reads a motif in JASPAR format into a motif object
@@ -176,13 +222,22 @@ T  [    89     94    183     24      4      2      0      1      3    310      0
  */
 private fun processJASPARBlock  (motifBlock: List<String>): Motif {
     val name = motifBlock[0].split("[>\\s]+".toRegex())[1] // Capture motif name
-    val alength = motifBlock.size - 1 // get alphabet size (e.g. DNA = 4)
-    val w = motifBlock[1].split("\\s+".toRegex()).size - 3 // get motif width
-    val counts: List<Int> = motifBlock.subList(1,1+alength) // Capture counts
+    val aLength = motifBlock.size - 1 // get alphabet size (e.g. DNA = 4)
+    val width = motifBlock[1].split("\\s+".toRegex()).size - 3 // get motif width
+    val counts: List<Int> = motifBlock.subList(1,1+aLength) // Capture counts
         .map{ it.substringAfter("[").substringBeforeLast("]").trim()}
         .flatMap{it.trim().split("\\s+".toRegex())}
-        .onEach { println("after: $it") }
+        //.onEach { println("after: $it") }
         .map{count -> count.toInt()}
 
-    return Motif(name, mk.ndarray(counts,alength,w))
+    // Now we will "unflatten" the counts list into a nested list with the appropriate dimensions
+    val nestedCountsList:MutableList<List<Int>> = MutableList(aLength) { MutableList(width){ 0 } } // Initialize list
+    for (nuc in 0 until aLength) { // iterate over each nucleotide
+        val nucStartIndex = nuc * width // Get start position for nucleotide in counts list
+        val nucEndIndex = nuc * width + width // Get end position for nucleotide in counts list
+        val nucList  = counts.subList(nucStartIndex, nucEndIndex)
+        nestedCountsList[nuc] = nucList // Store corresponding count in nested counts list
+        }
+    return Motif(name, nestedCountsList)
+    //return Motif(name, mk.ndarray(counts,alength,w))
 }
