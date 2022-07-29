@@ -16,8 +16,18 @@ class GenomeBuilder {
 
     val children = mutableListOf<FeatureBuilder>()
 
+    /**
+     * Adds [child] to this [GenomeBuilder].
+     */
     fun addChild(child: FeatureBuilder) {
         children.add(child)
+    }
+
+    /**
+     * Add all children in [children] to this [GenomeBuilder].
+     */
+    fun addChildren(children: Iterable<FeatureBuilder>) {
+        children.forEach { addChild(it) }
     }
 
     /**
@@ -62,6 +72,34 @@ class GenomeBuilder {
 
         return genome
     }
+
+    /**
+     * Analogous to [Ancestor.flatten]
+     */
+//    internal fun flatten(): List<FeatureBuilder> {
+//        val list = mutableListOf<FeatureBuilder>()
+//
+//        for (child in children) {
+//            list.add(child)
+//            if (child.children.isNotEmpty()) list.addAll(child.flatten())
+//        }
+//
+//        return list
+//    }
+
+    companion object {
+        /**
+         * Creates a [GenomeBuilder] from a [Genome]. The [GenomeBuilder] will have analogous
+         * [FeatureBuilder]s for each [Feature] in the [Genome] tree, in the same location as the original.
+         */
+        fun fromGenome(genome: Genome): GenomeBuilder {
+            val builder = GenomeBuilder()
+            for (child in genome.children()) {
+                builder.addChild(FeatureBuilder.fromFeature(child))
+            }
+            return builder
+        }
+    }
 }
 
 /**
@@ -93,8 +131,18 @@ class FeatureBuilder(
      */
     val children = mutableListOf<FeatureBuilder>()
 
+    /**
+     * Adds [child] to this [FeatureBuilder].
+     */
     fun addChild(child: FeatureBuilder) {
         children.add(child)
+    }
+
+    /**
+     * Add all children in [children] to this [FeatureBuilder].
+     */
+    fun addChildren(children: Iterable<FeatureBuilder>) {
+        children.forEach { addChild(it) }
     }
 
     /**
@@ -174,5 +222,46 @@ class FeatureBuilder(
 
         }
         return "$seqid\t$source\t${type.gffName}\t$start\t$end\t$scoreString\t$strand\t$phaseString\t${attributesString}\n"
+    }
+
+    /**
+     * Analogous to [Ancestor.flatten]
+     */
+//    internal fun flatten(): List<FeatureBuilder> {
+//        val list = mutableListOf<FeatureBuilder>()
+//
+//        for (child in children) {
+//            list.add(child)
+//            if (child.children.isNotEmpty()) list.addAll(child.flatten())
+//        }
+//
+//        return list
+//    }
+
+    companion object {
+        /**
+         * Creates a [FeatureBuilder] from an existing [Feature]. The resulting [FeatureBuilder] will have the same
+         * properties to the original [Feature] and [FeatureBuilder] children that are analogous to the
+         * original [Feature] children (propagates down recursively through all children).
+         */
+        fun fromFeature(feature: Feature): FeatureBuilder {
+            val builder = FeatureBuilder(
+                feature.seqid,
+                feature.source,
+                feature.type(),
+                feature.start,
+                feature.end,
+                feature.score,
+                feature.strand,
+                feature.phase,
+                feature.attributes.toMutableMap()
+            )
+            if (feature is Ancestor) {
+                for (child in feature.children()) {
+                    builder.addChild(fromFeature(child))
+                }
+            }
+            return builder
+        }
     }
 }

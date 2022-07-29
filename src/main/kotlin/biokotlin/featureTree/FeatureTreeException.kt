@@ -5,6 +5,7 @@ package biokotlin.featureTree
  */
 sealed class IllegalFeatureTreeException: Exception()
 
+//TODO: Multiple parent exception
 
 /**
  * An exception that is thrown when a parent has a child of an incorrect type per this diagram.

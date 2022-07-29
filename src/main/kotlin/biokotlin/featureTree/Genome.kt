@@ -75,6 +75,13 @@ class Genome internal constructor(children: List<GenomeChild>): Ancestor {
      */
     fun scaffold(index: Int) = scaffolds()[index]
 
+    /**
+     * Returns a [Genome] that only contains features that satisfy [keepThisFeature] and their ancestors and descendants.
+     */
+    fun pruned(keepThisFeature: (Feature) -> Boolean): Genome {
+        return Genome.fromList(flatten().filter { keepThisFeature(it) })
+    }
+
     companion object {
         /**
          * Creates a [Genome] from a gff file with pathname [gff]. Throws [IllegalFeatureTreeException] is the gff file contains
@@ -161,6 +168,27 @@ class Genome internal constructor(children: List<GenomeChild>): Ancestor {
 
             file.close()
 
+            return genomeBuilder.build()
+        }
+
+        /**
+         * Packages [list] into a well-formed [Genome].
+         *
+         * TODO document better -- think of ways to show what this means
+         */
+        fun fromList(list: List<Feature>): Genome {
+            val topLevel = hashSetOf<Feature>()
+
+            for (feature in list) {
+                when (feature) {
+                    is GenomeChild -> topLevel.add(feature)
+                    is Transcript -> topLevel.add(feature.gene())
+                    is TranscriptChild -> topLevel.add(feature.transcript().gene())
+                }
+            }
+
+            val genomeBuilder = GenomeBuilder()
+            genomeBuilder.addChildren(topLevel.map { FeatureBuilder.fromFeature (it)})
             return genomeBuilder.build()
         }
     }

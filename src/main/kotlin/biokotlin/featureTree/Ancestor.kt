@@ -125,6 +125,7 @@ sealed interface Ancestor {
                 is GenomeChild -> descendant.genome()
                 is Transcript -> descendant.gene()
                 is TranscriptChild -> descendant.transcript()
+                else -> throw Exception() //This should be exhaustive; the IDE agrees but compiler doesn't :(
             }
             sb.append("\"${descendant.hashCode()}\" -> \"${parent.hashCode()}\"\n")
 
