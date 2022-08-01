@@ -1,0 +1,1 @@
+A representation of the structure of a feature tree, where the features Chromosome, Contig, and Scaffold are circled.

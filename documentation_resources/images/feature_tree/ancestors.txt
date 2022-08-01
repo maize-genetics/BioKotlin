@@ -1,0 +1,1 @@
+A representation of the structure of a feature tree, where the features Genome, Gene, and Transcript are highlighted in yellow.
