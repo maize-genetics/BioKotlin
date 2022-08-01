@@ -78,7 +78,7 @@ class MotifTest : StringSpec({
         print(searchResult)
         searchResult[0] shouldBe 0.0
     }
-    
+
 //    "Scan sequence for multiple motifs" {
 //        TODO()
 //    }
@@ -132,8 +132,7 @@ class MotifTest : StringSpec({
 
     "Count non-overlapping windows exceeding threshold for a given sequence and motif and write to file" {
         val threshold = 10
-        val fastaPath = "/Users/coh22/Desktop/motifScanning/Td-KS_B6_1-Draft-PanAnd-1_1000up100downPromoters.fa"
-        //val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
+        val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
         val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
         val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
         //writeMotifHits(fastaPath, motifPath, threshold, outputPath)
@@ -141,11 +140,11 @@ class MotifTest : StringSpec({
         val promoterMultiplier = 10_000
         val motifMultiplier = 200
         val time = measureNanoTime {
-            //repeat(motifMultiplier) {
-            writeMotifHits(fastaPath, motifPath, threshold, outputPath)
-            //}
+            repeat(motifMultiplier) {
+                writeMotifHits(fastaPath, motifPath, threshold, outputPath)
+            }
         }
-        println("Time to scan and write = ${(time.toDouble() * motifMultiplier) / 1e9}")
+        println("Time to scan and write = ${(time.toDouble() * promoterMultiplier) / 1e9}")
 
         //val lines: List<String> = File(outputPath).readLines()
         //lines.forEach { println(it) }
