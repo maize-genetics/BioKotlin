@@ -33,7 +33,7 @@ class MotifTest : StringSpec({
         listOf(0, 1, 0, 20, 0, 20),
         listOf(0, 0, 0, 0, 20, 0)
     )
-    val aMotif = Motif("MA0004.1", cnt, pseudocounts = 0.1)
+    val aMotif = Motif("MA0004.1", cnt)
 
     "Length should equal number of columns" { aMotif.length shouldBe 6 }
 
@@ -50,14 +50,13 @@ class MotifTest : StringSpec({
         aMotif.pssmRC[0][0] shouldBe 2 * log(((0.1/20.4)/0.25), 2.0)
     }
     "Search small seq" {
-        val aSeq = NucSeq("CACGTTaAACGTG")
+        //val aSeq = NucSeq("CACGTTaAACGTG")
+        val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
         val currentNuc= (aSeq[0].fourBit.toInt())
         print(currentNuc)
-        //val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
         val searchResult = aMotif.search(aSeq)
         print(searchResult)
         searchResult.size shouldBe aSeq.size() - aMotif.length + 1
-        //TODO: test whether individual scores are correct and that the higher of the forward and reverse PSSM scores is output
         //searchResult[0]
         val genesToTest = 30_000
         var totalHits = 0
@@ -73,7 +72,13 @@ class MotifTest : StringSpec({
         )
         println("Time = ${time.toDouble() / 1e9} sec TotalHits = $totalHits")
     }
-
+    "Search sequence containing N and other characters" {
+        val seqOfNs = NucSeq("NRMWSNNNN")
+        val searchResult = aMotif.search(seqOfNs)
+        print(searchResult)
+        searchResult[0] shouldBe 0.0
+    }
+    
 //    "Scan sequence for multiple motifs" {
 //        TODO()
 //    }
@@ -120,13 +125,29 @@ class MotifTest : StringSpec({
         countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 2
     }
 
+    " Test conversion of nucleotide to int" {
+        val aSeq = NucSeq("TAGTC")
+        aSeq[0].fourBit.toInt() shouldBe 3
+    }
+
     "Count non-overlapping windows exceeding threshold for a given sequence and motif and write to file" {
-        val threshold = 1
-        val fastaPath = "src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa"
+        val threshold = 10
+        val fastaPath = "/Users/coh22/Desktop/motifScanning/Td-KS_B6_1-Draft-PanAnd-1_1000up100downPromoters.fa"
+        //val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
         val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
         val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
-        writeMotifHits(fastaPath, motifPath, threshold, outputPath)
-        val lines: List<String> = File(outputPath).readLines()
-        lines.forEach { println(it) }
+        //writeMotifHits(fastaPath, motifPath, threshold, outputPath)
+
+        val promoterMultiplier = 10_000
+        val motifMultiplier = 200
+        val time = measureNanoTime {
+            //repeat(motifMultiplier) {
+            writeMotifHits(fastaPath, motifPath, threshold, outputPath)
+            //}
+        }
+        println("Time to scan and write = ${(time.toDouble() * motifMultiplier) / 1e9}")
+
+        //val lines: List<String> = File(outputPath).readLines()
+        //lines.forEach { println(it) }
     }
 })

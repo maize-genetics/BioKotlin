@@ -13,60 +13,60 @@ import javax.print.attribute.standard.MediaSize.NA
 import kotlin.math.log
 import kotlin.math.roundToInt
 
-fun main() {
-    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
-    motifs.forEach{println(it)}
-
-//    Multik.setEngine(JvmEngineType)
-//    val cnt = mk.ndarray(
-//        mk[
-//                mk[4, 19, 0, 0, 0, 0],
-//                mk[16, 0, 20, 0, 0, 0],
-//                mk[0, 1, 0, 20, 0, 20],
-//                mk[0, 0, 0, 0, 20, 0]
-//        ]
+//fun main() {
+//    val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt")
+//    motifs.forEach{println(it)}
+//
+////    Multik.setEngine(JvmEngineType)
+////    val cnt = mk.ndarray(
+////        mk[
+////                mk[4, 19, 0, 0, 0, 0],
+////                mk[16, 0, 20, 0, 0, 0],
+////                mk[0, 1, 0, 20, 0, 20],
+////                mk[0, 0, 0, 0, 20, 0]
+////        ]
+////    )
+//    val cnt = listOf(
+//        listOf(4, 19, 0, 0, 0, 0),
+//        listOf(16, 0, 20, 0, 0, 0),
+//        listOf(0, 1, 0, 20, 0, 20),
+//        listOf(0, 0, 0, 0, 20, 0)
 //    )
-    val cnt = listOf(
-        listOf(4, 19, 0, 0, 0, 0),
-        listOf(16, 0, 20, 0, 0, 0),
-        listOf(0, 1, 0, 20, 0, 20),
-        listOf(0, 0, 0, 0, 20, 0)
-    )
-    println(cnt)
-
-    val cnts = listOf(1,1,1,2,2,2,3,3,3)
-
-    val aMotif = Motif("MA0004.1", cnt)
-    println(aMotif)
-    println(aMotif.length)
-    println(aMotif.pwm())
-    println(aMotif.pssm)
-
-    val bMotif = Motif("MA0004.1", cnt, pseudocounts = 1.0)
-    println(bMotif.pwm())
-
-    println(bMotif.pssm)
-
-//    val reflect = mk.ndarray(mk[
-//            mk[-1.0,0.0,0.0,0.0],
-//        mk[0.0,-1.0,0.0,0.0],
-//        mk[0.0,0.0,-1.0,0.0],
-//        mk[0.0,0.0,0.0,-1.0]
-//    ])
-    //val reflect = mk.identity<Double>(6).transpose()
-//    val reflect = mk.ndarray(mk[
-//            mk[0.0,0.0,0.0,1.0],
-//            mk[0.0,0.0,1.0,0.0],
-//            mk[0.0,1.0,0.0,0.0],
-//            mk[1.0,0.0,0.0,0.0]
-//    ])
-    //println(reflect)
-   // println(bMotif.pssm.dot())
-    val revArr = bMotif.pssm.reversed()
-    //val revArr = bMotif.pssm.toDoubleArray().reversedArray()
-    println(revArr)
-    println(revArr[3][5])
-}
+//    println(cnt)
+//
+//    val cnts = listOf(1,1,1,2,2,2,3,3,3)
+//
+//    val aMotif = Motif("MA0004.1", cnt)
+//    println(aMotif)
+//    println(aMotif.length)
+//    println(aMotif.pwm())
+//    println(aMotif.pssm)
+//
+//    val bMotif = Motif("MA0004.1", cnt, pseudocounts = 1.0)
+//    println(bMotif.pwm())
+//
+//    println(bMotif.pssm)
+//
+////    val reflect = mk.ndarray(mk[
+////            mk[-1.0,0.0,0.0,0.0],
+////        mk[0.0,-1.0,0.0,0.0],
+////        mk[0.0,0.0,-1.0,0.0],
+////        mk[0.0,0.0,0.0,-1.0]
+////    ])
+//    //val reflect = mk.identity<Double>(6).transpose()
+////    val reflect = mk.ndarray(mk[
+////            mk[0.0,0.0,0.0,1.0],
+////            mk[0.0,0.0,1.0,0.0],
+////            mk[0.0,1.0,0.0,0.0],
+////            mk[1.0,0.0,0.0,0.0]
+////    ])
+//    //println(reflect)
+//   // println(bMotif.pssm.dot())
+//    val revArr = bMotif.pssm.reversed()
+//    //val revArr = bMotif.pssm.toDoubleArray().reversedArray()
+//    println(revArr)
+//    println(revArr[3][5])
+//}
 
 /**
  * The Motif class stores a count matrix or position weight matrix and associated attributes, including a
@@ -78,7 +78,7 @@ data class Motif(
     val counts: List<List<Int>>,
     //val counts: NDArray<Int, D2>,
     val bioSet: BioSet = BioSet.DNA,
-    val pseudocounts: Double = 0.0,
+    val pseudocounts: Double = 0.01,
     val background: List<Double> = listOf(0.25,0.25,0.25,0.25)
 ) {
     val length: Int = counts[0].size // test this
@@ -134,12 +134,17 @@ data class Motif(
             var reversePssmSum=0.0
             // Calculate PSSM scores for current window, both forward and reverse unless bothStrands = false
             for (relativeNucPos in 0 until length) {
-                val currentNuc= (seq[windowStartPos + relativeNucPos] // Get nucleotide at absolute sequence position
-                    .fourBit.toInt()) // Convert NUC object to nucleotide index
-                forwardPssmSum += pssm[currentNuc][relativeNucPos] // Add forward position-specific score for nucleotide
-                if(bothStrands) reversePssmSum += pssmRC[currentNuc][relativeNucPos] // Add reverse position-specific score
-//                forwardPssmSum += forwardPSSM[b]
-//                if(bothStrands) reversePssmSum += reversePSSM[b]
+                val currentNuc = seq[windowStartPos + relativeNucPos] // Get nucleotide at absolute sequence position
+                    .fourBit.toInt() // Convert NUC object to nucleotide index - how to handle Ns?
+                if (currentNuc > 3) { // Handle any Ns or other letters in sequence - add 0 to counts if encountered
+                    forwardPssmSum += 0
+                    if (bothStrands) reversePssmSum += 0
+                } else {
+                    forwardPssmSum += pssm[currentNuc][relativeNucPos] // Add forward position-specific score for nucleotide
+                    if (bothStrands) reversePssmSum += pssmRC[currentNuc][relativeNucPos] // Add reverse position-specific score
+                    //                forwardPssmSum += forwardPSSM[b]
+                    //                if(bothStrands) reversePssmSum += reversePSSM[b]
+                }
             }
             // Store forward or reverse PSSM score, whichever is higher
             if(forwardPssmSum > reversePssmSum) hits.put(windowStartPos,forwardPssmSum) else hits.put(-windowStartPos,reversePssmSum)
