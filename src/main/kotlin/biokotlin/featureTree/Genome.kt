@@ -3,6 +3,12 @@ package biokotlin.featureTree
 import java.io.File
 import biokotlin.featureTree.FeatureType.*
 
+/*
+TODO add ability to attach FASTA
+immutable must be created with fasta already attached (add it as a nullable parameter in all factory functions)
+mutable can have it attached and changed at will (tho it will also be a nullable parameter in factory functions)
+ */
+
 /**
  * TODO import documentation
  */
@@ -32,6 +38,14 @@ public sealed interface Genome: Ancestor {
      * TODO include diagram.
      */
     public val contigs: List<AssemblyUnit>
+
+    /**
+     * The genes that are direct children of the genome
+     */
+    public val genes: List<Gene>
+
+    //TODO byID
+    //TODO allTranscripts(), allExons(), etc
 
     /**
      * Returns a deeply immutable clone of this [Genome].
@@ -75,20 +89,17 @@ public sealed interface Genome: Ancestor {
 
                         when (val type = FeatureType.convert(split[2])) {
                             CHROMOSOME, SCAFFOLD, CONTIG -> MutableAssemblyUnitImpl(
-                                MutableFeatureImpl(
-                                    split[0], //seqid
-                                    split[1], //source
-                                    type,
-                                    split[3].toInt(), //start
-                                    split[4].toInt(), //end
-                                    score,
-                                    strand,
-                                    phase,
-                                    attributeMap
-                                )
+                                    seqid = split[0],
+                                    source = split[1],
+                                    type = type,
+                                    start = split[3].toInt(),
+                                    end = split[4].toInt(),
+                                    score = score,
+                                    strand = strand,
+                                    phase = phase,
+                                    attributes = attributeMap,
                             )
                             GENE -> MutableGeneImpl(
-                                MutableAncestralFeature(
                                     emptyList<MutableTranscript>(),
                                     split[0],
                                     split[1],
@@ -99,10 +110,8 @@ public sealed interface Genome: Ancestor {
                                     strand,
                                     phase,
                                     attributeMap
-                                )
                             )
                             TRANSCRIPT -> MutableTranscriptImpl(
-                                MutableAncestralFeature(
                                     emptyList<MutableTranscriptChild>(),
                                     split[0],
                                     split[1],
@@ -113,10 +122,8 @@ public sealed interface Genome: Ancestor {
                                     strand,
                                     phase,
                                     attributeMap
-                                )
                             )
                             LEADER, EXON, CODING_SEQUENCE, TERMINATOR -> MutableTranscriptChildImpl(
-                                MutableFeatureImpl(
                                     split[0],
                                     split[1],
                                     type,
@@ -126,7 +133,6 @@ public sealed interface Genome: Ancestor {
                                     strand,
                                     phase,
                                     attributeMap
-                                )
                             )
                         }
                     } catch (e: IllegalArgumentException) {
@@ -183,8 +189,8 @@ public sealed interface Genome: Ancestor {
                             throw IllegalChild(orphan, parent)
                         }
                     } else println(
-                        "Warning: A feature's parent (Parent=${orphan.attributes["Parent"]}) could not be located, so " +
-                                "this feature and its descendants will not be added to the tree."
+                            "Warning: A feature's parent (Parent=${orphan.attributes["Parent"]}) could not be located, so " +
+                                    "this feature and its descendants will not be added to the tree."
                     )
                 }
                 return genome.immutable()
@@ -222,6 +228,8 @@ public sealed interface Genome: Ancestor {
         }
 
     }
+
+    //TODO fromPredicate() -- arguably shouldn't be in companion object?
 }
 
 /**
@@ -234,6 +242,10 @@ public sealed interface MutableGenome: Genome, MutableAncestor {
     public override val chromosomes: List<MutableAssemblyUnit>
     public override val scaffolds: List<MutableAssemblyUnit>
     public override val contigs: List<MutableAssemblyUnit>
+    public override val genes: List<MutableGene>
+
+    //TODO byID
+    //TODO allTranscripts(), allExons(), etc
 
     /**
      * Inserts and returns new, mutable chromosome as a direct child of the [MutableGenome].
@@ -241,14 +253,14 @@ public sealed interface MutableGenome: Genome, MutableAncestor {
      * of the chromosome.
      */
     public fun insertChromosome(
-        seqid: String,
-        source: String,
-        start: Int,
-        end: Int,
-        score: Double?,
-        strand: Char?,
-        phase: Int?,
-        attributes: Map<String, String>
+            seqid: String,
+            source: String,
+            start: Int,
+            end: Int,
+            score: Double?,
+            strand: Char?,
+            phase: Int?,
+            attributes: Map<String, String>
     ): MutableAssemblyUnit
 
     /**
@@ -257,14 +269,14 @@ public sealed interface MutableGenome: Genome, MutableAncestor {
      * of the scaffold.
      */
     public fun insertScaffold(
-        seqid: String,
-        source: String,
-        start: Int,
-        end: Int,
-        score: Double?,
-        strand: Char?,
-        phase: Int?,
-        attributes: Map<String, String>
+            seqid: String,
+            source: String,
+            start: Int,
+            end: Int,
+            score: Double?,
+            strand: Char?,
+            phase: Int?,
+            attributes: Map<String, String>
     ): MutableAssemblyUnit
 
     /**
@@ -273,41 +285,63 @@ public sealed interface MutableGenome: Genome, MutableAncestor {
      * of the scaffold.
      */
     public fun insertContig(
-        seqid: String,
-        source: String,
-        start: Int,
-        end: Int,
-        score: Double?,
-        strand: Char?,
-        phase: Int?,
-        attributes: Map<String, String>
+            seqid: String,
+            source: String,
+            start: Int,
+            end: Int,
+            score: Double?,
+            strand: Char?,
+            phase: Int?,
+            attributes: Map<String, String>
     ): MutableAssemblyUnit
 
     /**
      * Removes [child] from this genome's children, if it exists. Returns true iff the child was removed.
      */
     public fun removeChild(child: MutableGenomeChild): Boolean
+
+    //TODO MutableGenome.fromGff() -- this will be the implementation behind Genome.fromGff()
+    //TODO MutableGenome.fromList()
+    //TODO MutableGenome.fromPredicate()?
 }
+
+/**
+ * Returns a new, empty [MutableGenome].
+ */
+public fun MutableGenome(): MutableGenome = MutableGenomeImpl()
 
 
 //TODO mutable genome blank constructor, mutable genome children constructor,
 //TODO proper interaction with interfaac
 
 internal open class GenomeImpl protected constructor (
-    protected open val delegate: AncestorImpl
-) : Ancestor by delegate,
-    Genome {
-    internal constructor(): this(AncestorImpl(emptyList()))
+        protected open val delegate: AncestorImpl
+) : Ancestor by delegate, Genome {
+
+    /**
+     * Creates a genome with the immediate children [children]
+     */
+    internal constructor(children: List<GenomeChild>): this(AncestorImpl(children))
 
     /* INVARIANTS:
     1. The children of this genome are all GenomeChildren
      */
+    internal open fun invariants(): Boolean {
+        delegate.invariants()
+        children //simply calling it ensures that it is a GenomeChild (or else it fails with ClassCastException)
+        return true
+    }
 
     public override val children: List<GenomeChild> get() = delegate.children.map { it as GenomeChild }
     public override val assemblyUnits: List<AssemblyUnit> get() = children.filterIsInstance<AssemblyUnit>()
     public override val chromosomes: List<AssemblyUnit> get() = assemblyUnits.filter { it.type == CHROMOSOME }
     public override val scaffolds: List<AssemblyUnit> get() = assemblyUnits.filter { it.type == SCAFFOLD }
     public override val contigs: List<AssemblyUnit> get() = assemblyUnits.filter { it.type == CONTIG }
+    public override val genes: List<Gene> get() = children.filterIsInstance<Gene>()
+
+    init {
+        assert(this.invariants())
+    }
 
     public override fun mutable(): MutableGenome {
         TODO()
@@ -315,8 +349,6 @@ internal open class GenomeImpl protected constructor (
     public override fun immutable(): Genome {
         TODO()
     }
-
-    //TODO special genome behaviors
 
     /**
      * Creates a mutable clone of the genome and returns the cloned MutableFeature that corresponds to [feature]
@@ -329,6 +361,13 @@ internal open class GenomeImpl protected constructor (
      * Creates a deeply immutable clone of the genome and returns the cloned Feature that corresponds to [feature]
      */
     internal fun immutable(feature: Feature): Feature {
+        TODO()
+    }
+
+    /**
+     * Traverses the entire tree and injects parents where appropriate.
+     */
+    internal fun injectAllParents() {
         TODO()
     }
 
@@ -351,59 +390,68 @@ internal open class GenomeImpl protected constructor (
 
 }
 internal class MutableGenomeImpl private constructor (
-    override val delegate: MutableAncestorImpl
-) : GenomeImpl(delegate),
-    MutableGenome {
+        override val delegate: MutableAncestorImpl
+) : GenomeImpl(delegate), MutableGenome {
+    /**
+     * INVARIANTS (in addition to those of super and delegate):
+     * 1. The children of this MutableGenome are all MutableGenomeChildren
+     */
+    internal override fun invariants(): Boolean {
+        super.invariants()
+        delegate.invariants()
+        children
+        return true
+    }
+
+
     internal constructor(): this(MutableAncestorImpl(emptyList()))
 
-    /* INVARIANTS:
-    1. The children of this genome are all MutableGenomeChildren
-     */
     public override val children: List<MutableGenomeChild> get() = delegate.children.map { it as MutableGenomeChild }
     public override val assemblyUnits: List<MutableAssemblyUnit> get() = children.filterIsInstance<MutableAssemblyUnit>()
     public override val chromosomes: List<MutableAssemblyUnit> get() = assemblyUnits.filter { it.type == CHROMOSOME }
     public override val scaffolds: List<MutableAssemblyUnit> get() = assemblyUnits.filter { it.type == SCAFFOLD }
     public override val contigs: List<MutableAssemblyUnit> get() = assemblyUnits.filter { it.type == CONTIG }
+    public override val genes: List<MutableGene> get() = children.filterIsInstance<MutableGene>()
 
     /**
      * Used for the implementations of inserts and moveTo.
      */
     internal fun addChild(child: MutableGenomeChild): Unit = delegate.addChild(child)
     public override fun insertChromosome(
-        seqid: String,
-        source: String,
-        start: Int,
-        end: Int,
-        score: Double?,
-        strand: Char?,
-        phase: Int?,
-        attributes: Map<String, String>
+            seqid: String,
+            source: String,
+            start: Int,
+            end: Int,
+            score: Double?,
+            strand: Char?,
+            phase: Int?,
+            attributes: Map<String, String>
     ): MutableAssemblyUnit {
         TODO("Not yet implemented")
     }
 
     public override fun insertScaffold(
-        seqid: String,
-        source: String,
-        start: Int,
-        end: Int,
-        score: Double?,
-        strand: Char?,
-        phase: Int?,
-        attributes: Map<String, String>
+            seqid: String,
+            source: String,
+            start: Int,
+            end: Int,
+            score: Double?,
+            strand: Char?,
+            phase: Int?,
+            attributes: Map<String, String>
     ): MutableAssemblyUnit {
         TODO("Not yet implemented")
     }
 
     public override fun insertContig(
-        seqid: String,
-        source: String,
-        start: Int,
-        end: Int,
-        score: Double?,
-        strand: Char?,
-        phase: Int?,
-        attributes: Map<String, String>
+            seqid: String,
+            source: String,
+            start: Int,
+            end: Int,
+            score: Double?,
+            strand: Char?,
+            phase: Int?,
+            attributes: Map<String, String>
     ): MutableAssemblyUnit {
         TODO("Not yet implemented")
     }

@@ -35,14 +35,14 @@ public sealed interface MutableAssemblyUnit: AssemblyUnit, MutableGenomeChild {
  */
 internal open class AssemblyUnitImpl protected constructor(
         protected open val delegate: FeatureImpl
-) : Feature by delegate,
-        AssemblyUnit {
+) : Feature by delegate, AssemblyUnit {
     /**
      * INVARIANTS:
      * 1. type is CHROMOSOME, CONTIG, OR SCAFFOLD
      * 2. parent is a Genome
      */
     protected open fun invariants(): Boolean {
+        delegate.invariants()
         if (type != CHROMOSOME && type != CONTIG && type != SCAFFOLD)
             throw IllegalStateException("An AssemblyUnit may only be of type CHROMOSOME, CONTIG, or SCAFFOLD.")
         parent //simply calling the property will ensure that it fails with a ClassCastException if the invariant is broken
@@ -68,11 +68,12 @@ internal open class AssemblyUnitImpl protected constructor(
         assert(this.invariants())
     }
 
-    public override fun copyTo(newParent: MutableGenome): MutableAssemblyUnit = delegate.copyTo(newParent) as MutableAssemblyUnit
+    public override fun copyTo(newParent: MutableGenome): MutableAssemblyUnit =
+            delegate.copyTo(newParent) as MutableAssemblyUnit
 
-    public override fun genes(): List<Gene> {
-        TODO("Not yet implemented")
-    }
+    // This could be made faster by taking advantage of the fact that all genes with the same seqid are adjacent in
+    // the list
+    public override fun genes(): List<Gene> = genome.genes.filter { it.seqid == seqid }
 
     public override fun toString(): String = asRow()
 
@@ -158,7 +159,5 @@ internal class MutableAssemblyUnitImpl private constructor(
     public override fun clearSafeAttributes(): Unit = delegate.clearSafeAttributes()
     public override fun addAttribute(tag: String, value: String): Unit = delegate.addAttribute(tag, value)
     public override fun removeAttribute(tag: String): String? = delegate.removeAttribute(tag)
-    public override fun genes(): List<MutableGene> {
-        TODO()
-    }
+    public override fun genes(): List<MutableGene> = genome.genes.filter { it.seqid == seqid }
 }

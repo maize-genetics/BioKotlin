@@ -12,6 +12,9 @@ interface Transcript: Ancestor, Feature {
     val gene: Gene
     override val children: List<TranscriptChild>
 
+    //TODO introns
+    //TODO protein
+
     override fun clone(): Transcript
     override fun mutable(): MutableTranscript
     override fun immutable(): Transcript

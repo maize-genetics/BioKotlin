@@ -36,6 +36,8 @@ internal open class AncestralFeature protected constructor(
      * 4. Type is either GENE or TRANSCRIPT
      */
     internal open fun invariants(): Boolean {
+        ancestorDelegate.invariants()
+        featureDelegate.invariants()
         if (attributes["ID"] == null && children.isNotEmpty()) {
             throw IllegalStateException("AncestralFeature must have an ID attribute if it has children")
         }
@@ -62,13 +64,10 @@ internal open class AncestralFeature protected constructor(
         assert(this.invariants())
     }
 
-    fun injectParent(toInject: Ancestor) = featureDelegate.injectParent(toInject)
+    internal fun injectParent(toInject: Ancestor) = featureDelegate.injectParent(toInject)
 
-    override val parent
-        get() = featureDelegate.parent
-
-    override val children
-        get() = ancestorDelegate.children
+    public override val parent get() = featureDelegate.parent
+    public override val children get() = ancestorDelegate.children
 
     /**
      * Copies to a new parent. Delegators should provide additional type-safety assurance before delegating the request.
@@ -82,8 +81,8 @@ internal open class AncestralFeature protected constructor(
 //Implicit overrides are intentional to avoid cluttering code with boilerplate!
 @Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
 internal class MutableAncestralFeature private constructor(
-    override val ancestorDelegate: MutableAncestorImpl,
-    override val featureDelegate: MutableFeatureImpl
+    protected override val ancestorDelegate: MutableAncestorImpl,
+    protected override val featureDelegate: MutableFeatureImpl
 ): AncestralFeature(ancestorDelegate, featureDelegate),
     MutableAncestor by ancestorDelegate, MutableFeature by featureDelegate {
     constructor(
@@ -100,17 +99,21 @@ internal class MutableAncestralFeature private constructor(
     ): this(MutableAncestorImpl(children), MutableFeatureImpl(seqid, source, type, start, end, score, strand, phase, attributes))
 
     //TODO INVARIANTS
-    override val parent
-        get() = featureDelegate.parent
+    public override val parent get() = featureDelegate.parent
+    public override val children get() = ancestorDelegate.children
 
-    override val children
-        get() = ancestorDelegate.children
+    /**
+     * Removes [child]. It is the delegator's responsibility to add additional type constraints.
+     */
+    internal fun removeChild(child: MutableFeature) = ancestorDelegate.removeChild(child)
 
-    fun removeChild(child: MutableFeature) = ancestorDelegate.removeChild(child)
-
-    //Implementation behind insertTranscript, insertExon, insertCodingSequence, etcs
-    fun addChild(child: MutableFeature) {
-        ancestorDelegate.addChild(child)
+    /**
+     * Adds [child]. It is the delegator's responsibility to add additional type constraints.
+     *
+     * This is the implementation behind insertTranscript, insertExon, etc.
+     */
+    fun addChild(child: MutableFeature, parent: MutableAncestor) {
+        ancestorDelegate.addChild(child, parent)
         assert(invariants())
     }
 
@@ -147,10 +150,6 @@ internal class MutableAncestralFeature private constructor(
         val removed = featureDelegate.removeAttribute(tag)
         assert(invariants())
         return removed
-    }
-
-    override fun clone(): MutableFeature {
-        TODO("Not yet implemented")
     }
 
     override fun flatten() = super<MutableAncestor>.flatten()

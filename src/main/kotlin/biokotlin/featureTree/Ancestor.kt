@@ -1,11 +1,11 @@
 package biokotlin.featureTree
 
-//TODO library formatting pass
 
-//TODO consider reintroducing immutable() and mutable()?
+//TODO library formatting pass
 
 /**
  * Represents a node that can have Feature children. Provides access to these children.
+ * TODO better documentation
  */
 public sealed interface Ancestor {
     /**
@@ -130,6 +130,7 @@ internal open class AncestorImpl(
      * INVARIANTS:
      * 1. _children is sorted
      * 2. _children is unique
+     * 3. If this is not MutableAncestor, then its children should not be MutableFeature
      */
     internal open fun invariants(): Boolean {
         for (i in 0 until _children.size - 1) {
@@ -140,6 +141,8 @@ internal open class AncestorImpl(
         if (_children.distinct().size != _children.size) {
             throw IllegalStateException("childrenImpl is not unique")
         }
+        if (this !is MutableAncestor && !_children.all { it !is MutableFeature })
+            throw MixedMutability(this, _children.find { it is MutableFeature }!!)
         return true
     }
 

@@ -24,6 +24,8 @@ interface Gene: GenomeChild, Ancestor {
     override fun clone(): Gene
     override fun immutable(): Gene
     override fun mutable(): MutableGene
+
+    //TODO allExons, allCodingSequences, etc (allProteins? allIntrons?)
 }
 
 interface MutableGene: Gene, MutableGenomeChild, MutableAncestor {
@@ -54,6 +56,7 @@ internal open class GeneImpl protected constructor(
      * 4. All children list this as their parent
      */
     internal open fun invariants(): Boolean {
+        delegate.invariants()
         for (child in children) {
             if (child.type != TRANSCRIPT) {
                 throw IllegalStateException("Gene children must be Transcripts")
