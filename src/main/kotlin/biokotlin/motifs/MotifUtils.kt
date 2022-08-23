@@ -15,18 +15,29 @@ fun countScoreAtThreshold(bytes:ByteArray, threshold:Int):Int {
 
 /**
  * This function counts the number of entries where the value
- * is greater than or equal to the specified threshold, and
+ * is greater than or equal to the specified threshold
+ * (adjusted by motif length by default), and
  * does not count overlapping entries within the same window.
  * For overlapping windows, the "first" entry exceeding the threshold
  * will be counted, then will skip ahead to the next entry that does
  * not overlap the window that exceeded the threshold.
  */
-fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Int, motifLength:Int):Int {
+fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Int, motifLength:Int, thresholdType:String = "length"):Int {
     var arrayIndex=0
     var motifCount=0
     val arrayLength = bytes.size
+    val adjThreshold = if (thresholdType == "length") {
+        threshold * motifLength
+    }
+//    else if (thresholdType == "entropy") {
+//        threshold / entropyScore // threshold adjusted by motif entropy (TODO)
+//    }
+    else {
+        threshold
+    }
+
     while (arrayIndex < arrayLength) {
-        if (bytes[arrayIndex] >= threshold) {
+        if (bytes[arrayIndex] >= adjThreshold) {
             motifCount++
             arrayIndex+=motifLength
         } else {

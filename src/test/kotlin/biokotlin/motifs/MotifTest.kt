@@ -42,12 +42,13 @@ class MotifTest : StringSpec({
     "BioSet should be DNA" { aMotif.bioSet shouldBe BioSet.DNA }
 
     "Check pwm values with pseudocounts " {
-        aMotif.pwm()[3][5] shouldBe 0.1/20.4
-        aMotif.pwm()[0][0] shouldBe 4.1/20.4}
+        println(aMotif.pwm())
+        aMotif.pwm()[3][5] shouldBe 0.01/20.04
+        aMotif.pwm()[0][0] shouldBe 4.01/20.04}
 
     "Check forward and reverse PSSM values" {
-        aMotif.pssm[3][5] shouldBe 2 * log(((0.1/20.4)/0.25), 2.0)
-        aMotif.pssmRC[0][0] shouldBe 2 * log(((0.1/20.4)/0.25), 2.0)
+        aMotif.pssm[3][5] shouldBe 2 * log(((0.01/20.04)/0.25), 2.0)
+        aMotif.pssmRC[0][0] shouldBe 2 * log(((0.01/20.04)/0.25), 2.0)
     }
     "Search small seq" {
         //val aSeq = NucSeq("CACGTTaAACGTG")
@@ -91,14 +92,14 @@ class MotifTest : StringSpec({
         with(motifs[0]) {
             name shouldBe "MA0004.1"
             numObservations shouldBe 20
-            pwm()[0][0] shouldBe 0.200
+            pwm()[0][0] shouldBe 4.01/20.04
         }
 
         with(motifs[1]) {
             name shouldBe "MA0006.1"
             numObservations shouldBe 24
-            pwm()[0][0] shouldBe 0.125
-            pwm()[1][2] shouldBe 0.958333.plusOrMinus(0.001)
+            pwm()[0][0] shouldBe 3.01/24.04
+            pwm()[1][2] shouldBe (23.01/24.04).plusOrMinus(0.001)
         }
     }
 
@@ -110,15 +111,12 @@ class MotifTest : StringSpec({
         with(motifs[0]) {
             name shouldBe "MA0020.1"
             numObservations shouldBe 21
-            pwm()[0][0] shouldBe 1
+            pwm()[0][0] shouldBe 21.01/21.04
         }
     }
 
-
-//    test("pseudocounts") { }
-
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
-        val testArray = byteArrayOf(0, 3, 0, 0, 4, 0, 1, 2)
+        val testArray = byteArrayOf(0, 9, 0, 0, 10, 0, 1, 8)
         val threshold = 2
         val motifLength = 4
         countScoreAtThreshold(testArray, threshold) shouldBe 3
