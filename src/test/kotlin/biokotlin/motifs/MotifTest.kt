@@ -71,7 +71,7 @@ class MotifTest : StringSpec({
                 aSeq.size().toDouble() * genesToTest / time
             } bp/nanoSec"
         )
-        println("Time = ${time.toDouble() / 1e9} sec TotalHits = $totalHits")
+        println("Time = ${time.toDouble() / 1e9} sec TotalHits = $totalHits") // takes ~3 seconds to scan promoter space for one motif (array of arrays implementation)
     }
     "Search sequence containing N and other characters" {
         val seqOfNs = NucSeq("NRMWSNNNN")
@@ -129,7 +129,7 @@ class MotifTest : StringSpec({
     }
 
     "Count non-overlapping windows exceeding threshold for a given sequence and motif and write to file" {
-        val threshold = 10
+        val threshold = 2
         val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
         val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
         val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
@@ -143,6 +143,7 @@ class MotifTest : StringSpec({
             }
         }
         println("Time to scan and write = ${(time.toDouble() * promoterMultiplier) / 1e9}")
+        // takes  ~6000 seconds (1.5-2 hrs) to scan 30,000 promoters for 600 motifs and write to file (array of arrays implementation)
 
         //val lines: List<String> = File(outputPath).readLines()
         //lines.forEach { println(it) }

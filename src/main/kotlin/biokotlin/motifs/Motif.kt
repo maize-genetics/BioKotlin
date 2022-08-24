@@ -75,6 +75,7 @@ import kotlin.math.roundToInt
  */
 data class Motif(
     val name: String,
+    //val counts: Array<IntArray>,
     val counts: List<List<Int>>,
     //val counts: NDArray<Int, D2>,
     val bioSet: BioSet = BioSet.DNA,
@@ -83,9 +84,10 @@ data class Motif(
 ) {
     val length: Int = counts[0].size // test this
     val numObservations: Int = counts.flatten().sum() / length
-    val pssm: List<List<Double>> =
+    //val pssm: List<List<Double>> =
+    val pssm: Array<DoubleArray> =
         //pwm().asType<Double>(DataType.DoubleDataType)
-        pwm().mapIndexed{ index, list -> list.map{ value -> 2.0 * log(value / background[index], 2.0)}}
+        pwm().mapIndexed{ index, list -> list.map{ value -> 2.0 * log(value / background[index], 2.0)}.toDoubleArray()}.toTypedArray()
             //.mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
     //val length: Int = counts.shape[1]
     //val numObservations: Int = counts.sum() / length
@@ -94,7 +96,8 @@ data class Motif(
 //        pwm().asType<Double>(DataType.DoubleDataType)
 //            .mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
     /*Position specific scoring matrix - reverse complement*/
-    val pssmRC: List<List<Double>> = pssm.reversed()
+    //val pssmRC: List<List<Double>> = pssm.reversed()
+    val pssmRC: Array<DoubleArray> = pssm.reversed().toTypedArray()
     //val pssmRC: NDArray<Double, D2> = mk.ndarray(pssm.toDoubleArray().reversedArray(),4,length)
 
 
@@ -103,6 +106,14 @@ data class Motif(
     Position Weight Matrix, which is proportion of each base observed.  If pseudocounts are used,
     they are added to all counts, and then proportion are calculated
      */
+//    fun pwm(): Array<DoubleArray> {
+//        val x: List<List<Double>> = counts
+//            .map{innerList -> innerList.map{count -> count.toDouble()}} // Convert values to double
+//        val y = x.map{ innerList -> innerList // Convert counts matrix to position weight matrix
+//            .map{count -> (count + pseudocounts) / (numObservations.toDouble() + (pseudocounts * bioSet.set.size))}.toDoubleArray()}
+//            .toTypedArray()
+//        return y
+//    }
     fun pwm(): List<List<Double>> {
         val x: List<List<Double>> = counts
             .map{innerList -> innerList.map{count -> count.toDouble()}} // Convert values to double
@@ -209,13 +220,16 @@ private fun processMEMEBlock(motifBlock: List<String>): Motif {
     //return Motif(name, mk.ndarray(counts,w,alength).transpose())
     // Now we will "unflatten" the counts list into a nested list with the appropriate dimensions
     val nestedCountsList:MutableList<MutableList<Int>> = MutableList(aLength) { MutableList(width){ 0 } } // Initialize list
+    //val nestedCountsArray:Array<IntArray> = Array(aLength) { IntArray(width){ 0 } } // Initialize list
     for (pos in 0 until width) { // iterate over each position in motif
         for (nuc in 0 until aLength) { // iterate over each nucleotide
             val countIndex = pos * 4 + nuc // Get corresponding index in counts list
             nestedCountsList[nuc][pos] = counts[countIndex] // Store corresponding count in nested counts list
+//            nestedCountsArray[nuc][pos] = counts[countIndex] // Store corresponding count in nested counts array
         }
     }
     return Motif(name, nestedCountsList)
+//    return Motif(name, nestedCountsArray)
 }
 
 /** This function reads a motif in JASPAR format into a motif object

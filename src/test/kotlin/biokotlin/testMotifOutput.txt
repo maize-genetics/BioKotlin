@@ -1,5 +1,5 @@
 FastaName	SeqID	MA0004.1	MA0006.1	MA0010.1
 
-PromoterTest	scaf_3:131213023-131214123	0	0	0
-PromoterTest	scaf_4:1487093-1488193	0	0	0
-PromoterTest	scaf_4:1490682-1491782	0	0	0
+PromoterTest	scaf_3:131213023-131214123	2	4	0
+PromoterTest	scaf_4:1487093-1488193	2	6	0
+PromoterTest	scaf_4:1490682-1491782	1	5	0
