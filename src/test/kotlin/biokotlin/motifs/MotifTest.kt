@@ -35,6 +35,18 @@ class MotifTest : StringSpec({
     )
     val aMotif = Motif("MA0004.1", cnt)
 
+    val cnt2 = listOf(
+        listOf(1, 17, 0, 0, 33, 0, 0, 0, 0, 1, 11, 1),
+        listOf(0, 0, 0, 0, 0, 33, 0, 0, 2, 0, 20, 32),
+        listOf(31, 16, 0, 33, 0, 0, 33, 0, 32, 22, 1, 0),
+        listOf(1, 0, 33, 0, 0, 0, 0, 33, 0, 10, 1, 0)
+    )
+    val aMotif2 = Motif("MA0097.1", cnt2)
+//    >MA0097.1	bZIP911
+//    A  [     1     17      0      0     33      0      0      0      0      1     11      1 ]
+//    C  [     0      0      0      0      0     33      0      0      1      0     20     32 ]
+//    G  [    31     16      0     33      0      0     33      0     32     22      1      0 ]
+//    T  [     1      0     33      0      0      0      0     33      0     10      1      0 ]
     "Length should equal number of columns" { aMotif.length shouldBe 6 }
 
     "Motif observations should be column sums" { aMotif.numObservations shouldBe 20 }
@@ -53,11 +65,12 @@ class MotifTest : StringSpec({
     "Search small seq" {
         //val aSeq = NucSeq("CACGTTaAACGTG")
         val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
-        val currentNuc= (aSeq[0].fourBit.toInt())
+        val aSeq2 = NucSeq("AAAAGATCGGATAACAACACgatgacgtggccTTTTCACACA")
+        val currentNuc= (aSeq2[0].fourBit.toInt())
         print(currentNuc)
-        val searchResult = aMotif.search(aSeq)
+        val searchResult = aMotif2.search(aSeq2)
         print(searchResult)
-        searchResult.size shouldBe aSeq.size() - aMotif.length + 1
+        searchResult.size shouldBe aSeq2.size() - aMotif2.length + 1
         //searchResult[0]
         val genesToTest = 30_000
         var totalHits = 0
@@ -73,6 +86,8 @@ class MotifTest : StringSpec({
         )
         println("Time = ${time.toDouble() / 1e9} sec TotalHits = $totalHits") // takes ~3 seconds to scan promoter space for one motif (array of arrays implementation)
     }
+
+
     "Search sequence containing N and other characters" {
         val seqOfNs = NucSeq("NRMWSNNNN")
         val searchResult = aMotif.search(seqOfNs)
@@ -115,12 +130,29 @@ class MotifTest : StringSpec({
         }
     }
 
+    "Make billboard" {
+        val aSeq2 = NucSeq("AAAAGATCGGATAACAACACgatgacgtggccTTTTCACACA")
+        val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MA0097Test.txt")
+        val billboard = makeBillboard(motifs, aSeq2)
+        println(billboard.map { "${it.key}: ${it.value}" }.joinToString(", "))
+
+    }
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
         val testArray = byteArrayOf(0, 9, 0, 0, 10, 0, 1, 8)
         val threshold = 2
         val motifLength = 4
         countScoreAtThreshold(testArray, threshold) shouldBe 3
         countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 2
+
+        val aSeq2 = NucSeq("AAAAGATCGGATAACAACACgatgacgtggccTTTTCACACA")
+        val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MA0097Test.txt")
+        val billboard = makeBillboard(motifs, aSeq2)
+        motifs.forEach { motif ->
+            val scanResult = billboard[motif]!!.toList()
+            println(motif.name)
+            println(scanResult)
+            countScoreAtThresholdNonOverlapping(billboard[motif]!!, threshold, motifLength) shouldBe 1
+        }
     }
 
     " Test conversion of nucleotide to int" {
@@ -131,19 +163,24 @@ class MotifTest : StringSpec({
     "Count non-overlapping windows exceeding threshold for a given sequence and motif and write to file" {
         val threshold = 2
         val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
+        //val fastaPath   = "/Users/coh22/Desktop/motifScanning/MCRTL069_1000up100downPromoters.fa"
         val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
+        //val motifPath = "/Users/coh22/Desktop/motifScanning/JASPAR2022_CORE_plants_non-redundant_pfms_meme.txt"
         val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
         //writeMotifHits(fastaPath, motifPath, threshold, outputPath)
 
-        val promoterMultiplier = 10_000
-        val motifMultiplier = 200
+        val promoterMultiplier = 1
+        val motifMultiplier = 1
         val time = measureNanoTime {
             repeat(motifMultiplier) {
                 writeMotifHits(fastaPath, motifPath, threshold, outputPath)
             }
         }
         println("Time to scan and write = ${(time.toDouble() * promoterMultiplier) / 1e9}")
-        // takes  ~6000 seconds (1.5-2 hrs) to scan 30,000 promoters for 600 motifs and write to file (array of arrays implementation)
+        // array of arrays implementation takes  ~6000 seconds (1.5-2 hrs) to scan 30,000 promoters for 600 motifs and
+    // write to file, estimated by 1 promoter * 3 motifs * 200 * 10,000
+        //takes 1730 seconds (~1/2 hr) to scan 37,000 promoters for 600 motifs, estimated  by all promoters of MCRTL069
+        // by 3 test motifs * 200
 
         //val lines: List<String> = File(outputPath).readLines()
         //lines.forEach { println(it) }

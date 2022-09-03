@@ -28,7 +28,7 @@ import java.lang.Math.abs
  * - Max score (default at 127 to fit in a byte)
  * Output: A mutable map of motif objects and byte arrays containing sliding window scores for input motif and sequence
  */
-fun makeBillboard(motifs: List<Motif>, seq: NucSeq, maxScore:Double = 127.0): Map<Motif, ByteArray> {
+fun makeBillboard(motifs: List<Motif>, seq: NucSeq, maxScore:Double = 127.0, minScore:Double = -127.0): Map<Motif, ByteArray> {
     // Initialize a mutable map to store motif objects and the motif's corresponding array of PSSM scores
     // for each seq window
     val motifsPresent= mutableMapOf<Motif, ByteArray> ()
@@ -37,7 +37,7 @@ fun makeBillboard(motifs: List<Motif>, seq: NucSeq, maxScore:Double = 127.0): Ma
         val hitArray = ByteArray(seq.size()) // Initialize a byte array to store PSSM scores for each window
         // Coerce score array into a byte array
         hits.forEach { (position, score) ->
-            hitArray[abs(position)] = score.coerceAtMost(maxScore).toInt().toByte()
+            hitArray[abs(position)] = score.coerceAtLeast(minScore).coerceAtMost(maxScore).toInt().toByte()
         }
         motifsPresent[motif]=hitArray // Map motif to byte array
     }

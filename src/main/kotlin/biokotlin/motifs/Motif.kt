@@ -146,7 +146,7 @@ data class Motif(
             // Calculate PSSM scores for current window, both forward and reverse unless bothStrands = false
             for (relativeNucPos in 0 until length) {
                 val currentNuc = seq[windowStartPos + relativeNucPos] // Get nucleotide at absolute sequence position
-                    .fourBit.toInt() // Convert NUC object to nucleotide index - how to handle Ns?
+                    .fourBit.toInt() // Convert NUC object to nucleotide index
                 if (currentNuc > 3) { // Handle any Ns or other letters in sequence - add 0 to counts if encountered
                     forwardPssmSum += 0
                     if (bothStrands) reversePssmSum += 0
