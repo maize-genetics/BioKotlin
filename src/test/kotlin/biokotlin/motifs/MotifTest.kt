@@ -139,19 +139,26 @@ class MotifTest : StringSpec({
     }
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
         val testArray = byteArrayOf(0, 9, 0, 0, 10, 0, 1, 8)
-        val threshold = 2
+        val threshold = 2.0
         val motifLength = 4
         countScoreAtThreshold(testArray, threshold) shouldBe 3
         countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 2
-
+    }
+    "Detect known motif in sequence" {
         val aSeq2 = NucSeq("AAAAGATCGGATAACAACACgatgacgtggccTTTTCACACA")
+        val aSeq3 = NucSeq("AgatgacgtggccAAAGATCGGATAACAACACgatgacgtggccTTTTCAgatgacgtggccCACA")
         val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MA0097Test.txt")
-        val billboard = makeBillboard(motifs, aSeq2)
+        val billboard1 = makeBillboard(motifs, aSeq2)
+        val billboard2 = makeBillboard(motifs, aSeq3)
+        val threshold = 2.0
+        val motifLength = 4
+
         motifs.forEach { motif ->
-            val scanResult = billboard[motif]!!.toList()
+            val scanResult = billboard1[motif]!!.toList()
             println(motif.name)
             println(scanResult)
-            countScoreAtThresholdNonOverlapping(billboard[motif]!!, threshold, motifLength) shouldBe 1
+            countScoreAtThresholdNonOverlapping(billboard1[motif]!!, threshold, motifLength) shouldBe 1 //single motif
+            countScoreAtThresholdNonOverlapping(billboard2[motif]!!, threshold, motifLength) shouldBe 3 //single motif
         }
     }
 
@@ -161,7 +168,7 @@ class MotifTest : StringSpec({
     }
 
     "Count non-overlapping windows exceeding threshold for a given sequence and motif and write to file" {
-        val threshold = 2
+        val threshold = 2.0
         val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
         //val fastaPath   = "/Users/coh22/Desktop/motifScanning/MCRTL069_1000up100downPromoters.fa"
         val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"

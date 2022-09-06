@@ -7,7 +7,7 @@ import java.io.File
  * This function counts the number of entries where the value
  * is greater than or equal to the specified threshold
  */
-fun countScoreAtThreshold(bytes:ByteArray, threshold:Int):Int {
+fun countScoreAtThreshold(bytes:ByteArray, threshold:Double):Int {
     val count: Int = bytes.filter{it >= threshold}
         .count()
     return count
@@ -22,7 +22,7 @@ fun countScoreAtThreshold(bytes:ByteArray, threshold:Int):Int {
  * will be counted, then will skip ahead to the next entry that does
  * not overlap the window that exceeded the threshold.
  */
-fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Int, motifLength:Int, thresholdType:String = "length"):Int {
+fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motifLength:Int, thresholdType:String = "length"):Int {
     var arrayIndex=0
     var motifCount=0
     val arrayLength = bytes.size
@@ -66,7 +66,7 @@ B73_Ref_Subset	B73V4_ctg58	0	0	0
 B73_Ref_Subset	B73V4_ctg43	0	3	1
  */
 
-fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Int, outputPath:String, nonOverlapping:Boolean = true) {
+fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputPath:String, nonOverlapping:Boolean = true) {
     val fasta = NucSeqIO(fastaPath, SeqFormat.fasta)
     val motifs = readMotifs(motifPath)
     val fastaName = fastaPath.substringAfterLast("/").substringBeforeLast(".")
