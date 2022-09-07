@@ -138,10 +138,10 @@ class MotifTest : StringSpec({
 
     }
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
-        val testArray = byteArrayOf(0, 9, 0, 0, 10, 0, 1, 8)
+        val testArray = byteArrayOf(0, 11, 0, 0, 0, 0, 15, 0, 1, 20, 0, 0, 20)
         val threshold = 2.0
-        val motifLength = 4
-        countScoreAtThreshold(testArray, threshold) shouldBe 3
+        val motifLength = 5
+        countScoreAtThreshold(testArray, threshold) shouldBe 4
         countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 2
     }
     "Detect known motif in sequence" {
