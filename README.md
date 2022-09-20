@@ -1,31 +1,38 @@
 # README #
 
-This is multilanguage platform for modeling molecular biology and physiology for applied breeding.
+BioKotlin is in the early stages of development, but we expect to support nucleotide and 
+protein sequence manipulation, fast sequence IO, alignment, motif, pathway support.  
 
+BioKotlin leverages the performance and type safety of the JVM languages with ease of Python like scripting.
+Because the Kotlin language is compiled on the fly it can be thousands of times faster for
+certain applications than scripting languages.  Because it uses the JVM, we expect high interoperability with
+[GATK](https://gatk.broadinstitute.org/hc/en-us), SamTools [HTSJDK](https://samtools.github.io/htsjdk/), 
+BioJava, [TASSEL](https://www.maizegenetics.net/tassel) for GWAS and Genome Wide Prediction, and the PHG - the 
+pangenome representation.  Additionally, since we have mimicked the beautiful API of [BioPython](https://biopython.org), 
+we expect fast and efficient interoperability with BioPython through GraalVM.
+ 
+ We expect to have extensive cross language support with the use of GraalVM's support of JVM, Python, and R (FastR). 
+ 
+ You can follow our current progress at our [Trello Board](https://bitbucket.org/bucklerlab/biokotlin/addon/trello/trello-board) 
+ 
 ### What is this repository for? ###
 
-* This project is an initial experiment to model the central dogma of molecular biology in a way 
-that would be useful to make breeding predictions.
-* Definitions of terms and the structure of the model
-* How to run the model is different languages
-* How to create a new function and share it.
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* This is the main repository for BioKotlin development
+* We follow a Git-Flow branching structure
+* Since we are in early development, most of the code is in the 
+[develop](https://bitbucket.org/bucklerlab/biokotlin/branch/develop) and associated branches
 
 ### How do I get set up? ###
-
-* Data files - place test in data folder (do not sync with Git)
-    * B73 Reference genome proteins and GFF
-    * Flowering time/clock EggNog Orthologs
-    * Kremling expression data for above genes and NAM founders
-    * Mini-PHG for NAM founders and only the flowering genes
  
-* Configuration
-    * GraalVM
-    * FastR
+* Configuration for a User
+    * JupyterLab with Kotlin
+    
+* Configuration for a Power User (or Developer)
+    * IntelliJ with Kotlin support  
     * JupyterLab with Kotlin
 
 * Dependencies
-* Database configuration
+* 
 
 * How to run tests
 * Deployment instructions
@@ -39,15 +46,9 @@ that would be useful to make breeding predictions.
 ### Who do I talk to? ###
 
 * Edward Buckler - esb33@cornell.edu
-* Other community or team contact
+* Terry Casstevens - tmc46@cornell.edu
 
 ### ToDo ###
-1. Define terms and flow (Markdown file in repository)
-2. Define Parameters and Outputs
-3. Test data
-4. Model pseudocode - how would you like to run this pipeline in scientific English
-5. Create basic functions and flow in Kotlin, R, and/or Python (can just move random values)
-6. Test code for basic functions
-7. Start implementing easiest of the real functions
+1. Making the 
 8. Interop between languages using GraalVM
 
