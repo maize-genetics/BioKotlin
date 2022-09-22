@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 // Dependencies will follow the buildscript
 
 group = "org.biokotlin"
-version = "0.04"
+version = "0.05"
 
 /*
 This build script is need to use the early access
@@ -16,7 +16,6 @@ buildscript {
     repositories {
         mavenCentral()
         gradlePluginPortal()
-        maven("https://dl.bintray.com/kotlin/kotlin-eap")
     }
 
     dependencies {
@@ -68,7 +67,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
-    implementation("de.mpicbg.scicomp:krangl:0.13")
+    implementation("com.github.holgerbrandl:krangl:0.18")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
 
     // Biology possible dependencies
@@ -121,55 +120,76 @@ tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
 }
 
+/**
+ * Generates HTML files based on Javadoc-style comments. Supports automatic insertion of Jupyter notebook tutorials,
+ * (see [tutorialInjector] for details). Supports insertion of images (see [imageInjector] for details).
+ */
 val dokkaHtml by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
     dokkaSourceSets {
         configureEach {
             includes.from("src/main/kotlin/biokotlin/packages.md")
         }
     }
+    doLast {
+        tutorialInjector()
+        imageInjector()
+    }
 }
 
-val tutorialInjector by tasks.registering {
-    doLast {
-        //Convert raw notebooks into HTML files
-        val raw = File("${rootProject.projectDir}/tutorials/raw")
-        val html = File("${rootProject.projectDir}/build/dokka/html")
-        for (notebook in raw.listFiles()!!) {
-            if (notebook.name.endsWith(".ipynb")) {
-                //TODO look at how to manage this executable properly
-                File("${rootProject.projectDir}/build/dokka/html").mkdirs()
+/**
+ * Replaces occurences of ```!tutorial tutorial_name``` within the Javadocs with am embedded tutorial.
+ *
+ * ```!tutorial tutorial_name``` must be on its own line, surrounded by a blank line on either side.
+ *
+ * Do not include the file extension in tutorial_name. The tutorial must be present in documentation_resources/raw_tutorials
+ * as a Jupyter notebook file.
+ */
+fun tutorialInjector() {
+    //Convert raw notebooks into HTML files
+    val raw = File("${rootProject.projectDir}/documentation_resources/raw_tutorials")
+    val html = File("${rootProject.projectDir}/build/dokka/html")
+    val tutorials = File("${rootProject.projectDir}/build/dokka/html/tutorials")
+    for (notebook in raw.listFiles()!!) {
+        if (notebook.name.endsWith(".ipynb")) {
+            tutorials.mkdirs()
+            try {
+                val home: String = System.getProperty("user.home")
                 ProcessBuilder(
-                    "/home/jeff/miniconda3/bin/jupyter",
+                    "$home/miniconda3/bin/jupyter",
                     "nbconvert",
                     notebook.absolutePath,
                     "--stdout",
                     "--to",
                     "html",
                 )
-                    .redirectOutput(File("build/dokka/html/${notebook.name.substringBefore(".")}.html"))
+                    .redirectOutput(File("build/dokka/html/tutorials/${notebook.name.substringBefore(".")}.html"))
                     .start()
                     .waitFor()
-            }
-        }
-
-        val packageList = File("build/dokka/html/biokotlin/package-list").readText()
-
-        //Replaces shorthand links with accurate ones and inserts links into code
-        val linkFinder = Regex("<a href=\"\\..*?>")
-        for (file in html.listFiles()!!) {
-            if (!file.isFile) continue
-            //Matches <a href=". until >
-            val text = file.readText()
-            val fixedLinks = linkFinder.replace(text) { a ->
-                a.value.replace(Regex("\".*\"")) { "\"${parseLink(it.value.drop(1).dropLast(1), packageList)}\" target=\"_blank\"" }
+            } catch (_: java.io.IOException) {
+                println("Warning: Jupyter must be installed through conda for tutorials to be injected.")
+                return
             }
 
-            file.writeText(fixedLinks)
         }
-
-        //Replaces any <p></p> blocks in the dokka files that contain !tutorial with their tutorial
-        recursivelyInjectTutorials(html, -1)
     }
+
+    val packageList = File("build/dokka/html/biokotlin/package-list").readText()
+
+    //Replaces shorthand links with accurate ones and inserts links into code
+    val linkFinder = Regex("<a href=\"\\..*?>")
+    for (file in tutorials.listFiles()!!) {
+        if (!file.isFile) continue
+        //Matches <a href=". until >
+        val text = file.readText()
+        val fixedLinks = linkFinder.replace(text) { a ->
+            a.value.replace(Regex("\".*\"")) { "\"../${parseLink(it.value.drop(1).dropLast(1), packageList)}\" target=\"_blank\"" }
+        }
+
+        file.writeText(fixedLinks)
+    }
+
+    //Replaces any <p></p> blocks in the dokka files that contain !tutorial with their tutorial
+    recursivelyInjectTutorials(html, -1)
 }
 
 /**
@@ -236,6 +256,9 @@ fun linkFromMatch(match: MatchResult): String {
     return match.value.substringAfter('\u001F')
 }
 
+/**
+ * Recursively injects the tutorials into iframes in the dokka files.
+ */
 fun recursivelyInjectTutorials(file: File, depth: Int) {
     if (file.isDirectory) file.listFiles()!!.forEach { recursivelyInjectTutorials(it, depth + 1) }
     val tutorialIdentifier = Regex("<p [^<]*?!tutorial .*?<\\/p>")
@@ -245,7 +268,7 @@ fun recursivelyInjectTutorials(file: File, depth: Int) {
         val injected = tutorialIdentifier.replace(text) {
             val name = it.value.substringAfter(">").substringAfter(" ").substringBefore("<")
             "<div class=\"iframeDiv\" style=\"width:100%; padding-bottom:56.25%; position:relative;\">\n" +
-                    "  <iframe src=\"${"../".repeat(depth)}$name.html\" style=\"position:absolute; top:0px; left:0px; \n" +
+                    "  <iframe src=\"${"../".repeat(depth)}tutorials/$name.html\" style=\"position:absolute; top:0px; left:0px; \n" +
                     "  width:100%; height:100%; border: none; overflow: hidden;\"></iframe>\n" +
                     "</div>"
         }
@@ -253,15 +276,62 @@ fun recursivelyInjectTutorials(file: File, depth: Int) {
     }
 }
 
+/**
+ * Copies all files from the documentation_resources/images directory to the build/dokka/html directory.
+ * Supports nested folders within the images directory. Treat the image directory as the root in your
+ * src tag. Example, to access an image in the images directory, simply use the filename "myImage.svg", but to
+ * access one in a subdirectory, use "mySubdirectory/myImage.svg".
+ *
+ * Then, recursively descends the html folder, finds all files with a .html extensions and replaces
+ * their <img> tags with the proper src attribute, taking into account the depth of the
+ * folder. Ignores img src that are on the internet. If an image lacks an alt tag, it will be
+ * inserted based on the content of a text file with the same name as the image (in the same
+ * directory).
+ *
+ *
+ * Prefer using svg files for images.
+ *
+ * To allow for flexibility, all styling for the image must be included in the style tag of the
+ * image; the injector will not attempt to inject styling.
+ */
+fun imageInjector() {
+    val images = File("${rootProject.projectDir}/documentation_resources/images")
+    val html = File("${rootProject.projectDir}/build/dokka/html")
+    val documentationImages = File("${rootProject.projectDir}/build/dokka/html/documentation_images")
+    documentationImages.mkdirs()
+    images.copyRecursively(documentationImages, overwrite = true)
+    recursivelyInjectImages(html, -1)
+}
+
+fun recursivelyInjectImages(file: File, depth: Int) {
+    if (file.isDirectory) file.listFiles()!!.forEach { recursivelyInjectImages(it, depth + 1) }
+    if (file.name.endsWith(".html")) {
+        val text = file.readText()
+        val injected = Regex("<img [^<]*?>").replace(text) {
+            val src = it.value.substringAfter("src=\"").substringBefore("\"")
+            if (src.startsWith("http")) {
+                it.value
+            } else {
+                val correctedSource = it.value.replace(src, "${"../".repeat(depth)}documentation_images/$src")
+                if (it.value.contains("alt")) {
+                    correctedSource
+                } else {
+                    val alt = File("${rootProject.projectDir}/documentation_resources/images/${src.substringBefore(".")}.txt").readText()
+                    correctedSource.replace(">", "alt=\"$alt\">")
+                }
+            }
+        }
+        file.writeText(injected)
+    }
+}
+
 val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
-    doLast {
-        group = JavaBasePlugin.DOCUMENTATION_GROUP
-        description = "BioKotlin: ${property("version")}"
-        archiveClassifier.set("javadoc")
-        from(dokkaHtml.outputDirectory)
-    }
-    finalizedBy(tutorialInjector)
+    mustRunAfter(dokkaHtml)
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    description = "BioKotlin: ${property("version")}"
+    archiveClassifier.set("javadoc")
+    from(dokkaHtml.outputDirectory)
 }
 
 tasks.test {
@@ -346,6 +416,10 @@ publishing {
                         name.set("Peter Bradbury")
                         email.set("pjb39@cornell.edu")
                     }
+                    developer {
+                        name.set("Jeffrey Morse")
+                        email.set("jbm249@cornell.edu")
+                    }
                 }
                 scm {
                     connection.set("scm:git:git://bitbucket.org:bucklerlab/biokotlin.git")
@@ -375,4 +449,9 @@ tasks.jar {
         from(zipTree(file.absoluteFile))
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.publish {
+    dependsOn(dokkaJar)
+    mustRunAfter(dokkaJar)
 }
