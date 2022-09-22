@@ -1,0 +1,1 @@
+The structure of a feature tree, where the features Chromosome, Contig, Scaffold, and Gene are circled in blue and the features Leader, Exon, Coding sequence, and Terminator are circled in green.
