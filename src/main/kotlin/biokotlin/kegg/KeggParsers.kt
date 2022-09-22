@@ -55,9 +55,11 @@ internal fun geneParser(keggResponseText: String): KeggGene {
     val keGenome = KeggEntry.of(genome.abbr, entryHeader[2])
     val orgCode = KeggCache.orgCode(keGenome) ?: throw IllegalStateException("Genome $keGenome not in org set")
     //TODO add pathway parsing
+    //TODO KEGG changed things - with NAME, DEFINITION, and SYMBOL
+    // https://www.kegg.jp/kegg/docs/dbentry.html
     val orthologyKID = KeggEntry.of(orthology.abbr, (attributes["ORTHOLOGY"]
             ?: error("ORTHOLOGY missing")).split(whiteSpace)[0])
-    val nameAndDefinition = attributes["DEFINITION"].orEmpty()
+    val nameAndDefinition = attributes["NAME"].orEmpty() //used to be DEFINITION
 
     val aaSeq = attributes["AASEQ"]?.let { cleanSeqWithLength(it) }?:""
     val ntSeq = attributes["NTSEQ"]?.let { cleanSeqWithLength(it) }?:""
@@ -100,8 +102,8 @@ internal fun pathwayParser(keggResponseText: String): KeggPathway {
 internal fun orthologyParser(keggResponseText: String): KeggOrtholog {
     val attributes = parseKEGG(keggResponseText)
     val kid = KeggEntry.of("ko", (attributes["ENTRY"] ?: error("ENTRY missing")).split(whiteSpace)[0])
-    val name = attributes["NAME"] ?: error("NAME is missing")
-    val definition = attributes["DEFINITION"].orEmpty()
+    val name = attributes["SYMBOL"] ?: error("NAME is missing")
+    val definition = attributes["NAME"].orEmpty()
     val ec = ecInBracket.find(definition)!!.value
 
     val genes: Map<String, List<KeggEntry>> = (attributes["GENES"] ?: error("GENES is missing")).lines()

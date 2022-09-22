@@ -1,0 +1,3 @@
+A diagram depicting the parent/child relationships that are permissible within the feature tree framework. The genome
+may parent chromosomes, contigs, scaffolds, and genes. Genes may parent transcripts. Transcripts may parent leaders,
+exons, coding sequences, and terminators.
