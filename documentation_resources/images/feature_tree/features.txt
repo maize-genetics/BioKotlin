@@ -1,0 +1,1 @@
+A diagram depicting the structure of a feature tree where all nodes except Genome are circled.

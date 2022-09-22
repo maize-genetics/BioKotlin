@@ -16,8 +16,8 @@ import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import krangl.DataFrame
-import krangl.asStrings
 import krangl.deparseRecords
+import krangl.toStrings
 import java.io.File
 
 /**
@@ -244,7 +244,7 @@ fun organisms(): DataFrame {
             .map { it.split("\t") }
             .filter { it.size == 4 } //there is EOF line
             .deparseRecords { mapOf("kid" to it[0], "org" to it[1], "species" to it[2], "taxonomy" to it[3]) }
-            .addColumn("taxaIndex") { it["kid"].asStrings().map { it!!.substring(1) } }
+            .addColumn("taxaIndex") { it["kid"].toStrings().map { it!!.substring(1) } }
 }
 
 
