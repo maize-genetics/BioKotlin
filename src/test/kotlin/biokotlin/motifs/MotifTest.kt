@@ -192,4 +192,21 @@ class MotifTest : StringSpec({
         //val lines: List<String> = File(outputPath).readLines()
         //lines.forEach { println(it) }
     }
+
+    "Write motif hits with positions of individual motifs" {
+        val threshold = 2.0
+        val fastaPath = "src/test/kotlin/biokotlin/motifs/PromoterTest.fa"
+        val motifPath = "src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt"
+        val outputPath = "src/test/kotlin/biokotlin/testMotifOutput.txt"
+
+        val promoterMultiplier = 10000
+        val motifMultiplier = 200
+        val time = measureNanoTime {
+            repeat(motifMultiplier) {
+                writeMotifHitsWithPositions(fastaPath, motifPath, threshold, outputPath)
+            }
+        }
+        println("Time to scan and write = ${(time.toDouble() * promoterMultiplier) / 1e9}")
+
+    }
 })

@@ -48,6 +48,12 @@ fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motif
 
     return motifCount
 }
+/**
+ * This function writes a single line of output containing fastaName, seqID, motif start and end positions, and motif ID.
+ */
+fun writeSingleLine(fastaName:String, seqID:String, startPos:Int, endPos:Int, motifID:String) {
+    //TODO
+}
 
 /**
  * This function takes a given NucSeqIO fasta file and list of motif objects
@@ -105,6 +111,71 @@ fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputP
                 writer.write(count.toString())
             }
             writer.write("\n")
+        }
+    }
+}
+
+fun writeMotifHitsWithPositions(fastaPath:String, motifPath:String, threshold:Double, outputPath:String,
+                                minThreshold:Double = 15.0, nonOverlapping:Boolean = true, thresholdType:String = "length") {
+    val fasta = NucSeqIO(fastaPath, SeqFormat.fasta)
+    val motifs = readMotifs(motifPath)
+    val fastaName = fastaPath.substringAfterLast("/").substringBeforeLast(".")
+
+    // Make list of motif names
+    val motifNames: MutableList<String> = mutableListOf()
+    motifs.forEach { motif ->
+        motifNames.add(motif.name)
+    }
+    File(outputPath).bufferedWriter().use { writer ->
+        // Write headers for motif count matrix (motif counts for each seq)
+        val headers = "FastaName\tSeqID\tStartPos\tEndPos\tMotifID\n"
+        writer.write(headers)
+
+        // Iterate through each seq in fasta
+        // >scaf_3:131213023-131214123
+        fasta.forEach { seq ->
+            val seqID = seq.id
+            val seqStartPos = seqID.substringAfter(":").substringBefore("-").toInt()
+            // Calculate PSSM scores for each motif across sequence windows
+            val motifScores = makeBillboard(motifs, seq.sequence)
+
+            // For each motif, write occurrences exceeding score threshold (either overlapping or non-overlapping)
+            motifs.forEach { motif ->
+                val motifLength = motif.length
+                val motifID = motif.name
+                val motifBillboard = motifScores[motif]!!
+                var arrayIndex=0
+                val arrayLength = motifBillboard.size
+                val adjThreshold = if (thresholdType == "length") {
+                    maxOf(threshold * motifLength, minThreshold)
+                } else {
+                    threshold
+                }
+
+                while (arrayIndex < arrayLength) {
+                    if (motifBillboard[arrayIndex] >= adjThreshold) { // If motif entry exceeds threshold, write a line
+                        val motifStartPos = seqStartPos + arrayIndex // Get motif start position
+                        val motifEndPos = motifStartPos + motifLength // Get motif end position
+                        writer.write("\n")
+                        writer.write(fastaName) //write fasta name
+                        writer.write("\t")
+                        writer.write(seqID) //write seqID
+                        writer.write("\t")
+                        writer.write(motifStartPos.toString()) //write motif start position
+                        writer.write("\t")
+                        writer.write(motifEndPos.toString()) //write motif end position
+                        writer.write("\t")
+                        writer.write(motifID) // write motif ID
+
+                        if (nonOverlapping) { // move to either end of motif (if non-overlapping), or to next base
+                            arrayIndex += motifLength
+                        } else arrayIndex ++
+
+                    } else {
+                        arrayIndex++
+                    }
+                }
+            }
         }
     }
 }
