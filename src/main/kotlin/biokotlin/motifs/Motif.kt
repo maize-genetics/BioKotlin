@@ -82,7 +82,7 @@ data class Motif(
     val pseudocounts: Double = 0.01,
     val background: List<Double> = listOf(0.25,0.25,0.25,0.25)
 ) {
-    val length: Int = counts[0].size // test this
+    val length: Int = counts[0].size
     val numObservations: Int = counts.flatten().sum() / length
     //val pssm: List<List<Double>> =
     val pssm: Array<DoubleArray> =
@@ -100,6 +100,7 @@ data class Motif(
     val pssmRC: Array<DoubleArray> = pssm.reversed().toTypedArray()
     //val pssmRC: NDArray<Double, D2> = mk.ndarray(pssm.toDoubleArray().reversedArray(),4,length)
 
+    val entropyScore = siteEntropies().sum()
 
 
     /*
@@ -121,11 +122,19 @@ data class Motif(
             .map{count -> (count + pseudocounts) / (numObservations.toDouble() + (pseudocounts * bioSet.set.size))}}
         return y
     }
-//    fun pwm(): NDArray<Double, D2> {
-//        val x: NDArray<Double, D2> = counts.asType(DataType.DoubleDataType)
-//        val y = (x + pseudocounts) / (numObservations.toDouble() + (pseudocounts * bioSet.set.size))
-//        return y
-//    }
+
+    fun siteEntropies(): List<Double> {
+        val entropyLossBySite: MutableList<Double> = mutableListOf()
+        for (site in 0 until length) {// calculate Shannon entropy loss for each site
+            val indivSite: MutableList<Double> = mutableListOf()
+            for (nuc in pwm().indices) {
+                val nucFreq = pwm()[nuc][site]
+                indivSite.add(-nucFreq * log(nucFreq, base = 2.0))
+            }
+            entropyLossBySite.add(4 * (-0.25) * log(0.25, base = 2.0) - indivSite.sum()) // Note: assumes homogenous background nuc freqs
+        }
+        return entropyLossBySite
+    }
 
     override fun toString(): String {
         return "Motif(name='$name', bioSet=$bioSet, pseudocounts=$pseudocounts, length=$length, numObservations=$numObservations\n" +

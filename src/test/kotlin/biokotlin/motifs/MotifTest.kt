@@ -59,9 +59,31 @@ class MotifTest : StringSpec({
         aMotif.pwm()[0][0] shouldBe 4.01/20.04}
 
     "Check forward and reverse PSSM values" {
+        aMotif.pssm.forEach { nuc ->
+            nuc.forEach { site ->
+                print("$site ")
+            }
+            print("\n")
+        }
+//        for (nuc in aMotif.pssm.indices) {
+//            for (site in aMotif.pssm[0].indices) {
+//                print(aMotif.pssm[nuc][site])
+//                print(" ")
+//            }
+//            print("\n")
+//        }
         aMotif.pssm[3][5] shouldBe 2 * log(((0.01/20.04)/0.25), 2.0)
         aMotif.pssmRC[0][0] shouldBe 2 * log(((0.01/20.04)/0.25), 2.0)
     }
+
+    "Calculate entropy of individual site" {
+        print(aMotif.siteEntropies())
+        aMotif.siteEntropies()[0] shouldBe 2 - (-(4.01/20.04) * log((4.01/20.04), base = 2.0) +
+                -(16.01/20.04) * log((16.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0))
+    }
+
     "Search small seq" {
         //val aSeq = NucSeq("CACGTTaAACGTG")
         val aSeq = NucSeq("acgCACGTTacAACGTGtgtagcta") * 40
@@ -207,6 +229,7 @@ class MotifTest : StringSpec({
             }
         }
         println("Time to scan and write = ${(time.toDouble() * promoterMultiplier) / 1e9}")
-
+        // with overlapping motifs allowed (of the same motif)
+        //writeMotifHitsWithPositions(fastaPath, motifPath, threshold, outputPath, nonOverlapping=false)
     }
 })
