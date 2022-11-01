@@ -58,6 +58,47 @@ class MotifTest : StringSpec({
         aMotif.pwm()[3][5] shouldBe 0.01/20.04
         aMotif.pwm()[0][0] shouldBe 4.01/20.04}
 
+    "Calculate entropy of individual site" {
+        aMotif.siteEntropies()[0] shouldBe 2 - (-(4.01/20.04) * log((4.01/20.04), base = 2.0) +
+                -(16.01/20.04) * log((16.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0))
+    }
+
+    "Calculate total entropy of motif" {
+        print(aMotif.entropyScore)
+        aMotif.entropyScore shouldBe (2 - (-(4.01/20.04) * log((4.01/20.04), base = 2.0) +
+                -(16.01/20.04) * log((16.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0)) +
+
+                2 - (-(19.01/20.04) * log((19.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(1.01/20.04) * log((1.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0)) +
+
+                2 - (-(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(20.01/20.04) * log((20.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0)) +
+
+                2 - (-(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(20.01/20.04) * log((20.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0)) +
+
+                2 - (-(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(20.01/20.04) * log((20.01/20.04), base = 2.0)) +
+
+                2 - (-(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
+                -(20.01/20.04) * log((20.01/20.04), base = 2.0))
+                ).plusOrMinus(0.001)
+    }
+
     "Check forward and reverse PSSM values" {
         aMotif.pssm.forEach { nuc ->
             nuc.forEach { site ->
@@ -76,13 +117,6 @@ class MotifTest : StringSpec({
         aMotif.pssmRC[0][0] shouldBe 2 * log(((0.01/20.04)/0.25), 2.0)
     }
 
-    "Calculate entropy of individual site" {
-        print(aMotif.siteEntropies())
-        aMotif.siteEntropies()[0] shouldBe 2 - (-(4.01/20.04) * log((4.01/20.04), base = 2.0) +
-                -(16.01/20.04) * log((16.01/20.04), base = 2.0) +
-                -(0.01/20.04) * log((0.01/20.04), base = 2.0) +
-                -(0.01/20.04) * log((0.01/20.04), base = 2.0))
-    }
 
     "Search small seq" {
         //val aSeq = NucSeq("CACGTTaAACGTG")
@@ -160,11 +194,11 @@ class MotifTest : StringSpec({
 
     }
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
-        val testArray = byteArrayOf(0, 11, 0, 0, 0, 0, 15, 0, 1, 20, 0, 0, 20)
+        val testArray = byteArrayOf(0, 15, 0, 0, 0, 0, 15, 0, 1, 20, 0, 0, 20)
         val threshold = 2.0
         val motifLength = 5
-        countScoreAtThreshold(testArray, threshold) shouldBe 4
-        countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 2
+        countScoreAtThreshold(testArray, threshold, motifLength) shouldBe 4
+        countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 3
     }
     "Detect known motif in sequence" {
         val aSeq2 = NucSeq("AAAAGATCGGATAACAACACgatgacgtggccTTTTCACACA")

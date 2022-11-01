@@ -7,8 +7,20 @@ import java.io.File
  * This function counts the number of entries where the value
  * is greater than or equal to the specified threshold
  */
-fun countScoreAtThreshold(bytes:ByteArray, threshold:Double):Int {
-    val count: Int = bytes.filter{it >= threshold}
+fun countScoreAtThreshold(bytes:ByteArray, threshold:Double, motifLength: Int, minThreshold:Double = 15.0,
+                          thresholdType:String = "length"):Int {
+
+    val adjThreshold = if (thresholdType == "length") {
+        maxOf(threshold * motifLength, minThreshold)
+    }
+//    else if (thresholdType == "entropy") {
+//        threshold / entropyScore // threshold adjusted by motif entropy (TODO)
+//    }
+    else {
+        threshold
+    }
+
+    val count: Int = bytes.filter{it >= adjThreshold}
         .count()
     return count
 }
@@ -107,13 +119,28 @@ fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputP
                 val count = if(nonOverlapping){
                     countScoreAtThresholdNonOverlapping(motifScores[motif]!!, threshold, motifLength)
                 }
-                else {countScoreAtThreshold(motifScores[motif]!!, threshold) }
+                else {countScoreAtThreshold(motifScores[motif]!!, threshold, motifLength) }
                 writer.write(count.toString())
             }
             writer.write("\n")
         }
     }
 }
+/**
+ * This function takes a given NucSeqIO fasta file and list of motif objects
+ * and outputs non-overlapping (or overlapping if explicitly specified)
+ * motif hits exceeding some user-defined threshold. It writes the result to a
+ * user-specified tab-separated file, with each row containing a single motif "hit" from the fasta
+
+Sample output:
+FastaName                   SeqID                  StartPos EndPos  MotifID
+
+Zm-B73-REFERENCE-NAM-5.0    chr1:33616-34716        33710   33716   MA0020.1
+Zm-B73-REFERENCE-NAM-5.0    chr1:33616-34716        34105   34111   MA0020.1
+Zm-B73-REFERENCE-NAM-5.0    chr1:33616-34716        34584   34590   MA0020.1
+Zm-B73-REFERENCE-NAM-5.0    chr1:33616-34716        33710   33716   MA0021.1
+Zm-B73-REFERENCE-NAM-5.0    chr1:33616-34716        33833   33839   MA0021.1
+ */
 
 fun writeMotifHitsWithPositions(fastaPath:String, motifPath:String, threshold:Double, outputPath:String,
                                 minThreshold:Double = 15.0, nonOverlapping:Boolean = true, thresholdType:String = "length") {
