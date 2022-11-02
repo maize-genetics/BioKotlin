@@ -97,7 +97,11 @@ data class Motif(
 //            .mapMultiIndexed { rowCol, value -> 2.0 * log(value / background[rowCol[0]], 2.0) }
     /*Position specific scoring matrix - reverse complement*/
     //val pssmRC: List<List<Double>> = pssm.reversed()
-    val pssmRC: Array<DoubleArray> = pssm.reversed().toTypedArray()
+    //val pssmRC: Array<DoubleArray> = pssm.reversed().toTypedArray()
+    val pssmRC: Array<DoubleArray> = pssm.map{row ->
+                row.reversed().toDoubleArray()
+            }.reversed().toTypedArray()
+
     //val pssmRC: NDArray<Double, D2> = mk.ndarray(pssm.toDoubleArray().reversedArray(),4,length)
 
     val entropyScore = siteEntropies().sum()

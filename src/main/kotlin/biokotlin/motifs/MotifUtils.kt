@@ -4,6 +4,38 @@ import biokotlin.seqIO.SeqFormat
 import java.io.File
 
 /**
+ * This function trims input motifs based on an entropy bit score threshold.
+ * It outputs a trimmed motif file in MEME format.
+ */
+fun trimMotifs(motifPath:String, entropyBitThreshold:Double = 0.5) {
+    val motifs = readMotifs(motifPath) // Read motif(s) into a Motif object
+
+    for (motif in motifs) { // Trim motifs based on entropy bit threshold
+
+        // Left trimming
+        var currentIndex = 0 // Initialize index variable
+        var currentEntropy = motif.siteEntropies()[currentIndex] // Initialize variable to store current entropy score
+        while (currentEntropy < entropyBitThreshold) {
+            currentIndex += 1
+            currentEntropy = motif.siteEntropies()[currentIndex]
+        }
+        val trimmedStart = currentIndex // Store first index from left that exceeds entropy threshold
+        println(trimmedStart)
+        // Right trimming
+        currentIndex = motif.length - 1 // Reset index variables to end of motif
+        currentEntropy = motif.siteEntropies()[currentIndex]
+        while (currentEntropy < entropyBitThreshold) {
+            currentIndex -= 1
+            currentEntropy = motif.siteEntropies()[currentIndex]
+        }
+        val trimmedEnd = currentIndex  // Store first index from right that exceeds entropy threshold
+        println(trimmedEnd)
+
+    }
+    // Write to meme file
+}
+
+/**
  * This function counts the number of entries where the value
  * is greater than or equal to the specified threshold
  */
@@ -59,12 +91,6 @@ fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motif
     }
 
     return motifCount
-}
-/**
- * This function writes a single line of output containing fastaName, seqID, motif start and end positions, and motif ID.
- */
-fun writeSingleLine(fastaName:String, seqID:String, startPos:Int, endPos:Int, motifID:String) {
-    //TODO
 }
 
 /**
