@@ -23,6 +23,9 @@ fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double =
                     "\n")
         }
         for (motif in motifs) { // Trim motifs based on entropy bit threshold
+            if (motif.counts.flatten().sum() != motif.length * motif.numObservations) { // Skip motif if counts are funky
+                continue
+            }
 
             // Left trimming
             var currentIndex = 0 // Initialize index variable

@@ -211,9 +211,11 @@ class MotifTest : StringSpec({
             counts[2][1] shouldBe 296
         }
 
-        // Trim multiple motifs
+        // Trim multiple motifs, testing whether motif with inconsistent number of observations is skipped
         trimMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt",
             "src/test/kotlin/biokotlin/testData/testTrimmedMotifsMEME.txt", outputFormat = "MEME")
+        val trimmedMotifs = readMotifs("src/test/kotlin/biokotlin/testData/testTrimmedMotifsMEME.txt")
+        trimmedMotifs.size shouldBe 2
     }
 
     "Trim motifs and output JASPAR format" {
