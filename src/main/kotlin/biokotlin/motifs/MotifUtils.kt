@@ -7,12 +7,21 @@ import java.io.File
  * This function trims input motifs based on an entropy bit score threshold.
  * It outputs a trimmed motif file in JASPAR format.
  */
-fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double = 0.5) {
+fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double = 0.5, outputFormat:String = "MEME") {
     val motifs = readMotifs(motifPath) // Read motif(s) into a Motif object
     val nucs = listOf("A", "C", "G", "T")
 
     File(outputPath).bufferedWriter().use { writer -> // open output file for writing
-
+        if(outputFormat == "MEME") { //write MEME header
+            writer.write("MEME version 4\n" +
+                    "\nALPHABET= ACGT\n" +
+                    "\n" +
+                    "strands: + -\n" +
+                    "\n" +
+                    "Background letter frequencies\n" +
+                    "A 0.25 C 0.25 G 0.25 T 0.25\n" +
+                    "\n")
+        }
         for (motif in motifs) { // Trim motifs based on entropy bit threshold
 
             // Left trimming
@@ -24,6 +33,7 @@ fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double =
                 currentEntropy = motif.siteEntropies()[currentIndex]
             }
             val trimmedStart = currentIndex // Store first index from left that exceeds entropy threshold
+
             // Right trimming
             currentIndex = motif.length - 1 // Reset index variables to end of motif
             currentEntropy = motif.siteEntropies()[currentIndex]
@@ -32,17 +42,33 @@ fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double =
                 currentEntropy = motif.siteEntropies()[currentIndex]
             }
             val trimmedEnd = currentIndex  // Store first index from right that exceeds entropy threshold
-
-            // Write trimmed motif
-            writer.write(">${motif.name}\n") // Write header
             val trimmedLength = trimmedEnd - trimmedStart
-            for (row in 0..3) { // iterate over each row (nucleotide) of counts matrix
-                writer.write("${nucs[row]}\t[\t")
-                for (site in 0..trimmedLength) { // iterate over each site in trimmed motif
-                    val currentCount = motif.counts[row][trimmedStart + site]
-                    writer.write("$currentCount\t") // write count for that site
+
+            if (outputFormat == "JASPAR") {
+                // Write trimmed motif in JASPAR format
+                writer.write(">${motif.name}\n") // Write header
+                for (row in 0..3) { // iterate over each row (nucleotide) of counts matrix
+                    writer.write("${nucs[row]}\t[\t")
+                    for (site in 0..trimmedLength) { // iterate over each site in trimmed motif
+                        val currentCount = motif.counts[row][trimmedStart + site]
+                        writer.write("$currentCount\t") // write count for that site
+                    }
+                    writer.write("\t]\n")
                 }
-                writer.write("\t]\n")
+            }
+            else if (outputFormat == "MEME") {
+                // Write trimmed motif in MEME format
+                writer.write(
+                    "MOTIF ${motif.name}\n" + // Write header
+                            "letter-probability matrix: alength= 4 w= ${trimmedLength + 1} nsites= ${motif.numObservations} E= 0 \n"
+                )
+                for (site in 0..trimmedLength) { // iterate over each site in trimmed motif
+                    for (row in 0..3) { // iterate over each row (nucleotide) of counts matrix
+                        val currentFreq:Double = motif.counts[row][trimmedStart + site] / motif.numObservations.toDouble()
+                        writer.write("$currentFreq\t") // write count for that site
+                    }
+                    writer.write("\n")
+                }
             }
         }
     }

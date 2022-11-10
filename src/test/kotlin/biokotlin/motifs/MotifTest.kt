@@ -195,15 +195,38 @@ class MotifTest : StringSpec({
         }
     }
 
-    "Trim motifs" {
+    "Trim motifs and output MEME format" {
         // Trim single motif
-        trimMotifs("src/test/kotlin/biokotlin/motifs/MA1307.2.txt", "src/test/kotlin/biokotlin/testData/testTrimmedMotif.txt")
-
-        // Trim multiple motifs
-        trimMotifs("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt", "src/test/kotlin/biokotlin/testData/testTrimmedMotifs.txt")
+        trimMotifs("src/test/kotlin/biokotlin/motifs/MA1307.2.txt",
+            "src/test/kotlin/biokotlin/testData/testTrimmedMotifMEME.txt", outputFormat = "MEME")
 
         // Read in trimmed motif
-        val trimmedMotifs = readMotifs("src/test/kotlin/biokotlin/testData/testTrimmedMotifs.txt")
+        val trimmedMotif = readMotifs("src/test/kotlin/biokotlin/testData/testTrimmedMotifMEME.txt")
+        trimmedMotif.size shouldBe 1
+        with(trimmedMotif[0]) {
+            name shouldBe "MA1307.2"
+            numObservations shouldBe 299
+            length shouldBe 8
+            counts[0][0] shouldBe 134
+            counts[2][1] shouldBe 296
+        }
+
+        // Trim multiple motifs
+        trimMotifs("src/test/kotlin/biokotlin/motifs/MemeMotifsTest.txt",
+            "src/test/kotlin/biokotlin/testData/testTrimmedMotifsMEME.txt", outputFormat = "MEME")
+    }
+
+    "Trim motifs and output JASPAR format" {
+        // Trim single motif
+        trimMotifs("src/test/kotlin/biokotlin/motifs/MA1307.2.txt",
+            "src/test/kotlin/biokotlin/testData/testTrimmedMotifJASPAR.txt", outputFormat = "JASPAR")
+
+        // Trim multiple motifs
+        trimMotifs("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt",
+            "src/test/kotlin/biokotlin/testData/testTrimmedMotifsJASPAR.txt", outputFormat = "JASPAR")
+
+        // Read in trimmed motif
+        val trimmedMotifs = readMotifs("src/test/kotlin/biokotlin/testData/testTrimmedMotifsJASPAR.txt")
         trimmedMotifs.forEach { println(it) }
     }
 
