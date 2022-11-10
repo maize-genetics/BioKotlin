@@ -115,13 +115,7 @@ class MotifTest : StringSpec({
             }
             print("\n")
         }
-//        for (nuc in aMotif.pssm.indices) {
-//            for (site in aMotif.pssm[0].indices) {
-//                print(aMotif.pssm[nuc][site])
-//                print(" ")
-//            }
-//            print("\n")
-//        }
+
         aMotif.pssm[3][5] shouldBe 2 * log(((0.01/20.04)/0.25), 2.0)
         aMotif.pssm[3][4] shouldBe 2 * log(((20.01/20.04)/0.25), 2.0)
         aMotif.pssm[1][0] shouldBe 2 * log(((16.01/20.04)/0.25), 2.0)
@@ -203,10 +197,14 @@ class MotifTest : StringSpec({
 
     "Trim motifs" {
         // Trim single motif
-        trimMotifs("src/test/kotlin/biokotlin/motifs/MA1307.2.txt")
+        trimMotifs("src/test/kotlin/biokotlin/motifs/MA1307.2.txt", "src/test/kotlin/biokotlin/testData/testTrimmedMotif.txt")
 
         // Trim multiple motifs
-        trimMotifs("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt")
+        trimMotifs("src/test/kotlin/biokotlin/motifs/JasparMotifsTest.txt", "src/test/kotlin/biokotlin/testData/testTrimmedMotifs.txt")
+
+        // Read in trimmed motif
+        val trimmedMotifs = readMotifs("src/test/kotlin/biokotlin/testData/testTrimmedMotifs.txt")
+        trimmedMotifs.forEach { println(it) }
     }
 
     "Make billboard" {

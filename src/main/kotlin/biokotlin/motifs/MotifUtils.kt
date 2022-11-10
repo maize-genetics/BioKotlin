@@ -5,34 +5,47 @@ import java.io.File
 
 /**
  * This function trims input motifs based on an entropy bit score threshold.
- * It outputs a trimmed motif file in MEME format.
+ * It outputs a trimmed motif file in JASPAR format.
  */
-fun trimMotifs(motifPath:String, entropyBitThreshold:Double = 0.5) {
+fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double = 0.5) {
     val motifs = readMotifs(motifPath) // Read motif(s) into a Motif object
+    val nucs = listOf("A", "C", "G", "T")
 
-    for (motif in motifs) { // Trim motifs based on entropy bit threshold
+    File(outputPath).bufferedWriter().use { writer -> // open output file for writing
 
-        // Left trimming
-        var currentIndex = 0 // Initialize index variable
-        var currentEntropy = motif.siteEntropies()[currentIndex] // Initialize variable to store current entropy score
-        while (currentEntropy < entropyBitThreshold) {
-            currentIndex += 1
+        for (motif in motifs) { // Trim motifs based on entropy bit threshold
+
+            // Left trimming
+            var currentIndex = 0 // Initialize index variable
+            var currentEntropy =
+                motif.siteEntropies()[currentIndex] // Initialize variable to store current entropy score
+            while (currentEntropy < entropyBitThreshold) {
+                currentIndex += 1
+                currentEntropy = motif.siteEntropies()[currentIndex]
+            }
+            val trimmedStart = currentIndex // Store first index from left that exceeds entropy threshold
+            // Right trimming
+            currentIndex = motif.length - 1 // Reset index variables to end of motif
             currentEntropy = motif.siteEntropies()[currentIndex]
-        }
-        val trimmedStart = currentIndex // Store first index from left that exceeds entropy threshold
-        println(trimmedStart)
-        // Right trimming
-        currentIndex = motif.length - 1 // Reset index variables to end of motif
-        currentEntropy = motif.siteEntropies()[currentIndex]
-        while (currentEntropy < entropyBitThreshold) {
-            currentIndex -= 1
-            currentEntropy = motif.siteEntropies()[currentIndex]
-        }
-        val trimmedEnd = currentIndex  // Store first index from right that exceeds entropy threshold
-        println(trimmedEnd)
+            while (currentEntropy < entropyBitThreshold) {
+                currentIndex -= 1
+                currentEntropy = motif.siteEntropies()[currentIndex]
+            }
+            val trimmedEnd = currentIndex  // Store first index from right that exceeds entropy threshold
 
+            // Write trimmed motif
+            writer.write(">${motif.name}\n") // Write header
+            val trimmedLength = trimmedEnd - trimmedStart
+            for (row in 0..3) { // iterate over each row (nucleotide) of counts matrix
+                writer.write("${nucs[row]}\t[\t")
+                for (site in 0..trimmedLength) { // iterate over each site in trimmed motif
+                    val currentCount = motif.counts[row][trimmedStart + site]
+                    writer.write("$currentCount\t") // write count for that site
+                }
+                writer.write("\t]\n")
+            }
+        }
     }
-    // Write to meme file
 }
 
 /**
@@ -197,7 +210,7 @@ fun writeMotifHitsWithPositions(fastaPath:String, motifPath:String, threshold:Do
                 val motifLength = motif.length
                 val motifID = motif.name
                 val motifBillboard = motifScores[motif]!!
-                var arrayIndex=0
+                var arrayIndex = 0
                 val arrayLength = motifBillboard.size
                 val adjThreshold = if (thresholdType == "length") {
                     maxOf(threshold * motifLength, minThreshold)
@@ -222,7 +235,7 @@ fun writeMotifHitsWithPositions(fastaPath:String, motifPath:String, threshold:Do
 
                         if (nonOverlapping) { // move to either end of motif (if non-overlapping), or to next base
                             arrayIndex += motifLength
-                        } else arrayIndex ++
+                        } else arrayIndex++
 
                     } else {
                         arrayIndex++

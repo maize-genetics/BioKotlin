@@ -107,6 +107,7 @@ data class Motif(
     val entropyScore = siteEntropies().sum()
 
 
+
     /*
     Position Weight Matrix, which is proportion of each base observed.  If pseudocounts are used,
     they are added to all counts, and then proportion are calculated
