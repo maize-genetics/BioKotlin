@@ -11,6 +11,7 @@ import java.util.TreeMap
 import java.util.stream.IntStream
 import javax.print.attribute.standard.MediaSize.NA
 import kotlin.math.log
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 //fun main() {
@@ -107,7 +108,6 @@ data class Motif(
     val entropyScore = siteEntropies().sum()
 
 
-
     /*
     Position Weight Matrix, which is proportion of each base observed.  If pseudocounts are used,
     they are added to all counts, and then proportion are calculated
@@ -120,6 +120,9 @@ data class Motif(
 //            .toTypedArray()
 //        return y
 //    }
+    /**
+     * This function returns a position weight matrix, given a matrix of counts and a pseudocount value
+     */
     fun pwm(): List<List<Double>> {
         val x: List<List<Double>> = counts
             .map{innerList -> innerList.map{count -> count.toDouble()}} // Convert values to double
@@ -128,6 +131,9 @@ data class Motif(
         return y
     }
 
+    /**
+     * This calculates the entropy loss at each site in the motif, returning a list of entropy losses
+     */
     fun siteEntropies(): List<Double> {
         val entropyLossBySite: MutableList<Double> = mutableListOf()
         for (site in 0 until length) {// calculate Shannon entropy loss for each site
@@ -140,8 +146,25 @@ data class Motif(
         }
         return entropyLossBySite
     }
+    /**
+     * This function calculates the maximum score for the motif by summing the maximum PSSM scores at each site
+     */
+    fun maxScore(): Double {
+        var maxTotalScore = 0.0
+        for (site in 0 until length) { // Calculate max scores for each site
+            var siteMax = 0.0 // Initialize variable to store max site score
+            for (nuc in 0 until 4) {// Get scores for each nucleotide at a particular site
+                val currentSiteScore = (pssm[nuc][site]) // Extract PSSM score for current nucleotide and site
+                if (currentSiteScore > siteMax) {
+                    siteMax = currentSiteScore
+                }
+            }
+            maxTotalScore += siteMax //Add max site score to total score
+        }
+        return maxTotalScore
+    }
 
-    override fun toString(): String {
+        override fun toString(): String {
         return "Motif(name='$name', bioSet=$bioSet, pseudocounts=$pseudocounts, length=$length, numObservations=$numObservations\n" +
                 "counts=\n$counts)"
     }

@@ -126,6 +126,11 @@ class MotifTest : StringSpec({
 
     }
 
+    "Calculate max score for motif" {
+        print(aMotif.maxScore())
+        aMotif.maxScore() shouldBe aMotif.pssm[1][0] + aMotif.pssm[0][1] + aMotif.pssm[1][2] + aMotif.pssm[2][3] +
+                aMotif.pssm[3][4] + aMotif.pssm[2][5]
+    }
 
     "Search small seq" {
         //val aSeq = NucSeq("CACGTTaAACGTG")
@@ -241,10 +246,18 @@ class MotifTest : StringSpec({
     }
     "Count total number of windows exceeding threshold, both including and excluding overlaps within window size " {
         val testArray = byteArrayOf(0, 15, 0, 0, 0, 0, 15, 0, 1, 20, 0, 0, 20)
-        val threshold = 2.0
+        val lengthThreshold = 2.0
+        val entropyThreshold = 0.9
         val motifLength = 5
-        countScoreAtThreshold(testArray, threshold, motifLength) shouldBe 4
-        countScoreAtThresholdNonOverlapping(testArray, threshold, motifLength) shouldBe 3
+        val maxScore = 15.0
+
+        // Length-based threshold
+        countScoreAtThreshold(testArray, lengthThreshold, motifLength, maxScore) shouldBe 4
+        countScoreAtThresholdNonOverlapping(testArray, lengthThreshold, motifLength, maxScore) shouldBe 3
+
+        // Entropy-based threshold
+        countScoreAtThreshold(testArray, lengthThreshold, motifLength, maxScore) shouldBe 4
+        countScoreAtThresholdNonOverlapping(testArray, lengthThreshold, motifLength, maxScore) shouldBe 3
     }
     "Detect known motif in sequence" {
         val aSeq2 = NucSeq("AAAAGATCGGATAACAACACgatgacgtggccTTTTCACACA")
@@ -252,15 +265,22 @@ class MotifTest : StringSpec({
         val motifs = readMotifs("src/test/kotlin/biokotlin/motifs/MA0097Test.txt")
         val billboard1 = makeBillboard(motifs, aSeq2)
         val billboard2 = makeBillboard(motifs, aSeq3)
-        val threshold = 2.0
+        val lengthThreshold = 2.0
+        val entropyThreshold = 0.9
         val motifLength = 4
 
         motifs.forEach { motif ->
             val scanResult = billboard1[motif]!!.toList()
             println(motif.name)
             println(scanResult)
-            countScoreAtThresholdNonOverlapping(billboard1[motif]!!, threshold, motifLength) shouldBe 1 //single motif
-            countScoreAtThresholdNonOverlapping(billboard2[motif]!!, threshold, motifLength) shouldBe 3 //single motif
+            
+            // Use length-based threshold
+            countScoreAtThresholdNonOverlapping(billboard1[motif]!!, lengthThreshold, motifLength, motif.maxScore()) shouldBe 1
+            countScoreAtThresholdNonOverlapping(billboard2[motif]!!, lengthThreshold, motifLength, motif.maxScore()) shouldBe 3
+
+            // Use entropy-based threshold
+            countScoreAtThresholdNonOverlapping(billboard1[motif]!!, entropyThreshold, motifLength, motif.maxScore()) shouldBe 1
+            countScoreAtThresholdNonOverlapping(billboard2[motif]!!, entropyThreshold, motifLength, motif.maxScore()) shouldBe 3
         }
     }
 

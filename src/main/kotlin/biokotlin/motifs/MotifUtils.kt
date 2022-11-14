@@ -81,15 +81,15 @@ fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double =
  * This function counts the number of entries where the value
  * is greater than or equal to the specified threshold
  */
-fun countScoreAtThreshold(bytes:ByteArray, threshold:Double, motifLength: Int, minThreshold:Double = 15.0,
+fun countScoreAtThreshold(bytes:ByteArray, threshold:Double, motifLength: Int, motifMaxScore:Double, minThreshold:Double = 15.0,
                           thresholdType:String = "length"):Int {
 
     val adjThreshold = if (thresholdType == "length") {
         maxOf(threshold * motifLength, minThreshold)
     }
-//    else if (thresholdType == "entropy") {
-//        threshold / entropyScore // threshold adjusted by motif entropy (TODO)
-//    }
+    else if (thresholdType == "entropy") {
+        maxOf(threshold * motifMaxScore, minThreshold)
+    }
     else {
         threshold
     }
@@ -108,7 +108,7 @@ fun countScoreAtThreshold(bytes:ByteArray, threshold:Double, motifLength: Int, m
  * will be counted, then will skip ahead to the next entry that does
  * not overlap the window that exceeded the threshold.
  */
-fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motifLength:Int, minThreshold:Double = 15.0,
+fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motifLength:Int, motifMaxScore:Double, minThreshold:Double = 15.0,
                                         thresholdType:String = "length"):Int {
     var arrayIndex=0
     var motifCount=0
@@ -116,9 +116,9 @@ fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motif
     val adjThreshold = if (thresholdType == "length") {
         maxOf(threshold * motifLength, minThreshold)
     }
-//    else if (thresholdType == "entropy") {
-//        threshold / entropyScore // threshold adjusted by motif entropy (TODO)
-//    }
+    else if (thresholdType == "entropy") {
+        maxOf(threshold * motifMaxScore, minThreshold)
+    }
     else {
         threshold
     }
@@ -185,9 +185,9 @@ fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputP
                 writer.write("\t")
                 // Count either non-overlapping or overlapping motifs, depending on user input
                 val count = if(nonOverlapping){
-                    countScoreAtThresholdNonOverlapping(motifScores[motif]!!, threshold, motifLength)
+                    countScoreAtThresholdNonOverlapping(motifScores[motif]!!, threshold = threshold, motifLength = motifLength, motifMaxScore = motif.maxScore())
                 }
-                else {countScoreAtThreshold(motifScores[motif]!!, threshold, motifLength) }
+                else {countScoreAtThreshold(motifScores[motif]!!, threshold = threshold, motifLength = motifLength, motifMaxScore = motif.maxScore()) }
                 writer.write(count.toString())
             }
             writer.write("\n")
