@@ -82,7 +82,7 @@ fun trimMotifs(motifPath:String, outputPath:String, entropyBitThreshold:Double =
  * is greater than or equal to the specified threshold
  */
 fun countScoreAtThreshold(bytes:ByteArray, threshold:Double, motifLength: Int, motifMaxScore:Double, minThreshold:Double = 15.0,
-                          thresholdType:String = "length"):Int {
+                          thresholdType:String):Int {
 
     val adjThreshold = if (thresholdType == "length") {
         maxOf(threshold * motifLength, minThreshold)
@@ -109,7 +109,7 @@ fun countScoreAtThreshold(bytes:ByteArray, threshold:Double, motifLength: Int, m
  * not overlap the window that exceeded the threshold.
  */
 fun countScoreAtThresholdNonOverlapping(bytes:ByteArray, threshold:Double, motifLength:Int, motifMaxScore:Double, minThreshold:Double = 15.0,
-                                        thresholdType:String = "length"):Int {
+                                        thresholdType:String):Int {
     var arrayIndex=0
     var motifCount=0
     val arrayLength = bytes.size
@@ -153,7 +153,8 @@ B73_Ref_Subset	B73V4_ctg58	0	0	0
 B73_Ref_Subset	B73V4_ctg43	0	3	1
  */
 
-fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputPath:String, nonOverlapping:Boolean = true) {
+fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputPath:String, nonOverlapping:Boolean = true,
+                   thresholdType:String = "entropy") {
     val fasta = NucSeqIO(fastaPath, SeqFormat.fasta)
     val motifs = readMotifs(motifPath)
     val fastaName = fastaPath.substringAfterLast("/").substringBeforeLast(".")
@@ -185,15 +186,18 @@ fun writeMotifHits(fastaPath:String, motifPath:String, threshold:Double, outputP
                 writer.write("\t")
                 // Count either non-overlapping or overlapping motifs, depending on user input
                 val count = if(nonOverlapping){
-                    countScoreAtThresholdNonOverlapping(motifScores[motif]!!, threshold = threshold, motifLength = motifLength, motifMaxScore = motif.maxScore())
+                    countScoreAtThresholdNonOverlapping(motifScores[motif]!!, threshold = threshold,
+                        motifLength = motifLength, motifMaxScore = motif.maxScore(), thresholdType = thresholdType)
                 }
-                else {countScoreAtThreshold(motifScores[motif]!!, threshold = threshold, motifLength = motifLength, motifMaxScore = motif.maxScore()) }
+                else {countScoreAtThreshold(motifScores[motif]!!, threshold = threshold, motifLength = motifLength,
+                    motifMaxScore = motif.maxScore(), thresholdType = thresholdType) }
                 writer.write(count.toString())
             }
             writer.write("\n")
         }
     }
 }
+
 /**
  * This function takes a given NucSeqIO fasta file and list of motif objects
  * and outputs non-overlapping (or overlapping if explicitly specified)
@@ -211,7 +215,7 @@ Zm-B73-REFERENCE-NAM-5.0    chr1:33616-34716        33833   33839   MA0021.1
  */
 
 fun writeMotifHitsWithPositions(fastaPath:String, motifPath:String, threshold:Double, outputPath:String,
-                                minThreshold:Double = 15.0, nonOverlapping:Boolean = true, thresholdType:String = "length") {
+                                minThreshold:Double = 15.0, nonOverlapping:Boolean = true, thresholdType:String = "entropy") {
     val fasta = NucSeqIO(fastaPath, SeqFormat.fasta)
     val motifs = readMotifs(motifPath)
     val fastaName = fastaPath.substringAfterLast("/").substringBeforeLast(".")
@@ -243,7 +247,9 @@ fun writeMotifHitsWithPositions(fastaPath:String, motifPath:String, threshold:Do
                 val arrayLength = motifBillboard.size
                 val adjThreshold = if (thresholdType == "length") {
                     maxOf(threshold * motifLength, minThreshold)
-                } else {
+                } else if (thresholdType == "entropy") {
+                    maxOf(threshold * motif.maxScore(), minThreshold)
+                }else {
                     threshold
                 }
 
