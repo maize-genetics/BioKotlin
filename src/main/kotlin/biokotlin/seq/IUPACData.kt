@@ -66,6 +66,12 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
     W("Trp", 'W', 204.2252),
     /**Tyrosine*/
     Y("Tyr", 'Y', 181.1885),
+    /**Any amino acid*/
+    X("Xaa", 'X', Double.NaN),
+    /**Aspartic acid or Asparagine*/
+    B("Asx", 'B', Double.NaN),
+    /**Glutamine or Glutamic acid*/
+    Z("Glx", 'Z', Double.NaN),
     /**Stop*/
     STOP("Stp",'*', Double.NaN),
     /**Gap*/
@@ -85,7 +91,8 @@ enum class AminoAcid(val name3letter: String, val char: Char, val weight: Double
         /**Returns [AminoAcid] based on the IUPAC [Char]*/
         fun fromChar(char: Char) =  byteToAA[char.code] ?: throw IllegalArgumentException("Illegal char allowed for AminoAcid conversion")
         /**EnumSet of all [AminoAcid] made immutable with Guava's ImmutableSet*/
-        val all: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java)-GAP-STOP)
+        val all: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java)-GAP-STOP-X-B-Z)
+        val ambiguous: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java)-GAP-STOP)
         val allStopGap: ImmutableSet<AminoAcid> = Sets.immutableEnumSet(EnumSet.allOf(AminoAcid::class.java))
         internal val bitSetOfChars: BitSet
             get() {

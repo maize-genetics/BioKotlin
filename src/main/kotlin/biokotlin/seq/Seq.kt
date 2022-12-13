@@ -140,7 +140,7 @@ enum class BioSet(val set: ImmutableSet<*>, internal val bitSets: BitSet, intern
     RNA(NUC.RNA, bitSetOfChars(NUC.RNA), { s: String -> NucSeq(s, NUC.RNA) }),
     AmbiguousDNA(NUC.AmbiguousDNA, bitSetOfChars(NUC.AmbiguousDNA), { s: String -> NucSeq(s, NUC.AmbiguousDNA) }),
     AmbiguousRNA(NUC.AmbiguousRNA, bitSetOfChars(NUC.AmbiguousRNA), { s: String -> NucSeq(s, NUC.AmbiguousRNA) }),
-    AminoAcid(biokotlin.seq.AminoAcid.all, biokotlin.seq.AminoAcid.bitSetOfChars, { s: String -> ProteinSeqByte(s) }),
+    AminoAcid(biokotlin.seq.AminoAcid.ambiguous, biokotlin.seq.AminoAcid.bitSetOfChars, { s: String -> ProteinSeqByte(s) }),
 }
 
 private fun bitSetOfChars(nucs: NucSet): BitSet {

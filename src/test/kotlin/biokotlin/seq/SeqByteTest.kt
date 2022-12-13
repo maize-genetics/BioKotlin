@@ -38,7 +38,7 @@ class SeqByteTest : StringSpec({
         NucSeqByteEncode("GCXT").seq() shouldBe "GCNT"
         NucSeqByteEncode("GCxT").seq() shouldBe "GCNT"
         NucSeqByteEncode("GCNT").seq() shouldBe "GCNT"
-        shouldThrow<IllegalStateException> {ProteinSeq("GCXT")}  //currently X not a state in AminoAcid
+        shouldThrow<IllegalStateException> {ProteinSeq("GCJT")}  //currently J not a state in AminoAcid
     }
 
 
