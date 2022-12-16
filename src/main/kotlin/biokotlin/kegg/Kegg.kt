@@ -124,7 +124,7 @@ enum class KeggDB(val abbr: String, val kidPrefix: List<String>) {
         }
         return KeggServer.query(KeggOperations.list, adjQuery).lines()
                 .map { it.split("\t") }
-                .filter { it.size == 2 } //there is EOF line
+                .filter { it.size == 2 || it.size == 4 } //there is EOF line
                 .deparseRecords { mapOf("dbKid" to it[0], "name" to it[1]) }
     }
 
