@@ -35,11 +35,11 @@ class MSATest : StringSpec({
     }
 
     "Test indexing" {
-        dnaAlign.sample(2).id shouldBe "ID003"
-        dnaAlign.sample(-2).id shouldBe "ID007"
-        dnaAlign.sample(0).id shouldBe "ID001"
-        proteinAlign.sample(1).id shouldBe "ID002"
-        proteinAlign.sample(-1).id shouldBe "ID003"
+        dnaAlign.sample(2).first().id shouldBe "ID003"
+        dnaAlign.sample(-2).first().id shouldBe "ID007"
+        dnaAlign.sample(0).first().id shouldBe "ID001"
+        proteinAlign.sample(1).first().id shouldBe "ID002"
+        proteinAlign.sample(-1).first().id shouldBe "ID003"
     }
 
     "Test Lambda Sample filtering" {
@@ -47,7 +47,7 @@ class MSATest : StringSpec({
         dnaAlign.samples{idx -> idx % 3 == 0}.numSamples() shouldBe 3
         dnaAlign.samples { idx -> idx < 4 }.numSamples() shouldBe 4
         dnaAlign.samples { idx -> idx < 4 }.last().id shouldBe "ID004"
-        dnaAlign.samples { idx -> idx < 4 }.sample(2).id shouldBe "ID003"
+        dnaAlign.samples { idx -> idx < 4 }.sample(2).first().id shouldBe "ID003"
 
         dnaAlign.samplesById{ id -> id.endsWith("2") || id.endsWith("6") }.numSamples() shouldBe 2
         proteinAlign.samplesById{ id -> id.substring(2).toInt() % 2 == 1 }.numSamples() shouldBe 2
@@ -78,8 +78,8 @@ class MSATest : StringSpec({
     }
 
     "Test 2d slicing" {
-        dnaAlign.sites(4..4).sample(2).seq() shouldBe "A"
-        dnaAlign.sample(2)[4..4].seq() shouldBe "A" //Ideally we would like this call to match the one above.
+        dnaAlign.sites(4..4).sample(2).gappedSequence(0).seq() shouldBe "A"
+        dnaAlign.sample(2).sites(4..4).gappedSequence(0).seq() shouldBe "A" //Ideally we would like this call to match the one above.
         //TODO do the same for Protein msas
     }
 
@@ -87,8 +87,8 @@ class MSATest : StringSpec({
         dnaAlign.sites{idx -> idx % 3 == 0}.numSites() shouldBe 4
         dnaAlign.sites{idx -> idx % 3 == 0}.numSamples() shouldBe 8 //To check to make sure we are not filtering by sample during the slice
 
-        dnaAlign.sites{idx -> idx % 3 == 0}.sample(2).seq() shouldBe "CCGC"
-        dnaAlign.sites{idx -> idx % 3 == 0}.sample(5).seq() shouldBe "TCGT"
+        dnaAlign.sites{idx -> idx % 3 == 0}.sample(2).gappedSequence(0).seq() shouldBe "CCGC"
+        dnaAlign.sites{idx -> idx % 3 == 0}.sample(5).gappedSequence(0).seq() shouldBe "TCGT"
 
         //TODO do the same for the Protein MSAs
     }
@@ -96,8 +96,8 @@ class MSATest : StringSpec({
     "Immutability test" {
         nucRecords[2] = NucSeqRecord(NucSeq("ATCG"), "changed sequence")
         proteinRecords[1] = ProteinSeqRecord(ProteinSeq("MH"), "changed sequence")
-        dnaAlign.sample(2).id shouldBe "ID003"
-        proteinAlign.sample(1).id shouldBe "ID002"
+        dnaAlign.sample(2).first().id shouldBe "ID003"
+        proteinAlign.sample(1).first().id shouldBe "ID002"
     }
 
 

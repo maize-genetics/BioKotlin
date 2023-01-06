@@ -39,9 +39,6 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     private val numSamples = sequences.size
     protected val seqIdToIndexMap : Map<String,Int>
     init {
-        require(sequences.size >= 2)
-        {"Too few sequence records given - requires at least 2 sequences."}
-
         numSites = sequences[0].size()
         for (seq in sequences) {
             require(seq.size() == numSites)
@@ -95,43 +92,48 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
 
     constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences))
 
-    /**Returns the [NucSeqRecord] at the specified sample index [idx] with [idx] starting at zero.
+
+    fun gappedSequence(sampleIdx: Int) : NucSeq {
+        return sequences[sampleIdx].sequence
+    }
+
+    fun nonGappedSequence(sampleIdx : Int): NucSeq {
+        return NucSeq(sequences[sampleIdx].sequence.seq().replace("-",""))
+    }
+
+    /**Returns the [NucMSA] with a single [NucSeqRecord] at the specified sample index [idx] with [idx] starting at zero.
      * Negative indices start from the end of the sampleList, i.e. -1 is the last sample
      */
-    fun sample(idx: Int) : NucSeqRecord =
-        when (idx) {
-            in 0 until sequences.size -> sequences[idx]
-            in -1*sequences.size .. -1 -> sequences[idx+sequences.size]
+    fun sample(idx : Int) : NucMSA {
+        return NucMSA(listOf(extractNucSeqRecord(idx)))
+    }
+    private fun extractNucSeqRecord(idx: Int) : NucSeqRecord {
+        return when (idx) {
+            in 0 until numSamples() -> sequences[idx]
+            in -1 * numSamples() .. -1 -> sequences[idx + numSamples()]
             else -> throw IllegalStateException("Provided index: ${idx} for NucMSA.sample(idx) is outside of the valid boundaries ${-1 * sequences.size} .. ${sequences.size-1}")
         }
-
-//
-//    operator fun get(i: Int): NucSeqRecord =
-//            if (i >= 0) sequences[i] else sequences[i+sequences.size]
-
-
-//    /**Returns the [NUC] at row [i] and column [j], starting at zero.
-//     * Negative indices start from the end of the sequence, i.e. -1 is the last base.
-//     */
-//    operator fun get(i: Int, j: Int): NUC = this[i][j]
+    }
 
     //TODO Need a function to extract out a single NUC
 
-    /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [List], based on
+    /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [NucMSA], based on
      * the sample [IntRange] given.
      * Kotlin range operator is "..". Indices start at zero.
      * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
-    fun samples(range: IntRange) = sequences.slice(negativeSlice(range,size))
-    //    operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
+    fun samples(range: IntRange) :NucMSA {
+        return NucMSA(negativeSlice(range,size).map { extractNucSeqRecord(it) })
+    }
+
     /**
      * Function to return a non-continuous set of sample Indices given a collection of indices
      * Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a new [NucMSA] based on the provided indices.
      * Note this will work with both positive and negative indices.
      */
     fun samples(sampleIndices: Collection<Int>): NucMSA {
-        return NucMSA(sampleIndices.toSet().map { sample(it) })
+        return NucMSA(sampleIndices.toSet().map { extractNucSeqRecord(it) })
     }
     fun samples(filterLambda: (Int) -> Boolean): NucMSA {
         return samples(sequences.indices.filter(filterLambda))
@@ -170,32 +172,6 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
         return sites((0 until numSites).filter(filterLambda))
     }
 
-//    /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [List] of [NucSeq]s,
-//     * based on the [IntRange]s given.
-//     * [i] represents the row range indices, and [j] represents the column range indices.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: IntRange, j: IntRange) = this[i].map {it[j]}
-
-//    /** Returns a subset of the [i]th [NucSeqRecord] in the [NucMSA] as a [NucSeq],
-//     * based on the [IntRange] given.
-//     * [i] represents the row index, and [j] represents the column range indices.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: Int, j: IntRange) = this[i][j]
-
-//    /** Returns the [j]th column of a subset of [NucSeqRecord]s in the [NucMSA] as a
-//     * [List] of [NUC]s, based on the [IntRange] given.
-//     * [i] represents the row range indices, and [j] represents the column index.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: IntRange, j: Int) = this[i].map {it[j]}
 
     /**
      * Returns a string summary of the [NucMSA].
@@ -255,15 +231,27 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
     constructor(sequences: List<ProteinSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
     }
 
-    /**Returns the [ProteinSeqRecord] at the specified index [idx] with [idx] starting at zero.
+    fun gappedSequence(sampleIdx: Int) : ProteinSeq {
+        return sequences[sampleIdx].sequence
+    }
+
+    fun nonGappedSequence(sampleIdx : Int): ProteinSeq {
+        return ProteinSeq(sequences[sampleIdx].sequence.seq().replace("-",""))
+    }
+
+    /**Returns the [ProteinMSA] at the specified index [idx] with [idx] starting at zero.
      * Negative indices start from the end of the sampleList, i.e. -1 is the last sample
      */
-    fun sample(idx: Int) : ProteinSeqRecord =
-        when (idx) {
-            in 0 until sequences.size -> sequences[idx]
-            in -1*sequences.size .. -1 -> sequences[idx+sequences.size]
+    fun sample(idx : Int) : ProteinMSA {
+        return ProteinMSA(listOf(extractProteinSeqRecord(idx)))
+    }
+    private fun extractProteinSeqRecord(idx: Int) : ProteinSeqRecord {
+        return when (idx) {
+            in 0 until numSamples() -> sequences[idx]
+            in -1 * numSamples() .. -1 -> sequences[idx + numSamples()]
             else -> throw IllegalStateException("Provided index: ${idx} for NucMSA.sample(idx) is outside of the valid boundaries ${-1 * sequences.size} .. ${sequences.size-1}")
         }
+    }
 
     //TODO Need a function to extract out a single NUC
 
@@ -273,15 +261,16 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
      * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
      */
-    fun samples(range: IntRange) = sequences.slice(negativeSlice(range,size))
-
+    fun samples(range: IntRange) :ProteinMSA {
+        return ProteinMSA(negativeSlice(range,size).map { extractProteinSeqRecord(it) })
+    }
     /**
      * Function to return a non-continuous set of sample Indices given a collection of indices
      * Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a new [ProteinMSA] based on the provided indices.
      * Note this will work with both positive and negative indices.
      */
     fun samples(sampleIndices: Collection<Int>): ProteinMSA {
-        return ProteinMSA(sampleIndices.toSet().map { sample(it) })
+        return ProteinMSA(sampleIndices.toSet().map { extractProteinSeqRecord(it) })
     }
     fun samples(filterLambda: (Int) -> Boolean): ProteinMSA {
         return samples(sequences.indices.filter(filterLambda))
@@ -319,49 +308,6 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
     fun sites(filterLambda: (Int) -> Boolean): ProteinMSA {
         return sites((0 until numSites).filter(filterLambda))
     }
-
-//    operator fun get(i: Int): ProteinSeqRecord =
-//            if (i >= 0) sequences[i] else sequences[i+sequences.size]
-//    /**Returns the [AminoAcid] at row [i] and column [j], starting at zero.
-//     * Negative indices start from the end of the sequence, i.e. -1 is the last base.
-//     */
-//    operator fun get(i: Int, j: Int): AminoAcid = this[i][j]
-//
-//    /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List],
-//     * based on the [IntRange] given.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: IntRange) = sequences.slice(negativeSlice(i, size))
-//
-//    /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List],
-//     * based on the [IntRange]s given.
-//     * [i] represents the row range indices, and [j] represents the column range indices.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: IntRange, j: IntRange) = this[i].map {it[j]}
-//
-//    /** Returns a subset of the [i]th [ProteinSeqRecord] in the [ProteinMSA] as a [ProteinSeq],
-//     * based on the [IntRange] given.
-//     * [i] represents the row index, and [j] represents the column range indices.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: Int, j: IntRange) = this[i][j]
-//
-//    /** Returns the [j]th column of a subset of [ProteinSeqRecord]s in the [ProteinMSA] as a
-//     * [List] of [AminoAcid]s, based on the [IntRange] given.
-//     * [i] represents the row range indices, and [j] represents the column index.
-//     * Kotlin range operator is "..". Indices start at zero.
-//     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-//     * Negative slices "-3..-1" start from the last base (i.e. would return the last three bases).
-//     */
-//    operator fun get(i: IntRange, j: Int) = this[i].map {it[j]}
-
 
     /**
      * Returns a string summary of the [ProteinMSA].
