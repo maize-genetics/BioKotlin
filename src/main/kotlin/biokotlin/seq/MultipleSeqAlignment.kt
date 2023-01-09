@@ -164,7 +164,8 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
         return NucMSA(sequences.map { NucSeqRecord(buildSubSequence(it.sequence,siteIndices), it.id)})
     }
     private fun buildSubSequence(seq: NucSeq, siteIndices : Collection<Int>) : NucSeq {
-        return NucSeq(siteIndices.toSortedSet().map { seq[it] }.joinToString(""))
+        return NucSeq(siteIndices.toSortedSet().map { seq[it].char }
+            .joinToString(""))
 
     }
 
@@ -301,7 +302,9 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
         return ProteinMSA(sequences.map { ProteinSeqRecord(buildSubSequence(it.sequence,siteIndices), it.id) })
     }
     private fun buildSubSequence(seq: ProteinSeq, siteIndices : Collection<Int>) : ProteinSeq {
-        return ProteinSeq(siteIndices.toSortedSet().map { seq[it] }.joinToString(""))
+        return ProteinSeq(siteIndices.toSortedSet()
+            .map { seq[it].char }//Need to get the char otherwise 'GAP' will appear in the protein sequence.
+            .joinToString(""))
 
     }
 

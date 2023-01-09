@@ -13,7 +13,7 @@ class MSATest : StringSpec({
             NucSeqRecord(NucSeq("TCGCACGTTGTG"), id="ID005"),
             NucSeqRecord(NucSeq("TGGCACGTGTTT"), id="ID006"),
             NucSeqRecord(NucSeq("TGACACGTGGGA"), id="ID007"),
-            NucSeqRecord(NucSeq("TTACACGTGCGC"), id="ID008")
+            NucSeqRecord(NucSeq("TTACAC-TGCGC"), id="ID008")
     )
     val dnaAlign = NucMSA(nucRecords)
 
@@ -55,15 +55,6 @@ class MSATest : StringSpec({
 
     }
 
-//    "Test 2D indexing" {
-//        dnaAlign[2, 4] shouldBe NUC.A
-//        dnaAlign[-2, 3] shouldBe NUC.C
-//        dnaAlign[2, -3] shouldBe NUC.C
-//        proteinAlign[1, 5] shouldBe AminoAcid.F
-//        proteinAlign[-1, 4] shouldBe AminoAcid.I
-//        proteinAlign[1, -4] shouldBe AminoAcid.GAP
-//    }
-//
     "Test slicing" {
         dnaAlign.samples(0..2).map{it.id} shouldBe listOf("ID001", "ID002", "ID003")
         dnaAlign.samples(-3..-1).map{it.id} shouldBe listOf("ID006", "ID007", "ID008")
@@ -74,23 +65,29 @@ class MSATest : StringSpec({
     "Test Site Indexing" {
         dnaAlign.sites(0..2).numSites() shouldBe 3
         dnaAlign.sites(0 .. 2).numSamples() shouldBe 8 //To check to make sure we are not filtering by sample during the slice
-        //TODO do the same for Protein MSAs
+        proteinAlign.sites(5 .. 10).numSites() shouldBe 6
+        proteinAlign.sites(5 .. 10).numSamples() shouldBe 3
     }
 
     "Test 2d slicing" {
         dnaAlign.sites(4..4).sample(2).gappedSequence(0).seq() shouldBe "A"
-        dnaAlign.sample(2).sites(4..4).gappedSequence(0).seq() shouldBe "A" //Ideally we would like this call to match the one above.
-        //TODO do the same for Protein msas
+        dnaAlign.sample(2).sites(4..4).gappedSequence(0).seq() shouldBe "A"
+
+//        proteinAlign.sites(4 .. 4).sample(2).gappedSequence(0).seq() shouldBe "I"
+//        proteinAlign.sample(2).sites(4 .. 4).gappedSequence(0).seq() shouldBe "I"
     }
 
     "Test Lambda Site Slicing" {
-        dnaAlign.sites{idx -> idx % 3 == 0}.numSites() shouldBe 4
-        dnaAlign.sites{idx -> idx % 3 == 0}.numSamples() shouldBe 8 //To check to make sure we are not filtering by sample during the slice
+        val dnaEveryThirdBp = dnaAlign.sites{idx -> idx % 3 == 0}
+        dnaEveryThirdBp.numSites() shouldBe 4
+        dnaEveryThirdBp.numSamples() shouldBe 8 //To check to make sure we are not filtering by sample during the slice
+        dnaEveryThirdBp.sample(2).gappedSequence(0).seq() shouldBe "CCGC"
+        dnaEveryThirdBp.sample(5).gappedSequence(0).seq() shouldBe "TCGT"
 
-        dnaAlign.sites{idx -> idx % 3 == 0}.sample(2).gappedSequence(0).seq() shouldBe "CCGC"
-        dnaAlign.sites{idx -> idx % 3 == 0}.sample(5).gappedSequence(0).seq() shouldBe "TCGT"
-
-        //TODO do the same for the Protein MSAs
+        val proteinEveryThirdBp = proteinAlign.sites{idx -> idx % 3 == 0}
+        proteinEveryThirdBp.numSites() shouldBe 11
+        proteinEveryThirdBp.numSamples() shouldBe 3
+        proteinEveryThirdBp.sample(1).gappedSequence(0).seq() shouldBe "M-IIAKYSSYW"
     }
 
     "Immutability test" {
@@ -98,6 +95,22 @@ class MSATest : StringSpec({
         proteinRecords[1] = ProteinSeqRecord(ProteinSeq("MH"), "changed sequence")
         dnaAlign.sample(2).first().id shouldBe "ID003"
         proteinAlign.sample(1).first().id shouldBe "ID002"
+    }
+
+    "Test Gapped vs Ungapped seqs" {
+        val dnaMSA = dnaAlign.samplesById(listOf("ID008"))
+        dnaMSA.gappedSequence(0).size() shouldBe 12
+        dnaMSA.gappedSequence(0).seq() shouldBe "TTACAC-TGCGC"
+        dnaMSA.nonGappedSequence(0).size() shouldBe 11
+        dnaMSA.nonGappedSequence(0).seq() shouldBe "TTACACTGCGC"
+
+        //Test protein too
+        val proteinMSA = proteinAlign.samplesById(listOf("ID002"))
+        proteinMSA.gappedSequence(0).size() shouldBe 32
+        proteinMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
+        proteinMSA.nonGappedSequence(0).size() shouldBe 29
+        proteinMSA.nonGappedSequence(0).seq() shouldBe "MHIFIYQIGYAYLKSGYIQSIRSPEYNW*"
+
     }
 
 
