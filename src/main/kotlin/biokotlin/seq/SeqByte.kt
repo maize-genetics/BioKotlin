@@ -230,10 +230,8 @@ internal class ProteinSeqByte(sequence: String) : BioSeqByte(sequence), ProteinS
             .fromChar(seqS[seqS.length + i])
 
     /**
-     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
-     * Negative slices "-3 .. -1" start from the last base (i.e. would return the last three residues)
-     * If an exclusive end is needed, use the until operator.
-     * For example: seq[10 until 15] will return seq for positions 10,11,12,13 and 14.
+     * Note This assumes that we are looking at the range [i,j] both being inclusive-inclusive.
+     * This closely matches how NucSeq works
      */
     override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqS.substring(i, j+1))
 

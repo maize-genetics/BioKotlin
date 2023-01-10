@@ -249,15 +249,31 @@ class SeqByteTest : StringSpec({
 
         nucSeq[-4 until -1].seq() shouldBe "TTA" //Reminder it will resolve the boundaries and then reorder and keep the correct range settings
         proteinSeq[-4 until -1].seq() shouldBe "YDN"
-        //Check OOB indexing
+        //Check Out of Bounds indexing
         shouldThrow<StringIndexOutOfBoundsException> { nucSeq[5 .. 12]}
         nucSeq[5 until 12].seq() shouldBe "CGTTTAA"
 
         shouldThrow<StringIndexOutOfBoundsException> { proteinSeq[5 .. 31] }
         proteinSeq[5 until 31].seq() shouldBe "FIYQIGYPYLKSGYIQSIRSPEYDNW"
 
-        //Check OOB indexing with negative indices
+        //Check Out of Bounds indexing with negative indices
         shouldThrow<StringIndexOutOfBoundsException> { nucSeq[-13 ..-1] }
         shouldThrow<StringIndexOutOfBoundsException> { proteinSeq[-32 ..-1] }
+
+        //Test direct access of the get(i,j) method
+        nucSeq[3, 7].seq() shouldBe "CACGT"
+        proteinSeq[8, 21].seq() shouldBe "QIGYPYLKSGYIQS"
+
+        //Check Out of Bounds errors and negative errors
+        shouldThrow<StringIndexOutOfBoundsException> { nucSeq[5, 12]}
+        shouldThrow<StringIndexOutOfBoundsException> { proteinSeq[5, 31] }
+
+        shouldThrow<StringIndexOutOfBoundsException> { nucSeq[-4,-1]}
+        shouldThrow<StringIndexOutOfBoundsException> { proteinSeq[-4,-1] }
+
+        shouldThrow<StringIndexOutOfBoundsException> { nucSeq[-13,-1]}
+        shouldThrow<StringIndexOutOfBoundsException> { proteinSeq[-32,-1] }
+
+
     }
 })
