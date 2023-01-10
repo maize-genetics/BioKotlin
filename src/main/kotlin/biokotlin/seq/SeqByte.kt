@@ -229,7 +229,13 @@ internal class ProteinSeqByte(sequence: String) : BioSeqByte(sequence), ProteinS
     override fun get(i: Int): AminoAcid = if (i >= 0) AminoAcid.fromChar(seqS[i]) else AminoAcid
             .fromChar(seqS[seqS.length + i])
 
-    override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqS.substring(i, j))
+    /**
+     * Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end.
+     * Negative slices "-3 .. -1" start from the last base (i.e. would return the last three residues)
+     * If an exclusive end is needed, use the until operator.
+     * For example: seq[10 until 15] will return seq for positions 10,11,12,13 and 14.
+     */
+    override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqS.substring(i, j+1))
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three residues)
