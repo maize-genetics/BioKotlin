@@ -56,6 +56,23 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
     fun numSites(): Int {
         return numSites
     }
+    internal fun convertIndicesToPositive(siteIndices: Collection<Int>) : Collection<Int> {
+        return siteIndices.map { convertIndex(it) }
+    }
+    private fun convertIndex(idx : Int) : Int {
+        return when (idx) {
+            in 0 until numSites() -> idx
+            in -1 * numSites() .. -1 -> idx + numSites()
+            else -> throw IllegalStateException("Provided index: ${idx} for MSA.sites(idx) is outside of the valid boundaries ${-1 * numSites()} .. ${numSites()-1}")
+        }
+    }
+    //    private fun extractNucSeqRecord(idx: Int) : NucSeqRecord {
+    //        return when (idx) {
+    //            in 0 until numSamples() -> sequences[idx]
+    //            in -1 * numSamples() .. -1 -> sequences[idx + numSamples()]
+    //            else -> throw IllegalStateException("Provided index: ${idx} for NucMSA.sample(idx) is outside of the valid boundaries ${-1 * sequences.size} .. ${sequences.size-1}")
+    //        }
+    //    }
 }
 
 
@@ -92,21 +109,37 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
 
     constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences))
 
-
+    /**
+     * Function to create a new [NucSeq] containing the sequence with all of the gaps for a given [sampleIdx] index.
+     * This allows for retrieval of sequence out of the [NucSeq]
+     * Note: this is 0 based.
+     */
     fun gappedSequence(sampleIdx: Int) : NucSeq {
         return sequences[sampleIdx].sequence
     }
 
+    /**
+     * Function to create a new [NucSeq] removing the gaps from the sequence for a given [sampleIdx] index.
+     * This allows for retrieval of sequence out of the [NucSeq]
+     * Note: This is 0 based.
+     */
     fun nonGappedSequence(sampleIdx : Int): NucSeq {
         return NucSeq(sequences[sampleIdx].sequence.seq().replace("-",""))
     }
 
-    /**Returns the [NucMSA] with a single [NucSeqRecord] at the specified sample index [idx] with [idx] starting at zero.
+    /**
+     * Returns the [NucMSA] with a single [NucSeqRecord] at the specified sample index [idx] with [idx] starting at zero.
      * Negative indices start from the end of the sampleList, i.e. -1 is the last sample
      */
     fun sample(idx : Int) : NucMSA {
         return NucMSA(listOf(extractNucSeqRecord(idx)))
     }
+
+    /**
+     * Function to extract out the [NucSeqRecord] containing the [NucSeq] and the id of that row in the [NucMSA]
+     * Note: This is 0 based and supports negative indexing.
+     * An [IllegalStateException] will be thrown if the provided [idx] is outside of the range -1 * numSamples to numSamples() - 1
+     */
     private fun extractNucSeqRecord(idx: Int) : NucSeqRecord {
         return when (idx) {
             in 0 until numSamples() -> sequences[idx]
@@ -114,8 +147,6 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
             else -> throw IllegalStateException("Provided index: ${idx} for NucMSA.sample(idx) is outside of the valid boundaries ${-1 * sequences.size} .. ${sequences.size-1}")
         }
     }
-
-    //TODO Need a function to extract out a single NUC
 
     /** Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a [NucMSA], based on
      * the sample [IntRange] given.
@@ -135,10 +166,22 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     fun samples(sampleIndices: Collection<Int>): NucMSA {
         return NucMSA(sampleIndices.toSet().map { extractNucSeqRecord(it) })
     }
+
+    /**
+     * Function to filter the MSA by sample index based on the provided [filterLambda].
+     * This will return another [NucMSA].
+     * Note this will not work with negative indices
+     */
     fun samples(filterLambda: (Int) -> Boolean): NucMSA {
+        //TODO allow for negative slicing
         return samples(sequences.indices.filter(filterLambda))
     }
 
+    /**
+     * Function to filter the MSA by sampleId based on the provided [sampleIds] Collection.
+     * This will return another [NucMSA]
+     * If no matching samples are found, an [IllegalArgumentException] will be thrown
+     */
     fun samplesById(sampleIds : Collection<String>):NucMSA {
         val nonMatchingSamples = sampleIds.filter { !seqIdToIndexMap.keys.contains(it) }
 
@@ -149,26 +192,57 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
         return samples(seqIds)
     }
 
+    /**
+     * Function to filter the MSA by sample index based on the provided [filterLambda].
+     * This will return another [NucMSA].
+     */
     fun samplesById(filterLambda : (String) -> Boolean) : NucMSA {
         return samplesById(seqIdToIndexMap.keys.filter(filterLambda))
     }
 
+    /**
+     * Function to filter down a [NucMSA] at a single site.
+     * This will return another [NucMSA]
+     */
     fun sites(site: Int) : NucMSA {
         return sites(site..site)
     }
+
+    /**
+     * Function to slice the [NucMSA] by siteRange.
+     * This will return another [NucMSA] and does support negative indices
+     */
     fun sites(siteRange : IntRange) : NucMSA {
         return NucMSA(sequences.map { NucSeqRecord(it[siteRange], it.id) })
     }
 
+    /**
+     * Function to filter out the [NucMSA] based on a collection of siteIndices
+     * This Collection will first be Sorted and Duplicates removed so the resulting [NucMSA]'s [NucSeq]s will be in the correct order.
+     * Note: This will work with negative indices.
+     */
     fun sites(siteIndices : Collection<Int>): NucMSA {
         return NucMSA(sequences.map { NucSeqRecord(buildSubSequence(it.sequence,siteIndices), it.id)})
     }
+
+    /**
+     * Helper function to build the Subsequence when siteIndices are unsorted and could have duplicates.
+     * The input [NucSeq] will first be converted to a [SortedSet] to remove duplicates and sort.
+     * Then each index is processed, and the [NucSeq] is created.
+     *
+     * Note: This will work with negative indices
+     */
     private fun buildSubSequence(seq: NucSeq, siteIndices : Collection<Int>) : NucSeq {
-        return NucSeq(siteIndices.toSortedSet().map { seq[it].char }
+        return NucSeq(convertIndicesToPositive(siteIndices).toSortedSet().map { seq[it].char }
             .joinToString(""))
 
     }
 
+    /**
+     * Function to filter the [NucMSA] sites using a lambda function.
+     * This will return another [NucMSA] object
+     * Note this will not work with negative indices
+     */
     fun sites(filterLambda: (Int) -> Boolean): NucMSA {
         return sites((0 until numSites).filter(filterLambda))
     }
@@ -232,10 +306,20 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
     constructor(sequences: List<ProteinSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
     }
 
+    /**
+     * Function to create a new [ProteinSeq] containing the sequence with all of the gaps for a given [sampleIdx] index.
+     * This allows for retrieval of sequence out of the [ProteinSeq]
+     * Note: this is 0 based.
+     */
     fun gappedSequence(sampleIdx: Int) : ProteinSeq {
         return sequences[sampleIdx].sequence
     }
 
+    /**
+     * Function to create a new [ProteinSeq] removing the gaps from the sequence for a given [sampleIdx] index.
+     * This allows for retrieval of sequence out of the [ProteinSeq]
+     * Note: This is 0 based.
+     */
     fun nonGappedSequence(sampleIdx : Int): ProteinSeq {
         return ProteinSeq(sequences[sampleIdx].sequence.seq().replace("-",""))
     }
@@ -246,6 +330,12 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
     fun sample(idx : Int) : ProteinMSA {
         return ProteinMSA(listOf(extractProteinSeqRecord(idx)))
     }
+
+    /**
+     * Function to extract out the [ProteinSeqRecord] containing the [ProteinSeq] and the id of that row in the [ProteinMSA]
+     * Note: This is 0 based and supports negative indexing.
+     * An [IllegalStateException] will be thrown if the provided [idx] is outside of the range -1 * numSamples to numSamples() - 1
+     */
     private fun extractProteinSeqRecord(idx: Int) : ProteinSeqRecord {
         return when (idx) {
             in 0 until numSamples() -> sequences[idx]
@@ -253,8 +343,6 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
             else -> throw IllegalStateException("Provided index: ${idx} for NucMSA.sample(idx) is outside of the valid boundaries ${-1 * sequences.size} .. ${sequences.size-1}")
         }
     }
-
-    //TODO Need a function to extract out a single NUC
 
     /** Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a [List], based on
      * the sample [IntRange] given.
@@ -273,10 +361,20 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
     fun samples(sampleIndices: Collection<Int>): ProteinMSA {
         return ProteinMSA(sampleIndices.toSet().map { extractProteinSeqRecord(it) })
     }
+    /**
+     * Function to filter the MSA by sample index based on the provided [filterLambda].
+     * This will return another [ProteinMSA].
+     * Note this will not work with negative indices
+     */
     fun samples(filterLambda: (Int) -> Boolean): ProteinMSA {
         return samples(sequences.indices.filter(filterLambda))
     }
 
+    /**
+     * Function to filter the MSA by sampleId based on the provided [sampleIds] Collection.
+     * This will return another [ProteinMSA]
+     * If no matching samples are found, an [IllegalArgumentException] will be thrown
+     */
     fun samplesById(sampleIds : Collection<String>):ProteinMSA {
         val nonMatchingSamples = sampleIds.filter { !seqIdToIndexMap.keys.contains(it) }
 
@@ -287,27 +385,58 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
         return samples(seqIds)
     }
 
+    /**
+     * Function to filter the MSA by sample index based on the provided [filterLambda].
+     * This will return another [ProteinMSA].
+     */
     fun samplesById(filterLambda : (String) -> Boolean) : ProteinMSA {
         return samplesById(seqIdToIndexMap.keys.filter(filterLambda))
     }
 
+    /**
+     * Function to filter down a [ProteinMSA] at a single site.
+     * This will return another [ProteinMSA]
+     */
     fun sites(site: Int) : ProteinMSA {
         return sites(site..site)
     }
+
+    /**
+     * Function to slice the [ProteinMSA] by siteRange.
+     * This will return another [ProteinMSA] and does support negative indices
+     */
     fun sites(siteRange : IntRange) : ProteinMSA {
         return ProteinMSA(sequences.map { ProteinSeqRecord(it[siteRange], it.id) })
     }
 
+    /**
+     * Function to filter out the [ProteinMSA] based on a collection of siteIndices
+     * This Collection will first be Sorted and Duplicates removed so the resulting [ProteinMSA]'s [ProteinSeq]s will be in the correct order.
+     * Note: This will work with negative indices.
+     */
     fun sites(siteIndices : Collection<Int>): ProteinMSA {
         return ProteinMSA(sequences.map { ProteinSeqRecord(buildSubSequence(it.sequence,siteIndices), it.id) })
     }
+
+    /**
+     * Helper function to build the Subsequence when siteIndices are unsorted and could have duplicates.
+     * The input [ProteinSeq] will first be converted to a [SortedSet] to remove duplicates and sort.
+     * Then each index is processed, and the [ProteinSeq] is created.
+     *
+     * Note: This will work with negative indices
+     */
     private fun buildSubSequence(seq: ProteinSeq, siteIndices : Collection<Int>) : ProteinSeq {
-        return ProteinSeq(siteIndices.toSortedSet()
+        return ProteinSeq(convertIndicesToPositive(siteIndices).toSortedSet()
             .map { seq[it].char }//Need to get the char otherwise 'GAP' will appear in the protein sequence.
             .joinToString(""))
 
     }
 
+    /**
+     * Function to filter the [ProteinMSA] sites using a lambda function.
+     * This will return another [ProteinMSA] object
+     * Note this will not work with negative indices
+     */
     fun sites(filterLambda: (Int) -> Boolean): ProteinMSA {
         return sites((0 until numSites).filter(filterLambda))
     }
