@@ -5,7 +5,6 @@ import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.ProteinMSA
 import biokotlin.seq.ProteinSeqRecord
 
-@Suppress("UNCHECKED_CAST")
 class NucMSAIO(filename: String, format: SeqFormat? = null) : Iterable<NucSeqRecord> {
 
     private val reader = reader(filename, format, SeqType.nucleotide)
@@ -23,7 +22,6 @@ class NucMSAIO(filename: String, format: SeqFormat? = null) : Iterable<NucSeqRec
         return NucMSA(seqs.map { it.value })
     }
 }
-@Suppress("UNCHECKED_CAST")
 class ProteinMSAIO(filename: String, format: SeqFormat? = null) : Iterable<ProteinSeqRecord> {
 
     private val reader = reader(filename, format, SeqType.protein)
