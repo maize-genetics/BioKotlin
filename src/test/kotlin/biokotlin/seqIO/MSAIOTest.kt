@@ -20,12 +20,14 @@ class MSAIOTest : StringSpec({
     }
 
     "Test MSA Files Exist" {
+        File("src/test/resources/biokotlin/seqIO/").walk().forEach { println(it.name) }
         File("src/test/resources/biokotlin/seqIO/nucleotideMSA.fa").exists() shouldBe true
         File("src/test/resources/biokotlin/seqIO/proteinMSA.fa").exists() shouldBe true
+
     }
 
     "Test ProteinMSA Load File Read" {
-        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa")
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/ProteinMSA.fa")
 
         val iterator = proteinMSA.iterator()
         var count = 0
@@ -37,7 +39,7 @@ class MSAIOTest : StringSpec({
     }
 
     "Test ProteinMSA Load File ReadAll" {
-        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa")
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/ProteinMSA.fa")
 
         proteinMSA.readAll().size shouldBe 3
 
@@ -45,13 +47,13 @@ class MSAIOTest : StringSpec({
 
 
 
-//    "Test ProteinMSA" {
-//        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa").asMSA()
-//        proteinMSA.numSamples() shouldBe 3
-//        proteinMSA.numSites() shouldBe 32
-//
-//        val filteredMSA = proteinMSA.samples(listOf("ID002"))
-//        filteredMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
-//        filteredMSA.nonGappedSequence(0).seq() shouldBe "MHIFIYQIGYAYLKSGYIQSIRSPEYNW*"
-//    }
+    "Test ProteinMSA" {
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/ProteinMSA.fa").asMSA()
+        proteinMSA.numSamples() shouldBe 3
+        proteinMSA.numSites() shouldBe 32
+
+        val filteredMSA = proteinMSA.samples(listOf("ID002"))
+        filteredMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
+        filteredMSA.nonGappedSequence(0).seq() shouldBe "MHIFIYQIGYAYLKSGYIQSIRSPEYNW*"
+    }
 })
