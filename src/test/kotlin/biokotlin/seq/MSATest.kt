@@ -2,7 +2,6 @@ package biokotlin.seq
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.reflection.beInfix
 import io.kotest.matchers.shouldBe
 
 class MSATest : StringSpec({
@@ -53,8 +52,8 @@ class MSATest : StringSpec({
         proteinAlign.samples { idx -> idx %2 == 0}.numSamples() shouldBe 2
 
 
-        dnaAlign.samplesById{ id -> id.endsWith("2") || id.endsWith("6") }.numSamples() shouldBe 2
-        proteinAlign.samplesById{ id -> id.substring(2).toInt() % 2 == 1 }.numSamples() shouldBe 2
+        dnaAlign.samplesByName{ id -> id.endsWith("2") || id.endsWith("6") }.numSamples() shouldBe 2
+        proteinAlign.samplesByName{ id -> id.substring(2).toInt() % 2 == 1 }.numSamples() shouldBe 2
 
 
     }
@@ -109,14 +108,14 @@ class MSATest : StringSpec({
     }
 
     "Test Gapped vs Ungapped seqs" {
-        val dnaMSA = dnaAlign.samplesById(listOf("ID008"))
+        val dnaMSA = dnaAlign.samples(listOf("ID008"))
         dnaMSA.gappedSequence(0).size() shouldBe 12
         dnaMSA.gappedSequence(0).seq() shouldBe "TTACAC-TGCGC"
         dnaMSA.nonGappedSequence(0).size() shouldBe 11
         dnaMSA.nonGappedSequence(0).seq() shouldBe "TTACACTGCGC"
 
         //Test protein too
-        val proteinMSA = proteinAlign.samplesById(listOf("ID002"))
+        val proteinMSA = proteinAlign.samples(listOf("ID002"))
         proteinMSA.gappedSequence(0).size() shouldBe 32
         proteinMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
         proteinMSA.nonGappedSequence(0).size() shouldBe 29

@@ -159,12 +159,27 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     }
 
     /**
-     * Function to return a non-continuous set of sample Indices given a collection of indices
-     * Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a new [NucMSA] based on the provided indices.
+     * Function to return a [NucMSA]  given a collection of both indices and sample names.
+     * Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a new [NucMSA] based on the provided indices and sample names.
      * Note this will work with both positive and negative indices.
      */
-    fun samples(sampleIndices: Collection<Int>): NucMSA {
-        return NucMSA(sampleIndices.toSet().map { extractNucSeqRecord(it) })
+    fun samples(sampleCollection: Collection<Any>) : NucMSA {
+        //get any sampleNames and verify they are in the map
+        val namedSamples = sampleCollection.filterIsInstance<String>()
+        val idxSamples = sampleCollection.filterIsInstance<Int>()
+        val nonMatchingSamples = namedSamples.filter { !seqIdToIndexMap.keys.contains(it) }
+
+        require((namedSamples.isNotEmpty() && nonMatchingSamples.isEmpty()) || namedSamples.isEmpty()) {"NucMSA.samples(sampleList) found some samples not contained in the original MSA.  The following names are not found: ${nonMatchingSamples.joinToString(",")} "}
+
+        require(namedSamples.size + idxSamples.size == sampleCollection.size) {"NucMSA.samples(sampleList) has found some requested entries which are not Integers or Strings.  Please check the types of the input Collection"}
+
+        //convert the names to sampleIndices
+        val namedIndices = namedSamples.toSet().map { seqIdToIndexMap[it]!! }
+        val indicesToFilter = mutableSetOf<Int>()
+        indicesToFilter.addAll(namedIndices)
+        indicesToFilter.addAll(idxSamples)
+
+        return NucMSA(indicesToFilter.toSortedSet().map { extractNucSeqRecord(it) })
     }
 
     /**
@@ -178,26 +193,11 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     }
 
     /**
-     * Function to filter the MSA by sampleId based on the provided [sampleIds] Collection.
-     * This will return another [NucMSA]
-     * If no matching samples are found, an [IllegalArgumentException] will be thrown
-     */
-    fun samplesById(sampleIds : Collection<String>):NucMSA {
-        val nonMatchingSamples = sampleIds.filter { !seqIdToIndexMap.keys.contains(it) }
-
-        require(nonMatchingSamples.isEmpty()) {" NucMSA.samples(sampleIds) found some samples not contained in the original MSA.  The following ids are not found: ${nonMatchingSamples.joinToString(",")} "}
-
-        val seqIds = sampleIds.mapNotNull { seqIdToIndexMap[it] }
-
-        return samples(seqIds)
-    }
-
-    /**
      * Function to filter the MSA by sample index based on the provided [filterLambda].
      * This will return another [NucMSA].
      */
-    fun samplesById(filterLambda : (String) -> Boolean) : NucMSA {
-        return samplesById(seqIdToIndexMap.keys.filter(filterLambda))
+    fun samplesByName(filterLambda : (String) -> Boolean) : NucMSA {
+        return samples(seqIdToIndexMap.keys.filter(filterLambda))
     }
 
     /**
@@ -354,12 +354,27 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
         return ProteinMSA(negativeSlice(range,size).map { extractProteinSeqRecord(it) })
     }
     /**
-     * Function to return a non-continuous set of sample Indices given a collection of indices
-     * Returns a subset of the [ProteinSeqRecord]s in the [ProteinMSA] as a new [ProteinMSA] based on the provided indices.
+     * Function to return a [NucMSA]  given a collection of both indices and sample names.
+     * Returns a subset of the [NucSeqRecord]s in the [NucMSA] as a new [NucMSA] based on the provided indices and sample names.
      * Note this will work with both positive and negative indices.
      */
-    fun samples(sampleIndices: Collection<Int>): ProteinMSA {
-        return ProteinMSA(sampleIndices.toSet().map { extractProteinSeqRecord(it) })
+    fun samples(sampleCollection: Collection<Any>) : ProteinMSA {
+        //get any sampleNames and verify they are in the map
+        val namedSamples = sampleCollection.filterIsInstance<String>()
+        val idxSamples = sampleCollection.filterIsInstance<Int>()
+        val nonMatchingSamples = namedSamples.filter { !seqIdToIndexMap.keys.contains(it) }
+
+        require((namedSamples.isNotEmpty() && nonMatchingSamples.isEmpty()) || namedSamples.isEmpty()) {"NucMSA.samples(sampleList) found some samples not contained in the original MSA.  The following names are not found: ${nonMatchingSamples.joinToString(",")} "}
+
+        require(namedSamples.size + idxSamples.size == sampleCollection.size) {"NucMSA.samples(sampleList) has found some requested entries which are not Integers or Strings.  Please check the types of the input Collection"}
+
+        //convert the names to sampleIndices
+        val namedIndices = namedSamples.toSet().map { seqIdToIndexMap[it]!! }
+        val indicesToFilter = mutableSetOf<Int>()
+        indicesToFilter.addAll(namedIndices)
+        indicesToFilter.addAll(idxSamples)
+
+        return ProteinMSA(indicesToFilter.toSortedSet().map { extractProteinSeqRecord(it) })
     }
     /**
      * Function to filter the MSA by sample index based on the provided [filterLambda].
@@ -370,27 +385,14 @@ class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : Multi
         return samples(sequences.indices.filter(filterLambda))
     }
 
-    /**
-     * Function to filter the MSA by sampleId based on the provided [sampleIds] Collection.
-     * This will return another [ProteinMSA]
-     * If no matching samples are found, an [IllegalArgumentException] will be thrown
-     */
-    fun samplesById(sampleIds : Collection<String>):ProteinMSA {
-        val nonMatchingSamples = sampleIds.filter { !seqIdToIndexMap.keys.contains(it) }
 
-        require(nonMatchingSamples.isEmpty()) {" ProteinMSA.samples(sampleIds) found some samples not contained in the original MSA.  The following ids are not found: ${nonMatchingSamples.joinToString(",")} "}
-
-        val seqIds = sampleIds.mapNotNull { seqIdToIndexMap[it] }
-
-        return samples(seqIds)
-    }
 
     /**
      * Function to filter the MSA by sample index based on the provided [filterLambda].
      * This will return another [ProteinMSA].
      */
-    fun samplesById(filterLambda : (String) -> Boolean) : ProteinMSA {
-        return samplesById(seqIdToIndexMap.keys.filter(filterLambda))
+    fun samplesByName(filterLambda : (String) -> Boolean) : ProteinMSA {
+        return samples(seqIdToIndexMap.keys.filter(filterLambda))
     }
 
     /**
