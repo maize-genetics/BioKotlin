@@ -7,15 +7,16 @@ class MSAIOTest : StringSpec({
 //    val nucMSA = NucMSAIO("src/test/resources/biokotlin/seqIO/nucleotideMSA.fa").asMSA()
 //    val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa").asMSA()
 
-//    "Test NucMSA" {
-//        //Make sure size is correct
-//        nucMSA.numSamples() shouldBe 8
-//        nucMSA.numSites() shouldBe 12
-//
-//        val filteredMSA = nucMSA.samples(listOf("ID002","ID005"))
-//        filteredMSA.gappedSequence(0).seq() shouldBe "CACCACGTGG-T"
-//        filteredMSA.nonGappedSequence(1).seq() shouldBe "TCGACGTTGTG"
-//    }
+    "Test NucMSA" {
+        val nucMSA = NucMSAIO("src/test/resources/biokotlin/seqIO/nucleotideMSA.fa").asMSA()
+        //Make sure size is correct
+        nucMSA.numSamples() shouldBe 8
+        nucMSA.numSites() shouldBe 12
+
+        val filteredMSA = nucMSA.samples(listOf("ID002","ID005"))
+        filteredMSA.gappedSequence(0).seq() shouldBe "CACCACGTGG-T"
+        filteredMSA.nonGappedSequence(1).seq() shouldBe "TCGACGTTGTG"
+    }
 //
 //    "Test ProteinMSA" {
 //        proteinMSA.numSamples() shouldBe 3
