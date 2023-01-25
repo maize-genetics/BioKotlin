@@ -27,7 +27,7 @@ class MSAIOTest : StringSpec({
     }
 
     "Test ProteinMSA Load File Read" {
-        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/ProteinMSA.fa")
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa")
 
         val iterator = proteinMSA.iterator()
         var count = 0
@@ -39,7 +39,7 @@ class MSAIOTest : StringSpec({
     }
 
     "Test ProteinMSA Load File ReadAll" {
-        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/ProteinMSA.fa")
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa")
 
         proteinMSA.readAll().size shouldBe 3
 
@@ -48,7 +48,7 @@ class MSAIOTest : StringSpec({
 
 
     "Test ProteinMSA" {
-        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/ProteinMSA.fa").asMSA()
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa").asMSA()
         proteinMSA.numSamples() shouldBe 3
         proteinMSA.numSites() shouldBe 32
 
