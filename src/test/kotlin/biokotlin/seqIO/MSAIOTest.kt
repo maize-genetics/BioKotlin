@@ -18,12 +18,13 @@ class MSAIOTest : StringSpec({
         filteredMSA.nonGappedSequence(1).seq() shouldBe "TCGACGTTGTG"
     }
 //
-//    "Test ProteinMSA" {
-//        proteinMSA.numSamples() shouldBe 3
-//        proteinMSA.numSites() shouldBe 32
-//
-//        val filteredMSA = proteinMSA.samples(listOf("ID002"))
-//        filteredMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
-//        filteredMSA.nonGappedSequence(0).seq() shouldBe "MHIFIYQIGYAYLKSGYIQSIRSPEYNW*"
-//    }
+    "Test ProteinMSA" {
+        val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa").asMSA()
+        proteinMSA.numSamples() shouldBe 3
+        proteinMSA.numSites() shouldBe 32
+
+        val filteredMSA = proteinMSA.samples(listOf("ID002"))
+        filteredMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
+        filteredMSA.nonGappedSequence(0).seq() shouldBe "MHIFIYQIGYAYLKSGYIQSIRSPEYNW*"
+    }
 })
