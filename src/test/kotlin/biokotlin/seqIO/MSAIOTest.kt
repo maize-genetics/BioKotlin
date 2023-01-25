@@ -4,8 +4,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
 class MSAIOTest : StringSpec({
-    val nucMSA = NucMSAIO("src/test/resources/biokotlin/seqIO/nucleotideMSA.fa").asMSA()
-    val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa").asMSA()
+//    val nucMSA = NucMSAIO("src/test/resources/biokotlin/seqIO/nucleotideMSA.fa").asMSA()
+//    val proteinMSA = ProteinMSAIO("src/test/resources/biokotlin/seqIO/proteinMSA.fa").asMSA()
 
 //    "Test NucMSA" {
 //        //Make sure size is correct
