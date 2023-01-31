@@ -52,7 +52,9 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
         return numSamples
     }
 
-    /** Returns the length of each [SeqRecord] in the alignment. */
+    /** Returns the number of sites in the MSA.
+     * Because each [SeqRecord] has the same length, this can be used to further filter down the [Seq] objects.
+     */
     fun numSites(): Int {
         return numSites
     }
