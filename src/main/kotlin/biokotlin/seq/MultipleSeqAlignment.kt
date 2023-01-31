@@ -68,13 +68,6 @@ sealed class MultipleSeqAlignment(sequences: List<SeqRecord>) {
             else -> throw IllegalStateException("Provided index: ${idx} for MSA.sites(idx) is outside of the valid boundaries ${-1 * numSites()} .. ${numSites()-1}")
         }
     }
-    //    private fun extractNucSeqRecord(idx: Int) : NucSeqRecord {
-    //        return when (idx) {
-    //            in 0 until numSamples() -> sequences[idx]
-    //            in -1 * numSamples() .. -1 -> sequences[idx + numSamples()]
-    //            else -> throw IllegalStateException("Provided index: ${idx} for NucMSA.sample(idx) is outside of the valid boundaries ${-1 * sequences.size} .. ${sequences.size-1}")
-    //        }
-    //    }
 }
 
 
