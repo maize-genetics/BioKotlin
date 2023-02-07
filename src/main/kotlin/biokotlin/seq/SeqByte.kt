@@ -229,7 +229,11 @@ internal class ProteinSeqByte(sequence: String) : BioSeqByte(sequence), ProteinS
     override fun get(i: Int): AminoAcid = if (i >= 0) AminoAcid.fromChar(seqS[i]) else AminoAcid
             .fromChar(seqS[seqS.length + i])
 
-    override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqS.substring(i, j))
+    /**
+     * Note This assumes that we are looking at the range [i,j] both being inclusive-inclusive.
+     * This closely matches how NucSeq works
+     */
+    override operator fun get(i: Int, j: Int) = ProteinSeqByte(seqS.substring(i, j+1))
 
     /**Note Kotlin [IntRange] are inclusive end, while Python slices exclusive end
      * Negative slices "-3..-1" start from the last base (i.e. would return the last three residues)

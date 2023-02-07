@@ -28,7 +28,9 @@ To use BioKotlin with JupyterLab:
 
 # Package biokotlin.seq
 
-Read-only sequence object for DNA, RNA, and Protein Sequences.
+Read-only sequence object for DNA, RNA, Protein Sequences and Multiple Sequence Alignments.
+
+## Sequence
 
 Sequence objects are immutable. This prevents you from doing `mySeq[5] = "A"` for example,
 but does allow Seq objects to be used in multi-threaded applications.  While String are used to initially create
@@ -71,6 +73,50 @@ val protein = ProteinSeq("TGWR")
 You will typically use Bio.SeqIO to read in sequences from files as
 SeqRecord objects, whose sequence will be exposed as a Seq object via
 the seq property.
+
+## MultipleSequenceAlignment
+
+Multiple Sequence Alignments objects are Immutable representations of 
+both Nucleotide and Protein Sequence MSAs. 
+
+Most of the filtering functions for both [NucMSA] and [ProteinMSA] will return other MSA objects. 
+Both implementations support filtering the MSA for both sites and samples by id and by a provided lambda. 
+Also sample filtering is supported by id.
+
+Both of these classes have a gappedSequence(sampleIndex) and nonGappedSequence(sampleIndex) 
+which return the corresponding Seq objects as loaded or with gaps removed for a given sample index. 
+
+To create a simple [NucMSA]:
+```kotlin
+import biokotlin.seq.*
+val nucRecords = mutableListOf(
+    NucSeqRecord(NucSeq("AACCACGTTTAA"), id="ID001"), 
+    NucSeqRecord(NucSeq("CACCA-GTGGGT"), id="ID002"),
+    NucSeqRecord(NucSeq("CACCACGTT-GC"), id="ID003"))
+
+val nucMSA = NucMSA(nucRecords)
+
+val msaFiltered = nucMSA.sites(3 .. 6).samples(setOf(0,2))
+
+val gappedFirstNucSeq = msaFiltered.gappedSequence(0)
+val unGappedSecondNucSeq = msaFiltered.nonGappedSequence(1)
+```
+
+Similary to create a simple [ProteinMSA]:
+```kotlin
+import biokotlin.seq.*
+val proteinRecords = mutableListOf(
+    ProteinSeqRecord(ProteinSeq("MHQAIFIYQIGYP*LKSGYIQSIRSPEYDNW-"), id="ID001"), 
+    ProteinSeqRecord(ProteinSeq("MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"), id="ID002"),
+    ProteinSeqRecord(ProteinSeq("MHQAIFIYQIGYPYLKSGYIQSIRSPEYDNW*"), id="ID003")
+)
+val proteinMSA = ProteinMSA(proteinRecords)
+
+val msaFiltered = proteinMSA.samples(setOf("ID001", "ID003")).sites(-7 until -2)
+
+val gappedSecondProteinSeq = msaFiltered.nonGappedSequence(1)
+val unGappedFirstProteinSeq = msaFiltered.gappedSequence(0)
+```
 
 # Package biokotlin.featureTree
 The featureTree package is used to represent the features of a [GFF file](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md)
