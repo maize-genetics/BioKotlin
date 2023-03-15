@@ -124,6 +124,11 @@ enum class KeggDB(val abbr: String, val kidPrefix: List<String>) {
         }
         return KeggServer.query(KeggOperations.list, adjQuery).lines()
                 .map { it.split("\t") }
+                //
+                // Add it.size == 4 to handle the case where there are more columns in the output.
+                // I don't think the KEGG API has a standardized specification for the output of the list command.
+                // Example: https://rest.kegg.jp/list/zma
+                //
                 .filter { it.size == 2 || it.size == 4 } //there is EOF line
                 .deparseRecords { mapOf("dbKid" to it[0], "name" to it[1]) }
     }
