@@ -3,6 +3,7 @@ package biokotlin.seq
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import java.io.File
 
 class MSATest : StringSpec({
     val nucRecords = mutableListOf(
@@ -23,6 +24,33 @@ class MSATest : StringSpec({
             ProteinSeqRecord(ProteinSeq("MHQAIFIYQIGYPYLKSGYIQSIRSPEYDNW*"), id="ID003")
     )
     val proteinAlign = ProteinMSA(proteinRecords)
+
+    "Test NucMSA File Load" {
+        val fileName = "src/test/resources/biokotlin/seqIO/nucleotideMSA.fa"
+        File(fileName).exists() shouldBe true
+
+        val nucMSA = NucMSA.read(fileName)
+        //Make sure size is correct
+        nucMSA.numSamples() shouldBe 8
+        nucMSA.numSites() shouldBe 12
+
+        val filteredMSA = nucMSA.samples(listOf("ID002","ID005"))
+        filteredMSA.gappedSequence(0).seq() shouldBe "CACCACGTGG-T"
+        filteredMSA.nonGappedSequence(1).seq() shouldBe "TCGACGTTGTG"
+    }
+
+    "Test ProteinMSA File Load" {
+        val fileName = "src/test/resources/biokotlin/seqIO/proteinMSA.fa"
+        File(fileName).exists() shouldBe true
+
+        val proteinMSA = ProteinMSA.read("src/test/resources/biokotlin/seqIO/proteinMSA.fa")
+        proteinMSA.numSamples() shouldBe 3
+        proteinMSA.numSites() shouldBe 32
+
+        val filteredMSA = proteinMSA.samples(listOf("ID002"))
+        filteredMSA.gappedSequence(0).seq() shouldBe "MH--IFIYQIGYAYLKSGYIQSIRSPEY-NW*"
+        filteredMSA.nonGappedSequence(0).seq() shouldBe "MHIFIYQIGYAYLKSGYIQSIRSPEYNW*"
+    }
 
     "Test alignment length" {
         dnaAlign.numSites() shouldBe 12
