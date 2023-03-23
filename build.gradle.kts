@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 // Dependencies will follow the buildscript
 
 group = "org.biokotlin"
-version = "0.05.01"
+version = "0.06"
 
 /*
 This build script is need to use the early access
