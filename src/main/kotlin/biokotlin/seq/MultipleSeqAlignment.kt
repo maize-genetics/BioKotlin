@@ -2,6 +2,9 @@
 
 package biokotlin.seq
 
+import biokotlin.seqIO.SeqFormat
+import biokotlin.seqIO.SeqType
+import biokotlin.seqIO.reader
 import com.google.common.collect.ImmutableList
 
 /**
@@ -101,6 +104,17 @@ List<NucSeqRecord>)
  */
 class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences),
         Collection<NucSeqRecord> by sequences{
+
+    companion object {
+        /**
+         * Static function to read in a [NucMSA] from a file.
+         */
+        fun read(filename: String, format : SeqFormat? = null) : NucMSA {
+            val reader = reader(filename, format, SeqType.nucleotide)
+            val seqs = reader.readAll() as Map<String, NucSeqRecord>
+            return NucMSA(seqs.map { it.value })
+        }
+    }
 
     constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences))
 
@@ -297,6 +311,17 @@ List<ProteinSeqRecord>)
 class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment
 (sequences),
         Collection<ProteinSeqRecord> by sequences {
+
+    companion object {
+        /**
+         * Static function to read in a [ProteinMSA] from a file.
+         */
+        fun read(file : String, format: SeqFormat? = null) :ProteinMSA {
+            val reader = reader(file, format, SeqType.protein)
+            val seqs = reader.readAll() as Map<String, ProteinSeqRecord>
+            return ProteinMSA(seqs.map { it.value })
+        }
+    }
 
     constructor(sequences: List<ProteinSeqRecord>) : this(ImmutableList.copyOf(sequences)) {
     }
