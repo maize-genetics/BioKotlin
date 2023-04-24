@@ -211,7 +211,7 @@ internal object CodonTableData {
                 CodonTable(33,listOf("Cephalodiscidae Mitochondrial"),addRNA(TTG, CTG, ATG, GTG), addRNA(TAG),diffsToAll(AGA to S,AGG to K,TAA to Y,TGA to W))
 
                 )
-        println(standardCodonTable.id)
+//        println(standardCodonTable.id)
         allCodonTables = dnaCodonTables.associate { it.key() to it }
         nameToId = allCodonTables.values
                 .flatMap { codonTable -> codonTable.name.map { it to codonTable.id } }  //the list of names need to be associated with single id
@@ -283,6 +283,23 @@ enum class Codon {
         get() = !this.name.contains('U')
     val isRNACodon
         get() = !this.name.contains('T')
+
+    /**
+     * Function to determine if a codon is a 4 fold Degenerative site.
+     */
+    fun has4DSite() : Boolean {
+        return when(this) {
+            ACA, ACC, ACG, ACT, ACU,  //T
+            CGA, CGC, CGG, CGT, CGU,  //R
+            TCA, TCC, TCG, TCT, UCA, UCC, UCG, UCU,  //S
+            CCA, CCC, CCG, CCT, CCU,  //P
+            CTA, CTC, CTG, CTT, CUA, CUC, CUG, CUU,  //L
+            GCA, GCC, GCG, GCT, GCU, //A
+            GGA, GGC, GGG, GGT, GGU, //G
+            GTA, GTC, GTG, GTT, GUA, GUC, GUG, GUU -> true //V
+            else -> false
+        }
+    }
 
     companion object {
         private val nuc3bytesToCodon: Array<Codon?> = Array(65){null}

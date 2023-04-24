@@ -217,5 +217,28 @@ class MSATest : StringSpec({
         mixedIndicesMSA.sample(2).gappedSequence(0).seq() shouldBe "MAII"
 
     }
+    "Test 4D site finding" {
+        val nuc4DRecords = mutableListOf(
+            NucSeqRecord(NucSeq("ACACACGTTTAA"), id="ID001"),
+            NucSeqRecord(NucSeq("ACCCACGTGTAA"), id="ID002"),
+            NucSeqRecord(NucSeq("AC-CACGTTTAA"), id="ID003")
+        )
+        val dnaAlign4d = NucMSA(nuc4DRecords)
+
+
+        val truthMSA = NucMSA(mutableListOf(
+            NucSeqRecord(NucSeq("AT"), id="ID001"),
+            NucSeqRecord(NucSeq("CG"), id="ID002"),
+            NucSeqRecord(NucSeq("-T"), id="ID003")
+        ))
+
+        val fourDMSA = dnaAlign4d.fourDMSA()
+        fourDMSA.numSites() shouldBe 2
+        fourDMSA.numSamples() shouldBe 3
+
+        (0 until fourDMSA.numSamples()).forEach {
+            fourDMSA.gappedSequence(it).seq() shouldBe truthMSA.gappedSequence(it).seq()
+        }
+    }
 
 })

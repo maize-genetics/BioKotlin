@@ -2,10 +2,14 @@
 
 package biokotlin.seq
 
+import biokotlin.data.Codon
+import biokotlin.data.standardCodonTable
 import biokotlin.seqIO.SeqFormat
 import biokotlin.seqIO.SeqType
 import biokotlin.seqIO.reader
 import com.google.common.collect.ImmutableList
+import java.io.BufferedWriter
+import java.io.FileWriter
 
 /**
 Immutable multiple sequence alignment object, consisting of two or more [SeqRecord]s with equal
@@ -103,7 +107,7 @@ List<NucSeqRecord>)
 
  */
 class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAlignment(sequences),
-        Collection<NucSeqRecord> by sequences{
+    Collection<NucSeqRecord> by sequences{
 
     companion object {
         /**
@@ -117,6 +121,15 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     }
 
     constructor(sequences: List<NucSeqRecord>) : this(ImmutableList.copyOf(sequences))
+
+    fun write(filename: String) {
+        BufferedWriter(FileWriter(filename)).use { writer ->
+            for (seq in sequences) {
+                writer.write(">${seq.id}\n")
+                writer.write("${seq.sequence.seq()}\n")
+            }
+        }
+    }
 
     /**
      * Function to create a new [NucSeq] containing the sequence with all of the gaps for a given [sampleIdx] index.
@@ -225,6 +238,10 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
         return NucMSA(sequences.map { NucSeqRecord(it[siteRange], it.id) })
     }
 
+    fun sitesByRanges(siteRanges: Collection<IntRange>) : NucMSA {
+        return sites(siteRanges.flatMap { it.toList() })
+    }
+
     /**
      * Function to filter out the [NucMSA] based on a collection of siteIndices
      * This Collection will first be Sorted and Duplicates removed so the resulting [NucMSA]'s [NucSeq]s will be in the correct order.
@@ -255,6 +272,80 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     fun sites(filterLambda: (Int) -> Boolean): NucMSA {
         return sites((0 until numSites).filter(filterLambda))
     }
+
+
+    fun fourDMSA(): NucMSA {
+        return sites(get4DSites())
+    }
+
+    /**
+     * Function to get all the 4-fold degenerate sites from a [NucMSA].
+     *
+     * It works by building codons from the MSA and then checking if the codon is 4D.
+     *
+     * @return a list of the 4D site positions in the MSA
+     */
+    fun get4DSites(): List<Int> {
+        val codonStarts = 0 until numSites() step 3 //Get all the codon starts for the length of the MSA
+
+        return codonStarts.map { Pair(it,sites(it..it+2)) } // filter out the MSA for the given codon
+            .map{ (codonStart,msa) -> extract4DSitesFromMSA(msa,codonStart) } //Extract the 4D sites
+            .filter { it != -1 } //Remove the -1s as those are not 4D sites
+    }
+
+    /**
+     * Function to extract a specific potential 4D site from a codon MSA.
+     *
+     * With this, we ignore any 3 bp sequences where there is a gap or an N.
+     * If all the remaining codons starting at [codonStart] are 4D, then we return the position(which is [codonStart] + 2) of the 4D site.  If not, we return -1.
+     *
+     * @param codonMSA the input MSA
+     * @param codonStart the start position of the codon
+     * @return the position of the 4D site or -1 if the codon is not 4D
+     */
+    private fun extract4DSitesFromMSA(
+        codonMSA: NucMSA,
+        codonStart: Int
+    ) : Int{
+        val nonMissingCodons = filterOutMissingCodons(codonMSA) //Get the codon
+
+        val fourDAminoAcids = check4DAndTranslate(nonMissingCodons) //Filter out non-4d and get the amino acid
+
+        //Need to check that the sizes are the same and that all the amino acids are the same
+        return if (nonMissingCodons.size == fourDAminoAcids.size && fourDAminoAcids.all { fourDAminoAcids[0] == it }) {
+            codonStart + 2
+        }
+        else {
+            -1 //return -1 if the site is not 4D
+        }
+    }
+
+    /**
+     * Simple function to filter out missing codons from the MSA
+     * This will ignore any codons that have a gap or an N and then it will convert the sequence into a Codon object
+     *
+     * @param codonMSA the input MSA
+     * @return a list of the non-missing codons in the MSA
+     */
+    private fun filterOutMissingCodons(codonMSA: NucMSA): List<Codon> {
+        return (0 until codonMSA.numSamples()).map { codonMSA.gappedSequence(it) } //Get the codon seqs
+            .filter { !it.seq().contains("-") && !it.seq().contains("N") } //Filter out the gapped sites
+            .map { Codon[it.seq()] }
+    }
+
+    /**
+     * Function to check if a codon is 4D and then translate it to an amino acid.
+     *
+     * @param nonMissingCodons the list of non-missing codons
+     * @return a list of the amino acids that the codons translate to
+     */
+    private fun check4DAndTranslate(nonMissingCodons: List<Codon>): List<AminoAcid?> {
+        return nonMissingCodons
+            .filter { it.has4DSite() } //Filter out the 4D codons
+            .map { standardCodonTable.codonToAA[it] }
+    }
+
+
 
 
     /**
@@ -309,8 +400,8 @@ List<ProteinSeqRecord>)
 
  */
 class ProteinMSA(private val sequences: ImmutableList<ProteinSeqRecord>) : MultipleSeqAlignment
-(sequences),
-        Collection<ProteinSeqRecord> by sequences {
+    (sequences),
+    Collection<ProteinSeqRecord> by sequences {
 
     companion object {
         /**
