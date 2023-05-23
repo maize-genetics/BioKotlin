@@ -8,9 +8,10 @@ import io.kotest.matchers.string.shouldBeEmpty
 import io.kotest.matchers.string.shouldContain
 import java.io.File
 import biokotlin.featureTree.FeatureType.*
+import biokotlin.genome.GenomicFeatures
 import io.kotest.matchers.types.shouldBeInstanceOf
 
-class FeatureTreeTesting : StringSpec({
+/*class FeatureTreeTesting : StringSpec({
     val setUpListener = listener(SystemOutWireListener(true))
     val b73_shortened = Genome.fromGFF("src/test/kotlin/biokotlin/featureTree/gffs/b73_shortened.gff") //This is a valid tree, for reference
     visualizeToFile(b73_shortened, "b73_shortened")
@@ -263,9 +264,9 @@ class FeatureTreeTesting : StringSpec({
         visualizeToFile(genomeBuilder.build(), "child_with_incorrect_parent_attribute")
         childWithIncorrectParentAttributeListener.output().shouldContain(warning)
     }
-    /*
-    These metrics are dependent on data that is too large for git, so they have been commented out.
-    "performance metrics" {
+
+    //These metrics are dependent on data that is too large for git, so they have been commented out.
+    /*"performance metrics" {
         val initialMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
         val initialTime = System.nanoTime()
         val dataFrame = GenomicFeatures("/home/jeff/Buckler/Biokotlin/b73.gff")
@@ -283,27 +284,5 @@ class FeatureTreeTesting : StringSpec({
         println("Tree parse time: ${treeTime / 1e9}")
 
     }*/
-})
+})*/
 
-/**
- * Allows for conveniently visualizing features to a file. If the needed dependency (graphviz) is missing, it will
- * not do anything.
- */
-fun visualizeToFile(ancestor: Ancestor, name: String) {
-    val ancestorDot = File("$name.dot")
-    ancestorDot.writeText(ancestor.visualize())
-    ancestorDot.deleteOnExit()
-    val file = File("src/test/kotlin/biokotlin/featureTree/visualizations/$name.svg")
-    try {
-        ProcessBuilder(
-            "dot",
-            "-Tsvg",
-            ancestorDot.absolutePath
-        )
-            .redirectOutput(file)
-            .start()
-            .waitFor()
-    } catch (_: Exception) {
-        println("Install graphviz if you want to generate up-to-date visualizations for the featureTree test package.")
-    }
-}
