@@ -875,7 +875,7 @@ fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
                         chromNucSeqMap.put(currChrom,NucSeq(currSeq.toString()))
                     }
                     // reset chromosome name and sequence, begin processing next chrom
-                    currChrom = line.replace(">","")
+                    currChrom = line.substring(1).split(" ")[0]
                     currSeq = ByteArrayOutputStream()
                 } else {
                     currSeq.write(line.toByteArray())
