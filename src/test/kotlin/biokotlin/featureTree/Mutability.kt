@@ -13,7 +13,7 @@ class Mutability : FunSpec({
  * Allows for conveniently visualizing features to a file. If the needed dependency (graphviz) is missing, it will
  * not do anything.
  */
-fun visualizeToFile(ancestor: Ancestor, name: String) {
+fun visualizeToFile(ancestor: Parent, name: String) {
     val ancestorDot = File("$name.dot")
     ancestorDot.writeText(ancestor.visualize())
     ancestorDot.deleteOnExit()
