@@ -12,6 +12,84 @@ import biokotlin.seq.Seq
 * Kmers to be stored as Longs for efficiency and efficient comparison.
 * But if they're stored this way, cannot accept sequences with N's
  */
+
+/* produce kmer object from sequence string */
+fun KmerValue(seq: String): KmerValue {
+    if (seq.length > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
+
+    var encoding = 0L
+    seq.forEach{ c ->
+        when (c) {
+            'A' -> encoding = (encoding shl 2)
+            'C' -> encoding = (encoding shl 2) or 1L
+            'G' -> encoding = (encoding shl 2) or 2L
+            'T' -> encoding = (encoding shl 2) or 3L
+            else -> throw java.lang.IllegalArgumentException("Sequence may contain only A,C,G,T.") }
+    }
+    return KmerValue(encoding)
+}
+
+fun KmerValue(seq: NucSeq): KmerValue {
+    if (seq.size() > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
+
+    var encoding = 0L
+    seq.seq().forEach{ c ->
+        when (c) {
+            'A' -> encoding = (encoding shl 2)
+            'C' -> encoding = (encoding shl 2) or 1L
+            'G' -> encoding = (encoding shl 2) or 2L
+            'T' -> encoding = (encoding shl 2) or 3L
+            else -> throw java.lang.IllegalArgumentException("Sequence may contain only A,C,G,T.") }
+    }
+    return KmerValue(encoding)
+}
+
+
+@JvmInline
+value class KmerValue(val encoding: Long): Comparable<KmerValue> {
+    override fun compareTo(other: KmerValue): Int {
+        return if(this.encoding < other.encoding) { -1 }
+        else if (this.encoding > other.encoding) { 1 }
+        else { 0 }
+    }
+
+    //TODO could be faster
+    override fun toString(): String {
+        return toString(32)
+    }
+
+    fun toString(kmerSize: Int): String {
+        var temp = encoding
+        return (0 until kmerSize).map{
+            val y = when ( temp and 3L) {
+                0L -> 'A'
+                1L -> 'C'
+                2L -> 'G'
+                3L -> 'T'
+                else -> 'N'
+            }
+            temp = temp ushr 2
+            return@map y
+        }.reversed().joinToString("")
+    }
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Kmer: Comparable<Kmer> {
 
     val length: Int
