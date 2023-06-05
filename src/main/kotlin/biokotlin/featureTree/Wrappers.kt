@@ -4,7 +4,6 @@
 package biokotlin.featureTree
 
 import biokotlin.featureTree.FeatureType.*
-import org.apache.commons.lang3.mutable.Mutable
 import java.io.File
 import java.lang.StringBuilder
 import java.util.*

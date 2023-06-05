@@ -11,7 +11,7 @@ version = "0.05"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.5.31")
+    val kotlinVersion by extra ("1.8.21")
 
     repositories {
         mavenCentral()
@@ -27,7 +27,7 @@ buildscript {
 
 
 plugins {
-    val kotlinVersion = "1.5.31"
+    val kotlinVersion = "1.8.21"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion

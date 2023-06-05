@@ -4,33 +4,11 @@ package biokotlin.featureTree
 
 import java.lang.IllegalStateException
 import java.util.*
+import kotlin.IllegalStateException
 
 /**
  * Utilities, types, and exceptions relevants to the FeatureTree model
  */
-
-@JvmInline
-public value class Attributes(val value: Map<String, String>): Map<String, String> by value
-
-internal data class FeatureData(
-    var seqid: String,
-    var source: String,
-    var type: FeatureType,
-    var start: Int,
-    var end: Int,
-    var score: Double?,
-    var strand: Strand,
-    var phase: Phase,
-    var attributes: MutableMap<String, String>,
-    /**
-     * The ordinal of the parent of this feature
-     */
-    var parent: Int?,
-    /**
-     * The ordinals of the children
-     */
-    var children: BitSet //TODO BitSet may not be the most efficient source due to the sparse size. Play with other options
-)
 
 /**
  * The different types of features in GFF files. Does not support full sequence ontology.
@@ -93,10 +71,10 @@ public enum class FeatureType(
     TERMINATOR(setOf("three_prime_UTR", "SO:0000205", "INSDC_feature:3'UTR", "three prime untranslated region", "three prime UTR"));
 
     public companion object {
+        //TODO: Add some way of storing what String was parsed to produce the enum
         /**
          * Converts from Strings as they appear in GFF files to [FeatureType].
          */
-
         public fun fromString(gffString: String): FeatureType {
             for (type in values()) {
                 if (type.gffName.contains(gffString)) return type
@@ -149,14 +127,14 @@ public enum class Phase(val number: Int?, val gffName: String) {
 public class DeletedAccessException : Exception("An attempt was made to read from or write to a Feature that has been deleted.\n" +
         "Hint: do not attempt to access a Feature that has had delete() called on it or any of that Feature's descendants.")
 
-internal class IllegalFeatureState(label: String, feature: Feature) :
+public class IllegalFeatureState(label: String, feature: Feature) :
     IllegalStateException("$label\nFeature: ${feature.asRow()}")
 
-internal class IllegalParentChild(label: String, parent: Feature, child: Feature) :
+public class IllegalParentChild(label: String, parent: Feature, child: Feature) :
     IllegalStateException("$label\nParent: ${parent.asRow()}\nChild: ${child.asRow()}")
 
-internal class IllegalTypeWrapper(internal: IFeature, illegalType: FeatureType) :
+public class IllegalTypeWrapper internal constructor(internal: IFeature, illegalType: FeatureType) :
     IllegalStateException("${internal::class} cannot wrap featureData with type $illegalType")
 
-internal class IllegalParent(label: String, parent: Feature) :
+public class IllegalParent(label: String, parent: Feature) :
     IllegalStateException("$label\nParent: ${parent.asRow()}")
