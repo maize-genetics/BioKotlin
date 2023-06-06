@@ -91,14 +91,14 @@ class KmerTest {
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
         val kmerset2 = KmerMap(sequence2, 3)
 
-        val actual1 = mapOf(Pair(Kmer("ACA"), 1), Pair(Kmer("AGC"), 2), Pair(Kmer("CAG"), 1),
-            Pair(Kmer("CGA"), 2), Pair(Kmer("CTA"), 1), Pair(Kmer("CTC"), 1), Pair(Kmer("GAC"), 1), Pair(Kmer("TAC"), 1))
+        val actual1 = mapOf(Pair(Kmer("ACA").encoding, 1), Pair(Kmer("AGC").encoding, 2), Pair(Kmer("CAG").encoding, 1),
+            Pair(Kmer("CGA").encoding, 2), Pair(Kmer("CTA").encoding, 1), Pair(Kmer("CTC").encoding, 1), Pair(Kmer("GAC").encoding, 1), Pair(Kmer("TAC").encoding, 1))
 
-        val actual2 = mapOf(Pair(Kmer("AAA"), 3), Pair(Kmer("AGG"), 2), Pair(Kmer("CAG"), 1),
-            Pair(Kmer("CTC"), 1), Pair(Kmer("TCC"), 1), Pair(Kmer("TCA"), 1))
+        val actual2 = mapOf(Pair(Kmer("AAA").encoding, 3), Pair(Kmer("AGG").encoding, 2), Pair(Kmer("CAG").encoding, 1),
+            Pair(Kmer("CTC").encoding, 1), Pair(Kmer("TCC").encoding, 1), Pair(Kmer("TCA").encoding, 1))
 
-        assertEquals(actual1, kmerset1.map)
-        assertEquals(actual2, kmerset2.map)
+        assertEquals(actual1, kmerset1.map.toMap())
+        assertEquals(actual2, kmerset2.map.toMap())
 
     }
 

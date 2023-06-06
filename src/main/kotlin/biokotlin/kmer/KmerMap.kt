@@ -2,6 +2,8 @@ package biokotlin.kmer
 
 import biokotlin.seq.NUC
 import biokotlin.seq.NucSeq
+import it.unimi.dsi.fastutil.longs.Long2IntLinkedOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongSortedSet
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -25,8 +27,8 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
         }
     }
 
-    private fun seqToKmerMap(seq: NucSeq): Map<Kmer, Int> {
-        val kmerMap = mutableMapOf<Kmer, Int>()
+    private fun seqToKmerMap(seq: NucSeq): Long2IntLinkedOpenHashMap {
+        val kmerMap = Long2IntLinkedOpenHashMap()
 
         var hashMask = 0L
         (0 until kmerSize*2).forEach{ _ -> hashMask = (hashMask shl 1) or 1}
@@ -51,8 +53,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
 
                 val kmer = minOf(Kmer(previousHash), Kmer(previousHash).reverseComplement(kmerSize))
 
-                kmerMap[kmer] = if(kmerMap[kmer] == null) {1} else {kmerMap[kmer]!! + 1}
-
+                kmerMap.addTo(kmer.encoding, 1)
 
             }
 
@@ -63,8 +64,14 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
         return kmerMap
     }
 
-    fun set(): Set<Kmer> {
+    //set of keys as longs
+    fun longSet(): LongSortedSet {
         return map.keys
+    }
+
+    // set of keys as kmer objects
+    fun set(): Set<Kmer> {
+        return map.keys.map{Kmer(it)}.toSet()
     }
 
     fun manhattanDistance(seq: NucSeq): Double {
@@ -75,7 +82,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     fun manhattanDistance(other: KmerMap): Double {
         if (other.kmerSize != kmerSize) { throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.") }
 
-        return (set() union other.set()).map{
+        return (longSet() union other.longSet()).map{
             abs((map[it]?:0)  - (other.map[it]?:0))
         }.sum().toDouble()
     }
@@ -87,7 +94,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     fun euclideanDistance(other: KmerMap): Double {
         if (other.kmerSize != kmerSize) { throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.") }
 
-        return sqrt((set() union other.set()).map{
+        return sqrt((longSet() union other.longSet()).map{
             ((map[it]?:0)  - (other.map[it]?:0)).toDouble().pow(2)
         }.sum())
     }
@@ -99,7 +106,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     fun setDifferenceCount(other: KmerMap): Int {
         if (other.kmerSize != kmerSize) { throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.") }
 
-        return ((set() union other.set()).size - (set() intersect other.set()).size)
+        return ((longSet() union other.longSet()).size - (longSet() intersect other.longSet()).size)
     }
 
     fun setDistance(seq: NucSeq): Double {
@@ -107,7 +114,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     }
 
     fun setDistance(other: KmerMap): Double {
-        return setDifferenceCount(other).toDouble() / (set() union other.set()).size
+        return setDifferenceCount(other).toDouble() / (longSet() union other.longSet()).size
     }
 
     fun setHamming1Count(seq: NucSeq): Int {
@@ -117,7 +124,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     fun setHamming1Count(other: KmerMap): Int {
         if (other.kmerSize != kmerSize) { throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.") }
 
-        return (other.set().map{minHammingDistance(it)}.count{it == 1} + set().map{other.minHammingDistance(it)}.count{it == 1})
+        return (other.longSet().map{minHammingDistance(Kmer(it))}.count{it == 1} + longSet().map{other.minHammingDistance(Kmer(it))}.count{it == 1})
     }
 
     fun setHamming1Distance(seq: NucSeq): Double {
@@ -125,7 +132,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     }
 
     fun setHamming1Distance(other: KmerMap): Double {
-        return setHamming1Count(other).toDouble() / (set() union other.set()).size
+        return setHamming1Count(other).toDouble() / (longSet() union other.longSet()).size
     }
 
     fun setHammingManyCount(seq: NucSeq): Int {
@@ -135,7 +142,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     fun setHammingManyCount(other: KmerMap): Int {
         if (other.kmerSize != kmerSize) { throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.") }
 
-        return (other.set().map{minHammingDistance(it)}.count{it > 1} + set().map{other.minHammingDistance(it)}.count{it > 1})
+        return (other.longSet().map{minHammingDistance(Kmer(it))}.count{it > 1} + longSet().map{other.minHammingDistance(Kmer(it))}.count{it > 1})
     }
 
     fun setHammingManyDistance(seq: NucSeq): Double {
@@ -143,13 +150,13 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int) {
     }
 
     fun setHammingManyDistance(other: KmerMap): Double {
-        return setHammingManyCount(other).toDouble() / (set() union other.set()).size
+        return setHammingManyCount(other).toDouble() / (longSet() union other.longSet()).size
     }
 
 
     // returns the minimum hamming distance between the given kmer and all kmers in this set
     fun minHammingDistance(kmer: Kmer): Int {
-        return set().minOf { minOf(it.hammingDistance(kmer), it.hammingDistance(kmer.reverseComplement(kmerSize))) }
+        return longSet().minOf { minOf(Kmer(it).hammingDistance(kmer), Kmer(it).hammingDistance(kmer.reverseComplement(kmerSize))) }
     }
 
 }
