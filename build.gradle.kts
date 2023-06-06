@@ -94,6 +94,8 @@ dependencies {
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
+    implementation("it.unimi.dsi:fastutil-core:8.5.12")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
     val kotestVersion = "4.2.6"

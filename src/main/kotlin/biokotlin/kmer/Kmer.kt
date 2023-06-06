@@ -3,57 +3,34 @@ package biokotlin.kmer
 import biokotlin.seq.NucSeq
 import biokotlin.seq.Seq
 
-//const val AValue = 0L
-//const val CValue = 1L
-//const val GValue = 2L
-//const val TValue = 3L
 
 /*
 * Kmers to be stored as Longs for efficiency and efficient comparison.
 * But if they're stored this way, cannot accept sequences with N's
  */
 
+
 /* produce kmer object from sequence string */
-fun KmerValue(seq: String): KmerValue {
+fun Kmer(seq: String): Kmer {
     if (seq.length > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
 
+    if( seq.contains(Regex("[^ACTGU]"))) {throw java.lang.IllegalArgumentException("Kmer may contain only A, C, T, G, U")}
     var encoding = 0L
-    seq.forEach{ c ->
-        when (c) {
-            'A' -> encoding = (encoding shl 2)
-            'C' -> encoding = (encoding shl 2) or 1L
-            'G' -> encoding = (encoding shl 2) or 2L
-            'T' -> encoding = (encoding shl 2) or 3L
-            else -> throw java.lang.IllegalArgumentException("Sequence may contain only A,C,G,T.") }
-    }
-    return KmerValue(encoding)
+    seq.forEach{ c -> encoding = (encoding shl 2) or (c.code.toLong() ushr 1 and 3L) }
+    return Kmer(encoding)
 }
 
-fun KmerValue(seq: NucSeq): KmerValue {
-    if (seq.size() > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
-
-    var encoding = 0L
-    seq.seq().forEach{ c ->
-        when (c) {
-            'A' -> encoding = (encoding shl 2)
-            'C' -> encoding = (encoding shl 2) or 1L
-            'G' -> encoding = (encoding shl 2) or 2L
-            'T' -> encoding = (encoding shl 2) or 3L
-            else -> throw java.lang.IllegalArgumentException("Sequence may contain only A,C,G,T.") }
-    }
-    return KmerValue(encoding)
+fun Kmer(seq: NucSeq): Kmer {
+    return Kmer(seq.seq())
 }
 
 
 @JvmInline
-value class KmerValue(val encoding: Long): Comparable<KmerValue> {
-    override fun compareTo(other: KmerValue): Int {
-        return if(this.encoding < other.encoding) { -1 }
-        else if (this.encoding > other.encoding) { 1 }
-        else { 0 }
+value class Kmer(val encoding: Long): Comparable<Kmer> {
+    override operator fun compareTo(other: Kmer): Int {
+        return encoding.toULong().compareTo(other.encoding.toULong())
     }
 
-    //TODO could be faster
     override fun toString(): String {
         return toString(32)
     }
@@ -64,109 +41,11 @@ value class KmerValue(val encoding: Long): Comparable<KmerValue> {
             val y = when ( temp and 3L) {
                 0L -> 'A'
                 1L -> 'C'
-                2L -> 'G'
-                3L -> 'T'
+                2L -> 'T'
+                3L -> 'G'
                 else -> 'N'
             }
             temp = temp ushr 2
-            return@map y
-        }.reversed().joinToString("")
-    }
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class Kmer: Comparable<Kmer> {
-
-    val length: Int
-    val encoding: ULong
-
-    // Note: Because each nucleotide is encoded with 2 bits, we can only
-    // store 4 values: A, C, T, G
-    // which means no ambiguous bases (N's)
-    constructor(seq: String) {
-        if (seq.length > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
-
-        this.length = seq.length
-        this.encoding = seq.mapIndexed{index, c -> when (c) {
-            'A' -> 0UL shl (seq.length - index - 1)*2
-            'C' -> 1UL shl (seq.length - index - 1)*2
-            'G' -> 2UL shl (seq.length - index - 1)*2
-            'T' -> 3UL shl (seq.length - index - 1)*2
-            else -> throw java.lang.IllegalArgumentException("Sequence may contain only A,C,G,T.")
-        } }.sum()
-    }
-
-    constructor(seq: NucSeq) {
-        if (seq.size() > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
-        this.length = seq.size()
-        this.encoding = seq.seq().mapIndexed{index, c -> when (c) {
-            'A' -> 0UL shl (seq.size() - index - 1)*2
-            'C' -> 1UL shl (seq.size() - index - 1)*2
-            'G' -> 2UL shl (seq.size() - index - 1)*2
-            'T' -> 3UL shl (seq.size() - index - 1)*2
-            else -> throw java.lang.IllegalArgumentException("Sequence may contain only A,C,G,T.")
-        } }.sum()
-    }
-
-    constructor(encoding: ULong, length: Int) {
-        if (length > 32) {throw java.lang.IllegalArgumentException("Kmer must be less than or equal to 32 bases long")}
-        this.length = length
-        this.encoding = encoding
-    }
-
-    override fun compareTo(other: Kmer): Int {
-        return if(this.encoding < other.encoding) { -1 }
-        else if (this.encoding > other.encoding) { 1 }
-        else {
-            if (this.length > other.length) { 1 }
-            else if (this.length < other.length) { -1 }
-            else { 0 }
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (other != null) {
-            if (other::class == Kmer::class) {
-                if((other as Kmer).length == this.length && other.encoding == this.encoding) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    // this may not be the best way of doing it
-    // but if encoding and length are equal, then Kmer is equal
-    override fun hashCode(): Int{
-        return Pair(this.encoding, this.length).hashCode()
-    }
-
-    override fun toString(): String {
-        var temp = encoding
-        return (0 until length).map{
-            val y = when ( temp % 4u) {
-                0UL -> 'A'
-                1UL -> 'C'
-                2UL -> 'G'
-                3UL -> 'T'
-                else -> 'N'
-            }
-            temp = temp shr 2
             return@map y
         }.reversed().joinToString("")
     }
@@ -175,52 +54,25 @@ class Kmer: Comparable<Kmer> {
         return Seq(this.toString())
     }
 
-    fun reverseComplement(): Kmer {
+    fun toSeq(kmerSize: Int): NucSeq {
+        return Seq(this.toString(kmerSize))
+    }
+
+    fun reverseComplement(kmerSize: Int): Kmer {
         var temp = encoding
 
-        var x = 0UL
+        var x = 0L
 
-        (0 until length).forEach{
-            x = (x shl 2) +  (3u - temp % 4u)
-            temp = temp shr 2
+        (0 until kmerSize).forEach{
+            x = (x shl 2) or (((temp and 2L).inv() and 2L) or (temp and 1L))
+            temp = temp ushr 2
         }
 
-        return Kmer(x, this.length)
-    }
-
-    // returns the smaller of itself and its reverse compliment
-    fun minRepresentation(): Kmer {
-        val rev = reverseComplement()
-
-        return if (rev.encoding < this.encoding)  {
-            rev
-        } else {
-            this
-        }
-    }
-
-    fun hammingDistanceNaive(other: Kmer): Int {
-        if(other.length != this.length) {
-            throw IllegalArgumentException("To calculate Hamming distance sequences must have equal length. Query sequence length is ${other.length}.")
-        }
-
-        var tempSelf = encoding
-        var tempOther = other.encoding
-        var distance = 0
-        (0 until length).forEach{
-            if (tempSelf.mod(4u) != tempOther.mod(4u)) { distance += 1}
-
-            tempSelf = tempSelf shr 2
-            tempOther = tempOther shr 2
-        }
-        return distance
+        return Kmer(x)
     }
 
     fun hammingDistance(other: Kmer): Int {
-        if(other.length != this.length) {
-            throw IllegalArgumentException("To calculate Hamming distance sequences must have equal length. Query sequence length is ${other.length}.")
-        }
-        var x = encoding xor other.encoding
+        var x = encoding.toULong() xor other.encoding.toULong()
         //x and 001100110011...
         var y = x and 3689348814741910323u
         y = y and (y shr 1)
@@ -239,12 +91,5 @@ class Kmer: Comparable<Kmer> {
         x += (x shr 32)
         return (x and 127u).toInt()
     }
-
-
-
-
-
-
-
 
 }
