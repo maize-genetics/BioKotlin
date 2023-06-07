@@ -3,9 +3,9 @@ package biokotlin.kegg
 import biokotlin.seq.NucSeq
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.Seq
-import io.ktor.util.*
+//import io.ktor.util.*
 import kotlinx.serialization.*
-import java.util.*
+//import java.util.*
 
 /**
  * Fundamental key for a KEGG entities.  A combination of DB abbreviation combined with a KEGG ID (kid)
