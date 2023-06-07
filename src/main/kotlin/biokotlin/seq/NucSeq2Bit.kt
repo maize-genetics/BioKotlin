@@ -3,6 +3,7 @@ package biokotlin.seq
 
 import biokotlin.data.Codon
 import biokotlin.data.CodonTable
+import biokotlin.kmer.KmerSet
 import biokotlin.seq.NUC.Companion.utf8To2BitInt
 import com.google.common.collect.ImmutableRangeMap
 import com.google.common.collect.Range
@@ -258,6 +259,10 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
             String(pB)
         }
         return ProteinSeqByte(proStr)
+    }
+
+    override fun kmers(kmerSize: Int, bothStrands: Boolean, stepSize: Int): KmerSet {
+        TODO("Not yet implemented")
     }
 
     override fun copyOfBytes(): ByteArray {
