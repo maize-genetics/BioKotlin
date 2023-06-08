@@ -94,6 +94,25 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
         return Kmer(rev)
     }
 
+    // the new and improved way to get the reverse complement
+    fun reverseComplementFast(kmerSize: Int): Kmer {
+
+        // reverse bits
+        var y = ((encoding and 0x5555555555555555) shl 1) or ((encoding and -6148914691236517206) ushr 1)
+        y = ((y and 0x3333333333333333) shl 2) or ((y and -3689348814741910324) ushr 2)
+        y = ((y and 0x0F0F0F0F0F0F0F0F) shl 4) or ((y and -1085102592571150096) ushr 4)
+        y = ((y and 0x00FF00FF00FF00FF) shl 8) or ((y and -71777214294589696) ushr 8)
+        y = ((y and 0x0000FFFF0000FFFF) shl 16) or ((y and -281470681808896) ushr 16)
+        y = ((y and 0x00000000FFFFFFFF) shl 32) or ((y and -4294967296) ushr 32)
+
+        //convert reversed nucleotide to its complement
+        val a = (y and -6148914691236517206) ushr 1
+        val b = (y.inv() and 0x5555555555555555) shl 1
+
+        //mask to desired
+        return Kmer((a or b) ushr (64 - (2 * kmerSize)))
+    }
+
     fun hammingDistance(other: Kmer): Int {
         var x = encoding.toULong() xor other.encoding.toULong()
         //x and 001100110011...

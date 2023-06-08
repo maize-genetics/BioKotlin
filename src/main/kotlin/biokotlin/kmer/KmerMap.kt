@@ -2,6 +2,8 @@ package biokotlin.kmer
 
 import biokotlin.seq.NucSeq
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.longs.LongSet
 import kotlin.math.abs
 import kotlin.math.pow
@@ -69,6 +71,11 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
         return ambiguousKmers*2
     }
 
+    /* wrapper for read-only access of map */
+    fun getCountOf(kmer: Kmer): Int {
+        return map[kmer.encoding]
+    }
+
     /**
      *   All kmers (packed into longs) and there associated counts
      */
@@ -82,6 +89,35 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
     // set of keys as kmer objects
     fun set(): Set<Kmer> {
         return map.keys.map { Kmer(it) }.toSet()
+    }
+
+    fun getEvenOddHashMap(): Long2ObjectOpenHashMap<LongOpenHashSet> {
+
+        //TODO initialize with capacity - what capacity?
+        val hashMap = Long2ObjectOpenHashMap<LongOpenHashSet>()
+
+        map.forEach { entry ->
+            // min representation of kmer
+            val even = entry.key and -3689348814741910324L
+            val odd = entry.key and 0x3333333333333333
+
+            hashMap.getOrPut(even) { LongOpenHashSet() }.add(entry.key)
+            hashMap.getOrPut(odd) { LongOpenHashSet() }.add(entry.key)
+
+            //max representation of kmer
+            val maxRep = Kmer(entry.key).reverseComplement(kmerSize)
+            // may not be worth the time for this if statement
+            if(maxRep.encoding != entry.key) {
+                val maxEven = maxRep.encoding and -3689348814741910324L
+                val maxOdd = maxRep.encoding and 0x3333333333333333
+
+                hashMap.getOrPut(maxEven) {LongOpenHashSet()}.add(maxRep.encoding)
+                hashMap.getOrPut(maxOdd) {LongOpenHashSet()}.add(maxRep.encoding)
+            }
+
+        }
+
+        return hashMap
     }
 
     fun manhattanDistance(seq: NucSeq): Double {

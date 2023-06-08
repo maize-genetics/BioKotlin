@@ -212,6 +212,22 @@ class KmerTest {
 
     }
 
+    @Test
+    fun testTest() {
+        val seq1 = Seq("TCTATGGCGCGCTACGATACTCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTAGCTTCACAGGCCCTTTCCACCCCCTTCC")
+        val seq2 = Seq("CGTACACCTTCCCCGACTCCATCCCCCCCCCCCCAAAACTCGCTCGGGCTCTGACTCGCTACACCCACC")
 
+        val kmerMap = KmerMap(seq1, 5)
+        val kmerMap2 = KmerMap(seq2, 5)
+
+        println(kmerMap.setHamming1Count(seq2))
+        println(kmerMap.setHammingManyCount(seq2))
+        //println(kmerHammingDistanceBreakdown(kmerMap, kmerMap2))
+
+        //assertEquals(6, kmerMap.setHamming1Count(seq2))
+
+
+
+    }
 
 }
