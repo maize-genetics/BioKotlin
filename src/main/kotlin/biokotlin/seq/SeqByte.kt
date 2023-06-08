@@ -3,7 +3,6 @@ package biokotlin.seq
 
 import biokotlin.data.Codon
 import biokotlin.data.CodonTable
-import biokotlin.kmer.KmerSet
 
 
 internal sealed class BioSeqByte constructor(sequence: String) : Seq {
@@ -181,10 +180,6 @@ internal class NucSeqByte(sequence: String, override val nucSet: NucSet) : BioSe
             pB
         }
         return ProteinSeqByte(proStr)
-    }
-
-    override fun kmers(kmerSize: Int, bothStrands: Boolean, stepSize: Int): KmerSet {
-
     }
 
     override fun equals(other: Any?): Boolean {

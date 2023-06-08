@@ -3,15 +3,14 @@ package biokotlin.seq
 
 import biokotlin.data.Codon
 import biokotlin.data.CodonTable
-import biokotlin.kmer.KmerSet
 import biokotlin.seq.NUC.Companion.utf8To2BitInt
+import biokotlin.seq.NucSeq2Bit.Companion.seqStringTo2Bit
 import com.google.common.collect.ImmutableRangeMap
 import com.google.common.collect.Range
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.NoSuchElementException
 
 /**
  * [NucSeq2Bit] supports storage of DNA sequences into two bits per bp.  It does support Ns and runs of Ns through
@@ -259,10 +258,6 @@ internal sealed class NucSeq2Bit(val seqs2B: ImmutableRangeMap<Int, TwoBitArray>
             String(pB)
         }
         return ProteinSeqByte(proStr)
-    }
-
-    override fun kmers(kmerSize: Int, bothStrands: Boolean, stepSize: Int): KmerSet {
-        TODO("Not yet implemented")
     }
 
     override fun copyOfBytes(): ByteArray {

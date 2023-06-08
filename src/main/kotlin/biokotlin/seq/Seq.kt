@@ -2,7 +2,7 @@
 package biokotlin.seq
 
 import biokotlin.data.CodonTable
-import biokotlin.kmer.KmerSet
+import biokotlin.kmer.KmerMap
 import com.google.common.collect.ImmutableSet
 import java.util.*
 import java.util.stream.Collectors
@@ -269,7 +269,7 @@ interface NucSeq : Seq {
      * @param bothStrands extract kmers from only the forward strand or both strands
      * @param stepSize kmers are extracted from the first base going forward based on a given step
      */
-    fun kmers(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1): KmerSet
+    fun kmers(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1): KmerMap = KmerMap(this,kmerSize,bothStrands,stepSize)
 }
 
 /**Main data structure for working with Protein sequences*/

@@ -62,13 +62,36 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
         var temp = encoding
 
         var x = 0L
-
-        (0 until kmerSize).forEach{
+        for(i in 0 until kmerSize) {
             x = (x shl 2) or (((temp and 2L).inv() and 2L) or (temp and 1L))
             temp = temp ushr 2
         }
 
         return Kmer(x)
+    }
+
+    /**
+     * Returns the reverse complement of a sequence already encoded in a 2-bit long.
+     *
+     *
+     * Note: polyA is used represent unknown, but reverse complement will change it to polyT which does not mean the same
+     * sometimes it is best to reverseComplement by text below
+     * @param seq  2-bit encoded sequence
+     * @param len  length of the sequence
+     * @return  2-bit reverse complement
+     */
+    fun getReverseComplement(seqInLong: Long, len: Byte): Long {
+        var seq = seqInLong
+        var rev: Long = 0
+        // byte b=0;
+        val mask: Long = 3
+        seq = seq.inv()
+        for (i in 0 until len) {
+            rev = (rev shl 2) + (seq and mask)
+            seq = seq shr 2
+            // System.out.println("v = " + v);
+        }
+        return rev
     }
 
     fun hammingDistance(other: Kmer): Int {
