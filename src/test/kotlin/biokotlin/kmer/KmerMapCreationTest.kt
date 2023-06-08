@@ -14,7 +14,10 @@ class KmerMapCreationTest : StringSpec({
         "seqWSNP" to "acTtaaacccgggttt",
         "seqWSSR" to "acgtaaacccCCCgggttt",
         "seqWINS" to "acgtaaacccACGTACGTgggttt",
-        "seqWDEL" to "acgtaaagggttt")
+        "seqWDEL" to "acgtaaagggttt",
+        "seqWNEarly" to "aaNacgtaaacccgggttt",
+        "seqWNLate" to "acgtaaacccgggtttNNggNcc"
+    )
     val seqNameToSeq = seqs.entries.associate { (name, seq) -> name to NucSeq(seq)}
     val bigSeq = RandomNucSeq(100_000)
     val bigSeqByte = NucSeqByteEncode(bigSeq.seq())
@@ -32,22 +35,37 @@ class KmerMapCreationTest : StringSpec({
             .forEach{(kmerLong, count)-> println("${Kmer(kmerLong).toString(3)} -> $count,")}
     }
 
+    "Test for Kmer N problems" {
+        println(Kmer(Long.MAX_VALUE))
+        println(Kmer(Long.MIN_VALUE))
+        println(Kmer(-1L))
+
+        val kmerMap = KmerMap(seqNameToSeq["seqBase"]!!,3)
+        println(kmerMap)
+        println(kmerMap.toSeqCountString())
+
+        val kmerNEarlyMap = KmerMap(seqNameToSeq["seqWNEarly"]!!,3)
+        println(kmerNEarlyMap)
+        println(kmerNEarlyMap.toSeqCountString())
+
+        val kmerNLateMap = KmerMap(seqNameToSeq["seqWNLate"]!!,3)
+        println(kmerNLateMap)
+        println(kmerNLateMap.toSeqCountString())
+    }
+
     "Test speed of kmer functions" {
         val elapsed = measureTimeMillis {
 //            repeat(1000) {val kmerMap = KmerMap(bigSeq,13)}
-            val kmerMap = KmerMap(bigSeq,13)
-            for(i in 1..1000) {kmerMap.reuse(bigSeq)}
+            val kmerMap = KmerMap(bigSeq,31)
+            for(i in 1..1000) {KmerMap(bigSeq)}
             println("Measuring time via measureTimeMillis")
         }
         println("KmerMap took $elapsed ms")
-//        val elapsed2 = measureTimeMillis {
-//            repeat(1000) {val kmerMap = bigSeqByte.kmers(13)}
-//        }
-//        println("NucSeq.kmers() took $elapsed2 ms")
-//        val elapsed3 = measureTimeMillis {
-//            val kmerMap = bigSeq2Bit.kmers(13)
-//        }
-//        println("NucSeq2Bit.kmers() took $elapsed3 ms")
+        val elapsed2 = measureTimeMillis {
+            repeat(1000) {val kmerMap = bigSeqByte.kmers(31)}
+        }
+        println("NucSeq.kmers() took $elapsed2 ms")
+
     }
 
 })

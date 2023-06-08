@@ -80,18 +80,18 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
      * @param len  length of the sequence
      * @return  2-bit reverse complement
      */
-    fun getReverseComplement(seqInLong: Long, len: Byte): Long {
-        var seq = seqInLong
+    fun reverseComplement2(kmerSize: Int): Kmer {
+        var seq = encoding
         var rev: Long = 0
         // byte b=0;
         val mask: Long = 3
         seq = seq.inv()
-        for (i in 0 until len) {
+        for (i in 0 until kmerSize) {
             rev = (rev shl 2) + (seq and mask)
             seq = seq shr 2
             // System.out.println("v = " + v);
         }
-        return rev
+        return Kmer(rev)
     }
 
     fun hammingDistance(other: Kmer): Int {

@@ -21,9 +21,12 @@ import kotlin.math.sqrt
 class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean = true, val stepSize: Int = 1) {
     val sequenceLength = sequence.size()
     private val map = Long2IntOpenHashMap(sequenceLength * 3)
+    val ambiguousKmers: Long
 
     init {
-        seqToKmerMap(sequence)
+        require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31"
+        }
+        ambiguousKmers = seqToKmerMap(sequence)
     }
 
     // hash: the previous hash for the sequence
@@ -37,40 +40,33 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
             'C' -> ((hash shl 2) or 1L) and mask
             'T' -> ((hash shl 2) or 2L) and mask
             'G' -> ((hash shl 2) or 3L) and mask
-            else -> throw java.lang.IllegalArgumentException("Attempted to update kmer hash with an invalid nucleotide character($nucleotide). Must be one of A,G,C,T")
+            'U' -> ((hash shl 2) or 2L) and mask
+            else -> -1L //32bp of G - not possible with 31mers
         }
     }
 
-    private fun seqToKmerMap(seq: NucSeq) {
-
+    private fun seqToKmerMap(seq: NucSeq): Long {
         var hashMask = 0L
         (0 until kmerSize * 2).forEach { _ -> hashMask = (hashMask shl 1) or 1 }
+        var ambiguousKmers =0L
 
-        //TODO fix the testing for N
-        // split out ambiguous nucleotides, keep only sequences with at least one kmer of desired length
-//        val splitList = if (seq.nucSet == NUC.RNA) {seq.back_transcribe().seq() } else { seq.seq()}
-//            .split("[^ACGT]+".toRegex())
-//            .filter{it.length >= kmerSize}
-
-        val splitList = listOf(seq.seq())
-
-        for (sequence in splitList) {
-            var previousHash = 0L
-
-            for (nucleotide in sequence.subSequence(0 until kmerSize - 1)) {
-                previousHash = updateKmerHash(previousHash, nucleotide, hashMask)
-            }
-
-            for (nucleotide in sequence.subSequence(kmerSize - 1 until sequence.length)) {
-                previousHash = updateKmerHash(previousHash, nucleotide, hashMask)
-                val kmer = Kmer(previousHash)
-                map.addTo(kmer.encoding, 1)
-                if (bothStrands) map.addTo(kmer.reverseComplement(kmerSize).encoding, 1)
-            }
+        var goodBpRun=0
+        var previousHash = 0L
+        for(i in 0 until seq.size() step stepSize) {
+            previousHash = updateKmerHash(previousHash, seq.seq()[i], hashMask)
+            //If ambiguous base are encountered - then they are skipped but counted
+            if(previousHash == -1L) {goodBpRun=0; previousHash = 0L; ambiguousKmers++; continue}
+            goodBpRun++
+            if(goodBpRun<kmerSize) continue
+            val kmer = Kmer(previousHash)
+            map.addTo(kmer.encoding, 1)
+            if (bothStrands) map.addTo(kmer.reverseComplement(kmerSize).encoding, 1)
         }
+
         if (map.isEmpty()) {
             throw IllegalArgumentException("Sequence has no Kmers of size $kmerSize, set cannot be constructed.")
         }
+        return ambiguousKmers*2
     }
 
     /**
@@ -189,9 +185,16 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
         }
     }
 
-    fun reuse(seq: NucSeq) {
-        map.clear()
-        seqToKmerMap(seq)
+    override fun toString(): String {
+        return "KmerMap(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +
+                "size=${map.size}, ambiguousKmers=$ambiguousKmers)"
     }
+
+    fun toSeqCountString(max:Int = Int.MAX_VALUE, separator:CharSequence = "\n"): String {
+        return kmer2CountEntrySet
+            .map{(kmerLong, count)-> "${Kmer(kmerLong).toString(3)} -> $count"}
+            .joinToString(separator)
+    }
+
 
 }
