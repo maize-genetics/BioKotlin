@@ -24,6 +24,39 @@ class KmerUtilsTest: StringSpec({
 
     }
 
+    "Test hamming counts, both strands" {
+        val seq1 = NucSeq("CACCACATATATATAGGGG")
+        val seq2 = NucSeq("CACGACATATATATATATA")
+
+        val kmerSet1 = KmerMap(seq1, 5)
+        val kmerSet2 = KmerMap(seq2, 5)
+
+        val counts = kmerHammingDistanceBreakdown(kmerSet1, kmerSet2)
+
+        counts.copyNumberKmerCount shouldBe 4
+        counts.h1KmerCount shouldBe 20
+        counts.hManyKmerCount shouldBe 4
+        counts.copyNumberKmerDifference shouldBe 8
+    }
+
+    "Test hamming counts, one strand" {
+        val seq1Rev = NucSeq("CACCACATATATATAGGGG").reverse_complement()
+        val seq2 = NucSeq("CACGACATATATATATATA")
+
+        val kmerSet1 = KmerMap(seq1Rev, 5, bothStrands = false)
+        val kmerSet2 = KmerMap(seq2, 5, bothStrands = false)
+
+        val counts = kmerHammingDistanceBreakdown(kmerSet1, kmerSet2)
+
+        counts.copyNumberKmerCount shouldBe 4
+        counts.h1KmerCount shouldBe 6
+        counts.hManyKmerCount shouldBe 10
+        counts.copyNumberKmerDifference shouldBe 4
+    }
+
+
+
+
 
 
 

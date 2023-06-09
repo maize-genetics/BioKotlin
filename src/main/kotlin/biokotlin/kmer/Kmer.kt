@@ -95,7 +95,7 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
     }
 
     // the new and improved way to get the reverse complement
-    fun reverseComplementFast(kmerSize: Int): Kmer {
+    fun reverseComplement3(kmerSize: Int): Kmer {
 
         // reverse bits
         var y = ((encoding and 0x5555555555555555) shl 1) or ((encoding and -6148914691236517206) ushr 1)
