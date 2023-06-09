@@ -4,6 +4,7 @@ package biokotlin.genome
 
 //import biokotlin.genome.SeqRangeSort.Companion.createComparator
 import biokotlin.seq.*
+import biokotlin.seqIO.NucSeqIO
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -537,6 +538,59 @@ class RangesTest: StringSpec({
         df.columnNames().contains("start") shouldBe true
         df.columnNames().contains("end") shouldBe true
         df.columnNames().size shouldBe 4
+
+    }
+    "Test FastaToNuqSeq " {
+
+        // This test verifies  the fastaToNucSeq() function works correctly
+        // The sequence lengths below represent those from the file
+        //     src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa
+        // This file has ids lines that contain spaces and additional characters, e.g.
+        //  >B73V4_ctg182 dna:contig contig:AGPv4:B73V4_ctg182:1:1278389:1 REF
+        //  >B73V4_ctg31 dna:contig contig:AGPv4:B73V4_ctg31:1:846561:1 REF
+        //
+        // The fastaToNucSeq() function should strip out the additional characters and spaces and return a map
+        // where the key is the id line minus the ">" and minus the additional characters and spaces
+        val seqLengths = mapOf(
+            "B73V4_ctg182" to 256,
+            "B73V4_ctg31" to 283,
+            "B73V4_ctg14" to 269,
+            "B73V4_ctg42" to 243,
+            "B73V4_ctg58" to 196,
+            "B73V4_ctg43" to 161
+        )
+
+        val fasta1 = "src/test/resources/biokotlin/seqIO/B73_Ref_Subset.fa"
+        val fasta1NucSeq = fastaToNucSeq(fasta1)
+
+        // Verify the keys in the fasta1NucSeq map are the same as the keys in the seqLengths map
+        fasta1NucSeq.keys.containsAll(seqLengths.keys) shouldBe true
+        fasta1NucSeq.keys.size shouldBe 6
+
+        // Verify the sequence lengths are correct
+        fasta1NucSeq.keys.forEach { key ->
+            fasta1NucSeq[key]?.size() shouldBe seqLengths[key]
+        }
+
+        // Verify fasta with id lines with no spaces
+        // THe id lines in this fasta file are:
+        //  >chr9
+        //  >chr10
+        val seqLengths2 = mapOf(
+            "chr9" to 1920,
+            "chr10" to 1440
+        )
+        val fasta2 = "src/test/kotlin/biokotlin/genome/chr9chr10short.fa"
+        val fasta2NucSeq = fastaToNucSeq(fasta2)
+
+        // Verify the keys in the fasta2NucSeq map are the same as the keys in the seqLengths2 map
+        fasta2NucSeq.keys.containsAll(seqLengths2.keys) shouldBe true
+        fasta2NucSeq.keys.size shouldBe 2
+
+        // Verify the sequence lengths are correct
+        fasta2NucSeq.keys.forEach { key ->
+            fasta2NucSeq[key]?.size() shouldBe seqLengths2[key]
+        }
 
     }
 

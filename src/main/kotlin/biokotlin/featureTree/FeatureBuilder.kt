@@ -57,6 +57,7 @@ class GenomeBuilder {
             when (descendant) {
                 is Gene -> descendant.transcripts().forEach { it.injectGene(descendant) }
                 is Transcript -> descendant.children.forEach { it.injectTranscript(descendant) }
+                else -> Unit
             }
         }
 
