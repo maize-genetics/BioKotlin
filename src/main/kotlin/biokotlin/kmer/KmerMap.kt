@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.longs.LongSet
 
-
 /**
  *
  * Extracts the kmer count from a nucleotide sequence [NucSeq].
@@ -18,9 +17,9 @@ import it.unimi.dsi.fastutil.longs.LongSet
  * @param stepSize kmers are extracted from the first base going forward based on a given step
  */
 class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean = true, val stepSize: Int = 1) {
-    val sequenceLength = sequence.size()
-    private val map = Long2IntOpenHashMap(sequenceLength * 3)
-    val ambiguousKmers: Long
+    val sequenceLength = sequence.size() // useful to store for normalization purposes
+    private val map = Long2IntOpenHashMap(sequenceLength * 3) // kmers stored as 2-bit encoded longs
+    val ambiguousKmers: Long // keep track of the number of kmers containing N, which don't go into map
 
     init {
         require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31"
@@ -28,11 +27,13 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
         ambiguousKmers = seqToKmerMap(sequence)
     }
 
-    // hash: the previous hash for the sequence
-    // nucleotide: the char to add
-    // mask: the mask to keep the kmer to a specific length
-    // mask should be of the form 00000001111111b, where the number of 1's is
-    // equal to the length of the kmer x 2
+    /**
+     * @param hash: the previous hash for the sequence
+     * @param nucleotide: the char to add
+     * @param mask: the mask to keep the kmer to a specific length
+     * mask should be of the form 00000001111111b, where the number of 1's is
+     * equal to the length of the kmer x 2
+     */
     private fun updateKmerHash(hash: Long, nucleotide: Char, mask: Long): Long {
         return when (nucleotide) {
             'A' -> ((hash shl 2) or 0L) and mask
@@ -44,6 +45,12 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
         }
     }
 
+    /**
+     * given a [NucSeq], load all non-ambiguous kmers of length [kmerSize] into [map]
+     * returns the number of kmers containing ambiguous bases
+     *
+     * @param NucSeq
+     */
     private fun seqToKmerMap(seq: NucSeq): Long {
         var hashMask = 0L
         (0 until kmerSize * 2).forEach { _ -> hashMask = (hashMask shl 1) or 1 }
@@ -61,16 +68,23 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
                 continue }
             val kmer = Kmer(previousHash)
             map.addTo(kmer.encoding, 1)
-            if (bothStrands) map.addTo(kmer.reverseComplement3(kmerSize).encoding, 1)
+            if (bothStrands) map.addTo(kmer.reverseComplement(kmerSize).encoding, 1)
         }
 
+        //TODO: should empty maps be allowed?
         if (map.isEmpty()) {
             throw IllegalArgumentException("Sequence has no Kmers of size $kmerSize, set cannot be constructed.")
         }
         return ambiguousKmers*2
     }
 
-    /* wrapper for read-only access of map */
+    /**
+     * wrapper allowing read-only access to [map]
+     * Takes Kmer input instead of Long input
+     * Returns the count of occurrences of [kmer], or 0 if [kmer] is not present in [map]
+     *
+     * @param kmer query Kmer
+     */
     fun getCountOf(kmer: Kmer): Int {
         return map[kmer.encoding]
     }
@@ -80,16 +94,25 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
      */
     val kmer2CountEntrySet = map.long2IntEntrySet()
 
-    //set of keys as longs
+    /**
+     * Returns the set of [Kmers] in [map] as Longs
+     */
     fun longSet(): LongSet {
         return map.keys
     }
 
-    // set of keys as kmer objects
+    /**
+     * Returns the set of [Kmers] in [map]
+     */
     fun set(): Set<Kmer> {
         return map.keys.map { Kmer(it) }.toSet()
     }
 
+    /**
+     * Hashes the longs in [map] based on their even nucleotides and their odd nucleotides
+     * So, each long hashes into two different bins
+     * And returns the map of bins
+     */
     fun getEvenOddHashMap(): Long2ObjectOpenHashMap<LongOpenHashSet> {
 
         //TODO initialize with capacity - what capacity?
@@ -108,102 +131,14 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
         return hashMap
     }
 
-//    fun manhattanDistance(seq: NucSeq): Double {
-//        return manhattanDistance(KmerMap(seq, kmerSize))
-//    }
-
-    // Note: this doesn't divide by length or number of kmers or anything: not normalized
-//    fun manhattanDistance(other: KmerMap): Double {
-//        if (other.kmerSize != kmerSize) {
-//            throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.")
-//        }
-//
-//        return (longSet() union other.longSet()).map {
-//            abs((map[it] ?: 0) - (other.map[it] ?: 0))
-//        }.sum().toDouble()
-//    }
-
-//    fun euclideanDistance(seq: NucSeq): Double {
-//        return euclideanDistance(KmerMap(seq, kmerSize))
-//    }
-
-//    fun euclideanDistance(other: KmerMap): Double {
-//        if (other.kmerSize != kmerSize) {
-//            throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.")
-//        }
-//        return sqrt((longSet() union other.longSet()).map {
-//            ((map[it] ?: 0) - (other.map[it] ?: 0)).toDouble().pow(2)
-//        }.sum())
-//    }
-
-//    fun setDifferenceCount(seq: NucSeq): Int {
-//        return (setDifferenceCount(KmerMap(seq, kmerSize)))
-//    }
-
-//    fun setDifferenceCount(other: KmerMap): Int {
-//        if (other.kmerSize != kmerSize) {
-//            throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.")
-//        }
-//
-//        return ((longSet() union other.longSet()).size - (longSet() intersect other.longSet()).size)
-//    }
-
-//    fun setDistance(seq: NucSeq): Double {
-//        return setDistance(KmerMap(seq, kmerSize))
-//    }
-
-//    fun setDistance(other: KmerMap): Double {
-//        return setDifferenceCount(other).toDouble() / (longSet() union other.longSet()).size
-//    }
-
-//    fun setHamming1Count(seq: NucSeq): Int {
-//        return setHamming1Count(KmerMap(seq, kmerSize))
-//    }
-
-//    fun setHamming1Count(other: KmerMap): Int {
-//        if (other.kmerSize != kmerSize) {
-//            throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.")
-//        }
-//
-//        return (other.longSet().map { minHammingDistance(Kmer(it)) }
-//            .count { it == 1 } + longSet().map { other.minHammingDistance(Kmer(it)) }.count { it == 1 })
-//    }
-
-//    fun setHamming1Distance(seq: NucSeq): Double {
-//        return setHamming1Distance(KmerMap(seq, kmerSize))
-//    }
-
-//    fun setHamming1Distance(other: KmerMap): Double {
-//        return setHamming1Count(other).toDouble() / (longSet() union other.longSet()).size
-//    }
-
-//    fun setHammingManyCount(seq: NucSeq): Int {
-//        return setHammingManyCount(KmerMap(seq, kmerSize))
-//    }
-
-//    fun setHammingManyCount(other: KmerMap): Int {
-//        if (other.kmerSize != kmerSize) {
-//            throw java.lang.IllegalArgumentException("Kmer lengths must be equal to compare. Query kmer length is ${other.kmerSize}.")
-//        }
-//
-//        return (other.longSet().map { minHammingDistance(Kmer(it)) }
-//            .count { it > 1 } + longSet().map { other.minHammingDistance(Kmer(it)) }.count { it > 1 })
-//    }
-
-//    fun setHammingManyDistance(seq: NucSeq): Double {
-//        return setHammingManyDistance(KmerMap(seq, kmerSize))
-//    }
-
-//    fun setHammingManyDistance(other: KmerMap): Double {
-//        return setHammingManyCount(other).toDouble() / (longSet() union other.longSet()).size
-//    }
-
-
-    // returns the minimum hamming distance between the given kmer and all kmers in this set
-    // bothStrands: whether or not to consider the reverse complement of kmer when comupting minimum hamming distance
+    /**
+     * Returns the minimum hamming distance between the query [Kmer] and all kmers in this map
+     * @param kmer query Kmer
+     * @param bothStrands whether to consider the reverse complement of [kmer] when computing minimum hamming distance
+     */
     fun minHammingDistance(kmer: Kmer, bothStrands: Boolean = true): Int {
         return if (bothStrands && !(this.bothStrands) ) {
-            val reverseComplement = kmer.reverseComplement3(kmerSize)
+            val reverseComplement = kmer.reverseComplement(kmerSize)
             longSet().minOf{minOf(Kmer(it).hammingDistance(kmer), Kmer(it).hammingDistance(reverseComplement))}
         } else {
             longSet().minOf{Kmer(it).hammingDistance(kmer)}

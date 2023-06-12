@@ -43,10 +43,10 @@ class KmerTest {
     }
 
     @Test
-    fun ReverseComplimentTest() {
+    fun ReverseComplementTest() {
         val test = Kmer("CTAACG")
 
-        assertEquals("CGTTAG", test.reverseComplement3(6).toString(6))
+        assertEquals("CGTTAG", test.reverseComplement(6).toString(6))
     }
 
 
