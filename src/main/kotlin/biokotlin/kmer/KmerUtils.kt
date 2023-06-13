@@ -8,31 +8,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import java.io.File
 import kotlin.math.abs
-//
-//enum class CalculationType {Manhattan, Euclidean, Set, SetH1, SetHMany}
-//fun kmerDistanceMatrix(sequenceArray: Array<NucSeq>, kmerSize: Int, calculationType: CalculationType): Array<Array<Double>> {
-//    val kmerMaps = sequenceArray.map{ KmerMap(it, kmerSize)}
-//
-//    val distanceMatrix = Array<Array<Double>>(sequenceArray.size) {Array<Double>(sequenceArray.size){0.0} }
-//
-//    for (i in 0 until kmerMaps.size - 1) {
-//        for (j in i + 1 until kmerMaps.size) {
-//            val distance = when (calculationType) {
-//                CalculationType.Manhattan -> kmerMaps[i].manhattanDistance(kmerMaps[j]) / ((kmerMaps[i].sequenceLength + kmerMaps[j].sequenceLength)/ 2.0)
-//                CalculationType.Euclidean -> kmerMaps[i].euclideanDistance(kmerMaps[j]) / ((kmerMaps[i].sequenceLength + kmerMaps[j].sequenceLength)/ 2.0)
-//                CalculationType.Set -> kmerMaps[i].setDistance(kmerMaps[j])
-//                CalculationType.SetH1 -> kmerMaps[i].setHamming1Distance(kmerMaps[j])
-//                CalculationType.SetHMany -> kmerMaps[i].setHammingManyDistance(kmerMaps[j])
-//            }
-//
-//            distanceMatrix[i][j] = distance
-//            distanceMatrix[j][i] = distance
-//        }
-//    }
-//
-//    return distanceMatrix
-//
-//}
 
 data class HammingCounts(val h1KmerCount: Int, val hManyKmerCount: Int, val copyNumberKmerCount: Int, val copyNumberKmerDifference: Int)
 
@@ -113,7 +88,7 @@ fun kmerDistanceMatrix(fastaFile: String, kmerSize: Int = 21): DistanceMatrixBre
 
             val results = kmerHammingDistanceBreakdown(allMaps[idA]!!, allMaps[idB]!!, allHashes[idA]!!, allHashes[idB]!!)
 
-            val averageLength = ((allMaps[idA]!!.sequenceLength + allMaps[idB]!!.sequenceLength) / 2.0F)
+            val averageLength = ((allMaps[idA]!!.sequenceLength() + allMaps[idB]!!.sequenceLength()) / 2.0F)
             hManyMatrix[x][y] = results.hManyKmerCount / averageLength
             hManyMatrix[y][x] = results.hManyKmerCount / averageLength
 

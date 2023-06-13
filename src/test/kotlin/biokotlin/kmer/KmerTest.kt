@@ -82,6 +82,43 @@ class KmerTest {
 
     }
 
+    @Test
+    fun KmerAddTest() {
+        val sequence1 = Seq("CTACAGCTCGAC")
+        val kmerset1 = KmerMap(sequence1, 3)
+        val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
+
+        kmerset1.addNewSeq(sequence2)
+        val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
+
+        assertEquals(listOf("AAA", "ACA", "AGC", "AGG", "CAG", "CCT", "CGA", "CTA", "CTC", "CTG",
+            "GAC", "GAG", "GCT", "GGA", "GTA", "GTC", "TAC", "TAG", "TCA", "TCC", "TCG", "TGA", "TGT", "TTT"), strings1)
+
+        assertEquals(kmerset1.ambiguousKmers(), 18)
+        assertEquals(kmerset1.sequenceLength(), 12 + 20)
+
+        assertEquals(kmerset1.getCountOf(Kmer("GTA")), 1) //only in sequence1
+        assertEquals(kmerset1.getCountOf(Kmer("AAA")), 3) //only in sequence2
+        assertEquals(kmerset1.getCountOf(Kmer("GAG")), 2) //in both
+        assertEquals(kmerset1.getCountOf(Kmer("TTA")), 0) //in neither
+
+    }
+
+    @Test
+    fun KmerSetTestMinOnly() {
+        val sequence1 = Seq("CTACAGCTCGAC")
+        val kmerset1 = KmerMap(sequence1, 3, keepMinOnly = true)
+        val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
+
+        val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
+        val kmerset2 = KmerMap(sequence2, 3, keepMinOnly = true)
+        val strings2 = kmerset2.set().map{it.toString(3)}.sorted()
+
+        assertEquals(listOf("ACA", "AGC", "CAG", "CGA", "CTA", "CTC", "GAC", "TAC"), strings1)
+        assertEquals(listOf("AAA", "AGG", "CAG", "CTC", "TCA", "TCC"), strings2)
+
+    }
+
 
     @Test
     fun KmerMapTest() {
@@ -145,9 +182,9 @@ class KmerTest {
         val kmerset3 = KmerMap(sequence3, 3)
 
         // test count of ambiguous kmers
-        assertEquals(0, kmerset1.ambiguousKmers)
-        assertEquals(18, kmerset2.ambiguousKmers)
-        assertEquals(22, kmerset3.ambiguousKmers)
+        assertEquals(0, kmerset1.ambiguousKmers())
+        assertEquals(18, kmerset2.ambiguousKmers())
+        assertEquals(22, kmerset3.ambiguousKmers())
     }
 
     @Test

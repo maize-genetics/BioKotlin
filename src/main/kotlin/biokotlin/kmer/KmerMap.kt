@@ -1,6 +1,7 @@
 package biokotlin.kmer
 
 import biokotlin.seq.NucSeq
+import biokotlin.seq.NucSeq2Bit
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
@@ -15,11 +16,12 @@ import it.unimi.dsi.fastutil.longs.LongSet
  * @param kmerSize length of kmers to be extracted from the sequence
  * @param bothStrands extract kmers from only the forward strand or both strands
  * @param stepSize kmers are extracted from the first base going forward based on a given step
+ * @param keepMinOnly if set to true, keep only the minimum value between kmer and its reverse complement. Only matters if [bothStrands] is true
  */
-class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean = true, val stepSize: Int = 1) {
-    val sequenceLength = sequence.size() // useful to store for normalization purposes
+class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean = true, val stepSize: Int = 1, val keepMinOnly: Boolean = false) {
+    private var sequenceLength = sequence.size() // useful to store for normalization purposes
     private val map = Long2IntOpenHashMap(sequenceLength * 3) // kmers stored as 2-bit encoded longs
-    val ambiguousKmers: Long // keep track of the number of kmers containing N, which don't go into map
+    private var ambiguousKmers: Long // keep track of the number of kmers containing N, which don't go into map
 
     init {
         require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31"
@@ -58,8 +60,9 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
 
         var goodBpRun=0
         var previousHash = 0L
+
         for(i in 0 until seq.size() step stepSize) {
-            previousHash = updateKmerHash(previousHash, seq.seq()[i], hashMask)
+            previousHash = updateKmerHash(previousHash, seq[i].char, hashMask)
             //If ambiguous base are encountered - then they are skipped but counted
             if(previousHash == -1L) {goodBpRun=0; previousHash = 0L; ambiguousKmers++; continue}
             goodBpRun++
@@ -67,15 +70,31 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
                 if ( i >= (kmerSize-1)*stepSize) ambiguousKmers++
                 continue }
             val kmer = Kmer(previousHash)
-            map.addTo(kmer.encoding, 1)
-            if (bothStrands) map.addTo(kmer.reverseComplement(kmerSize).encoding, 1)
+            if (bothStrands && keepMinOnly) {
+                map.addTo(minOf(kmer, kmer.reverseComplement(kmerSize)).encoding, 1)
+            } else {
+                map.addTo(kmer.encoding, 1)
+                if (bothStrands) map.addTo(kmer.reverseComplement(kmerSize).encoding, 1)
+            }
         }
 
         //TODO: should empty maps be allowed?
         if (map.isEmpty()) {
             throw IllegalArgumentException("Sequence has no Kmers of size $kmerSize, set cannot be constructed.")
         }
-        return ambiguousKmers*2
+        return if (keepMinOnly) { ambiguousKmers } else { ambiguousKmers*2 }
+    }
+
+    /**
+     * Updates the existing map with kmers from an additional [NucSeq]
+     * Assumes [seq] is not contiguous with any previous sequence
+     *
+     * Primarily to be used with genome wide mapping,
+     * Where we might want to avoid loading in every chromosome's sequence at once
+     */
+    fun addNewSeq(seq:NucSeq) {
+        sequenceLength += seq.size()
+        ambiguousKmers += seqToKmerMap(seq)
     }
 
     /**
@@ -106,6 +125,14 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
      */
     fun set(): Set<Kmer> {
         return map.keys.map { Kmer(it) }.toSet()
+    }
+
+    fun ambiguousKmers(): Long {
+        return ambiguousKmers
+    }
+
+    fun sequenceLength(): Int {
+        return sequenceLength
     }
 
     /**
