@@ -38,6 +38,23 @@ class MSATest : StringSpec({
         filteredMSA.gappedSequence(0).seq() shouldBe "CACCACGTGG-T"
         filteredMSA.nonGappedSequence(1).seq() shouldBe "TCGACGTTGTG"
     }
+    "Test NucMSA sampleNames and allSequences functions" {
+        val fileName = "src/test/resources/biokotlin/seqIO/nucleotideMSA.fa"
+        File(fileName).exists() shouldBe true
+        val nucMSA = NucMSA.read(fileName)
+
+        val sampleNames = nucMSA.sampleNames()
+        sampleNames.size shouldBe 8
+        sampleNames[0] shouldBe "ID001"
+        sampleNames[7] shouldBe "ID008"
+
+        val allSequences = nucMSA.allSequences()
+        allSequences.size shouldBe 8
+        allSequences[0] shouldBe "AACCACGTTTAA"
+        allSequences[7] shouldBe "TTACAC-TGCGC"
+
+
+    }
 
     "Test ProteinMSA File Load" {
         val fileName = "src/test/resources/biokotlin/seqIO/proteinMSA.fa"
