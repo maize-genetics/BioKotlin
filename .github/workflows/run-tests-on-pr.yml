@@ -1,0 +1,22 @@
+name: Run BioKotlin Tests When Opening a PR
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+    branches:
+      - master # Branch you are merging into
+
+jobs:  
+  test:
+    name: BioKotlin Unit Tests
+    runs-on: ubuntu-latest
+    container:
+      image: gradle:6.4.1-jdk11
+    steps:
+      - uses: actions/checkout@v3
+      - name: Gradle Build and Test
+        uses: gradle/gradle-build-action
+        with:
+          arguments: build
