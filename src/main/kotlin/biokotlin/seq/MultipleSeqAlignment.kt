@@ -145,6 +145,21 @@ class NucMSA(private val sequences: ImmutableList<NucSeqRecord>) : MultipleSeqAl
     }
 
     /**
+     * Returns the list of sample names in the [NucMSA]
+     */
+    fun sampleNames() : List<String> {
+        return sequences.map { it.id }
+    }
+
+
+    /**
+     * Returns the list of sequences in the [NucMSA]
+     */
+    fun allSequences() : List<String> {
+        return sequences.map { it.sequence.seq() }
+    }
+
+    /**
      * Function to extract out the [NucSeqRecord] containing the [NucSeq] and the id of that row in the [NucMSA]
      * Note: This is 0 based and supports negative indexing.
      * An [IllegalStateException] will be thrown if the provided [idx] is outside of the range -1 * numSamples to numSamples() - 1
