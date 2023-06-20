@@ -1,11 +1,7 @@
 package biokotlin.kmer
 
 import biokotlin.seq.NucSeq
-import biokotlin.seq.NucSeq2Bit
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet
-import it.unimi.dsi.fastutil.longs.LongSet
+import it.unimi.dsi.fastutil.longs.*
 
 /**
  *
@@ -18,10 +14,13 @@ import it.unimi.dsi.fastutil.longs.LongSet
  * @param stepSize kmers are extracted from the first base going forward based on a given step
  * @param keepMinOnly if set to true, keep only the minimum value between kmer and its reverse complement. Only matters if [bothStrands] is true
  */
-class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean = true, val stepSize: Int = 1, val keepMinOnly: Boolean = false) {
+class KmerMultiSetFromSeq(sequence: NucSeq, override val kmerSize: Int = 21, override val bothStrands: Boolean = true, override val stepSize: Int = 1, override val keepMinOnly: Boolean = false):
+    KmerMSet, KmerSeqSet {
     private var sequenceLength = sequence.size() // useful to store for normalization purposes
-    private val map = Long2IntOpenHashMap(sequenceLength * 3) // kmers stored as 2-bit encoded longs
     private var ambiguousKmers: Long // keep track of the number of kmers containing N, which don't go into map
+    //TODO: initial map value may be too big when doing full-genome maps - make an optional parameter to adjust?
+    val map: Long2IntOpenHashMap = Long2IntOpenHashMap(sequenceLength * 3) // kmers stored as 2-bit encoded longs
+
 
     init {
         require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31"
@@ -36,6 +35,7 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
      * mask should be of the form 00000001111111b, where the number of 1's is
      * equal to the length of the kmer x 2
      */
+    //TODO move to utils? This is not specific to class
     private fun updateKmerHash(hash: Long, nucleotide: Char, mask: Long): Long {
         return when (nucleotide) {
             'A' -> ((hash shl 2) or 0L) and mask
@@ -92,96 +92,37 @@ class KmerMap(sequence: NucSeq, val kmerSize: Int = 21, val bothStrands: Boolean
      * Primarily to be used with genome wide mapping,
      * Where we might want to avoid loading in every chromosome's sequence at once
      */
-    fun addNewSeq(seq:NucSeq) {
-        sequenceLength += seq.size()
+    override fun addNewSeq(seq:NucSeq) {
         ambiguousKmers += seqToKmerMap(seq)
-    }
-
-    /**
-     * wrapper allowing read-only access to [map]
-     * Takes Kmer input instead of Long input
-     * Returns the count of occurrences of [kmer], or 0 if [kmer] is not present in [map]
-     *
-     * @param kmer query Kmer
-     */
-    fun getCountOf(kmer: Kmer): Int {
-        return map[kmer.encoding]
+        sequenceLength += seq.size()
     }
 
     /**
      *   All kmers (packed into longs) and there associated counts
      */
-    val kmer2CountEntrySet = map.long2IntEntrySet()
+    val kmer2CountEntrySet: Long2IntMap.FastEntrySet = map.long2IntEntrySet()
 
-    /**
-     * Returns the set of [Kmers] in [map] as Longs
-     */
-    fun longSet(): LongSet {
-        return map.keys
-    }
+    override fun getCountOf(kmer: Kmer): Int { return map[kmer.encoding] }
 
-    /**
-     * Returns the set of [Kmers] in [map]
-     */
-    fun set(): Set<Kmer> {
-        return map.keys.map { Kmer(it) }.toSet()
-    }
+    override fun ambiguousKmers(): Long { return ambiguousKmers }
 
-    fun ambiguousKmers(): Long {
-        return ambiguousKmers
-    }
+    override fun sequenceLength(): Int { return sequenceLength }
 
-    fun sequenceLength(): Int {
-        return sequenceLength
-    }
+    override fun longSet(): LongSet { return map.keys }
 
-    /**
-     * Hashes the longs in [map] based on their even nucleotides and their odd nucleotides
-     * So, each long hashes into two different bins
-     * And returns the map of bins
-     */
-    fun getEvenOddHashMap(): Long2ObjectOpenHashMap<LongOpenHashSet> {
+    override fun set(): Set<Kmer> { return map.keys.map { Kmer(it) }.toSet() }
 
-        //TODO initialize with capacity - what capacity?
-        val hashMap = Long2ObjectOpenHashMap<LongOpenHashSet>()
-
-        map.forEach { entry ->
-            // min representation of kmer
-            val even = entry.key and -3689348814741910324L
-            val odd = entry.key and 0x3333333333333333
-
-            hashMap.getOrPut(even) { LongOpenHashSet() }.add(entry.key)
-            hashMap.getOrPut(odd) { LongOpenHashSet() }.add(entry.key)
-
-        }
-
-        return hashMap
-    }
-
-    /**
-     * Returns the minimum hamming distance between the query [Kmer] and all kmers in this map
-     * @param kmer query Kmer
-     * @param bothStrands whether to consider the reverse complement of [kmer] when computing minimum hamming distance
-     */
-    fun minHammingDistance(kmer: Kmer, bothStrands: Boolean = true): Int {
-        return if (bothStrands && !(this.bothStrands) ) {
-            val reverseComplement = kmer.reverseComplement(kmerSize)
-            longSet().minOf{minOf(Kmer(it).hammingDistance(kmer), Kmer(it).hammingDistance(reverseComplement))}
-        } else {
-            longSet().minOf{Kmer(it).hammingDistance(kmer)}
-        }
-    }
+    override fun contains(kmer: Kmer): Boolean { return map.containsKey(kmer.encoding)}
 
     override fun toString(): String {
         return "KmerMap(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +
                 "size=${map.size}, ambiguousKmers=$ambiguousKmers)"
     }
 
-    fun toSeqCountString(max:Int = Int.MAX_VALUE, separator:CharSequence = "\n"): String {
+    override fun toSeqCountString(max:Int, separator:CharSequence): String {
         return kmer2CountEntrySet
             .map{(kmerLong, count)-> "${Kmer(kmerLong).toString(kmerSize)} -> $count"}
             .joinToString(separator)
     }
-
 
 }

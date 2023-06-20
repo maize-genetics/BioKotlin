@@ -5,7 +5,6 @@ import biokotlin.seq.*
 import biokotlin.seq.NucSeq2Bit
 import biokotlin.seq.NucSeqByteEncode
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
 import kotlin.system.measureTimeMillis
 
 class KmerMapCreationTest : StringSpec({
@@ -25,9 +24,9 @@ class KmerMapCreationTest : StringSpec({
 
     "Test Kmers NucSeqBytes" {
         println(seqNameToSeq["seqBase"]!!)
-        val kmerMap = KmerMap(seqNameToSeq["seqBase"]!!,3)
+        val kmerMultiSetFromSeq = KmerMultiSetFromSeq(seqNameToSeq["seqBase"]!!,3)
         println("KmerMap")
-        kmerMap.kmer2CountEntrySet
+        kmerMultiSetFromSeq.kmer2CountEntrySet
             .forEach{(kmerLong, count)-> println("${Kmer(kmerLong).toString(3)} -> $count,")}
         println("NucSeq.kmers()")
         val kmerMapByteSeq = seqNameToSeq["seqBase"]!!.kmers(3)
@@ -40,15 +39,15 @@ class KmerMapCreationTest : StringSpec({
         println(Kmer(Long.MIN_VALUE))
         println(Kmer(-1L))
 
-        val kmerMap = KmerMap(seqNameToSeq["seqBase"]!!,3)
-        println(kmerMap)
-        println(kmerMap.toSeqCountString())
+        val kmerMultiSetFromSeq = KmerMultiSetFromSeq(seqNameToSeq["seqBase"]!!,3)
+        println(kmerMultiSetFromSeq)
+        println(kmerMultiSetFromSeq.toSeqCountString())
 
-        val kmerNEarlyMap = KmerMap(seqNameToSeq["seqWNEarly"]!!,3)
+        val kmerNEarlyMap = KmerMultiSetFromSeq(seqNameToSeq["seqWNEarly"]!!,3)
         println(kmerNEarlyMap)
         println(kmerNEarlyMap.toSeqCountString())
 
-        val kmerNLateMap = KmerMap(seqNameToSeq["seqWNLate"]!!,3)
+        val kmerNLateMap = KmerMultiSetFromSeq(seqNameToSeq["seqWNLate"]!!,3)
         println(kmerNLateMap)
         println(kmerNLateMap.toSeqCountString())
     }
@@ -56,8 +55,8 @@ class KmerMapCreationTest : StringSpec({
     "Test speed of kmer functions" {
         val elapsed = measureTimeMillis {
 //            repeat(1000) {val kmerMap = KmerMap(bigSeq,13)}
-            val kmerMap = KmerMap(bigSeq,31)
-            for(i in 1..1000) {KmerMap(bigSeq)}
+            val kmerMultiSetFromSeq = KmerMultiSetFromSeq(bigSeq,31)
+            for(i in 1..1000) {KmerMultiSetFromSeq(bigSeq)}
             println("Measuring time via measureTimeMillis")
         }
         println("KmerMap took $elapsed ms")

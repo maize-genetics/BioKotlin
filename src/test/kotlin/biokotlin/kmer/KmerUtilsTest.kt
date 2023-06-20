@@ -8,9 +8,9 @@ import io.kotest.matchers.shouldBe
 class KmerUtilsTest: StringSpec({
 
     "Test even/odd hashmap" {
-        val kmerMap = KmerMap(NucSeq("TATCCATGAA"), 4)
+        val kmerMultiSetFromSeq = KmerMultiSetFromSeq(NucSeq("TATCCATGAA"), 4)
 
-        val hash = kmerMap.getEvenOddHashMap()
+        val hash = kmerMultiSetFromSeq.getEvenOddHashMap()
 
         hash[0b10001000].shouldContainExactlyInAnyOrder(Kmer("TATC").encoding)
         hash[1].shouldContainExactlyInAnyOrder(Kmer("TATC").encoding)
@@ -28,8 +28,8 @@ class KmerUtilsTest: StringSpec({
         val seq1 = NucSeq("CACCACATATATATAGGGG")
         val seq2 = NucSeq("CACGACATATATATATATA")
 
-        val kmerSet1 = KmerMap(seq1, 5)
-        val kmerSet2 = KmerMap(seq2, 5)
+        val kmerSet1 = KmerMultiSetFromSeq(seq1, 5)
+        val kmerSet2 = KmerMultiSetFromSeq(seq2, 5)
 
         val counts = kmerHammingDistanceBreakdown(kmerSet1, kmerSet2)
 
@@ -43,8 +43,8 @@ class KmerUtilsTest: StringSpec({
         val seq1Rev = NucSeq("CACCACATATATATAGGGG").reverse_complement()
         val seq2 = NucSeq("CACGACATATATATATATA")
 
-        val kmerSet1 = KmerMap(seq1Rev, 5, bothStrands = false)
-        val kmerSet2 = KmerMap(seq2, 5, bothStrands = false)
+        val kmerSet1 = KmerMultiSetFromSeq(seq1Rev, 5, bothStrands = false)
+        val kmerSet2 = KmerMultiSetFromSeq(seq2, 5, bothStrands = false)
 
         val counts = kmerHammingDistanceBreakdown(kmerSet1, kmerSet2)
 
