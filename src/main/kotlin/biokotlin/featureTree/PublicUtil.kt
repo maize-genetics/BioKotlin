@@ -2,8 +2,6 @@
 
 package biokotlin.featureTree
 
-import java.util.*
-
 // This file is for public utilities for working with feature trees
 
 /**
@@ -17,7 +15,7 @@ public enum class FeatureType(
      * The name(s) of this type as it appears in a GFF file
      */
 
-    val gffName: Set<String>,
+    val gffNames: Set<String>,
 ) {
     /**
      * Structural unit composed of a nucleic acid molecule which controls its own replication
@@ -100,11 +98,11 @@ public enum class FeatureType(
         /**
          * Converts from Strings as they appear in GFF files to [FeatureType].
          */
-        public fun fromString(gffString: String): FeatureType {
+        public fun fromString(gffString: String): FeatureType? {
             for (type in values()) {
-                if (type.gffName.contains(gffString)) return type
+                if (type.gffNames.contains(gffString)) return type
             }
-            throw IllegalArgumentException("Could not parse provided type \"$gffString\" into a FeatureType.")
+            return null
         }
 
         public val TRANSCRIPT_CHILD = setOf(LEADER, EXON, CODING_SEQUENCE, TERMINATOR)
@@ -116,6 +114,8 @@ public enum class FeatureType(
     }
 }
 
+public fun FeatureType.gffName() = this.gffNames.first()
+
 public enum class Strand(val gffName: String) {
     PLUS("+"),
     MINUS("-"),
@@ -123,11 +123,11 @@ public enum class Strand(val gffName: String) {
     UNKNOWN("?");
 
     public companion object {
-        public fun fromString(gffString: String): Strand {
+        public fun fromString(gffString: String): Strand? {
             for (strand in values()) {
                 if (gffString == strand.gffName) return strand
             }
-            throw IllegalArgumentException("Could not parse provided strand \"$gffString\" into a Strand.")
+            return null
         }
     }
 }
@@ -139,11 +139,11 @@ public enum class Phase(val number: Int?, val gffName: String) {
     UNSPECIFIED(null, ".");
 
     public companion object {
-        public fun fromString(gffString: String): Phase {
+        public fun fromString(gffString: String): Phase? {
             for (phase in values()) {
                 if (gffString == phase.gffName) return phase
             }
-            throw IllegalArgumentException("Could not parse provided phase \"$gffString\" into a Phase.")
+            return null
         }
     }
 }
@@ -152,8 +152,8 @@ public enum class Phase(val number: Int?, val gffName: String) {
 typealias Attributes = Map<String, Iterable<String>>
 
 // ++++ EXCEPTIONS ++++
-public class DeletedAccessException : Exception(
-    "An attempt was made to read from or write to a Feature that has been deleted.\n" +
+internal class DeletedAccessException(feature: Ordinal) : Exception(
+    "An attempt was made to read from or write to a Feature that has been deleted. Ordinal = $feature.\n" +
             "Hint: do not attempt to access a Feature that has had delete() called on it or any of that Feature's descendants."
 )
 
@@ -169,46 +169,19 @@ public class IllegalParentChild(label: String, parent: Feature, child: Feature) 
 public class IllegalParent(label: String, parent: Feature) :
     IllegalStateException("$label\nParent: ${parent.asRow()}")
 
-// ++++ ITERATORS ++++
+public class IDConflict(existing: Feature, propertyName: String, existingProperty: Any, insertedProperty: Any) :
+    Exception("Attempting to parse a row with the same ID as\n$existing, but rows differ in property $propertyName.\n" +
+            "Existing value: $existingProperty. Newly parsed value: $insertedProperty.\n" +
+            "Hint: rows with the same ID may only differ in their start/end or in their attributes (all attributes will " +
+            "be merged).")
 
-/**
- * Iterates over the tree of [Feature] rooted at [root], without including [root]
- */
-public class FeatureIterator(root: Parent) : Iterator<Feature> {
-    private val stack = Stack<Feature>()
+public class IllegalStartEnd(start: Int, end: Int): Exception("start $start is greater than end $end")
 
-    init {
-        stack.addAll(root.children)
-    }
+public class MultiplicityException: Exception("Cannot directly set the start, end, phase, or range property of a feature whose " +
+        "multiplicity is greater than one (eg it is discontinuous).\n" +
+        "Hint: use setDiscontinuity.")
+public class MixedMultiplicityException(ranges: Iterable<IntRange>, phases: Iterable<Phase>):
+        Exception("ranges $ranges is not equal in size to phases $phases.")
 
-    override fun hasNext() = !stack.isEmpty()
-    override fun next(): Feature {
-        val popped = stack.pop()
-        if (popped is Parent) stack.addAll(popped.children)
-        return popped
-    }
-}
-
-/**
- * Iterates over the tree of [Feature] rooted at [root], without including [root]. Does not allow for iteration
- * while the topology of the tree is being modified.
- */
-public class MutableFeatureIterator(root: MutableParent) : Iterator<MutableFeature> {
-    private val stack = Stack<MutableFeature>()
-    private val genome = if (root is Genome) root else (root as Feature).genome
-    private val topologicalMutations = (genome as IGenome).graph.topologicalMutations
-
-    init {
-        stack.addAll(root.children)
-    }
-
-    override fun hasNext() = !stack.isEmpty()
-
-    override fun next(): MutableFeature {
-        if (topologicalMutations != (genome as IGenome).graph.topologicalMutations)
-            throw ConcurrentModificationException("Do not modify the topology of a MutableGenome while iterating over it.")
-        val popped = stack.pop()
-        if (popped is MutableParent) stack.addAll(popped.children)
-        return popped
-    }
-}
+public class GffParseException(lineNumber: Int, line: String, label: String):
+        Exception("Parse exception at line number $lineNumber\n$line\n$label")

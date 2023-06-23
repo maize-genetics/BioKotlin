@@ -1,97 +1,68 @@
 package biokotlin.featureTree
 
-// This file is for internal utility classes
-
 /**
- * All elements of the graph han an [ID]. If the member of the graph is a [Feature] with a defined ID attribute (either
- * by the client or from parsing a GFF file), its [ID] referred to as "natural."
- * Natural [ID]s will return this ID attribute when [idAttribute] is called. Otherwise, [idAttribute] returns
- * `null`. The root of a graph is represented with [GENOME].
+ * All elements of the graph have an [Ordinal], which uniquely defines it.
  */
 @JvmInline
-internal value class ID private constructor(private val value: String) {
-    /**
-     * Creates an [ID]. If [isNatural], this [ID] will yield [string] when [idAttribute] is called on it.
-     * Otherwise, [idAttribute] will be null.
-     */
-    internal constructor(string: String, isNatural: Boolean) : this(
-        if (isNatural) string else UNNATURAL_PREFIX + string
-    )
-
-    /**
-     * Returns true iff the [ID] represents a natural [ID], as defined above
-     */
-    internal fun isNatural(): Boolean = !value.startsWith(UNNATURAL_PREFIX) && this != GENOME
-
-    /**
-     * @return the ID attribute for this [ID] or `null` if this is an unnatural [ID].
-     */
-    internal fun idAttribute(): String? = if (isNatural()) value else null
+internal value class Ordinal private constructor(val ordinal: Int) {
+    internal fun isRoot(): Boolean = ordinal < 0
 
     internal companion object {
-        private var counter = 0u
-            private set(_) {
-                field++
-            }
-
-        private const val UNNATURAL_PREFIX = "#!unnat:"
+        private var counter = 0
+        private var rootCounter = -1
 
         /**
-         * Represents the root of a graph
+         * Gives a globally unique [Ordinal]
          */
-        internal val GENOME = ID("#!GENOME")
+        internal fun request(): Ordinal = Ordinal(counter++)
 
-        /**
-         * @return unique unnatural ID
-         */
-        internal fun unique(): ID = ID(counter++.toString(), false)
+        internal fun requestRoot(): Ordinal = Ordinal(rootCounter--)
     }
 }
 
 /**
  * Represents a mapping of keys of type [K] to multiple unique values of type [V]. Allows for constant-time lookup,
  * insertion, and removal.
-fastafrombed*/
-internal class OneToSeveral<K, V> private constructor(
+*/
+internal class OneToMulti<K, V> private constructor(
     private val map: MutableMap<K, MutableSet<V>>, private val sorting: MutableMap<K, (V, V) -> Int>
 ) {
 
     /**
      * Creates blank map.
      */
-    internal constructor() : this(mutableMapOf(), mutableMapOf())
+    internal constructor() : this(LinkedHashMap(), LinkedHashMap())
 
     /**
      * TODO
      */
-    internal constructor(source: Map<K, Iterable<V>>) : this(HashMap(source.mapValues { (_, values) ->
+    internal constructor(source: Map<K, Iterable<V>>) : this(LinkedHashMap(source.mapValues { (_, values) ->
         values.toMutableSet()
     }), mutableMapOf())
 
     /**
      * Adds [value] to the set of values associated with [key].
      */
-    internal fun add(key: K, value: V): Unit {
+    fun add(key: K, value: V): Unit {
         val set = map[key]
         if (set == null) {
             map[key] = mutableSetOf(value)
         } else {
-            if (set.contains(value)) return
-            else set.add(value)
+            set.add(value)
         }
     }
 
     /**
      * Sets [value] as the *only* value associated with [key]
      */
-    internal fun set(key: K, value: V): Unit {
+    fun set(key: K, value: V): Unit {
         map[key] = mutableSetOf(value)
     }
 
     /**
      * Removes [value] from the values associated with [key]
      */
-    internal fun remove(key: K, value: V): Unit {
+    fun remove(key: K, value: V): Unit {
         val set = map[key] ?: return
         set.remove(value)
     }
@@ -99,17 +70,17 @@ internal class OneToSeveral<K, V> private constructor(
     /**
      * @return true iff [value] is associated with [key]
      */
-    internal fun contains(key: K, value: V): Boolean = map[key]?.contains(value) ?: false
+    fun contains(key: K, value: V): Boolean = map[key]?.contains(value) ?: false
 
     /**
      * @return true iff [key] has any associated values
      */
-    internal fun contains(key: K): Boolean = map.contains(key)
+    fun contains(key: K): Boolean = map.contains(key)
 
     /**
      * Replaces *all* values associated with [key] with values within the set [values].
      */
-    internal fun overwrite(key: K, values: Set<V>): Unit {
+    fun overwrite(key: K, values: Set<V>): Unit {
         map[key] = HashSet(values)
     }
 
@@ -117,30 +88,41 @@ internal class OneToSeveral<K, V> private constructor(
      * Uses [comparator] to sort the values of [key]. Whenever the values for [key] are queried, they will *always* be
      * in the order provided by [comparator] until another call of [sortValues] is made.
      */
-    internal fun sortValues(key: K, comparator: (V, V) -> Int): Unit {
+    fun sortValues(key: K, comparator: (V, V) -> Int): Unit {
         sorting[key] = comparator
     }
 
     /**
      * @return all values associated with [key]
      */
-    internal fun values(key: K): List<V> {
+    fun values(key: K): List<V> {
         val set = map[key] ?: return listOf()
         val sorting = sorting[key]
         return if (sorting == null) set.toList() else set.sortedWith(sorting)
     }
 
+    fun remove(key: K) {
+        map.remove(key)
+    }
+
+    /**
+     * Associates [key] with the elements in [values] and *only* those elements.
+     */
+    fun overwrite(key: K, values: Iterable<V>) {
+        map[key] = values.toMutableSet()
+    }
+
     /**
      * @return deep copy of `this`
      */
-    internal fun copy(): OneToSeveral<K, V> {
-        return OneToSeveral(HashMap(map), HashMap(sorting))
+    fun copy(): OneToMulti<K, V> {
+        return OneToMulti(LinkedHashMap(map), LinkedHashMap(sorting))
     }
 
     /**
      * Removes all values associated with [key].
      */
-    internal fun clear(key: K): Unit {
+    fun clear(key: K): Unit {
         map.remove(key)
         sorting.remove(key)
     }
@@ -157,67 +139,87 @@ internal class OneToSeveral<K, V> private constructor(
     internal val values
         get() = map.values
 
-    /**
-     * Alias for `values.flatten()`
-     */
-    internal fun flatValues(): List<V> = values.flatten()
+}
 
+internal class BiMap<K, V> private constructor(private val forward: MutableMap<K, V>, private val reverse: MutableMap<V, K>) {
+    constructor(): this(LinkedHashMap(), LinkedHashMap())
+    @JvmName("forwardGet")
+
+    operator fun get(key: K): V? = forward[key]
+
+    @JvmName("reverseGet")
+    operator fun get(key: V): K? = reverse[key]
+
+    @JvmName("forwardRemove")
+    fun remove(key: K) {
+        val value = forward.remove(key)
+        reverse.remove(value)
+    }
+
+    @JvmName("reverseRemove")
+    fun remove(key: V) {
+        val value = reverse.remove(key)
+        forward.remove(value)
+    }
+
+    @JvmName("forwardSet")
+    operator fun set(key: K, value: V) {
+        forward[key] = value
+        reverse[value] = key
+    }
+
+    @JvmName("reverseSet")
+    operator fun set(key: V, value: K) {
+        reverse[key] = value
+        forward[value] = key
+    }
+
+    @JvmName("forwardContains")
+    fun contains(key: K) = forward.contains(key)
+
+    @JvmName("reverseContains")
+    fun contains(key: V) = reverse.contains(key)
+
+    fun copy(): BiMap<K, V> = BiMap(LinkedHashMap(forward), LinkedHashMap(reverse))
 }
 
 internal data class FeatureData(
     var seqid: String,
     var source: String,
     var type: FeatureType,
-    var start: UInt,
-    var end: UInt,
+    var ranges: MutableList<IntRange>,
     var score: Double?,
     var strand: Strand,
-    var phase: Phase,
-    var attributes: OneToSeveral<String, String>,
+    var phases: MutableList<Phase>,
+    var attributes: OneToMulti<String, String>,
 )
 
-internal fun insertionHelper(data: FeatureData, graph: Graph, parent: ID): MFeature {
-    return mWrap(graph.insert(data, parent), graph)
-}
-
-// +++++ WRAPPING FUNCTIONS +++++
-
 /**
- * Creates an immutable member of Wrapper.kt appropriate for the data specified by [id] and [graph].
+ * Smallest start value in all the ranges
  */
-internal inline fun <reified T : Feature> iWrap(id: ID, graph: Graph): T {
-    return when (graph.type(id)) {
-        FeatureType.CHROMOSOME -> IChromosome(id, graph) as T
-        FeatureType.SCAFFOLD -> IScaffold(id, graph) as T
-        FeatureType.CONTIG -> IContig(id, graph) as T
-        FeatureType.GENE -> IGene(id, graph) as T
-        FeatureType.TRANSCRIPT -> ITranscript(id, graph) as T
-        FeatureType.LEADER -> ILeader(id, graph) as T
-        FeatureType.EXON -> IExon(id, graph) as T
-        FeatureType.CODING_SEQUENCE -> ICodingSequence(id, graph) as T
-        FeatureType.TERMINATOR -> ITerminator(id, graph) as T
-    }
+internal fun Iterable<IntRange>.minimum(): Int {
+    return this.sortedWith { one, two -> one.first - two.first }[0].first
 }
 
 /**
- * Creates a mutable member of Wrapper.kt appropriate for the data specified by [id] and [graph].
+ * Largest start value in all the ranges
  */
-internal inline fun <reified T : MutableFeature> mWrap(id: ID, graph: Graph): T {
-    return when (graph.type(id)) {
-        FeatureType.CHROMOSOME -> MChromosome(id, graph) as T
-        FeatureType.SCAFFOLD -> MScaffold(id, graph) as T
-        FeatureType.CONTIG -> MContig(id, graph) as T
-        FeatureType.GENE -> MGene(id, graph) as T
-        FeatureType.TRANSCRIPT -> MTranscript(id, graph) as T
-        FeatureType.LEADER -> MLeader(id, graph) as T
-        FeatureType.EXON -> MExon(id, graph) as T
-        FeatureType.CODING_SEQUENCE -> MCodingSequence(id, graph) as T
-        FeatureType.TERMINATOR -> MTerminator(id, graph) as T
-    }
+internal fun Iterable<IntRange>.maximum(): Int {
+    return this.sortedWith { one, two -> one.last - two.last }[0].last
 }
 
-internal inline fun <reified T : Feature> iWrapList(ids: Iterable<ID>, graph: Graph): List<T> =
-    ids.map { iWrap<T>(it, graph) }
+/**
+ * Zero-cost wrapper around mutable list to restrict it to immutable interface
+ */
+@JvmInline
+internal value class ImmutableList<T>(val list: List<T>) : List<T> by list
 
-internal inline fun <reified T : MutableFeature> mWrapList(ids: Iterable<ID>, graph: Graph): List<T> =
-    ids.map { mWrap<T>(it, graph) }
+/**
+ * Only applies assertions if -ea flag is enabled. Useful for expensive assertions.
+ */
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+internal inline fun assert(condition: () -> Boolean) {
+    if (_Assertions.ENABLED && !condition()) {
+        throw AssertionError()
+    }
+}
