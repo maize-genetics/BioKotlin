@@ -12,7 +12,7 @@ import kotlin.math.abs
 
 data class HammingCounts(val h1KmerCount: Int, val hManyKmerCount: Int, val copyNumberKmerCount: Int, val copyNumberKmerDifference: Int)
 
-fun kmerHammingDistanceBreakdown(map1: KmerMultiSetFromSeq, map2: KmerMultiSetFromSeq): HammingCounts {
+fun kmerHammingDistanceBreakdown(map1: KmerMultiSet, map2: KmerMultiSet): HammingCounts {
     var hashmap1 = map1.getEvenOddHashMap()
     var hashmap2 = map2.getEvenOddHashMap()
 
@@ -20,7 +20,7 @@ fun kmerHammingDistanceBreakdown(map1: KmerMultiSetFromSeq, map2: KmerMultiSetFr
 }
 
 
-fun kmerHammingDistanceBreakdown(map1: KmerMultiSetFromSeq, map2: KmerMultiSetFromSeq, hashmap1: Long2ObjectOpenHashMap<LongOpenHashSet>, hashmap2: Long2ObjectOpenHashMap<LongOpenHashSet>): HammingCounts {
+fun kmerHammingDistanceBreakdown(map1: KmerMultiSet, map2: KmerMultiSet, hashmap1: Long2ObjectOpenHashMap<LongOpenHashSet>, hashmap2: Long2ObjectOpenHashMap<LongOpenHashSet>): HammingCounts {
     // we set the default to 2
     // actual minimum hamming distance could be more than 2
     // but we really don't care what the exact number is past that
@@ -57,12 +57,12 @@ data class DistanceMatrixBreakdown(val seqIDs: List<String>, val h1Count: IntMat
 
 fun kmerDistanceMatrix(fastaFile: String, kmerSize: Int = 21): DistanceMatrixBreakdown {
 
-    val allMaps: MutableMap<String, KmerMultiSetFromSeq> = mutableMapOf()
+    val allMaps: MutableMap<String, KmerMultiSet> = mutableMapOf()
     val allHashes: MutableMap<String, Long2ObjectOpenHashMap<LongOpenHashSet>> = mutableMapOf()
 
     FastaIO(fastaFile, SeqType.nucleotide).forEach {record ->
         try {
-            allMaps[record.id] = KmerMultiSetFromSeq((record as NucSeqRecord).sequence, kmerSize = kmerSize)
+            allMaps[record.id] = KmerMultiSet((record as NucSeqRecord).sequence, kmerSize = kmerSize)
             allHashes[record.id] = allMaps[record.id]!!.getEvenOddHashMap()
         }
         catch(e: Exception) {
@@ -122,18 +122,18 @@ fun printMatrixToFile(seqIDs: List<String>, matrix: IntMatrix, fileName: String)
  * by default, assumes a "compact" representation (collapses forward and reverse complement)
  * and both strands
  */
-fun getGenomicKmerMap(fastaFile: String, kmerSize: Int): KmerMultiSetFromSeq {
-    lateinit var map: KmerMultiSetFromSeq
+fun getGenomicKmerMap(fastaFile: String, kmerSize: Int): KmerMultiSet {
+    lateinit var map: KmerMultiSet
     var mapInitialized = false
 
 
     FastaIO(fastaFile, SeqType.nucleotide).iterator().forEach{record ->
         try {
             if(!mapInitialized) {
-                map = KmerMultiSetFromSeq((record as NucSeqRecord).sequence, kmerSize = kmerSize, bothStrands = true, keepMinOnly = true)
+                map = KmerMultiSet((record as NucSeqRecord).sequence, kmerSize = kmerSize, bothStrands = true, keepMinOnly = true)
                 mapInitialized = true
             } else {
-                map.addNewSeq((record as NucSeqRecord).sequence)
+                map.addKmersFromNewSeq((record as NucSeqRecord).sequence)
             }
         } catch (exe: IllegalArgumentException) {
                 println("No valid kmers in record ${record.id}, skipping record")

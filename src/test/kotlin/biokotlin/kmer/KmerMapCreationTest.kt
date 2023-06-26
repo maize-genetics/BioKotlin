@@ -24,9 +24,9 @@ class KmerMapCreationTest : StringSpec({
 
     "Test Kmers NucSeqBytes" {
         println(seqNameToSeq["seqBase"]!!)
-        val kmerMultiSetFromSeq = KmerMultiSetFromSeq(seqNameToSeq["seqBase"]!!,3)
+        val kmerMultiSet = KmerMultiSet(seqNameToSeq["seqBase"]!!,3)
         println("KmerMap")
-        kmerMultiSetFromSeq.kmer2CountEntrySet
+        kmerMultiSet.kmer2CountEntrySet
             .forEach{(kmerLong, count)-> println("${Kmer(kmerLong).toString(3)} -> $count,")}
         println("NucSeq.kmers()")
         val kmerMapByteSeq = seqNameToSeq["seqBase"]!!.kmers(3)
@@ -39,15 +39,15 @@ class KmerMapCreationTest : StringSpec({
         println(Kmer(Long.MIN_VALUE))
         println(Kmer(-1L))
 
-        val kmerMultiSetFromSeq = KmerMultiSetFromSeq(seqNameToSeq["seqBase"]!!,3)
-        println(kmerMultiSetFromSeq)
-        println(kmerMultiSetFromSeq.toSeqCountString())
+        val kmerMultiSet = KmerMultiSet(seqNameToSeq["seqBase"]!!,3)
+        println(kmerMultiSet)
+        println(kmerMultiSet.toSeqCountString())
 
-        val kmerNEarlyMap = KmerMultiSetFromSeq(seqNameToSeq["seqWNEarly"]!!,3)
+        val kmerNEarlyMap = KmerMultiSet(seqNameToSeq["seqWNEarly"]!!,3)
         println(kmerNEarlyMap)
         println(kmerNEarlyMap.toSeqCountString())
 
-        val kmerNLateMap = KmerMultiSetFromSeq(seqNameToSeq["seqWNLate"]!!,3)
+        val kmerNLateMap = KmerMultiSet(seqNameToSeq["seqWNLate"]!!,3)
         println(kmerNLateMap)
         println(kmerNLateMap.toSeqCountString())
     }
@@ -55,8 +55,8 @@ class KmerMapCreationTest : StringSpec({
     "Test speed of kmer functions" {
         val elapsed = measureTimeMillis {
 //            repeat(1000) {val kmerMap = KmerMap(bigSeq,13)}
-            val kmerMultiSetFromSeq = KmerMultiSetFromSeq(bigSeq,31)
-            for(i in 1..1000) {KmerMultiSetFromSeq(bigSeq)}
+            val kmerMultiSet = KmerMultiSet(bigSeq,31)
+            for(i in 1..1000) {KmerMultiSet(bigSeq)}
             println("Measuring time via measureTimeMillis")
         }
         println("KmerMap took $elapsed ms")

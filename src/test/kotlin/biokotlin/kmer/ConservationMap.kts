@@ -1,23 +1,24 @@
 import biokotlin.kmer.Kmer
-import biokotlin.kmer.KmerConservationSet
-import biokotlin.kmer.KmerSimpleSetFromSeq
+import biokotlin.kmer.KmerBigSet
+import biokotlin.kmer.KmerSet
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seqIO.FastaIO
 import biokotlin.seqIO.SeqType
+import it.unimi.dsi.fastutil.BigArrays
 import java.io.File
 import kotlin.system.exitProcess
 
-fun getGenomicSet(file: File, kmerSize: Int): KmerSimpleSetFromSeq {
-    lateinit var set: KmerSimpleSetFromSeq
+fun getGenomicSet(file: File, kmerSize: Int): KmerSet {
+    lateinit var set: KmerSet
     var mapInitialized = false
     println("processing ${file.nameWithoutExtension}")
     FastaIO(file.absolutePath, SeqType.nucleotide).iterator().forEach{record ->
             try {
                 if(!mapInitialized) {
-                    set = KmerSimpleSetFromSeq((record as NucSeqRecord).sequence, kmerSize = kmerSize, bothStrands = true, keepMinOnly = true)
+                    set = KmerSet((record as NucSeqRecord).sequence, kmerSize = kmerSize, bothStrands = true, keepMinOnly = true)
                     mapInitialized = true
                 } else {
-                    set.addNewSeq((record as NucSeqRecord).sequence)
+                    set.addKmersFromNewSeq((record as NucSeqRecord).sequence)
                 }
             } catch (exe: IllegalArgumentException) {
                 println("Could not construct kmers for record ${record.id}, skipping record")
@@ -37,7 +38,7 @@ val outputFile = File(args[1])
 
 
 
-val conservationSet = KmerConservationSet(kmerSize, keepMinOnly = true)
+val conservationSet = KmerBigSet(kmerSize, keepMinOnly = true)
 
 for(i in 1 until args.size) {
     val argFile = File(args[i])
@@ -48,6 +49,7 @@ for(i in 1 until args.size) {
                     System.gc()
                     val set = getGenomicSet(file, kmerSize)
                     conservationSet.addSet(set, file.nameWithoutExtension)
+                    println("set added, new size: ${conservationSet.setSize()}")
                 }
             }
         }
@@ -56,18 +58,20 @@ for(i in 1 until args.size) {
             System.gc()
             val set = getGenomicSet(argFile, kmerSize)
             conservationSet.addSet(set, argFile.nameWithoutExtension)
+            println("set added, new size: ${conservationSet.setSize()}")
         }
     }
 }
 
 println("writing to file")
 outputFile.bufferedWriter().use { writer ->
-    writer.write("Kmer\tnumHits(max${conservationSet.taxaList().size})\ttaxaHits\n")
+    writer.write("Kmer\tnumHits\n")
 
-    conservationSet.longSet().forEach{l->
-        writer.write("${Kmer(l).toString(kmerSize)}\t")
-        writer.write("${conservationSet.getCountOf(Kmer(l))}\t")
-        writer.write("${conservationSet.getTaxaWith(Kmer(l)).joinToString(",")}\n")
+    for(i in conservationSet.arr.indices) {
+        for(j in conservationSet.arr[i].indices) {
+            if (conservationSet.arr[i][j] > 0) {
+                writer.write("${Kmer(BigArrays.index(i, j)).toString(kmerSize)}\t${conservationSet.arr[i][j]}\n")
+            }
+        }
     }
-
 }

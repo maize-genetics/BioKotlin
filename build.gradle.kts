@@ -94,7 +94,8 @@ dependencies {
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
-    implementation("it.unimi.dsi:fastutil-core:8.5.12")
+    implementation("it.unimi.dsi:fastutil:8.5.12")
+    implementation("org.lz4:lz4-java:1.8.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 

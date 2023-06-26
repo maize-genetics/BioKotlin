@@ -1,61 +1,46 @@
 package biokotlin.kmer
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import biokotlin.seq.NucSeq
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.longs.LongSet
 
-interface KmerSet {
-    val kmerSize: Int
-    val bothStrands: Boolean
-    val keepMinOnly: Boolean
+class KmerSet(sequence: NucSeq, kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1,
+              keepMinOnly: Boolean = false) : AbstractSparseKmerSet(kmerSize, bothStrands, stepSize, keepMinOnly) {
+    override var sequenceLength: Long = 0
+    override var ambiguousKmers: Long = 0
+    val set = LongOpenHashSet(sequence.size())
 
-
-    /**
-     * Returns the set of [Kmers] in [map] as Longs
-     */
-    fun longSet(): LongSet
-
-    /**
-     * Returns the set of [Kmers] in [map]
-     */
-    fun set(): Set<Kmer>
-
-    /**
-     * Returns true if [kmer] is in [map], false otherwise
-     */
-    fun contains(kmer: Kmer): Boolean
-
-    /**
-     * Hashes the longs in [map] based on their even nucleotides and their odd nucleotides
-     * So, each long hashes into two different bins
-     * And returns the map of bins
-     */
-    fun getEvenOddHashMap(): Long2ObjectOpenHashMap<LongOpenHashSet> {
-        //TODO initialize with capacity - what capacity?
-        val hashMap = Long2ObjectOpenHashMap<LongOpenHashSet>()
-
-        longSet().forEach { entry ->
-            val even = entry and -3689348814741910324L
-            val odd = entry and 0x3333333333333333
-
-            hashMap.getOrPut(even) { LongOpenHashSet() }.add(entry)
-            hashMap.getOrPut(odd) { LongOpenHashSet() }.add(entry)
+    init {
+        require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31"
         }
-        return hashMap
+        sequenceLength = sequence.size().toLong()
+        ambiguousKmers = seqToKmerMap(sequence)
     }
 
     /**
-     * Returns the minimum hamming distance between the query [Kmer] and all kmers in this map
-     * @param kmer query Kmer
-     * @param bothStrands whether to consider the reverse complement of [kmer] when computing minimum hamming distance
+     * Returns this set of kmers in 2-bit encoding
      */
-    fun minHammingDistance(kmer: Kmer, bothStrands: Boolean = true): Int {
-        return if (bothStrands && !(this.bothStrands) ) {
-            val reverseComplement = kmer.reverseComplement(kmerSize)
-            longSet().minOf{minOf(Kmer(it).hammingDistance(kmer), Kmer(it).hammingDistance(reverseComplement))}
-        } else {
-            longSet().minOf{Kmer(it).hammingDistance(kmer)}
-        }
-    }
+    override fun longSet(): LongSet { return set }
+
+    /**
+     * returns the set of kmers
+     */
+    override fun set(): Set<Kmer> { return set.map{Kmer(it)}.toSet() }
+
+    /**
+     * True if this set contains [kmer], false otherwise
+     */
+    override fun contains(kmer: Kmer): Boolean { return set.contains(kmer.encoding) }
+
+    /**
+     * Adds [kmer] to this set
+     */
+    override fun addKmerToSet(kmer: Long) { set.add(kmer) }
+
+    /**
+     * True if set is empty, false otherwise
+     */
+    override fun isSetEmpty(): Boolean { return set.isEmpty() }
+
 
 }

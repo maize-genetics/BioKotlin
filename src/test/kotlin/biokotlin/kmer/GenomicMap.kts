@@ -1,4 +1,4 @@
-import biokotlin.kmer.KmerMultiSetFromSeq
+import biokotlin.kmer.KmerMultiSet
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seqIO.FastaIO
 import biokotlin.seqIO.SeqType
@@ -20,7 +20,7 @@ if(!File(fileName).isFile) {
 }
 
 
-lateinit var map: KmerMultiSetFromSeq
+lateinit var map: KmerMultiSet
 var mapInitialized = false
 
 
@@ -31,10 +31,10 @@ FastaIO(fileName, SeqType.nucleotide).iterator().forEach{record ->
     } else {
         try {
             if(!mapInitialized) {
-                map = KmerMultiSetFromSeq((record as NucSeqRecord).sequence, kmerSize = kmerSize, bothStrands = true, keepMinOnly = true)
+                map = KmerMultiSet((record as NucSeqRecord).sequence, kmerSize = kmerSize, bothStrands = true, keepMinOnly = true)
                 mapInitialized = true
             } else {
-                map.addNewSeq((record as NucSeqRecord).sequence)
+                map.addKmersFromNewSeq((record as NucSeqRecord).sequence)
             }
         } catch (exe: IllegalArgumentException) {
             println("Could not construct kmers for record ${record.id}, skipping record")

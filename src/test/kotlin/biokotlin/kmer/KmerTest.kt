@@ -1,5 +1,6 @@
 package biokotlin.kmer
 
+import biokotlin.seq.RandomNucSeq
 import biokotlin.seq.Seq
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -69,11 +70,11 @@ class KmerTest {
     @Test
     fun KmerMultiSetTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerMultiSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerMultiSet(sequence1, 3)
         val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerMultiSetFromSeq(sequence2, 3)
+        val kmerset2 = KmerMultiSet(sequence2, 3)
         val strings2 = kmerset2.set().map{it.toString(3)}.sorted()
 
         assertEquals(listOf("ACA", "AGC", "CAG", "CGA", "CTA", "CTC", "CTG", "GAC", "GAG", "GCT", "GTA", "GTC", "TAC", "TAG", "TCG", "TGT"), strings1)
@@ -84,11 +85,11 @@ class KmerTest {
     @Test
     fun KmerSetTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerSimpleSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerSet(sequence1, 3)
         val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerSimpleSetFromSeq(sequence2, 3)
+        val kmerset2 = KmerSet(sequence2, 3)
         val strings2 = kmerset2.set().map{it.toString(3)}.sorted()
 
         assertEquals(listOf("ACA", "AGC", "CAG", "CGA", "CTA", "CTC", "CTG", "GAC", "GAG", "GCT", "GTA", "GTC", "TAC", "TAG", "TCG", "TGT"), strings1)
@@ -102,10 +103,10 @@ class KmerTest {
     @Test
     fun KmerMultiSetAddTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerMultiSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerMultiSet(sequence1, 3)
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
 
-        kmerset1.addNewSeq(sequence2)
+        kmerset1.addKmersFromNewSeq(sequence2)
         val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
 
         assertEquals(listOf("AAA", "ACA", "AGC", "AGG", "CAG", "CCT", "CGA", "CTA", "CTC", "CTG",
@@ -124,10 +125,10 @@ class KmerTest {
     @Test
     fun KmerAddTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerSimpleSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerSet(sequence1, 3)
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
 
-        kmerset1.addNewSeq(sequence2)
+        kmerset1.addKmersFromNewSeq(sequence2)
         val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
 
         assertEquals(listOf("AAA", "ACA", "AGC", "AGG", "CAG", "CCT", "CGA", "CTA", "CTC", "CTG",
@@ -140,11 +141,11 @@ class KmerTest {
     @Test
     fun KmerMultiSetTestMinOnly() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerMultiSetFromSeq(sequence1, 3, keepMinOnly = true)
+        val kmerset1 = KmerMultiSet(sequence1, 3, keepMinOnly = true)
         val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerMultiSetFromSeq(sequence2, 3, keepMinOnly = true)
+        val kmerset2 = KmerMultiSet(sequence2, 3, keepMinOnly = true)
         val strings2 = kmerset2.set().map{it.toString(3)}.sorted()
 
         assertEquals(listOf("ACA", "AGC", "CAG", "CGA", "CTA", "CTC", "GAC", "TAC"), strings1)
@@ -155,11 +156,11 @@ class KmerTest {
     @Test
     fun KmerSetTestMinOnly() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerSimpleSetFromSeq(sequence1, 3, keepMinOnly = true)
+        val kmerset1 = KmerSet(sequence1, 3, keepMinOnly = true)
         val strings1 = kmerset1.set().map{it.toString(3)}.sorted()
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerSimpleSetFromSeq(sequence2, 3, keepMinOnly = true)
+        val kmerset2 = KmerSet(sequence2, 3, keepMinOnly = true)
         val strings2 = kmerset2.set().map{it.toString(3)}.sorted()
 
         assertEquals(listOf("ACA", "AGC", "CAG", "CGA", "CTA", "CTC", "GAC", "TAC"), strings1)
@@ -171,10 +172,10 @@ class KmerTest {
     @Test
     fun KmerMapTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerMultiSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerMultiSet(sequence1, 3)
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerMultiSetFromSeq(sequence2, 3)
+        val kmerset2 = KmerMultiSet(sequence2, 3)
 
         val actual1 = mapOf(
             Pair(Kmer("ACA"), 1),
@@ -221,13 +222,13 @@ class KmerTest {
     @Test
     fun ambiguousKmerMultiCountTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerMultiSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerMultiSet(sequence1, 3)
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerMultiSetFromSeq(sequence2, 3)
+        val kmerset2 = KmerMultiSet(sequence2, 3)
 
         val sequence3 = Seq("AANNTCTCANNNCCACNN")
-        val kmerset3 = KmerMultiSetFromSeq(sequence3, 3)
+        val kmerset3 = KmerMultiSet(sequence3, 3)
 
         // test count of ambiguous kmers
         assertEquals(0, kmerset1.ambiguousKmers())
@@ -238,13 +239,13 @@ class KmerTest {
     @Test
     fun ambiguousKmerCountTest() {
         val sequence1 = Seq("CTACAGCTCGAC")
-        val kmerset1 = KmerSimpleSetFromSeq(sequence1, 3)
+        val kmerset1 = KmerSet(sequence1, 3)
 
         val sequence2 = Seq("AAAAANTCAGGAGGNNNNAT")
-        val kmerset2 = KmerSimpleSetFromSeq(sequence2, 3)
+        val kmerset2 = KmerSet(sequence2, 3)
 
         val sequence3 = Seq("AANNTCTCANNNCCACNN")
-        val kmerset3 = KmerSimpleSetFromSeq(sequence3, 3)
+        val kmerset3 = KmerSet(sequence3, 3)
 
         // test count of ambiguous kmers
         assertEquals(0, kmerset1.ambiguousKmers())
@@ -271,25 +272,25 @@ class KmerTest {
     @Test
     fun MinHammingDistanceTest() {
         val seq = Seq("ATCTCATCA")
-        val kmerMultiSetFromSeq = KmerMultiSetFromSeq(seq, 3)
-        val kmerMultiSetFromSeqSingleStrand = KmerMultiSetFromSeq(seq, 3, bothStrands = false)
+        val kmerMultiSet = KmerMultiSet(seq, 3)
+        val kmerMultiSetSingleStrand = KmerMultiSet(seq, 3, bothStrands = false)
 
-        assertEquals(0, kmerMultiSetFromSeq.minHammingDistance(Kmer("ATC")))
-        assertEquals(0, kmerMultiSetFromSeq.minHammingDistance(Kmer("GAT")))
-        assertEquals(1, kmerMultiSetFromSeq.minHammingDistance(Kmer("GAA")))
-        assertEquals(1, kmerMultiSetFromSeq.minHammingDistance(Kmer("GAA"), false))
-        assertEquals(2, kmerMultiSetFromSeqSingleStrand.minHammingDistance(Kmer("GAA"), false))
-        assertEquals(2, kmerMultiSetFromSeq.minHammingDistance(Kmer("TAC")))
+        assertEquals(0, kmerMultiSet.minHammingDistance(Kmer("ATC")))
+        assertEquals(0, kmerMultiSet.minHammingDistance(Kmer("GAT")))
+        assertEquals(1, kmerMultiSet.minHammingDistance(Kmer("GAA")))
+        assertEquals(1, kmerMultiSet.minHammingDistance(Kmer("GAA"), false))
+        assertEquals(2, kmerMultiSetSingleStrand.minHammingDistance(Kmer("GAA"), false))
+        assertEquals(2, kmerMultiSet.minHammingDistance(Kmer("TAC")))
 
     }
 
     @Test
     fun ConservationSetTest() {
-        val setA = KmerSimpleSetFromSeq(Seq("GAGGAGGAGACGTCA"), 3)
-        val setB = KmerSimpleSetFromSeq(Seq("GATTAGGAGAAGTCA"), 3)
-        val setC = KmerSimpleSetFromSeq(Seq("CATACATACA"), 3)
+        val setA = KmerSet(Seq("GAGGAGGAGACGTCA"), 3)
+        val setB = KmerSet(Seq("GATTAGGAGAAGTCA"), 3)
+        val setC = KmerSet(Seq("CATACATACA"), 3)
 
-        val conservationSet = KmerConservationSet(3)
+        val conservationSet = KmerBigSet(3)
         conservationSet.addSet(setA)
         conservationSet.addSet(setB)
         conservationSet.addSet(setC)
@@ -332,10 +333,6 @@ class KmerTest {
             Pair(Kmer("TGT"), 1),
             Pair(Kmer("TTA"), 1),
             Pair(Kmer("TTC"), 1)
-
-
-
-
         )
 
         // test equality of counts
@@ -346,32 +343,13 @@ class KmerTest {
     }
 
     @Test
-    fun conservationMissingTest() {
-        val setA = KmerSimpleSetFromSeq(Seq("GAGGAGGAGACGTCA"), 3)
-        val setB = KmerSimpleSetFromSeq(Seq("GATTAGGAGAAGTCA"), 3)
-        val setC = KmerSimpleSetFromSeq(Seq("CATACATACA"), 3)
-
-
-        val conservationSet = KmerConservationSet(3)
-        conservationSet.addSet(setA, "setA")
-        conservationSet.addSet(setB, "setB")
-        conservationSet.addSet(setC, "setC")
-
-        assertEquals(listOf(0, 1), conservationSet.getTaxaIndicesWith(Kmer("GAC")))
-        assertEquals(listOf("setA", "setB"), conservationSet.getTaxaWith(Kmer("GAC")))
-        assertEquals(listOf<Int>(), conservationSet.getTaxaIndicesWith(Kmer("TTT")))
-        assertEquals(listOf(2), conservationSet.getTaxaIndicesWith(Kmer("TAT")))
-
-    }
-
-    @Test
     fun conservationCountMissingTest() {
-        val setA = KmerSimpleSetFromSeq(Seq("GAGGAGGAGACGTCA"), 3)
-        val setB = KmerSimpleSetFromSeq(Seq("GATTAGGAGAAGTCA"), 3)
-        val setC = KmerSimpleSetFromSeq(Seq("CATACATACA"), 3)
+        val setA = KmerSet(Seq("GAGGAGGAGACGTCA"), 3)
+        val setB = KmerSet(Seq("GATTAGGAGAAGTCA"), 3)
+        val setC = KmerSet(Seq("CATACATACA"), 3)
 
 
-        val conservationSet = KmerConservationSet(3)
+        val conservationSet = KmerBigSet(3)
         conservationSet.addSet(setA, "setA")
         conservationSet.addSet(setB, "setB")
         conservationSet.addSet(setC, "setC")
@@ -387,14 +365,27 @@ class KmerTest {
 
     @Test
     fun testTest() {
-        //val seq1 = Seq("GAGGAGGAGACGTCA")
-        val seq1 = Seq("CATACATACA")
-
-        val set1 = KmerSimpleSetFromSeq(seq1, 3)
-
-        println(set1.set().map{it.toString(3)}.sorted().joinToString (","))
+        val setA = KmerSet(RandomNucSeq(3285, seed = 13), 13)
+        val setB = KmerSet(RandomNucSeq(23265, seed = 4), 13)
+        val setC = KmerSet(RandomNucSeq(957855, seed = 469), 13)
 
 
+        val conservationSet = KmerBigSet(13)
+        conservationSet.addSet(setA, "setA")
+        conservationSet.addSet(setB, "setB")
+        conservationSet.addSet(setC, "setC")
+
+        writeKmerSet(conservationSet, "/Users/ahb232/Desktop/hackathon/test_kmer.kmer")
+
+        val kmerIO = KmerIO("/Users/ahb232/Desktop/hackathon/test_kmer.kmer")
+
+        val bigSet = kmerIO.readBigSet()
+
+        for(i in conservationSet.arr.indices) {
+            for (j in conservationSet.arr[i].indices) {
+                assertEquals(conservationSet.arr[i][j], bigSet.arr[i][j])
+            }
+        }
     }
 
 }
