@@ -423,6 +423,10 @@ publishing {
                         name.set("Jeffrey Morse")
                         email.set("jbm249@cornell.edu")
                     }
+                    developer {
+                        name.set("Ana Berthel")
+                        email.set("ahb232@cornell.edu")
+                    }
                 }
                 scm {
                     connection.set("scm:git:git://bitbucket.org:bucklerlab/biokotlin.git")

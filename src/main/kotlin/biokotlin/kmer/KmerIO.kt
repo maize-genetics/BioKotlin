@@ -42,21 +42,49 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
             }
             currentLine = reader.readLine()
         }
+    }
 
-
-
-
-
+    fun readAll(): AbstractKmerSet {
+        return if(setType == "KmerBigSet") {readBigSet()}
+        else if (setType == "KmerSet") {readKmerSet()}
+        else if (setType == "KmerMultiSet") {readKmerMultiSet()}
+        else {throw FileNotFoundException("Provided file does not describe a known set type")}
     }
 
     fun readBigSet(): KmerBigSet {
         if(setType != "KmerBigSet") { throw FileNotFoundException("Provided file does not describe a KmerBigSet")}
 
-        val set = KmerBigSet(kmerSize, bothStrands, keepMinOnly = keepMinOnly)
+        val set = KmerBigSet(kmerSize, bothStrands, stepSize, keepMinOnly)
 
         while(this.hasNext()) {
             val pair = this.next()
             BigArrays.set(set.arr, pair.first.encoding, pair.second.toByte())
+        }
+
+        return set
+    }
+
+    fun readKmerSet(): KmerSet {
+        if(setType != "KmerSet") { throw FileNotFoundException("Provided file does not describe a KmerSet")}
+
+        val set = KmerSet(kmerSize, bothStrands, stepSize, keepMinOnly)
+
+        while(this.hasNext()) {
+            val pair = this.next()
+            set.addKmerToSet(pair.first.encoding)
+        }
+
+        return set
+    }
+
+    fun readKmerMultiSet(): KmerMultiSet {
+        if(setType != "KmerMultiSet") { throw FileNotFoundException("Provided file does not describe a KmerSet")}
+
+        val set = KmerMultiSet(kmerSize, bothStrands, stepSize, keepMinOnly)
+
+        while(this.hasNext()) {
+            val pair = this.next()
+            set.addNKmersToSet(pair.first.encoding, pair.second)
         }
 
         return set
@@ -71,7 +99,11 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
         if(!hasNext()) {throw NoSuchElementException()}
         val split = currentLine!!.split("\t")
         currentLine = reader.readLine()
-        return Pair(Kmer(split[0]), split[1].toInt())
+        return if(split.size > 1) {
+            Pair(Kmer(split[0]), split[1].toInt())
+        } else {
+            Pair(Kmer(split[0]), 1)
+        }
     }
 
 
@@ -101,6 +133,38 @@ fun writeKmerSet(set: KmerBigSet, filename: String, gzip: Boolean = true) {
             }
         }
     }
+}
 
+fun writeKmerSet(set: KmerSet, filename: String, gzip: Boolean = true) {
+    val bufferedWriter = if(gzip) { BufferedWriter(OutputStreamWriter(LZ4FrameOutputStream(FileOutputStream(File(filename)))) )
+    } else { File(filename).bufferedWriter() }
 
+    bufferedWriter.use{writer ->
+        // write header
+        writer.write("#setType KmerSet\n" +
+                "#keepMinOnly ${set.keepMinOnly}\n" +
+                "#bothStrands ${set.bothStrands}\n" +
+                "#kmerSize ${set.kmerSize}\n")
+
+        set.set().forEach{
+            writer.write("${it.toString(set.kmerSize)}\n")
+        }
+    }
+}
+
+fun writeKmerSet(set: KmerMultiSet, filename: String, gzip: Boolean = true) {
+    val bufferedWriter = if(gzip) { BufferedWriter(OutputStreamWriter(LZ4FrameOutputStream(FileOutputStream(File(filename)))) )
+    } else { File(filename).bufferedWriter() }
+
+    bufferedWriter.use{writer ->
+        // write header
+        writer.write("#setType KmerMultiSet\n" +
+                "#keepMinOnly ${set.keepMinOnly}\n" +
+                "#bothStrands ${set.bothStrands}\n" +
+                "#kmerSize ${set.kmerSize}\n")
+
+        set.set().forEach{
+            writer.write("${it.toString(set.kmerSize)}\t${set.getCountOf(it)}\n")
+        }
+    }
 }

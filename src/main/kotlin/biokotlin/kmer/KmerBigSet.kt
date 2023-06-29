@@ -9,7 +9,12 @@ class KmerBigSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int 
     override var sequenceLength: Long = 0
     override var ambiguousKmers: Long = 0
 
-    val arr = ByteBigArrays.newBigArray(1L shl (kmerSize * 2))
+    val arr: Array<ByteArray>
+
+    init {
+        require(kmerSize in 2..28) {"Kmer size must be in the range of 2..28" }
+        arr = ByteBigArrays.newBigArray(1L shl (kmerSize * 2))
+    }
 
     fun getCountOf(kmer: Kmer): Int {
         return BigArrays.get(arr, kmer.encoding).toInt()

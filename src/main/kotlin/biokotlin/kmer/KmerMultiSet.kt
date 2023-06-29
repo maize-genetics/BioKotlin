@@ -14,18 +14,21 @@ import it.unimi.dsi.fastutil.longs.*
  * @param stepSize kmers are extracted from the first base going forward based on a given step
  * @param keepMinOnly if set to true, keep only the minimum value between kmer and its reverse complement. Only matters if [bothStrands] is true
  */
-class KmerMultiSet(sequence: NucSeq, kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1, keepMinOnly: Boolean = false):
+class KmerMultiSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1, keepMinOnly: Boolean = false):
     AbstractSparseKmerSet(kmerSize, bothStrands, stepSize, keepMinOnly){
     override var sequenceLength: Long = 0
     override var ambiguousKmers: Long = 0
     //TODO: initial map value may be too big when doing full-genome maps - make an optional parameter to adjust?
-    val map: Long2IntOpenHashMap = Long2IntOpenHashMap(sequence.size() * 3) // kmers stored as 2-bit encoded longs
+    val map: Long2IntOpenHashMap = Long2IntOpenHashMap() // kmers stored as 2-bit encoded longs
 
     init {
-        require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31"
-        }
+        require(kmerSize in 2..31) {"Kmer size must be in the range of 2..31" }
+    }
+
+    constructor(sequence: NucSeq, kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1, keepMinOnly: Boolean = false): this(kmerSize, bothStrands, stepSize, keepMinOnly) {
         sequenceLength = sequence.size().toLong()
         ambiguousKmers = seqToKmerMap(sequence)
+        map.ensureCapacity(sequence.size() * 3)
     }
 
 
@@ -42,6 +45,8 @@ class KmerMultiSet(sequence: NucSeq, kmerSize: Int = 21, bothStrands: Boolean = 
 
     override fun contains(kmer: Kmer): Boolean { return map.containsKey(kmer.encoding)}
     override fun addKmerToSet(kmer: Long) { map.addTo(kmer, 1) }
+
+    internal fun addNKmersToSet(kmer: Long, count: Int) {map.addTo(kmer, count)}
 
     override fun isSetEmpty(): Boolean { return map.isEmpty() }
 

@@ -14,7 +14,7 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
      */
     abstract fun contains(kmer: Kmer): Boolean
 
-    abstract protected fun addKmerToSet(kmer: Long)
+    abstract internal fun addKmerToSet(kmer: Long)
 
     abstract protected fun isSetEmpty(): Boolean
 
