@@ -48,7 +48,7 @@ class KmerMultiSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: In
 
     internal fun addNKmersToSet(kmer: Long, count: Int) {map.addTo(kmer, count)}
 
-    override fun isSetEmpty(): Boolean { return map.isEmpty() }
+    override fun isEmpty(): Boolean { return map.isEmpty() }
 
     override fun toString(): String {
         return "KmerMap(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +

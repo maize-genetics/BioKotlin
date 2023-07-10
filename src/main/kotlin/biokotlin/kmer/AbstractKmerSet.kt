@@ -16,7 +16,7 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
 
     abstract internal fun addKmerToSet(kmer: Long)
 
-    abstract protected fun isSetEmpty(): Boolean
+    abstract fun isEmpty(): Boolean
 
     /**
      * given a [NucSeq], load all non-ambiguous kmers of length [kmerSize] into [map]
@@ -52,7 +52,7 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
         }
 
         //TODO: should empty maps be allowed?
-        if (isSetEmpty()) {
+        if (isEmpty()) {
             throw IllegalArgumentException("Sequence has no Kmers of size $kmerSize, set cannot be constructed.")
         }
         return if (keepMinOnly) { ambiguousKmers } else { ambiguousKmers*2 }

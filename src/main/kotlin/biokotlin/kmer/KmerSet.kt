@@ -47,7 +47,7 @@ class KmerSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1
     /**
      * True if set is empty, false otherwise
      */
-    override fun isSetEmpty(): Boolean { return set.isEmpty() }
+    override fun isEmpty(): Boolean { return set.isEmpty() }
 
 
 }

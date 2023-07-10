@@ -28,7 +28,7 @@ class KmerBigSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int 
         BigArrays.incr(arr, kmer)
     }
 
-    override fun isSetEmpty(): Boolean {
+    override fun isEmpty(): Boolean {
         return (setSize() == 0L)
     }
 
