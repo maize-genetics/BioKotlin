@@ -6,8 +6,8 @@ import it.unimi.dsi.fastutil.BigArrays
 
 class KmerBigSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1, keepMinOnly: Boolean = false):
     AbstractKmerSet(kmerSize, bothStrands, stepSize, keepMinOnly) {
-    override var sequenceLength: Long = 0
-    override var ambiguousKmers: Long = 0
+    override internal var sequenceLength: Long = 0
+    override internal var ambiguousKmers: Long = 0
 
     val arr: Array<ByteArray>
 
@@ -48,7 +48,7 @@ class KmerBigSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int 
 
     }
 
-    fun setSize(): Long {
+    override fun setSize(): Long {
         var counter = 0L
         for(i in arr.indices) {
             counter += arr[i].count { it > 0 }

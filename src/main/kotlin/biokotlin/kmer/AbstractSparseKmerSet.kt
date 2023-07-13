@@ -16,6 +16,7 @@ abstract class AbstractSparseKmerSet(kmerSize: Int, bothStrands: Boolean, stepSi
      */
     abstract fun set(): Set<Kmer>
 
+
     /**
      * Hashes the longs in [map] based on their even nucleotides and their odd nucleotides
      * So, each long hashes into two different bins
@@ -48,5 +49,7 @@ abstract class AbstractSparseKmerSet(kmerSize: Int, bothStrands: Boolean, stepSi
             longSet().minOf{Kmer(it).hammingDistance(kmer)}
         }
     }
+
+
 
 }

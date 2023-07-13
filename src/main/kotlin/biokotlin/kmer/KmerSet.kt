@@ -8,8 +8,8 @@ import jetbrains.letsPlot.scale.scaleFillHue
 
 class KmerSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1,
               keepMinOnly: Boolean = false) : AbstractSparseKmerSet(kmerSize, bothStrands, stepSize, keepMinOnly) {
-    override var sequenceLength: Long = 0
-    override var ambiguousKmers: Long = 0
+    override internal var sequenceLength: Long = 0
+    override internal var ambiguousKmers: Long = 0
     val set = LongOpenHashSet()
 
     init {
@@ -49,5 +49,9 @@ class KmerSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1
      */
     override fun isEmpty(): Boolean { return set.isEmpty() }
 
+    /**
+     * Returns size of set
+     */
+    override fun setSize(): Long { return set.size.toLong()}
 
 }

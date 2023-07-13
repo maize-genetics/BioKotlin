@@ -3,11 +3,16 @@ package biokotlin.kmer
 import biokotlin.seq.NucSeq
 
 abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val stepSize: Int, val keepMinOnly: Boolean) {
-    protected abstract var sequenceLength: Long
-    protected abstract var ambiguousKmers: Long
+    internal abstract var sequenceLength: Long
+    internal abstract var ambiguousKmers: Long
 
     fun ambiguousKmers(): Long {return ambiguousKmers}
     fun sequenceLength(): Long {return sequenceLength}
+
+    /**
+     * Returns the number of unique kmers in the set (not the count of total kmers)
+     */
+    abstract fun setSize(): Long
 
     /**
      * Returns true if [kmer] is in [map], false otherwise
@@ -82,6 +87,11 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
     fun addKmersFromNewSeq(seq: NucSeq) {
         ambiguousKmers += seqToKmerMap(seq)
         sequenceLength += seq.size()
+    }
+
+    override fun toString(): String {
+        return "KmerMap(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +
+                "size=${setSize()}, ambiguousKmers=$ambiguousKmers)"
     }
 
 }

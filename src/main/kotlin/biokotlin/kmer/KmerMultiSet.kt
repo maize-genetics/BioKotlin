@@ -16,8 +16,8 @@ import it.unimi.dsi.fastutil.longs.*
  */
 class KmerMultiSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1, keepMinOnly: Boolean = false):
     AbstractSparseKmerSet(kmerSize, bothStrands, stepSize, keepMinOnly){
-    override var sequenceLength: Long = 0
-    override var ambiguousKmers: Long = 0
+    override internal var sequenceLength: Long = 0
+    override internal var ambiguousKmers: Long = 0
     //TODO: initial map value may be too big when doing full-genome maps - make an optional parameter to adjust?
     val map: Long2IntOpenHashMap = Long2IntOpenHashMap() // kmers stored as 2-bit encoded longs
 
@@ -50,15 +50,13 @@ class KmerMultiSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: In
 
     override fun isEmpty(): Boolean { return map.isEmpty() }
 
-    override fun toString(): String {
-        return "KmerMap(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +
-                "size=${map.size}, ambiguousKmers=$ambiguousKmers)"
-    }
+    override fun setSize(): Long {return map.size.toLong()}
 
     fun toSeqCountString(max:Int=Int.MAX_VALUE, separator:CharSequence= "\n"): String {
         return kmer2CountEntrySet
             .map{(kmerLong, count)-> "${Kmer(kmerLong).toString(kmerSize)} -> $count"}
             .joinToString(separator)
     }
+
 
 }
