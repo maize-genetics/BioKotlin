@@ -4,23 +4,22 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.longs.LongSet
 
+/**
+ * Represents some AbstractKmerSet where most of the unique kmers of [kmerSize] are not represented.
+ * The maximum number of kmers cannot exceed [MAX_VALUE] of Int.
+ */
 abstract class AbstractSparseKmerSet(kmerSize: Int, bothStrands: Boolean, stepSize: Int, keepMinOnly: Boolean): AbstractKmerSet(kmerSize, bothStrands, stepSize, keepMinOnly) {
 
-    /**
-     * Returns the set of [Kmers] in [map] as Longs
-     */
+    /** Returns the set of kmers in the set as Longs */
     abstract fun longSet(): LongSet
 
-    /**
-     * Returns the set of [Kmers] in [map]
-     */
+    /** Returns the set of kmers in this set */
     abstract fun set(): Set<Kmer>
 
-
     /**
-     * Hashes the longs in [map] based on their even nucleotides and their odd nucleotides
-     * So, each long hashes into two different bins
-     * And returns the map of bins
+     * Hashes the longs in the set based on their even nucleotides and their odd nucleotides,
+     * placing each long into two bins.
+     * Returns this map of bins.
      */
     fun getEvenOddHashMap(): Long2ObjectOpenHashMap<LongOpenHashSet> {
         //TODO initialize with capacity - what capacity?
@@ -37,8 +36,7 @@ abstract class AbstractSparseKmerSet(kmerSize: Int, bothStrands: Boolean, stepSi
     }
 
     /**
-     * Returns the minimum hamming distance between the query [Kmer] and all kmers in this map
-     * @param kmer query Kmer
+     * Returns the minimum hamming distance between the query [kmer] and all kmers in this map
      * @param bothStrands whether to consider the reverse complement of [kmer] when computing minimum hamming distance
      */
     fun minHammingDistance(kmer: Kmer, bothStrands: Boolean = true): Int {
@@ -49,7 +47,5 @@ abstract class AbstractSparseKmerSet(kmerSize: Int, bothStrands: Boolean, stepSi
             longSet().minOf{Kmer(it).hammingDistance(kmer)}
         }
     }
-
-
 
 }

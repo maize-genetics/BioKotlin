@@ -2,32 +2,40 @@ package biokotlin.kmer
 
 import biokotlin.seq.NucSeq
 
+/**
+ * Represents some collection of kmers generated from nucleic acid sequence(s).
+ */
 abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val stepSize: Int, val keepMinOnly: Boolean) {
     internal abstract var sequenceLength: Long
     internal abstract var ambiguousKmers: Long
 
+    /** Returns the number of ambiguous kmers in the set. */
     fun ambiguousKmers(): Long {return ambiguousKmers}
+
+    /** Returns the total length of sequence(s) used to generate this set. */
     fun sequenceLength(): Long {return sequenceLength}
 
-    /**
-     * Returns the number of unique kmers in the set (not the count of total kmers)
-     */
+    /** Returns the number of unique kmers in the set (not the count of total kmers). */
     abstract fun setSize(): Long
 
-    /**
-     * Returns true if [kmer] is in [map], false otherwise
-     */
+    /** Returns true if [kmer] is in the set. */
     abstract fun contains(kmer: Kmer): Boolean
 
+    /**
+     * Returns the count of [kmer] in the set.
+     * If the set does not store counts, returns 1 if [kmer] is in the set.
+     */
+    abstract fun getCountOf(kmer: Kmer): Int
+
+    /** Adds the specified [kmer] to the set. */
     abstract internal fun addKmerToSet(kmer: Long)
 
+    /** Returns true if set contains no kmers. */
     abstract fun isEmpty(): Boolean
 
     /**
-     * given a [NucSeq], load all non-ambiguous kmers of length [kmerSize] into [map]
-     * returns the number of kmers containing ambiguous bases
-     *
-     * @param NucSeq
+     * Given a NucSeq [seq], load all non-ambiguous kmers of length kmerSize into the set.
+     * Returns the number of kmers containing ambiguous bases.
      */
     protected fun seqToKmerMap(seq: NucSeq): Long {
         var hashMask = 0L
@@ -47,12 +55,10 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
                 continue }
             val kmer = Kmer(previousHash)
             if (bothStrands && keepMinOnly) {
-                //map.addTo(minOf(kmer, kmer.reverseComplement(kmerSize)).encoding, 1)
                 addKmerToSet(minOf(kmer, kmer.reverseComplement(kmerSize)).encoding)
             } else {
-                //map.addTo(kmer.encoding, 1)
                 addKmerToSet(kmer.encoding)
-                if (bothStrands) addKmerToSet(kmer.reverseComplement(kmerSize).encoding)//map.addTo(kmer.reverseComplement(kmerSize).encoding, 1)
+                if (bothStrands) addKmerToSet(kmer.reverseComplement(kmerSize).encoding)
             }
         }
 
@@ -64,11 +70,11 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
     }
 
     /**
-     * @param hash: the previous hash for the sequence
-     * @param nucleotide: the char to add
-     * @param mask: the mask to keep the kmer to a specific length
-     * mask should be of the form 00000001111111b, where the number of 1's is
+     * Updates [hash], removing the oldest nucleotide and adding [nucleotide] to the end of the sequence.
+     * Sequence length is trimmed to a specific length using a [mask] over the bits to keep.
+     * [mask] should be of the form 00000001111111b, where the number of 1's is
      * equal to the length of the kmer x 2
+     * Returns the updated kmer hash.
      */
     protected fun updateKmerHash(hash: Long, nucleotide: Char, mask: Long): Long {
         return when (nucleotide) {
@@ -81,16 +87,15 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
         }
     }
 
-    /**
-     * Generates kmers from a nucleotide sequence and adds those kmers to this set
-     */
+    /** Generates kmers from a nucleotide sequence and adds those kmers to this set. */
     fun addKmersFromNewSeq(seq: NucSeq) {
         ambiguousKmers += seqToKmerMap(seq)
         sequenceLength += seq.size()
     }
 
+    /** Summarizes set parameters and size in string format. */
     override fun toString(): String {
-        return "KmerMap(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +
+        return "KmerSet(kmerSize=$kmerSize, bothStrands=$bothStrands, stepSize=$stepSize, sequenceLength=$sequenceLength, " +
                 "size=${setSize()}, ambiguousKmers=$ambiguousKmers)"
     }
 

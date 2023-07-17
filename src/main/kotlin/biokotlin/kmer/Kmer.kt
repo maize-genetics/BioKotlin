@@ -4,24 +4,6 @@ import biokotlin.seq.NucSeq
 import biokotlin.seq.Seq
 
 /**
- * 2-bit encoded representation of a short nucleotide sequence (32 bases or fewer)
- * Encoding: A=0, C=1, T/U=2, G=3
- * For kmers smaller than 32 bp, leftmost digits are padded with 0
- * Ambiguous bases (eg. N) are not allowed
- *
- *
- * ``` kotlin
- * val kmer = Kmer(1432462)
- * val kmerFromString = Kmer("UGCACUGCCA")
- * val kmerFromSeq = Kmer(NucSeq("TCTCACCTACA")
- *
- * val kmerFromString = Kmer("NTACCGANNTCG") // throw error - ambiguous bases
- * val kmerFromString = Kmer("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT") // throw error - string too long
- * ```
- */
-
-
-/**
  * Create a Kmer from a string
  * Sequence may be fewer than 32 bases long, left will be padded with A's to equal 32 bases
  * @param seq String representation of a nucleotide sequence
@@ -45,15 +27,25 @@ fun Kmer(seq: NucSeq): Kmer {
 }
 
 /**
- * A short nucleotide sequence
- * Value class wraps a single long object
+ * 2-bit encoded representation of a short nucleotide sequence (32 bases or fewer)
+ * Encoding: A=0, C=1, T/U=2, G=3
+ * For kmers smaller than 32 bp, leftmost digits are padded with 0
+ * Ambiguous bases (eg. N) are not allowed
+ *
+ *
+ * ``` kotlin
+ * val kmer = Kmer(1432462)
+ * val kmerFromString = Kmer("UGCACUGCCA")
+ * val kmerFromSeq = Kmer(NucSeq("TCTCACCTACA")
+ *
+ * val kmerFromString = Kmer("NTACCGANNTCG") // throw error - ambiguous bases
+ * val kmerFromString = Kmer("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT") // throw error - string too long
+ * ```
  */
 @JvmInline
 value class Kmer(val encoding: Long): Comparable<Kmer> {
 
-    /**
-     * compareTo follows comparisons of bits represented as unsigned long
-     */
+    /** Follows comparisons of bits represented as unsigned long */
     override operator fun compareTo(other: Kmer): Int {
         return encoding.toULong().compareTo(other.encoding.toULong())
     }
@@ -67,9 +59,8 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
     }
 
     /**
-     * Converts 2-bit encoding to string
-     *
-     * @param kmerSize the length of the kmer to display
+     * Converts 2-bit encoding to string, trimming leftmost bits
+     * so the resulting sequence length is [kmerSize]
      */
     fun toString(kmerSize: Int): String {
         var temp = encoding
@@ -95,8 +86,7 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
     }
 
     /**
-     * Converts Kmer to NucSeq
-     * @param kmerSize desired length of the NucSeq
+     * Converts Kmer to NucSeq, trimming A padding at left to [kmerSize]
      */
     fun toSeq(kmerSize: Int): NucSeq {
         return Seq(this.toString(kmerSize))
@@ -104,13 +94,8 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
 
     /**
      * Returns the reverse complement of a sequence already encoded in a 2-bit long.
-     *
-     *
-     * Note: polyA is used represent unknown, but reverse complement will change it to polyT which does not mean the same
-     * sometimes it is best to reverseComplement by text below
-     * kmerSize parameter is required to remove polyT padding
-     * @param kmerSize length of the sequence
-     * @return  2-bit reverse complement
+     * Note: polyA is used represent unknown, but reverse complement will change it to polyT which does not mean the same.
+     * [kmerSize] parameter is required to remove polyT padding
      */
     fun reverseComplement(kmerSize: Int): Kmer {
 
@@ -132,8 +117,7 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
     }
 
     /**
-     * Returns the Hamming Distance between this Kmer and another
-     * @param other some other Kmer
+     * Returns the Hamming Distance between this Kmer and [other] Kmer
      */
     fun hammingDistance(other: Kmer): Int {
         var x = encoding.toULong() xor other.encoding.toULong()

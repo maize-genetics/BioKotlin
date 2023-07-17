@@ -48,7 +48,7 @@ for(i in 1 until args.size) {
                 if(file.name.endsWith(".fa") || file.name.endsWith(".fasta") || file.name.endsWith(".fa.gz") || file.name.endsWith(".fasta.gz")) {
                     System.gc()
                     val set = getGenomicSet(file, kmerSize)
-                    conservationSet.addSet(set, file.nameWithoutExtension)
+                    conservationSet.addSet(set)
                     println("set added, new size: ${conservationSet.setSize()}")
                 }
             }
@@ -57,7 +57,7 @@ for(i in 1 until args.size) {
         if(argFile.name.endsWith(".fa") || argFile.name.endsWith(".fasta") || argFile.name.endsWith(".fa.gz") || argFile.name.endsWith(".fasta.gz")) {
             System.gc()
             val set = getGenomicSet(argFile, kmerSize)
-            conservationSet.addSet(set, argFile.nameWithoutExtension)
+            conservationSet.addSet(set)
             println("set added, new size: ${conservationSet.setSize()}")
         }
     }
