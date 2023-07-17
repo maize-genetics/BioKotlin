@@ -20,6 +20,13 @@ class KmerUtilsTest: StringSpec({
         if(!File(dataDir).exists()) { Files.createDirectory(Path(dataDir)) }
     }
 
+    afterSpec {
+        // remove contents of test folders
+        File(dataDir).walk().forEach { it.delete() }
+        File(dataDir).delete()
+        File(outputDir).delete()
+    }
+
     "getEvenOddHashMap" {
         val kmerMultiSet = KmerMultiSet(NucSeq("TATCCATGAA"), 4)
 
