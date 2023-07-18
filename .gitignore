@@ -96,3 +96,4 @@ uiDesigner.xml
 /.idea
 lets-plot-images
 documentation_resources/raw_tutorials/.ipynb_checkpoints
+src/test/kotlin/biokotlin/kmer/KmerDemo.kt
