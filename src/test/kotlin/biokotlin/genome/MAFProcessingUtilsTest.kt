@@ -13,7 +13,7 @@ import java.nio.file.Paths
 
 class MAFProcessingUtilsTest : StringSpec({
 
-    val testingDir = "/tmp/MAFProcessingUtilsTests/"
+    val testingDir = "/tmp/biokotlinTest/MAFProcessingUtilsTests/"
 
     File(testingDir).deleteRecursively()
 
