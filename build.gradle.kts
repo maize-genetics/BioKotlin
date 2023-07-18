@@ -94,6 +94,9 @@ dependencies {
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
+    implementation("it.unimi.dsi:fastutil:8.5.12")
+    implementation("org.lz4:lz4-java:1.8.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
     val kotestVersion = "4.2.6"
@@ -419,6 +422,10 @@ publishing {
                     developer {
                         name.set("Jeffrey Morse")
                         email.set("jbm249@cornell.edu")
+                    }
+                    developer {
+                        name.set("Ana Berthel")
+                        email.set("ahb232@cornell.edu")
                     }
                 }
                 scm {
