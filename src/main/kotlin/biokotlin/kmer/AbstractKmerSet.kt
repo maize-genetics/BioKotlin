@@ -7,7 +7,7 @@ import biokotlin.seq.NucSeq
  */
 abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val stepSize: Int, val keepMinOnly: Boolean) {
     internal abstract var sequenceLength: Long
-    internal abstract var ambiguousKmers: Long
+    internal abstract var ambiguousKmers: Long // number of kmers containing Ns (which cannot be represented in 2-bit encoding)
 
     /** Returns the number of ambiguous kmers in the set. */
     fun ambiguousKmers(): Long {return ambiguousKmers}
@@ -45,15 +45,23 @@ abstract class AbstractKmerSet(val kmerSize: Int, val bothStrands: Boolean, val 
         var goodBpRun=0
         var previousHash = 0L
 
-        for(i in 0 until seq.size() step stepSize) {
-            previousHash = updateKmerHash(previousHash, seq[i].char, hashMask)
+        for(idx in 0 until seq.size() step stepSize) {
+            previousHash = updateKmerHash(previousHash, seq[idx].char, hashMask)
             //If ambiguous base are encountered - then they are skipped but counted
-            if(previousHash == -1L) {goodBpRun=0; previousHash = 0L; ambiguousKmers++; continue}
+            if(previousHash == -1L) {
+                goodBpRun=0
+                previousHash = 0L
+                ambiguousKmers++
+                continue
+            }
             goodBpRun++
+
             if(goodBpRun<kmerSize) {
-                if ( i >= (kmerSize-1)*stepSize) ambiguousKmers++
-                continue }
+                if ( idx >= (kmerSize-1)*stepSize) { ambiguousKmers++ }
+                continue
+            }
             val kmer = Kmer(previousHash)
+
             if (bothStrands && keepMinOnly) {
                 addKmerToSet(minOf(kmer, kmer.reverseComplement(kmerSize)).encoding)
             } else {

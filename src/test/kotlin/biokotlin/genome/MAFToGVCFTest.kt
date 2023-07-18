@@ -9,8 +9,7 @@ import java.io.File
 
 class MAFToGVCFTest : StringSpec({
     val sampleName = "B97"
-    val userHome = System.getProperty("user.home")
-    val testingDir = "${userHome}/temp/MAFToGVCFTests/"
+    val testingDir = "/tmp/MAFToGVCFTests/"
     val refFile = "${testingDir}/B73Test.fa"
     val mafFile = "${testingDir}/B97.maf"
     val truthGVCFFile = "${testingDir}/B97_truth.gvcf"

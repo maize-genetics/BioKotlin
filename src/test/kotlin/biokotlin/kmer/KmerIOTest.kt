@@ -7,23 +7,23 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.NoSuchElementException
 import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 
 class KmerIOTest: StringSpec ({
-    val userHome = System.getProperty("user.home")
-    val outputDir = "$userHome/temp/biokotlinTest/"
-    val dataDir = outputDir + "data/"
+
+    val outputDir = "/tmp/biokotlinTest/"
+    val dataDir = outputDir + "/kmerIOTest/"
 
     beforeSpec {
-        // set up test folders
-        if(!File(outputDir).exists()) { Files.createDirectory(Path(outputDir)) }
-        if(!File(dataDir).exists()) { Files.createDirectory(Path(dataDir)) }
+        if(!File(dataDir).exists()) { Path(dataDir).createDirectories() }
     }
 
     afterSpec{
         // remove contents of test folders
-        File(dataDir).walk().forEach { it.delete() }
+        File(dataDir).listFiles()?.forEach { it.delete() }
         File(dataDir).delete()
         File(outputDir).delete()
     }

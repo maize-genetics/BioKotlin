@@ -26,7 +26,9 @@ abstract class AbstractSparseKmerSet(kmerSize: Int, bothStrands: Boolean, stepSi
         val hashMap = Long2ObjectOpenHashMap<LongOpenHashSet>()
 
         longSet().forEach { entry ->
-            val even = entry and -3689348814741910324L
+            // in binary: 110011001100110011001100... mask even nucleotides
+            val even = entry and -0x3333333333333334
+            // in binary: 001100110011001100110011... mask odd nucleotides
             val odd = entry and 0x3333333333333333
 
             hashMap.getOrPut(even) { LongOpenHashSet() }.add(entry)

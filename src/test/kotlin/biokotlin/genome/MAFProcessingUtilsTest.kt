@@ -13,8 +13,7 @@ import java.nio.file.Paths
 
 class MAFProcessingUtilsTest : StringSpec({
 
-    val userHome = System.getProperty("user.home")
-    val testingDir = "${userHome}/temp/MAFProcessingUtilsTests/"
+    val testingDir = "/tmp/MAFProcessingUtilsTests/"
 
     File(testingDir).deleteRecursively()
 

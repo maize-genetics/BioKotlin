@@ -98,21 +98,29 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
      * [kmerSize] parameter is required to remove polyT padding
      */
     fun reverseComplement(kmerSize: Int): Kmer {
-
         // reverse bits
         // no need to reverse the two bits encoding the same nucleotide
         // eg. TAGC -> CGAT
-        var y = ((encoding and 0x3333333333333333) shl 2) or ((encoding and -3689348814741910324) ushr 2)
-        y = ((y and 0x0F0F0F0F0F0F0F0F) shl 4) or ((y and -1085102592571150096) ushr 4)
-        y = ((y and 0x00FF00FF00FF00FF) shl 8) or ((y and -71777214294589696) ushr 8)
-        y = ((y and 0x0000FFFF0000FFFF) shl 16) or ((y and -281470681808896) ushr 16)
-        y = ((y and 0x00000000FFFFFFFF) shl 32) or ((y and -4294967296) ushr 32)
 
-        //convert reversed nucleotide to its complement
-        val a = (y.inv() and -6148914691236517206)
+        // ((encoding and 0011001100110011...) shl 2) or ((encoding and 1100110011001100...) ushr 2)
+        var y = ((encoding and 0x3333333333333333) shl 2) or ((encoding and -0x3333333333333334) ushr 2)
+        // ((y and 0000111100001111...) shl 4) or ((y and 1111000011110000...) ushr 4)
+        y = ((y and 0x0F0F0F0F0F0F0F0F) shl 4) or ((y and -0xF0F0F0F0F0F0F10) ushr 4)
+        // ((y and 0000000011111111...) shl 8) or ((y and 1111111100000000...) ushr 8)
+        y = ((y and 0x00FF00FF00FF00FF) shl 8) or ((y and -0xFF00FF00FF0100) ushr 8)
+        // ((y and 00000000000000001111111111111111...) shl 16) or ((y and 11111111111111110000000000000000...) shl 16)
+        y = ((y and 0x0000FFFF0000FFFF) shl 16) or ((y and -0xFFFF00010000) ushr 16)
+        // ((y and 0000000000000000000000000000000011111111111111111111111111111111) shl 32) or
+        // ((y and 1111111111111111111111111111111100000000000000000000000000000000) ushr 32)
+        y = ((y and 0x00000000FFFFFFFF) shl 32) or ((y and -0x100000000) ushr 32)
+
+        // convert reversed nucleotide to its complement
+        // y.inv() and 1010101010...)
+        val a = (y.inv() and -0x5555555555555556)
+        // y and 010101010101...)
         val b = (y and 0x5555555555555555)
 
-        //mask to desired length
+        // mask to desired length
         return Kmer((a or b) ushr (64 - (2 * kmerSize)))
     }
 
@@ -121,19 +129,23 @@ value class Kmer(val encoding: Long): Comparable<Kmer> {
      */
     fun hammingDistance(other: Kmer): Int {
         var x = encoding.toULong() xor other.encoding.toULong()
-        //x and 001100110011...
-        var y = x and 3689348814741910323u
+        // x and 001100110011...
+        var y = x and 0x3333333333333333u
         y = y and (y shr 1)
-        //x and 110011001100...
-        var z = x and 14757395258967641292u
+        // x and 110011001100...
+        var z = x and 0xCCCCCCCCCCCCCCCCu
         z = z and (z shr 1)
         // remove adjacent 1-bits iff those 1-bits encode the same base
         x = x and (y or z).inv()
         // count 1-bits
         // strategy modified from Hacker's Delight book for 64 bit longs
-        x -= ((x shr 1) and 6148914691236517205u)
-        x = (x and 3689348814741910323u) + ((x shr 2) and 3689348814741910323u)
-        x = (x + (x shr 4)) and 1085102592571150095u
+
+        // (x shr 1) and 101010101010...
+        x -= ((x shr 1) and 0x5555555555555555u)
+        // (x and 0011001100110011...) + ((x shr 2) and 00110011001100110011...)
+        x = (x and 0x3333333333333333u) + ((x shr 2) and 0x3333333333333333u)
+        // (x + (x shr 4)) and (0000111100001111...)
+        x = (x + (x shr 4)) and 0xF0F0F0F0F0F0F0Fu
         x += (x shr 8)
         x += (x shr 16)
         x += (x shr 32)

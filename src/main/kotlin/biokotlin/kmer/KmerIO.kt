@@ -13,9 +13,9 @@ import java.io.*
 class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer, Int>> {
     private val reader: BufferedReader
 
-    private var sequenceLength: Long? = null
-    private var ambiguousKmers: Long? = null
-    private var setType: String? = null
+    private var sequenceLength: Long = 0
+    private var ambiguousKmers: Long = 0
+    private var setType: String = "undefined"
     private var stepSize: Int? = null
     private var keepMinOnly: Boolean? = null
     private var bothStrands: Boolean? = null
@@ -31,9 +31,15 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
             File(filename).bufferedReader()
         }
 
-        // first line should be a header
+        /*
+        First line should be a header.
+        Header starts with "#" and is a comma-separated list of key:value pairs, in any order.
+        Recognized keys are sequenceLength, ambiguousKmers, setType, stepSize, keepMinOnly, bothStrands, kmerSize
+        Example.
+        #setType:KmerSet,kmerSize:15,keepMinOnly:false,ambiguousKmers:0,sequenceLength:12516,stepSize:1,bothStrands:true
+         */
         val firstLine = reader.readLine()
-        if(!firstLine.startsWith("#")) { throw FileNotFoundException("File does not contain a header line")}
+        if(!firstLine.startsWith("#")) { throw IllegalStateException("File does not contain a header line starting with #.")}
 
         // map header to set values
         val split = firstLine.substring(1).split(",")
@@ -51,9 +57,9 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
         }
 
         // check for required parameters, print warning if missing
-        if (sequenceLength == null) {println("Warning: header does not specify sequence length.")}
-        if (ambiguousKmers == null) {println("Warning: header does not specify ambiguous kmers.")}
-        if (setType == null) {println("Warning: header does not specify set type.")}
+        if (sequenceLength == 0L) {println("Warning: header may not specify sequence length.")}
+        if (ambiguousKmers == 0L) {println("Warning: header may not specify ambiguous kmers.")}
+        if (setType == "undefined") {println("Warning: header may not specify set type.")}
         if (stepSize == null) {println("Warning: header does not specify step size.")}
         if (keepMinOnly == null) {println("Warning: header does not specify keepMinOnly.")}
         if (bothStrands == null) {println("Warning: header does not specify bothStrands.")}
@@ -73,15 +79,16 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
             "KmerBigSet" -> {readBigSet()}
             "KmerSet" -> {readKmerSet()}
             "KmerMultiSet" -> {readKmerMultiSet()}
-            else -> {throw FileNotFoundException("Provided file does not describe a recognized set type")}
+            else -> {throw IllegalArgumentException("Provided file does not describe a recognized set type. " +
+                    "Allowed values for setType are: KmerSet, KmerBigSet, KmerMultiSet")}
         }
     }
 
     /** Returns a KmerBigSet of all kmers in the file. */
     fun readBigSet(): KmerBigSet {
         val set = KmerBigSet(kmerSize?:21, bothStrands?:true, stepSize?:1, keepMinOnly?:false)
-        set.ambiguousKmers = ambiguousKmers?:0
-        set.sequenceLength = sequenceLength?:0
+        set.ambiguousKmers = ambiguousKmers
+        set.sequenceLength = sequenceLength
 
         while(this.hasNext()) {
             val pair = this.next()
@@ -94,8 +101,8 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
     /** Returns a KmerSet of all kmers in the file. */
     fun readKmerSet(): KmerSet {
         val set = KmerSet(kmerSize?:21, bothStrands?:true, stepSize?:1, keepMinOnly?:false)
-        set.ambiguousKmers = ambiguousKmers?:0
-        set.sequenceLength = sequenceLength?:0
+        set.ambiguousKmers = ambiguousKmers
+        set.sequenceLength = sequenceLength
 
         while(this.hasNext()) {
             val pair = this.next()
@@ -108,8 +115,8 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
     /** Returns a KmerMultiSet of all kmers in the file. */
     fun readKmerMultiSet(): KmerMultiSet {
         val set = KmerMultiSet(kmerSize?:21, bothStrands?:true, stepSize?:1, keepMinOnly?:false)
-        set.ambiguousKmers = ambiguousKmers?:0
-        set.sequenceLength = sequenceLength?:0
+        set.ambiguousKmers = ambiguousKmers
+        set.sequenceLength = sequenceLength
 
         while(this.hasNext()) {
             val pair = this.next()

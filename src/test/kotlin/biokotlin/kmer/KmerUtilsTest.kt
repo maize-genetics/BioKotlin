@@ -7,17 +7,16 @@ import io.kotest.matchers.shouldBe
 import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 
 class KmerUtilsTest: StringSpec({
 
-    val userHome = System.getProperty("user.home")
-    val outputDir = "$userHome/temp/biokotlinTest/"
-    val dataDir = outputDir + "data/"
+    val outputDir = "/tmp/biokotlinTest/"
+    val dataDir = outputDir + "/kmerUtilsTest/"
 
     beforeSpec {
         // set up test folders
-        if(!File(outputDir).exists()) { Files.createDirectory(Path(outputDir)) }
-        if(!File(dataDir).exists()) { Files.createDirectory(Path(dataDir)) }
+        if(!File(dataDir).exists()) { Path(dataDir).createDirectories() }
     }
 
     afterSpec {
