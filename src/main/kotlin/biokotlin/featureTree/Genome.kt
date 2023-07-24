@@ -1,207 +1,217 @@
-@file:Suppress("RedundantVisibilityModifier")
-
 package biokotlin.featureTree
 
-import kotlin.time.ExperimentalTime
-
-/**
- * Represents the root of a feature tree and functions as a container for the entire tree.
- * This interface does not directly correspond with any particular annotation in a GFF file but can be thought
- * of as representing the entire file.
- */
-public sealed interface Genome : Parent, TranscriptAncestor, TranscriptChildAncestor {
+sealed interface Genome : Parent {
     /**
      * Creates mutable deep copy of this genome
      */
-    public fun mutable(): MutableGenome
+    fun mutable(): MutableGenome
 
     /**
      * Creates a deep copy of this [Genome]. If `this is MutableGenome`, the copy will be mutable. It will be
      * immutable otherwise.
      */
-    public fun clone(): Genome
+    fun clone(): Genome
 
     /**
      * Creates an immutable deep copy of this genome
      */
-    public fun immutable(): Genome
-
-    /**
-     * @return all chromosomes in [children], ordered as they are in [children]
-     */
-    public val chromosomes: List<Chromosome>
-        get() = filterChildren<Chromosome>()
-
-    /**
-     * @return all contigs in [children], ordered as they are in [children]
-     */
-    public val contigs: List<Contig>
-        get() = filterChildren<Contig>()
-
-    /**
-     * @return all scaffolds in [children], ordered as they are in [children]
-     */
-    public val scaffolds: List<Scaffold>
-        get() = filterChildren<Scaffold>()
-
-    /**
-     * @return all genes in [children], ordered as they are in [children]
-     */
-    public val genes: List<Gene>
-        get() = filterChildren<Gene>()
+    fun immutable(): Genome
 
     /**
      * @return new [Genome] containing all features in both `this` and [other].
      */
-    public fun appended(other: Genome): Genome
+    fun appended(other: Genome): Genome
 
     /**
      * @return new [Genome] containing all features for [predicate] is true and their ancestors.
      */
-    public fun filtered(predicate: (Feature) -> Boolean): Genome
+    fun filtered(predicate: (Feature) -> Boolean): Genome
 
     /**
      * Constant-time lookup of a feature by its ID attribute.
      * @return a [Feature] within this [Genome] with ID attribute [id] or `null` if no such [Feature] exists.
      */
-    public fun byID(id: String): Feature?
+    fun byID(id: String): Feature?
 
     /**
      * Constant-time lookup of a features by their Name attribute
      * @return a list of [Feature] containing all features whose Name attribute is [name]
      */
-    public fun byName(name: String): List<Feature>
+    fun byName(name: String): List<Feature>
 
-    public fun containsID(id: String): Boolean
+    /**
+     * True iff a feature with id property [id] exists in this genome.
+     */
+    fun containsID(id: String): Boolean
 
-    public fun containsName(Name: String): Boolean
+    /**
+     * True iff a feature with name property [name] exists in this genome.
+     */
+    fun containsName(name: String): Boolean
 
-    public companion object {
+    /**
+     * True iff [type1] and [type2] are synonyms for the same type.
+     */
+    fun isSynonym(type1: String, type2: String): Boolean
+
+    /**
+     * All synonyms of [type].
+     */
+    fun allSynonyms(type: String): List<String>
+
+    /**
+     * Returns the height of [type] in the type schema graph
+     */
+    fun typeHeight(type: String): Int
+
+    /**
+     * True iff [child] has a part-of relationship to [parent], either from the Sequence Ontology or due to manual
+     * definition of the type ([MutableGenome.defineType] or [MutableGenome.makePartOf]).
+     */
+    fun isPartOf(child: String, parent: String): Boolean
+
+    /**
+     * DOT format representation of the type schema where nodes represent a type and edges represent a part-Of relationship.
+     * Can be visualized with DOT visualization tools, such as Graphviz.
+     */
+    fun visualizeSchema(): String
+
+    /**
+     * String representation of this genome's type schema. Each line represents a type and all synonyms while
+     * an indentation indicates a part-of relationship.
+     */
+    fun schema(): String
+
+    /**
+     * The number of topological modifications that this [Genome] has undergone. Used to ensure that topology is not
+     * changed while iterating over the [Genome].
+     */
+    val topologicalModifications: Int
+
+    /**
+     * If `true`, then a [Feature] within the [Genome] may have multiple parents. If `false`, no [Feature] in the
+     * [Genome] may have multiple parents. Recommended to be `false` as multiple parentage can lead to unintuitive results.
+     */
+    val multipleParentage: Boolean
+
+    // PLANNED: map
+
+    companion object {
         /**
-         * Creates immutable representation of a GFF file
+         * Creates immutable representation of a GFF file.
+         * @param path The location of the GFF file.
+         * @param maxLines Line to stop parsing the GFF file. Useful for testing a pipeline on a reduced size.
+         * Defaults to `Int.MAX_VALUE`
+         * @param allowMultipleParents Allows for a feature to have multiple parents, disabled by default as multiple
+         * parentage leads to unintuitive behavior. Read extended discussion on multiple parentage in the wiki. TODO: WIKI
+         * @param parentResolver Will be used to select one parent out of multiple. See extended discussion on multiple
+         * parent resolution in the wiki TODO: WIKI
+         * @param overrideSO When true, the parser will automatically add unrecognized or illegally used types to the schema
+         * in their narrowest possible interpretation that allows the GFF to parse. See extended discussion of overriding
+         * the sequence ontology on the wiki TODO: WIKI
          */
-        @OptIn(ExperimentalTime::class)
-        public fun fromFile(
+        fun fromFile(
             path: String,
-            placeHolder: Boolean = false,
-            discardUnrecognized: Boolean = false,
-            maxLines: Int = Int.MAX_VALUE
+            maxLines: Int = Int.MAX_VALUE,
+            allowMultipleParents: Boolean = false,
+            parentResolver: ParentResolver? = null,
+            overrideSO: Boolean = false
         ): Genome {
-            val graph = Graph.fromFile(path, placeHolder, discardUnrecognized, maxLines)
-            return IGenome(INode(DelegateImpl(graph.root, graph)))
+            TODO()
         }
 
 
         /**
          * Creates an immutable genome containing all features in [features] and their ancestors. TODO add parameters
          */
-        public fun select(vararg features: Feature): Genome {
+        fun select(vararg features: Feature): Genome {
             TODO()
         }
 
     }
 }
-
-/**
- * Mutable representation of a [Genome]. Provides functionality for inserting [GenomeChild].
- */
-public sealed interface MutableGenome : Genome, MutableParent, MutableTranscriptAncestor,
-    MutableTranscriptChildAncestor {
-    public override fun clone(): MutableGenome
-    public override val chromosomes: List<MutableChromosome>
-        get() = filterChildren<MutableChromosome>()
-    public override val contigs: List<MutableContig>
-        get() = filterChildren<MutableContig>()
-    public override val scaffolds: List<MutableScaffold>
-        get() = filterChildren<MutableScaffold>()
-    public override val genes: List<MutableGene>
-        get() = filterChildren<MutableGene>()
-
-    /**
-     * Inserts a new [Gene] into this [Genome] with the properties specified.
-     * @return the [Gene] inserted.
-     */
-    fun insertGene(
-        seqid: String,
-        source: String,
-        ranges: Iterable<IntRange>,
-        score: Double?,
-        strand: Strand,
-        phases: Iterable<Phase>,
-        attributes: Attributes = emptyMap()
-    ): MutableGene
-
-    // TODO overload other inserts
-
-    /**
-     * Inserts a new [Chromosome] into this [Genome] with the properties specified.
-     * @return the [Chromosome] inserted.
-     */
-    fun insertChromosome(
-        seqid: String,
-        source: String,
-        ranges: Iterable<IntRange>,
-        score: Double?,
-        strand: Strand,
-        phases: Iterable<Phase>,
-        attributes: Attributes
-    ): MutableChromosome
-
-    /**
-     * Inserts a new [Contig] into this [Genome] with the properties specified.
-     * @return the [Contig] inserted.
-     */
-    fun insertContig(
-        seqid: String,
-        source: String,
-        ranges: Iterable<IntRange>,
-        score: Double?,
-        strand: Strand,
-        phases: Iterable<Phase>,
-        attributes: Attributes
-    ): MutableContig
-
-    /**
-     * Inserts a new [Scaffold] into this [Genome] with the properties specified.
-     * @return the [Scaffold] inserted.
-     */
-    fun insertScaffold(
-        seqid: String,
-        source: String,
-        ranges: Iterable<IntRange>,
-        score: Double?,
-        strand: Strand,
-        phases: Iterable<Phase>,
-        attributes: Attributes
-    ): MutableScaffold
+sealed interface MutableGenome : Genome, MutableParent {
+    override fun clone(): MutableGenome
 
     /**
      * Modifies `this` to include all features in [other].
      * @throws IllegalArgumentException if there are features with the same ID attribute in `this` and [other]
      */
-    public fun append(other: Genome): Unit
+    fun append(other: Genome): Unit
+    override fun byID(id: String): MutableFeature?
+
+    override fun byName(name: String): List<MutableFeature>
 
     /**
-     * Modifies `this` to only include features for which [predicate] is true and their ancestors
+     * Defines a new type in the type schema. If parent is null, the type will not have any part-of relationships.
+     * Otherwise, the type will have a part-of relationship with the specified [parent]. [name] is the name of the
+     * type (including all synonyms).
+     *
+     * This is only to be used for bespoke types; it is unnecessary for types already in the Sequence Ontology.
+     * Defining types that conflict with the Sequence Ontology may lead to unintuitive results. The defined type
+     * will maintain all synonyms and part-of relationships that are manually defined AND all those specified by
+     * the Sequence Ontology.
+     *
+     * @throws IllegalArgumentException if any [name] is in the type schema already.
      */
-    public fun filter(predicate: (Feature) -> Boolean): MutableGenome
+    fun defineType(parent: String? = null, vararg name: String)
 
-    public override fun byID(id: String): MutableFeature?
+    /**
+     * Makes [child] have a part-of relationship with [parent].
+     *
+     * @throws IllegalArgumentException if [child] or [parent] is not in the type schema.
+     */
+    fun makePartOf(child: String, parent: String)
 
-    public override fun byName(name: String): List<MutableFeature>
+    /**
+     * Makes all [synonym] synonyms of [existing].
+     *
+     * @throws IllegalArgumentException if [existing] is not in the type schema and not in the Sequence Ontology or
+     * if any [synonym] is already present in the type schema and not a synonym of [existing].
+     */
+    fun addSynonym(existing: String, vararg synonym: String)
 
-    public companion object {
+    /**
+     * If [value] is `true`, then enables [multipleParentage]. If [value] is `false`, then disables [multipleParentage].
+     * @throws MultipleParentageException if `false` is supplied while there are instances of multiple parentage.
+     */
+    fun multipleParentage(value: Boolean): Unit
+
+    companion object {
         /**
-         * Creates a [MutableGenome] representing the GFF file at [path]. TODO add parameters
+         * Creates mutable representation of a GFF file.
+         * @param path The location of the GFF file.
+         * @param maxLines Line to stop parsing the GFF file. Useful for testing a pipeline on a reduced size.
+         * Defaults to `Int.MAX_VALUE`
+         * @param allowMultipleParents Allows for a feature to have multiple parents, disabled by default as multiple
+         * parentage leads to unintuitive behavior. Read extended discussion on multiple parentage in the wiki. TODO: WIKI
+         * @param parentResolver Will be used to select one parent out of multiple. See extended discussion on multiple
+         * parent resolution in the wiki TODO: WIKI
+         * @param overrideSO When true, the parser will automatically add unrecognized or illegally used types to the schema
+         * in their narrowest possible interpretation that allows the GFF to parse. See extended discussion of overriding
+         * the sequence ontology on the wiki TODO: WIKI
          */
-        public fun fromFile(path: String): MutableGenome {
+        fun fromFile(
+            path: String,
+            maxLines: Int = Int.MAX_VALUE,
+            allowMultipleParents: Boolean = false,
+            parentResolver: ParentResolver? = null,
+            overrideSO: Boolean = false
+        ): Genome {
             TODO()
         }
 
         /**
          * Creates a [MutableGenome] containing only features in [features] and their ancestors.
          */
-        public fun select(vararg features: Feature): MutableGenome {
+        fun select(vararg features: Feature): MutableGenome {
+            TODO()
+        }
+
+        /**
+         * Creates a blank [MutableGenome].
+         */
+        fun blank(): MutableGenome {
             TODO()
         }
     }

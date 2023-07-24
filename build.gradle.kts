@@ -94,12 +94,16 @@ dependencies {
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
+    implementation("com.beust:klaxon:5.5")
+    implementation("io.github.oshai:kotlin-logging-jvm:4.0.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
-    val kotestVersion = "4.2.6"
-    listOf("runner-junit5", "assertions-core", "property").forEach {
+    val kotestVersion = "5.6.2"
+    listOf("runner-junit5", "assertions-core", "property", "framework-datatest").forEach {
         testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
     }
+
     //consider adding Kotlintest
 }
 //This is used for code generation for DataFrame Schema, however, it does not work
