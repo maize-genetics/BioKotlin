@@ -41,57 +41,11 @@ internal value class IFeature(private val node: Graph.DataNode) : Feature {
     override fun allAttributes(): Map<String, List<String>> = node.allAttributes()
 
     override fun ancestors(): List<Parent> = immutableParent(node.ancestors())
+    override fun subtree(): Sequence<Feature> = node.subtree().map { IFeature(it) }
 
     override fun children(type: String?): List<Feature> = immutableFeature(node.children)
 
     override fun descendants(type: String?): Sequence<Feature> = node.descendants().map { IFeature(it) }
-    override fun forEach(operation: (Feature) -> Unit, filter: ((Feature) -> Boolean)?) {
-        node.forEach({ IFeature(it) }, operation, filter)
-    }
-
-    override fun <R> reduce(transform: (Feature) -> R, combine: (R, R) -> R, filter: ((Feature) -> Boolean)?): R {
-        return node.reduce({ IFeature(it) }, transform, combine, filter)
-    }
-
-    override fun <K, V> associate(transform: (Feature) -> Pair<K, V>): Map<K, V> {
-        return node.associate({ IFeature(it) }, transform)
-    }
-
-    override fun <V> associateWith(valueSelector: (Feature) -> V): Map<out Feature, V> {
-        return node.associateWith({ IFeature(it) }, valueSelector)
-    }
-
-    override fun <K> associateBy(keySelector: (Feature) -> K): Map<K, Feature> {
-        return node.associateBy({ IFeature(it) }, keySelector)
-    }
-
-    override fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<Feature>> {
-        return node.groupBy({ IFeature(it) }, keySelector)
-    }
-
-    override fun find(predicate: (Feature) -> Boolean): Feature? {
-        return node.find({ IFeature(it) }, predicate)
-    }
-
-    override fun any(predicate: (Feature) -> Boolean): Boolean {
-        return node.any(predicate)
-    }
-
-    override fun all(predicate: (Feature) -> Boolean): Boolean {
-        return node.all(predicate)
-    }
-
-    override fun sumOf(selector: (Feature) -> Int): Int {
-        return node.sumOf(selector)
-    }
-
-    override fun sumOfDouble(selector: (Feature) -> Double): Double {
-        return node.sumOf(selector)
-    }
-
-    override fun filteredList(predicate: (Feature) -> Boolean): List<Feature> {
-        return node.filteredList({ IFeature(it) }, predicate)
-    }
 
     override fun toString() = node.asRow()
 
@@ -189,6 +143,8 @@ internal value class MFeature(private val node: Graph.DataNode) : MutableFeature
         node.setID(new)
     }
 
+    override fun subtree(): Sequence<MutableFeature> = node.subtree().map { MFeature(it) }
+
     override val type: String
         get() = node.type
 
@@ -206,52 +162,6 @@ internal value class MFeature(private val node: Graph.DataNode) : MutableFeature
     override fun children(type: String?): List<MutableFeature> = mutableFeature(node.children)
 
     override fun descendants(type: String?): Sequence<MutableFeature> = node.descendants().map { MFeature(it) }
-
-    override fun forEach(operation: (Feature) -> Unit, filter: ((Feature) -> Boolean)?) {
-        node.forEach({ IFeature(it) }, operation, filter)
-    }
-
-//    @Suppress("INAPPLICABLE_JVM_NAME")
-//    @JvmName("mutableForEach")
-    override fun modifyAll(operation: (MutableFeature) -> Unit, filter: ((Feature) -> Boolean)?, chunk: Int) {
-        node.forEach({ MFeature(it) }, operation, filter, chunk)
-    }
-
-    override fun <R> reduce(transform: (Feature) -> R, combine: (R, R) -> R, filter: ((Feature) -> Boolean)?): R {
-        return node.reduce({ IFeature(it) }, transform, combine, filter)
-    }
-
-    override fun <K, V> associate(transform: (Feature) -> Pair<K, V>): Map<K, V> {
-        return node.associate({ IFeature(it) }, transform)
-    }
-
-    override fun <V> associateWith(valueSelector: (Feature) -> V): Map<MutableFeature, V> {
-        return node.associateWith({ MFeature(it) }, valueSelector)
-    }
-
-    override fun <K> associateBy(keySelector: (Feature) -> K): Map<K, MutableFeature> {
-        return node.associateBy({ MFeature(it) }, keySelector)
-    }
-
-    override fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<MutableFeature>> {
-        return node.groupBy({ MFeature(it) }, keySelector)
-    }
-
-    override fun find(predicate: (Feature) -> Boolean): MutableFeature? {
-        return node.find({ MFeature(it) }, predicate)
-    }
-
-    override fun any(predicate: (Feature) -> Boolean): Boolean = node.any(predicate)
-
-    override fun all(predicate: (Feature) -> Boolean): Boolean = node.all(predicate)
-
-    override fun sumOf(selector: (Feature) -> Int): Int = node.sumOf(selector)
-
-    override fun sumOfDouble(selector: (Feature) -> Double): Double = node.sumOf(selector)
-
-    override fun filteredList(predicate: (Feature) -> Boolean): List<MutableFeature> {
-        return node.filteredList({ MFeature(it) }, predicate)
-    }
 
     override fun sort(comparator: (Feature, Feature) -> Int) {
         node.sort(comparator)
@@ -326,44 +236,6 @@ internal value class IGenome(private val graph: Graph) : Genome {
 
     override fun descendants(type: String?): Sequence<Feature> = graph.root.descendants().map { IFeature(it) }
 
-    override fun forEach(operation: (Feature) -> Unit, filter: ((Feature) -> Boolean)?) {
-        graph.root.forEach({ IFeature(it) }, operation, filter)
-    }
-
-    override fun <R> reduce(transform: (Feature) -> R, combine: (R, R) -> R, filter: ((Feature) -> Boolean)?): R {
-        return graph.root.reduce({ IFeature(it) }, transform, combine, filter)
-    }
-
-    override fun <K, V> associate(transform: (Feature) -> Pair<K, V>): Map<K, V> {
-        return graph.root.associate({ IFeature(it) }, transform)
-    }
-
-    override fun <V> associateWith(valueSelector: (Feature) -> V): Map<out Feature, V> {
-        return graph.root.associateWith({ IFeature(it) }, valueSelector)
-    }
-
-    override fun <K> associateBy(keySelector: (Feature) -> K): Map<K, Feature> {
-        return graph.root.associateBy({ IFeature(it) }, keySelector)
-    }
-
-    override fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<Feature>> {
-        return graph.root.groupBy({ IFeature(it) }, keySelector)
-    }
-
-    override fun find(predicate: (Feature) -> Boolean): Feature? = graph.root.find({ IFeature(it) }, predicate)
-
-    override fun any(predicate: (Feature) -> Boolean): Boolean = graph.root.any(predicate)
-
-    override fun all(predicate: (Feature) -> Boolean): Boolean = graph.root.all(predicate)
-
-    override fun sumOf(selector: (Feature) -> Int): Int = graph.root.sumOf(selector)
-
-    override fun sumOfDouble(selector: (Feature) -> Double): Double = graph.root.sumOf(selector)
-
-    override fun filteredList(predicate: (Feature) -> Boolean): List<Feature> {
-        return graph.root.filteredList({ IFeature(it) }, predicate)
-    }
-
     override fun toString(): String = graph.root.parentString()
 }
 
@@ -417,55 +289,6 @@ internal value class MGenome(private val graph: Graph) : MutableGenome {
 
     override fun descendants(type: String?): Sequence<MutableFeature> = graph.root.descendants().map { MFeature(it) }
 
-    override fun forEach(operation: (Feature) -> Unit, filter: ((Feature) -> Boolean)?) {
-        graph.root.forEach({ IFeature(it) }, operation, filter)
-    }
-
-//    @Suppress("INAPPLICABLE_JVM_NAME")
-//    @JvmName("mutableForEach")
-    override fun modifyAll(operation: (MutableFeature) -> Unit, filter: ((Feature) -> Boolean)?, chunk: Int) {
-        graph.root.forEach({ MFeature(it) }, operation, filter, chunk)
-    }
-
-    override fun <R> reduce(transform: (Feature) -> R, combine: (R, R) -> R, filter: ((Feature) -> Boolean)?): R {
-        return graph.root.reduce({ IFeature(it) }, transform, combine, filter)
-    }
-
-    override fun <K, V> associate(transform: (Feature) -> Pair<K, V>): Map<K, V> {
-        return graph.root.associate({ IFeature(it) }, transform)
-    }
-
-    // PLANNED: separate selectorWrapper and outputWrapper to prevent casting
-    override fun <V> associateWith(valueSelector: (Feature) -> V): Map<out MutableFeature, V> {
-        return graph.root.associateWith({ MFeature(it) }, valueSelector)
-    }
-
-    override fun <K> associateBy(keySelector: (Feature) -> K): Map<K, MutableFeature> {
-        return graph.root.associateBy({ MFeature(it) }, keySelector)
-    }
-
-    override fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<MutableFeature>> {
-        return graph.root.groupBy({ MFeature(it) }, keySelector)
-    }
-
-    override fun find(predicate: (Feature) -> Boolean): Feature? = graph.root.find({ MFeature(it) }, predicate)
-
-    override fun any(predicate: (Feature) -> Boolean): Boolean = graph.root.any(predicate)
-
-    override fun all(predicate: (Feature) -> Boolean): Boolean = graph.root.all(predicate)
-
-    override fun sumOf(selector: (Feature) -> Int): Int = graph.root.sumOf(selector)
-
-    override fun sumOfDouble(selector: (Feature) -> Double): Double = graph.root.sumOf(selector)
-
-    override fun filteredList(predicate: (Feature) -> Boolean): List<MutableFeature> {
-        return graph.root.filteredList({ MFeature(it) }, predicate)
-    }
-
-    override fun sort(comparator: (Feature, Feature) -> Int) {
-        graph.root.sort(comparator)
-    }
-
     override fun insert(
         seqid: String,
         source: String,
@@ -497,6 +320,9 @@ internal value class MGenome(private val graph: Graph) : MutableGenome {
 //    }
 
     override fun toString(): String = graph.root.parentString()
+    override fun sort(comparator: (Feature, Feature) -> Int) {
+        graph.root.sort(comparator)
+    }
 }
 internal fun immutableFeature(nodes: Iterable<Graph.DataNode>): List<Feature> {
     return nodes.map { IFeature(it) }

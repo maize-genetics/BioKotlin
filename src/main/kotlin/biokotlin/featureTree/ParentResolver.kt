@@ -9,20 +9,20 @@ typealias ParentResolver = (String, List<Feature>) -> Int
 /**
  * Leftmost potential parent
  */
-val ParentResolver.LEFT: ParentResolver
+val LEFT: ParentResolver
     get() = { _, _ -> 0 }
 
 /**
  * Rightmost potential parent
  */
-val ParentResolver.RIGHT: ParentResolver
+val RIGHT: ParentResolver
     get() = { _, parents -> parents.size - 1 }
 
 /**
  * Narrowest potential parent, meaning the parent that is a descendant of all other parents, or throws [Exception]
  * if no such parent exists.
  */
-val ParentResolver.NARROW: ParentResolver
+val NARROW: ParentResolver
     get() = TODO("Not yet supported")
 
 /**

@@ -110,11 +110,12 @@ sealed interface Genome : Parent {
          * this to enable the parsing of non-standard GFF files.
          *
          * @throws ParseException if, after the application of [textCorrecter], there are not 9 tab-delineated columns
-         * @throws ParseException if start or end columns cannot be parsed as integers
-         * @throws ParseException if multiple '=' characters in the attributes are present without being divided by a ';'
-         * @throws ParseException if multiple ID attributes are present in a row
-         * @throws ParseException if parents do not occur before their children.
-         * @throws ParseException if there are multiple parents for a feature even after the application of [parentResolver]
+         * @throws ParseException if, after the application of [textCorrecter], start or end columns cannot be parsed as integers
+         * @throws ParseException if, after the application of [textCorrecter], multiple '=' characters in the attributes are present without being divided by a ';'
+         * @throws ParseException if, after the application of [textCorrecter], multiple ID attributes are present in a row
+         * @throws ParseException if, after the application of [textCorrecter], parents do not occur before their children.
+         * @throws ParseException if, after the application of [textCorrecter], there are multiple identical attribute tags
+         * @throws ParseException if there are multiple parents for a feature [parentResolver] is null
          * and [multipleParentage] is false.
          *
          * PLANNED: data corrector
@@ -160,9 +161,7 @@ sealed interface MutableGenome : Genome, MutableParent {
     val topologicalModifications: Int
 
     /**
-     * Defines a new type in the type schema. If [parent] is not null, the defined type will be part of parent.
-     * The defined type will have all names in [name].
-     *
+     * PLANNED:
      * @throws NotInSchema if any element of [isA] or [partOf] is not null but is not in the type schema.
      */
     fun defineType(name: List<String>, isA: List<String>, partOf: List<String>)

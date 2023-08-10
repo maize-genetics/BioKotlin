@@ -1,7 +1,9 @@
 package biokotlin.featureTree
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import java.io.FileReader
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -41,11 +43,8 @@ internal class Graph private constructor(
      * the [root] and the [DataNode] instances. Specifically, allows operations relating to iterating down a series
      * of [DataNode].
      */
-    internal open inner class Node(val children: ArrayList<DataNode>) {
-        internal constructor() : this(ArrayList())
-
-        private val top: List<DataNode>
-            get() = if (this is DataNode) listOf(this) else ImmutableList(children)
+    internal open inner class Node(val children: LinkedList<DataNode>) {
+        internal constructor() : this(LinkedList())
 
         val graph: Graph
             get() = this@Graph
@@ -62,6 +61,7 @@ internal class Graph private constructor(
         }
 
         fun descendants(): Sequence<DataNode> = DataNodeIterator().asSequence()
+
         internal inner class DataNodeIterator : Iterator<DataNode> {
             private val stack: Deque<DataNode> = ArrayDeque()
             private val initialTopo = topo
@@ -110,7 +110,7 @@ internal class Graph private constructor(
                 if (!schema.partOf(type, this.type)) throw TypeSchemaException(type, this.type, IGenome(this@Graph))
             }
             val node = DataNode(
-                mutableListOf(this), ArrayList(), Data(
+                mutableListOf(this), LinkedList(), Data(
                     seqid,
                     source,
                     type,
@@ -163,7 +163,7 @@ internal class Graph private constructor(
                     throw IllegalArgumentException("Cannot have multiple parents if one is the root")
                 }
             }
-            children.add(children.size, child)
+            children.addLast(child)
             child.addParent(this)
             incrementTopo()
             assert { invariants() }
@@ -181,292 +181,6 @@ internal class Graph private constructor(
             assert { invariants() }
             return toReturn
         }
-
-        /**
-         * @throws MultipleParentageNotYetSupported if [multipleParentage] is true
-         */
-        private fun checkMultiParent(operation: String) {
-            if (multipleParentage)
-                throw MultipleParentageNotYetSupported(operation)
-        }
-
-        // PLANNED: Support for multiple parentage in concurrent operations
-        // using parentSelector, allowMultipleParentage, and noDuplicate frameworks
-
-        /**
-         * Supports filtering. A pair is an "R-value" and a "useful-boolean." If only one "R-value" is "useful",
-         * then the resulting pair will be that R-value, marked as useful. If both are useful, then the result
-         * is the combined values, marked as useful. If neither is useful, then the result is a dummy value, marked
-         * as useless.
-         */
-        private fun <R> combinePair(
-            pair1: Pair<R, Boolean>, pair2: Pair<R, Boolean>, combine: (R, R) -> R
-        ): Pair<R, Boolean> {
-            return if (pair1.second && pair2.second) {
-                combine(pair1.first, pair2.first) to true
-            } else if (pair1.second) {
-                pair1.first to true
-            } else if (pair2.second) {
-                pair2.first to true
-            } else {
-                pair1.first to false
-            }
-        }
-
-        /**
-         * Recursive concurrent operation used in [reduce].
-         */
-        private suspend fun <R, W> reduceIt(
-            node: DataNode,
-            wrapper: (DataNode) -> W,
-            transform: (W) -> R,
-            combine: (R, R) -> R,
-            filter: ((W) -> Boolean)?
-        ): Pair<R, Boolean> {
-            val wrapped = wrapper(node)
-            val included = filter == null || filter(wrapped)
-
-            return if (node.children.isEmpty()) {
-                transform(wrapped) to included
-            } else {
-                val beneath = coroutineScope {
-                    node.children.map { async { reduceIt(it, wrapper, transform, combine, filter) } }
-                }.awaitAll().reduce { pair1, pair2 -> combinePair(pair1, pair2, combine) }
-                if (included) {
-                    if (beneath.second) {
-                        combine(transform(wrapped), beneath.first) to true
-                    } else {
-                        transform(wrapped) to true
-                    }
-                } else {
-                    beneath
-                }
-            }
-        }
-
-        /**
-         * [wrapper] wraps a [DataNode] as so that [transform] can be applied to it.
-         * @see Parent.reduce
-         */
-        fun <R, W> reduce(
-            wrapper: (DataNode) -> W,
-            transform: (W) -> R,
-            combine: (R, R) -> R,
-            filter: ((W) -> Boolean)? = null
-        ): R {
-            if (top.isEmpty()) throw Exception("Called on an empty Genome.")
-            checkMultiParent("reduce")
-
-            val initialTopo = topo
-
-            val reduced = runBlocking {
-                top.map { async { reduceIt(it, wrapper, transform, combine, filter) } }.awaitAll()
-                    .reduce { pair1, pair2 -> combinePair(pair1, pair2, combine) }
-            }
-
-            if (initialTopo != topo) throw ConcurrentModificationException()
-
-            if (!reduced.second) throw IllegalArgumentException("Filter applied to reduce filtered out all features.")
-
-            return reduced.first
-        }
-
-        /**
-         * Recursive concurrent operation used in [forEach]
-         */
-        private fun <W> forEachIt(
-            node: DataNode,
-            wrapper: (DataNode) -> W,
-            operation: (W) -> Unit,
-            filter: ((W) -> Boolean)? = null,
-        ) {
-            val wrapped = wrapper(node)
-
-            if (filter == null || filter(wrapped)) operation(wrapped)
-
-            node.children.forEach { forEachIt(it, wrapper, operation, filter) }
-        }
-
-        private fun <W> forEachChunk(
-            initialIndex: Int,
-            chunkSize: Int,
-            list: List<DataNode>,
-            wrapper: (DataNode) -> W,
-            operation: (W) -> Unit,
-            filter: ((W) -> Boolean)? = null
-        ) {
-            for (index in initialIndex until minOf(list.size, initialIndex + chunkSize)) {
-                val wrapped = wrapper(list[index])
-                if (filter == null || filter(wrapped)) {
-                    operation(wrapped)
-                }
-                list[index].descendants().filter { filter == null || filter(wrapper(it)) }.forEach { operation(wrapper(it)) }
-            }
-        }
-
-        /**
-         * [wrapper] wraps a [DataNode] so [operation] can be applied
-         * @see Parent.forEach
-         */
-        fun <W> forEach(
-            wrapper: (DataNode) -> W,
-            operation: (W) -> Unit,
-            filter: ((W) -> Boolean)? = null,
-            chunk: Int = 1000
-        ) {
-            if (top.isEmpty()) return
-            val initialTopo = topo
-            checkMultiParent("forEach")
-
-            if (top.size == 1) {
-                runBlocking {
-                    (0..top.first().children.size / chunk).forEach { index ->
-                        launch {
-                            forEachChunk(
-                                index * chunk,
-                                chunk,
-                                top.first().children,
-                                wrapper,
-                                operation,
-                                filter
-                            )
-                        }
-                    }
-                }
-
-            } else {
-                descendants().forEach { operation(wrapper(it)) }
-            }
-
-            runBlocking {
-                top.forEach { launch { forEachIt(it, wrapper, operation, filter) } }
-            }
-
-            if (initialTopo != topo) throw ConcurrentModificationException()
-        }
-
-        /**
-         * [wrapper] wraps [DataNode] so [predicate] can be applied
-         * @see Parent.find
-         */
-        fun <W : Feature> find(wrapper: (DataNode) -> W, predicate: (Feature) -> Boolean): W? {
-            // Performance could be improved with short-circuit implementation, but this is low priority
-            return reduce(wrapper, { if (predicate(it)) it else null }, { one, two -> one ?: two })
-        }
-
-        /**
-         * @see Parent.any
-         */
-        fun any(predicate: (Feature) -> Boolean): Boolean {
-            return find({ IFeature(it) }, predicate) != null
-        }
-
-        /**
-         * @see Parent.all
-         */
-        fun all(predicate: (Feature) -> Boolean): Boolean {
-            return reduce({ IFeature(it) }, predicate, { bool1, bool2 -> bool1 && bool2 })
-        }
-
-        // PLANNED: decoupling wrapper from transform for associate to force read-only access even when associating
-        // mutable features
-
-        /**
-         * @see Parent.associate
-         */
-        fun <K, V, W : Feature> associate(
-            wrapper: (DataNode) -> W,
-            transform: (W) -> Pair<K, V>
-        ): Map<K, V> {
-            val map = mutableMapOf<K, V>()
-            forEach(wrapper, { feature ->
-                val pair = transform(feature)
-                map[pair.first] = pair.second
-            })
-            return map
-        }
-
-        /**
-         * @see Parent.associateWith
-         */
-        fun <V, W : Feature> associateWith(
-            wrapper: (DataNode) -> W,
-            valueSelector: (W) -> V
-        ): Map<W, V> {
-            return associate(wrapper) { feature ->
-                feature to valueSelector(feature)
-            }
-        }
-
-        /**
-         * @see Parent.associateBy
-         */
-        fun <K, W : Feature> associateBy(wrapper: (DataNode) -> W, keySelector: (W) -> K): Map<K, W> {
-            return associate(wrapper) { feature ->
-                keySelector(feature) to feature
-            }
-        }
-
-        /**
-         * @see Parent.groupBy
-         */
-        fun <K, W : Feature> groupBy(
-            wrapper: (DataNode) -> W,
-            keySelector: (W) -> K
-        ): Map<K, List<W>> {
-            val map: ConcurrentMap<K, MutableList<W>> = ConcurrentHashMap()
-            forEach(wrapper, { feature ->
-                val key = keySelector(feature)
-                map.putIfAbsent(key, mutableListOf(feature))?.add(feature)
-            })
-            return map
-        }
-
-        /**
-         * @see Parent.sumOf
-         */
-        fun sumOf(selector: (Feature) -> Int): Int {
-            return reduce({ IFeature(it) }, selector, { num1, num2 -> num1 + num2 })
-        }
-
-        /**
-         * @see Parent.sumOf
-         */
-        fun sumOf(selector: (Feature) -> Double): Double {
-            return reduce({ IFeature(it) }, selector, { num1, num2 -> num1 + num2 })
-        }
-
-        /**
-         * @see Parent.sumOf
-         */
-        fun sumOf(selector: (Feature) -> Long): Long {
-            return reduce({ IFeature(it) }, selector, { num1, num2 -> num1 + num2 })
-        }
-
-        /**
-         * @see Parent.filteredList
-         */
-        fun <W : Feature> filteredList(
-            wrapper: (DataNode) -> W,
-            predicate: (Feature) -> Boolean,
-        ): List<W> {
-            val list = mutableListOf<W>()
-            forEach(wrapper, { list.add(it) }, predicate)
-            return list
-        }
-
-
-        /**
-         * PLANNED:
-         * @see MutableParent.filter
-         */
-//        fun filter(predicate: (Feature) -> Boolean) {
-//            forEach(
-//                { MFeature(it) },
-//                { feature -> feature.delete() },
-//                { feature -> !predicate(feature) && feature.children.isEmpty() },
-//            )
-//        }
     }
 
     /**
@@ -498,9 +212,10 @@ internal class Graph private constructor(
 
     internal inner class DataNode(
         val parents: MutableList<Node>,
-        children: ArrayList<DataNode>,
+        children: LinkedList<DataNode>,
         val data: Data
     ) : Node(children) {
+        fun subtree(): Sequence<DataNode> = sequenceOf(this) + DataNodeIterator().asSequence()
 
         /**
          * PLANNED: enforce 1 <= start for all ranges (need to update mutators first)
@@ -625,7 +340,7 @@ internal class Graph private constructor(
         // PLANNED: convenience accessors for other specially defined attributes tags
 
         init {
-            parents.forEach { it.children.add(children.size, this) }
+            parents.forEach { it.children.addLast(this) }
             data.attributes.remove("Parent")
             if (id != null) {
                 val id = id!!
@@ -988,16 +703,11 @@ internal class Graph private constructor(
             if (multipleParentage) throw MultipleParentageNotYetSupported("Node.copy")
             val new = newGraph.DataNode(
                 parents = mutableListOf(),
-                children = ArrayList(children.map { it.copy(newGraph) }),
-//                children = runBlocking {
-//                    children.map { async { it.copy(newGraph) } }.awaitAll()
-//                }.toLinkedList(),
+                children = children.map { it.copy(newGraph) }.toLinkedList(),
+
                 data = data.copy(),
             )
             new.children.forEach { it.parents.add(new) }
-//            runBlocking{
-//                new.children.forEach { launch { it.parents.add(new) } }
-//            }
             return del(new)
         }
     }
@@ -1161,6 +871,9 @@ internal class Graph private constructor(
                         Strand.fromString(split[6]) ?: throw parseException("Cannot parse ${split[6]} into a strand.")
                     val phase =
                         Phase.fromString(split[7]) ?: throw parseException("Cannot parse ${split[7]} into a phase.")
+                    if (!split[8].trimEnd(';').split(';').map { it.split('=').first() }.allUnique() ) {
+                        throw parseException("Cannot have multiple instances of the same tag")
+                    }
                     val attributes = split[8].trimEnd(';').split(';').associate {
                         val tagValue = it.split('=')
                         if (tagValue.size != 2)
@@ -1198,7 +911,7 @@ internal class Graph private constructor(
                         throw parseException("Must enable multipleParentage to have features with multiple parents")
 
                     graph.DataNode(
-                        resolvedParents.toMutableList(), ArrayList(), Data(
+                        resolvedParents.toMutableList(), LinkedList(), Data(
                             seqid,
                             source,
                             type,

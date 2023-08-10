@@ -2,7 +2,6 @@ package biokotlin.featureTree
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
-import io.kotest.common.runBlocking
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
@@ -614,11 +613,6 @@ class ShortenedTest : StringSpec({
                 gene.children.size shouldBe 0
 
             }
-        }
-
-        runBlocking {
-            immutableGenomeTest(genome, "B73_shortened")
-            mutableGenomeTest(genome, "B73_shortened")
         }
     }
 })

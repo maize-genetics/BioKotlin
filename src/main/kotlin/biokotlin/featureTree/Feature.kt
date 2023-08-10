@@ -1,7 +1,6 @@
 package biokotlin.featureTree
 
 /**
- *
  * Represents a single annotation (feature) in a GFF (general feature format) file. Generally, these features correspond
  * to a row in a gff file and have all the same properties.
  */
@@ -20,7 +19,7 @@ sealed interface Feature : Parent {
         get() = ranges.minimum()
 
     /**
-     * Non-negative, always greater than or equal to [start].
+     * Positive, always greater than or equal to [start].
      * For discontinuous features, equivalent to maximum ending position among all ranges.
      */
     val end: Int
@@ -34,7 +33,7 @@ sealed interface Feature : Parent {
 
     /**
      * All start-end [IntRange]s that define this feature. Continuous features will only have one, while discontinuous
-     * features will have several. Size is equal to `phases.size`
+     * features will have several. Size is equal to `phases.size`. All ranges are positive.
      */
     val ranges: List<IntRange>
     val score: Double?
@@ -47,7 +46,8 @@ sealed interface Feature : Parent {
 
     /**
      * All phases for this feature. Continuous features will only have one, while discontinuous features
-     * will have several. Size is equal to `ranges.size`.
+     * will have several. Size is equal to `ranges.size`. A feature of type "CDS" (or synonym) may not have any
+     * [Phase.UNSPECIFIED] in its [phases] property.
      */
     val phases: List<Phase>
 
@@ -114,10 +114,13 @@ sealed interface Feature : Parent {
      * Return all ancestors of this feature in a depth-first order. Multiple parentage will result in duplicate values.
      */
     fun ancestors(): List<Parent>
+
+    /**
+     * Prepends this feature to [Parent.descendants].
+     */
+    fun subtree(): Sequence<Feature>
 }
 sealed interface MutableFeature : Feature, MutableParent {
-    // PLANNED: surface deleted?
-
     override var seqid: String
     override var source: String
     override var score: Double?
@@ -235,4 +238,9 @@ sealed interface MutableFeature : Feature, MutableParent {
      * @throws DiscontinuousLacksID if [new] is null and this feature a multiplicity greater than 1.
      */
     fun setID(new: String?): Unit
+
+    /**
+     * Prepends this feature to [MutableParent.descendants].
+     */
+    override fun subtree(): Sequence<MutableFeature>
 }
