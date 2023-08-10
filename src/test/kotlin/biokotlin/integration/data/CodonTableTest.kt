@@ -1,6 +1,10 @@
-package biokotlin.data
+package biokotlin.integration.data
 
+import biokotlin.data.Codon
 import biokotlin.data.Codon.*
+import biokotlin.data.CodonTable
+import biokotlin.data.CodonTablesAll
+import biokotlin.data.standardCodonTable
 import biokotlin.seq.AminoAcid
 import biokotlin.seq.AminoAcid.*
 import io.kotest.core.spec.style.StringSpec

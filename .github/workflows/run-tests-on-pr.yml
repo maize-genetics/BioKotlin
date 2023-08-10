@@ -1,0 +1,37 @@
+name: Run BioKotlin Tests When Opening a PR
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+    branches:
+      - master # Branch you are merging into
+
+jobs:  
+  test:
+    name: BioKotlin Gradle Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write # See: https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2.4.2
+        with:
+          gradle-version: 7.1
+          generate-job-summary: false
+      - run: gradle build
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: success() || failure()
+        with:
+          report_paths: '**/build/test-results/test/TEST-*.xml'
+          check_name: BioKotlin Test Report
+          job_summary: true
+          detailed_summary: true

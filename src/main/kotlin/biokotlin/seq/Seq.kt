@@ -2,6 +2,7 @@
 package biokotlin.seq
 
 import biokotlin.data.CodonTable
+import biokotlin.kmer.KmerMultiSet
 import com.google.common.collect.ImmutableSet
 import java.util.*
 import java.util.stream.Collectors
@@ -258,6 +259,17 @@ interface NucSeq : Seq {
      * Ambiguous nucleotides are not supported and will throw errors
      */
     fun translate(table: CodonTable = CodonTable(1), to_stop: Boolean = false, cds: Boolean = false): ProteinSeq
+
+    /**
+     * Extracts the kmer count from a nucleotide sequence [NucSeq].
+     * In general kmers from both strands should be extracted, unless strand specificity is really known.
+     * No kmers that include an ambiguous base pair will be included
+     * Using [stepSize] subsets of the kmers can be sampled
+     * @param kmerSize length of kmers to be extracted from the sequence
+     * @param bothStrands extract kmers from only the forward strand or both strands
+     * @param stepSize kmers are extracted from the first base going forward based on a given step
+     */
+    fun kmers(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: Int = 1): KmerMultiSet = KmerMultiSet(this,kmerSize,bothStrands,stepSize)
 }
 
 /**Main data structure for working with Protein sequences*/

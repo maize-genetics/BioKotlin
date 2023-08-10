@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 // Dependencies will follow the buildscript
 
 group = "org.biokotlin"
-version = "0.07"
+version = "0.08"
 
 /*
 This build script is need to use the early access
@@ -100,6 +100,8 @@ dependencies {
 
     implementation("io.github.oshai:kotlin-logging-jvm:5.0.0")
     implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.6")
+    implementation("it.unimi.dsi:fastutil:8.5.12")
+    implementation("org.lz4:lz4-java:1.8.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.0")
 
@@ -427,6 +429,10 @@ publishing {
                     developer {
                         name.set("Jeffrey Morse")
                         email.set("jbm249@cornell.edu")
+                    }
+                    developer {
+                        name.set("Ana Berthel")
+                        email.set("ahb232@cornell.edu")
                     }
                 }
                 scm {
