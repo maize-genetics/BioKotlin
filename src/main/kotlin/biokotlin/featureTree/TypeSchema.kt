@@ -127,7 +127,7 @@ class TypeSchema private constructor(
     private val customNamesToIds: MutableMap<String, MutableSet<TypeDecorator>>,
     private val memo: MutableMap<String, Pair<String, Boolean>>
 ) {
-    internal constructor(): this(HashMap(), HashMap())
+    internal constructor(): this(HashMap(), HashMap(), HashMap())
 
     inner class TypeDecorator private constructor(
         override val id: String,
@@ -151,7 +151,7 @@ class TypeSchema private constructor(
             get() = additionalPartOf union baseSet { partOf }
     }
 
-    fun idsByName(name: String): Set<String> {
+    private fun idsByName(name: String): Set<String> {
         val customIds = customNamesToIds[name]?.map { it.id }?.toSet() ?: emptySet()
         return customIds union BaseSchema.idsByName(name)
     }
@@ -163,25 +163,51 @@ class TypeSchema private constructor(
     fun containsName(name: String) = idsByName(name).isNotEmpty()
     fun containsID(id: String) = getOrNull(id) != null
 
-    fun typeByNameOrID(vararg nameOrId: String): Set<String> {
-        nameOrId.map {
-            idsByName(it).map { get(it) }.toSet() + (getOrNull(it) ?: emptySet())
-        }
+    private fun typeByNameOrID(vararg nameOrId: String): Set<Type> {
+        return nameOrId.map {
+            val byID = getOrNull(it)
+            val idsByName = idsByName(it)
+            val typesByName = idsByName.map { get(it) }
+            if (byID != null) typesByName + byID else typesByName
+        }.flatten().toSet()
     }
     fun isSynonym(name: String, vararg names: String): Boolean {
-        TODO()
+        val types = typeByNameOrID(name)
+        return names.all { nam -> types.any { type -> type.exactSynonyms.contains(nam) } }
     }
 
     fun isRoughSynonym(name: String, vararg names: String): Boolean {
-        TODO()
+        val types = typeByNameOrID(name)
+        return names.all { nam -> types.any { type -> type.exactSynonyms.contains(nam) || type.roughSynonyms.contains(name) } }
+    }
+
+    private fun isA(subType: Type, superTypeIds: Set<String>): Boolean {
+        if (subType.isA intersects superTypeIds) return true
+        return subType.isA.any { isA(get(it), superTypeIds) }
     }
 
     fun isA(subType: String, superType: String): Boolean {
-        TODO()
+        val superTypeIds = typeByNameOrID(superType).map { it.id }.toSet()
+        val subTypes = typeByNameOrID(subType)
+        return subTypes.any { isA(it, superTypeIds) }
+    }
+
+    private fun partOf(child: Type, goals: Set<String>): Boolean {
+        if (goals.contains(child.id)) return true
+        val toCheck = child.isA union child.partOf
+        return toCheck.map { get(it) }.any { partOf(it, goals) }
+    }
+
+    private fun allSuper(type: Type): Set<String> { // Only IDs
+        val idCollector = mutableSetOf<String>()
+        stackWalking(type, { idCollector.add(it.id) }, { it.isA.map { get(it) } })
+        return idCollector
     }
 
     fun partOf(child: String, parent: String): Boolean {
-        TODO()
+        val childTypes = typeByNameOrID(child)
+        val goals = typeByNameOrID(parent).map { allSuper(it) }.flatten().toSet()
+        return childTypes.any { partOf(it, goals) }
     }
 
     fun addSynonym(type: String, vararg synonym: String) {

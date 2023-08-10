@@ -104,3 +104,17 @@ internal fun <K, V> MutableMap<K, MutableSet<V>>.enroll(key: K, value: V) = enro
         arg
     )
 }
+
+internal infix fun <T> Set<T>.intersects(other: Set<T>): Boolean {
+    return (this intersect other).isNotEmpty()
+}
+
+internal fun <T> stackWalking(initial: T, popOperation: (T) -> Unit, pushOperation: (T) -> Iterable<T>) {
+    val stack = Stack<T>()
+    stack.push(initial)
+    while (stack.isNotEmpty()) {
+        val popped = stack.pop()
+        popOperation(popped)
+        stack.addAll(pushOperation(popped))
+    }
+}
