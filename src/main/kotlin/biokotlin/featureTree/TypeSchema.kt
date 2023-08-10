@@ -160,6 +160,46 @@ class TypeSchema private constructor(
 
     private fun get(id: String): Type = getOrNull(id) ?: throw NotInSchema(id)
 
+    fun containsName(name: String) = idsByName(name).isNotEmpty()
+    fun containsID(id: String) = getOrNull(id) != null
+
+    fun typeByNameOrID(vararg nameOrId: String): Set<String> {
+        nameOrId.map {
+            idsByName(it).map { get(it) }.toSet() + (getOrNull(it) ?: emptySet())
+        }
+    }
+    fun isSynonym(name: String, vararg names: String): Boolean {
+        TODO()
+    }
+
+    fun isRoughSynonym(name: String, vararg names: String): Boolean {
+        TODO()
+    }
+
+    fun isA(subType: String, superType: String): Boolean {
+        TODO()
+    }
+
+    fun partOf(child: String, parent: String): Boolean {
+        TODO()
+    }
+
+    fun addSynonym(type: String, vararg synonym: String) {
+
+    }
+
+    fun addIsA(subType: String, superType: String) {
+
+    }
+
+    fun addPartOf(child: String, parent: String) {
+
+    }
+
+    fun defineType(id: String, exactSynonyms: Set<String>, roughSynonyms: Set<String>, isA: Set<String>, partOf: Set<String>) {
+
+    }
+
 }
 //class TypeSchema private constructor(
 //    private val customRegistry: MutableMap<String, MutableSet<TypeDecorator>>,
