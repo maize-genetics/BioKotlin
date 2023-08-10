@@ -1,12 +1,12 @@
 package biokotlin.featureTree
 
 /**
+ *
  * Represents a single annotation (feature) in a GFF (general feature format) file. Generally, these features correspond
  * to a row in a gff file and have all the same properties.
- * TODO describe better
  */
 sealed interface Feature : Parent {
-    // TODO include full documentation of these properties
+    // PLANNED: Better documentation of these properties based on their definition in the GFF3 specification.
 
     val seqid: String
     val source: String
@@ -82,14 +82,28 @@ sealed interface Feature : Parent {
         get() = multiplicity > 1
 
     /**
+     * A name associated with this feature, as defined by the Name attribute. Null if no names
+     * are associated.
+     */
+    val name: String?
+
+    /**
+     * All names associated with this feature, as defined by the Name attribute. Empty list if no
+     * names are associated.
+     */
+    val names: List<String>
+
+    // PLANNED: More custom properties for special tags
+
+    /**
      * The [String] representation of this [Feature] as it appears as a row in a GFF file.
      */
     fun asRow(): String
 
     /**
-     * All attribute values for [tag] or null if none exist.
+     * All attribute values for [tag].
      */
-    fun attribute(tag: String): List<String>?
+    fun attribute(tag: String): List<String>
 
     /**
      * All attributes as tag-values pairs.
@@ -102,21 +116,37 @@ sealed interface Feature : Parent {
     fun ancestors(): List<Parent>
 }
 sealed interface MutableFeature : Feature, MutableParent {
+    // PLANNED: surface deleted?
+
     override var seqid: String
     override var source: String
     override var score: Double?
     override var strand: Strand
 
-    override val parent: Parent
+    override val parent: MutableParent
         get() = parents[0]
-    override val parents: List<Parent>
+    override val parents: List<MutableParent>
     override val genome: MutableGenome
 
+    /**
+     * @see Feature.name
+     * Setting this property will override all existing names and replace just with the set value.
+     * Setting this property to null will remove "Name" from attributes.
+     */
+    override var name: String?
+
+    /**
+     * @see Feature.names
+     * Setting this property will override all existing names and replace them with the set value.
+     * Setting this property to empty list will remove "Name" from attributes.
+     */
+    override var names: List<String>
 
 
     /**
-     * Deletes this [MutableFeature] from its [MutableGenome]. Subsequent attempts to read information from this
-     * will result in [DeletedAccessException].
+     * Deletes this [MutableFeature] from its [MutableGenome].
+     * Subsequent calls to read or write to this or any descendants that become orphaned as a result of this deletion
+     * will throw [DeletedAccessException].
      */
     fun delete()
 
@@ -149,6 +179,8 @@ sealed interface MutableFeature : Feature, MutableParent {
      * with [tag] that may have existed prior.
      * @throws IllegalArgumentException if [tag] is "Parent".
      * @throws IllegalArgumentException if [tag] is "ID" and [values] contains multiple elements.
+     * @throws IllegalArgumentException if values is empty.
+     * @throws IDConflict if [tag] is "ID" and any element of [values] is an ID of an existing feature.
      */
     fun setAttributes(tag: String, values: Iterable<String>)
 
@@ -156,11 +188,14 @@ sealed interface MutableFeature : Feature, MutableParent {
      * Clears all associations with [tag] in the attributes of this feature.
      * @throws IllegalArgumentException if [tag] is "Parent".
      * @throws IllegalArgumentException if [tag] is "ID" and this feature has children.
+     * @throws DiscontinuousLacksID if [tag] is "ID" and this feature a multiplicity greater than 1.
      */
     fun clearAttribute(tag: String)
 
     /**
      * Adds a discontinuous region of this feature, with [range] and [phase].
+     * @throws DiscontinuousLacksID if [id] is null.
+     * @throws CDSUnspecifiedPhase if [phase] is [Phase.UNSPECIFIED] and [type] is "CDS" or synonym
      */
     fun addDiscontinuity(range: IntRange, phase: Phase)
 
@@ -173,22 +208,31 @@ sealed interface MutableFeature : Feature, MutableParent {
     /**
      * Make this feature continuous with a phase [phase].
      * @param range the new [MutableFeature.range] of the feature, or null to keep [MutableFeature.range] unchanged
+     * @throws CDSUnspecifiedPhase if type is "CDS" or a synonym and [phase] is [Phase.UNSPECIFIED]
      */
     fun setPhase(phase: Phase, range: IntRange? = null)
 
     /**
      * Sets the discontinuous region of the feature at [index] to be of [range] and [phase].
-     * @throws IllegalArgumentException if [index] > [multiplicity]
+     * @throws IllegalArgumentException if [index] >= [multiplicity]
+     * @throws CDSUnspecifiedPhase if type is "CDS" or a synonym and [phase] is [Phase.UNSPECIFIED].
      */
     fun setDiscontinuity(index: Int, range: IntRange, phase: Phase)
 
-    fun overwriteDiscontinuities(discontinuities: Iterable<Pair<IntRange, Phase>>)
+    /**
+     * Sets the discontinuous regions of this feature to be those specified in [discontinuities].
+     * @throws CDSUnspecifiedPhase if type is "CDS" or a synonym and any [Phase] in [discontinuities] is [Phase.UNSPECIFIED].
+     * @throws DiscontinuousLacksID if [id] is null and [discontinuities] contains multiple elements.
+     */
+    fun setDiscontinuities(discontinuities: Iterable<Pair<IntRange, Phase>>)
 
     override fun ancestors(): List<MutableParent>
 
     /**
      * Sets the [id] to [new].
      * @throws IDConflict if [new] already exists within the [MutableGenome] that contains `this`
+     * @throws IllegalArgumentException if [new] is null and this feature has children.
+     * @throws DiscontinuousLacksID if [new] is null and this feature a multiplicity greater than 1.
      */
-    fun setID(new: String): Unit
+    fun setID(new: String?): Unit
 }

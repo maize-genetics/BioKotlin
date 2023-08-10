@@ -1,19 +1,21 @@
 package biokotlin.featureTree
 
+import java.util.*
+
 typealias Attributes = Map<String, Iterable<String>>
 
 /**
  * Smallest start value in all the ranges
  */
 internal fun Iterable<IntRange>.minimum(): Int {
-    return this.sortedWith { one, two -> one.first - two.first }[0].first
+    return this.minOf { it.first }
 }
 
 /**
  * Largest start value in all the ranges
  */
 internal fun Iterable<IntRange>.maximum(): Int {
-    return this.sortedWith { one, two -> one.last - two.last }[0].last
+    return this.maxOf { it.last }
 }
 
 /**
@@ -25,8 +27,6 @@ internal value class ImmutableList<E>(val list: List<E>) : List<E> by list
 /**
  * Prevents rep exposure of mutable maps
  */
-@JvmInline
-internal value class ImmutableMap<K, V>(val map: Map<K, V>): Map<K, V> by map
 
 /**
  * Only applies assertions if -ea flag is enabled. Useful for expensive assertions.
@@ -74,4 +74,15 @@ internal fun percentDecode(text: String): String {
         }
     }
     return sb.toString()
+}
+
+/**
+ * @return true iff all elements are different
+ */
+internal fun Iterable<*>.allUnique(): Boolean = this.count() == this.toSet().size
+
+internal fun <T> Iterable<T>.toLinkedList(): LinkedList<T> {
+    val list = LinkedList<T>()
+    list.addAll(this)
+    return list
 }

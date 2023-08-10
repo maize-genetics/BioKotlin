@@ -4,31 +4,26 @@ package biokotlin.featureTree
  * A ParentResolver is a functional type that takes a String representing the child feature and a list of Features
  * representing the potential parents and outputs the chosen parent
  */
-typealias ParentResolver = (String, List<Feature>) -> Feature
+typealias ParentResolver = (String, List<Feature>) -> Int
 
 /**
  * Leftmost potential parent
  */
 val ParentResolver.LEFT: ParentResolver
-    get() = { _, parents -> parents[0] }
+    get() = { _, _ -> 0 }
 
 /**
  * Rightmost potential parent
  */
 val ParentResolver.RIGHT: ParentResolver
-    get() = { _, parents -> parents[parents.size - 1] }
+    get() = { _, parents -> parents.size - 1 }
 
 /**
  * Narrowest potential parent, meaning the parent that is a descendant of all other parents, or throws [Exception]
  * if no such parent exists.
  */
 val ParentResolver.NARROW: ParentResolver
-    get() = { _, parents ->
-        parents.find { parent ->
-            val ancestors = parent.ancestors()
-            parents.all { it == parent || ancestors.contains(it) }
-        } ?: throw Exception("No narrowest parent")
-    }
+    get() = TODO("Not yet supported")
 
 /**
  * Will use output of [fallback] if `this` throws an exception

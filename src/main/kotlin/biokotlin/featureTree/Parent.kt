@@ -1,8 +1,6 @@
 package biokotlin.featureTree
 
 sealed interface Parent {
-    // TODO: improve documentation of multiple parentageo
-
     // PLANNED: Support multiple parent with concurrent operations
 
     /**
@@ -37,7 +35,7 @@ sealed interface Parent {
      * Does not currently support multiple parent trees.
      *
      * @throws ConcurrentModificationException if topology of tree is modified while it is being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun forEach(
         operation: (Feature) -> Unit,
@@ -57,7 +55,7 @@ sealed interface Parent {
      * @throws ConcurrentModificationException if topology of tree is modified while it is being traversed.
      * @throws IllegalArgumentException if [filter] returns false for all features rooted at this [Parent].
      * @throws IllegalArgumentException if `this` is a [Genome] with no features in it.
-     * @throws IllegalArgumentException if multiple parentage is enabled.
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled.
      */
     fun <R> reduce(
         transform: (Feature) -> R,
@@ -67,11 +65,13 @@ sealed interface Parent {
 
     // PLANNED: Replace "analogous" with more informative language
 
+    // PLANNED: Allow association/grouping operations to return null to exclude it from the map
+
     /**
      * Analogous to [kotlin.collections.associate] with a concurrent implementation. Makes no order guarantees.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun <K, V> associate(transform: (Feature) -> Pair<K, V>): Map<K, V>
 
@@ -79,7 +79,7 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.associateWith] with a concurrent implementation. Makes no order guarantees.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      *
      */
     fun <V> associateWith(valueSelector: (Feature) -> V): Map<out Feature, V>
@@ -88,7 +88,7 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.associateBy] with a concurrent implementation. Makes no order guarantees.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun <K> associateBy(keySelector: (Feature) -> K): Map<K, Feature>
 
@@ -96,7 +96,7 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.groupBy] with a concurrent implementation. Makes no order guarantees.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<Feature>>
 
@@ -104,7 +104,7 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.find] with a concurrent implementation. Makes no order guarantees.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun find(predicate: (Feature) -> Boolean): Feature?
 
@@ -112,7 +112,7 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.any] with a concurrent implementation.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun any(predicate: (Feature) -> Boolean): Boolean
 
@@ -120,7 +120,7 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.all] with a concurrent implementation.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun all(predicate: (Feature) -> Boolean): Boolean
 
@@ -130,26 +130,21 @@ sealed interface Parent {
      * Analogous to [kotlin.collections.sumOf] with a concurrent implementation.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun sumOf(selector: (Feature) -> Int): Int
 
     /**
-     * See [sumOf].
-     */
-    fun sumOf(selector: (Feature) -> Long): Long
-
-    /**
      * See [sumOf]
      */
-    fun sumOf(selector: (Feature) -> Double): Double
+    fun sumOfDouble(selector: (Feature) -> Double): Double
 
     /**
      * Creates a list of all [Feature]s in the tree rooted at this parent that satisfy [predicate]. Concurrent
      * implementation, makes no guarantees on order.
      *
      * @throws ConcurrentModificationException if topology of the tree is modified while being traversed.
-     * @throws IllegalArgumentException if multiple parentage is enabled
+     * @throws MultipleParentageNotYetSupported if multiple parentage is enabled
      */
     fun filteredList(predicate: (Feature) -> Boolean): List<Feature>
 }
@@ -171,9 +166,16 @@ sealed interface MutableParent : Parent {
      * If this [MutableParent] is not a [MutableGenome], the inserted [type] must have a part-of relationship
      * with this feature's type. This means that either the part-of relationship was explicitly defined by the user
      * or exists in the Sequence Ontology.
+     *
+     * @return the inserted feature
+     * @throws IllegalArgumentException if inserted has a multiplicity greater than 1 and does not have an ID.
+     * @throws IllegalArgumentException if type is "CDS" or a synonym and any phase is [Phase.UNSPECIFIED].
+     * @throws IllegalArgumentException if the specified ID attribute conflicts with another feature in the genome.
      * @throws TypeSchemaException if inserted type does not have part-of relationship.
      * @throws MixedMultiplicity if [ranges] and [phases] are not the same size.
-     * @throws ParentIDException if this parent is a [MutableFeature] and does not have a defined ID property.
+     * @throws IllegalArgumentException if this parent is a [MutableFeature] and does not have a defined ID property.
+     * @throws IllegalArgumentException if [attributes] contains the key "Parent." Parent/child relationships are
+     * determined by actual topology of the tree, NOT the attributes.
      */
     fun insert(
         seqid: String,
@@ -183,11 +185,12 @@ sealed interface MutableParent : Parent {
         score: Double?,
         strand: Strand,
         phases: Iterable<Phase>,
-        attributes: Iterable<Pair<String, Iterable<String>>>? = null
-    )
+        attributes: Map<String, Iterable<String>>? = null
+    ): MutableFeature
 
     /**
      * Alias for [insert] for features without discontinuous regions. Behaves analogously.
+     * @see [insert]
      */
     fun insert(
         seqid: String,
@@ -197,17 +200,28 @@ sealed interface MutableParent : Parent {
         score: Double?,
         strand: Strand,
         phase: Phase,
-        attributes: Iterable<Pair<String, Iterable<String>>>? = null
-    )
+        attributes: Map<String, Iterable<String>>? = null
+    ): MutableFeature
 
     /**
+     * PLANNED:
      * Modifies `this` to only include features for which [predicate] is true and their ancestors
      */
-    fun filter(predicate: (Feature) -> Boolean)
+    //fun filter(predicate: (Feature) -> Boolean)
 
-    override fun <V> associateWith(valueSelector: (Feature) -> V): Map<out Feature, V>
-    override fun <K> associateBy(keySelector: (Feature) -> K): Map<K, Feature>
+    override fun <V> associateWith(valueSelector: (Feature) -> V): Map<out MutableFeature, V>
+    override fun <K> associateBy(keySelector: (Feature) -> K): Map<K, MutableFeature>
     override fun find(predicate: (Feature) -> Boolean): Feature?
-    override fun filteredList(predicate: (Feature) -> Boolean): List<Feature>
-    override fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<Feature>>
+    override fun filteredList(predicate: (Feature) -> Boolean): List<MutableFeature>
+    override fun <K> groupBy(keySelector: (Feature) -> K): Map<K, List<MutableFeature>>
+
+    /**
+     * Applies [operation] to all [MutableFeature] in the tree rooted at this [MutableParent]. Children are modified
+     * prior to their parents, but no other guarantees about order are made.
+     *
+     * @throws ConcurrentModificationException if topological modifications are made as the tree is traversed
+     * @throws MultipleParentageNotYetSupported if the genome has multiple parentage enabled
+     */
+    fun modifyAll(operation: (MutableFeature) -> Unit, filter: ((Feature) -> Boolean)? = null, chunk: Int = 1000)
+
 }
