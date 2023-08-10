@@ -53,12 +53,15 @@ private fun decode(percentString: String): Char {
     val num = percentString.substring(1).toInt(16)
     return Char(num)
 }
+
 internal fun percentEncode(text: String, isColumnNine: Boolean = false): String {
-    return text.map { char -> if (toEncode.contains(char) || (isColumnNine && toEncodeCol9.contains(char))) {
-        encode(char)
-    } else {
-        char.toString()
-    } }.fold(StringBuilder()) { acc, e -> acc.append(e) }.toString()
+    return text.map { char ->
+        if (toEncode.contains(char) || (isColumnNine && toEncodeCol9.contains(char))) {
+            encode(char)
+        } else {
+            char.toString()
+        }
+    }.fold(StringBuilder()) { acc, e -> acc.append(e) }.toString()
 }
 
 internal fun percentDecode(text: String): String {
@@ -85,4 +88,19 @@ internal fun <T> Iterable<T>.toLinkedList(): LinkedList<T> {
     val list = LinkedList<T>()
     list.addAll(this)
     return list
+}
+
+internal fun <K, V, C : MutableCollection<V>> MutableMap<K, C>.enroll(key: K, value: V, makeCollection: (V) -> C) {
+    val existing = this[key]
+    if (existing == null) {
+        this[key] = makeCollection(value)
+    } else {
+        existing.add(value)
+    }
+}
+
+internal fun <K, V> MutableMap<K, MutableSet<V>>.enroll(key: K, value: V) = enroll(key, value) { arg ->
+    mutableSetOf(
+        arg
+    )
 }
