@@ -324,7 +324,7 @@ class MAFProcessingUtilsTest : StringSpec({
 
         // This is a MAF created in SmallSeq, added to the test's data folder here
         val workingDir = Paths.get(System.getProperty("user.dir"))
-        val mafFileSmallSeq = "${workingDir}/src/test/kotlin/biokotlin/data/LineA.maf"
+        val mafFileSmallSeq = "${workingDir}/src/test/kotlin/biokotlin/testData/LineA.maf"
         val covIdDF = getCoverageIdentityPercentForMAF(mafFileSmallSeq)
 
 
