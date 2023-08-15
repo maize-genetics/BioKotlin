@@ -2,22 +2,52 @@ package biokotlin.featureTree
 
 import java.io.File
 
-// This file is incomplete and will require a near total rework due to some complexities in the underlying SO file.
-
 const val SO_PATH = "src/main/resources/featureTree/so.obo"
 
+/**
+ *
+ */
 private interface Type {
-    val id: String // Uniquely defines type
-    val exactSynonyms: Set<String> // Includes only EXACT
-    val roughSynonyms: Set<String> // Includes BROAD & RELATED
-    val isA: Set<String> // Set of ID strings
-    val partOf: Set<String> // Set of ID strings
+    /**
+     * UNIQUELY defines a type within a [TypeSchema]
+     */
+    val id: String
+
+    /**
+     * Includes name and EXACT synonyms
+     */
+    val exactSynonyms: Set<String>
+
+    /**
+     * Includes BROAD & RELATED synonyms
+     */
+    val roughSynonyms: Set<String>
+
+    /**
+     * The IDs of direct supertypes of this type
+     */
+    val isA: Set<String>
+
+    /**
+     * The IDs of direct part-of relationships of this type
+     */
+    val partOf: Set<String>
 }
 
-private class BaseSchema private constructor() {
-    val idToType = mutableMapOf<String, BaseType>() // ID to its type
+internal class BaseSchema private constructor() {
+    /**
+     * Maps an ID to its base type
+     */
+    val idToType = mutableMapOf<String, BaseType>()
+
+    /**
+     * Maps all exact and rough synonyms to all IDs that they are associated with
+     */
     val nameToIDs = mutableMapOf<String, MutableSet<String>>() // Name to all types it is an exact or rough synonym of
 
+    /**
+     * Types defined within the sequence ontology
+     */
     inner class BaseType(
         override val id: String,
         override val exactSynonyms: Set<String>,
@@ -29,15 +59,17 @@ private class BaseSchema private constructor() {
         /**
          * INVARIANTS:
          * 1. idToType points to this
+         * 2. namesToIDs points to this ID for all names
          */
         fun invariants(): Boolean {
             check(idToType[id] == this) { "1" }
+            check((exactSynonyms + roughSynonyms).all { nameToIDs[it]?.contains(id) == true }) { "2" }
             return true
         }
 
         init {
             idToType[id] = this
-            (exactSynonyms.union(roughSynonyms)).forEach { nameToIDs.enroll(it, id) }
+            (exactSynonyms union roughSynonyms).forEach { nameToIDs.enroll(it, id) }
             assert { invariants() }
         }
 
@@ -45,6 +77,7 @@ private class BaseSchema private constructor() {
 
     companion object {
         private val instance = BaseSchema()
+
         init {
             // Populates registry with information from the so.obo file
             val partOfSynonyms = setOf("part_of", "member_of", "integral_part_of")
@@ -86,7 +119,7 @@ private class BaseSchema private constructor() {
 
                     // Add synonyms
                     if (line.startsWith("name: ")) exactSynonyms.add(line.substringAfter("name: "))
-                    if (line.startsWith("synonym: ") && line.contains("EXACT")) {
+                    if (line.startsWith("synonym: ")) {
                         val syn = line.substringAfter("\"").substringBefore("\"")
                         if (line.contains("EXACT")) {
                             exactSynonyms.add(syn)
@@ -110,37 +143,140 @@ private class BaseSchema private constructor() {
 
         }
 
+        /**
+         * All ids associated with the [name] within the base sequence ontology
+         */
         fun idsByName(name: String): Set<String> = instance.nameToIDs[name] ?: emptySet()
 
-        fun byID(id: String): Type? = instance.idToType[id]
+        /**
+         * The base type associated with [id] or null if none exists
+         */
+        fun byID(id: String): BaseType? = instance.idToType[id]
 
-//        operator fun get(name: String) = instance.baseRegistry[name]
-//        fun contains(name: String) = instance.baseRegistry.containsKey(name)
-//        fun keys(): Set<String> = instance.baseRegistry.keys.toSet()
-//
-//        fun values(): Set<Set<Type>> = instance.baseRegistry.values.toSet()
+        /**
+         * @return set of all IDs in the base schema
+         */
+        fun ids(): Set<String> = instance.idToType.keys.toSet()
     }
 }
 
+/**
+ * Defines ids, names, synonym, isA, and partOf relationships for types. Each genome will have a type schema, that
+ * may be modified from the base type schema defined by the sequence ontology to be more permissive.
+ */
 class TypeSchema private constructor(
+    /**
+     * Association of all IDs with their TypeDecorator, if they have one
+     */
     private val customIdToType: MutableMap<String, TypeDecorator>,
-    private val customNamesToIds: MutableMap<String, MutableSet<TypeDecorator>>,
-    private val memo: MutableMap<String, Pair<String, Boolean>>
+    /**
+     * Association of all names, exact synonyms and rough synonyms to their IDs within the TypeSchema
+     */
+    private val customNamesToIds: MutableMap<String, MutableSet<String>>,
+    /**
+     * Memoizes the results of [partOf] due to its cost.
+     * A partOf(child, parent) relation is true if `memo.get(child)?.get(parent) == true` and false if
+     * `memo.get(child)?.get(parent) == false`
+     */
+    private val memo: MutableMap<String, MutableMap<String, Boolean>>
 ) {
-    internal constructor(): this(HashMap(), HashMap(), HashMap())
+    internal constructor() : this(HashMap(), HashMap(), HashMap())
 
+    /**
+     * Wraps around an existing type to give it additional properties or defines a user-created type
+     */
     inner class TypeDecorator private constructor(
         override val id: String,
+        /**
+         * Only the *additional* exact synonyms (ie those not present in the base)
+         */
         private val additionalExactSynonyms: MutableSet<String>,
         private val additionalRoughSynonyms: MutableSet<String>,
         private val additionalIsA: MutableSet<String>,
         private val additionalPartOf: MutableSet<String>,
+        /**
+         * Base type that is being decorated or null if no underlying base type
+         */
         private val base: BaseSchema.BaseType?
     ) : Type {
 
+        internal constructor(id: String, base: BaseSchema.BaseType?) : this(
+            id, mutableSetOf(), mutableSetOf(), mutableSetOf(), mutableSetOf(), base
+        )
+
+        internal constructor(id: String) : this(
+            id, mutableSetOf(), mutableSetOf(), mutableSetOf(), mutableSetOf(), null
+        )
+
+        internal constructor(
+            id: String,
+            additionalExactSynonyms: Iterable<String>,
+            additionalRoughSynonyms: Iterable<String>,
+            additionalIsA: Iterable<String>,
+            additionalPartOf: Iterable<String>,
+            base: BaseSchema.BaseType?
+        ) : this(
+            id,
+            additionalExactSynonyms.toMutableSet(),
+            additionalRoughSynonyms.toMutableSet(),
+            additionalIsA.map {
+                val ids = idByNameOrID(it)
+                checkIDSet(it, ids)
+                ids
+            }.flatten().toMutableSet(),
+            additionalPartOf.map {
+                val ids = idByNameOrID(it)
+                checkIDSet(it, ids)
+                ids
+            }.flatten().toMutableSet(),
+            base
+        )
+
+        /**
+         * INVARIANTS:
+         * 1. ID is in [customIdToType] and points to this
+         * 2. All names are in [customNamesToIds] and contain this id
+         * 3. isA is not cyclic
+         * 4. partOf is not cyclic
+         * 5. If base schema contains this ID, then it points to base
+         */
+        private fun invariants(): Boolean {
+            check(customIdToType[id] == this) { "1" }
+            check((exactSynonyms + roughSynonyms).all { customNamesToIds[it]?.contains(id) == true }) { "2" }
+            check(!isA(id, id)) { "3" }
+            check(!partOf(id, id)) { "4" }
+            check(BaseSchema.byID(id) == null || BaseSchema.byID(id) == base) { "5" }
+            return true
+        }
+
+        init {
+            val existing = getOrNull(id)
+            if (existing != null && existing != base) throw IllegalArgumentException("Type id conflict $id")
+            customIdToType[id] = this
+            if (isA(id, id)) throw CyclicType(id)
+            if (partOf(id, id)) throw CyclicType(id)
+            (exactSynonyms.union(roughSynonyms)).forEach { customNamesToIds.enroll(it, id) }
+            assert { invariants() }
+        }
+
+        fun copy(): TypeDecorator {
+            return TypeDecorator(
+                id,
+                additionalExactSynonyms.toMutableSet(),
+                additionalRoughSynonyms.toMutableSet(),
+                additionalIsA.toMutableSet(),
+                additionalPartOf.toMutableSet(),
+                base
+            )
+        }
+
+        /**
+         * Pulls a Set property from the base of this [TypeDecorator] or empty set if no base
+         */
         private fun <T> baseSet(property: BaseSchema.BaseType.() -> Set<T>): Set<T> {
             return if (base == null) emptySet() else property.invoke(base)
         }
+
         override val exactSynonyms: Set<String>
             get() = additionalExactSynonyms union baseSet { exactSynonyms }
         override val roughSynonyms: Set<String>
@@ -149,20 +285,79 @@ class TypeSchema private constructor(
             get() = additionalIsA union baseSet { isA }
         override val partOf: Set<String>
             get() = additionalPartOf union baseSet { partOf }
+
+        /**
+         * Adds [synonym] to the set of exact synonyms for this type
+         */
+        fun addExactSynonym(synonym: String) {
+            additionalExactSynonyms.add(synonym)
+            customNamesToIds.enroll(synonym, id)
+            assert { invariants() }
+        }
+
+        /**
+         * Adds [synonym] to the set of rough synonyms for this type
+         */
+        fun addRoughSynonym(synonym: String) {
+            additionalRoughSynonyms.add(synonym)
+            customNamesToIds.enroll(synonym, id)
+            assert { invariants() }
+        }
+
+        /**
+         * Adds [isA] to the set of isA relationships for this type.
+         * @param isA the *id* of the type that this type is a subtype of
+         * @throws CyclicType if [isA] is already a subtype of this type
+         */
+        fun addIsA(isA: String) {
+            if (isA(isA, id)) throw CyclicType(id) // PLANNED clearer error message
+            additionalIsA.add(isA)
+            assert { invariants() }
+        }
+
+        /**
+         * Adds [partOf] to the set of partOf relationships for this type
+         * @param partOf the *id* of the type that this type is a part of
+         * @throws CyclicType if [partOf] is already a part of this type
+         */
+        fun addPartOf(partOf: String) {
+            if (partOf(partOf, id)) throw CyclicType(id) // PLANNED clearer error message
+            additionalPartOf.add(partOf)
+            assert { invariants() }
+        }
     }
 
+    /**
+     * All IDs that are associated with [name] in the schema
+     */
     private fun idsByName(name: String): Set<String> {
-        val customIds = customNamesToIds[name]?.map { it.id }?.toSet() ?: emptySet()
+        val customIds = customNamesToIds[name] ?: emptySet()
         return customIds union BaseSchema.idsByName(name)
     }
 
+    /**
+     * Returns the type associated with [id] or null if no such type exists
+     */
     private fun getOrNull(id: String): Type? = customIdToType[id] ?: BaseSchema.byID(id)
 
+    /**
+     * Returns the type associated with [id] or throws [NotInSchema] if no such type exists
+     */
     private fun get(id: String): Type = getOrNull(id) ?: throw NotInSchema(id)
 
-    fun containsName(name: String) = idsByName(name).isNotEmpty()
+    /**
+     * Returns true if [name] is associated with at least one type in the schema
+     */
+    fun containsName(name: String) = idByNameOrID(name).isNotEmpty()
+
+    /**
+     * Returns true if [id] is associated with a type in the schema
+     */
     fun containsID(id: String) = getOrNull(id) != null
 
+    /**
+     * Returns the set of all types associated with all [nameOrId]
+     */
     private fun typeByNameOrID(vararg nameOrId: String): Set<Type> {
         return nameOrId.map {
             val byID = getOrNull(it)
@@ -171,310 +366,215 @@ class TypeSchema private constructor(
             if (byID != null) typesByName + byID else typesByName
         }.flatten().toSet()
     }
+
+    /**
+     * Returns the set of all IDs associated with all [nameOrId]
+     */
+    private fun idByNameOrID(vararg nameOrId: String): Set<String> {
+        return typeByNameOrID(*nameOrId).map { it.id }.toSet()
+    }
+
+    fun synonyms(name: String): Set<String> {
+        val types = typeByNameOrID(name).filter { (it.exactSynonyms + it.id).contains(name) }
+        return types.map { it.exactSynonyms + it.id }.flatten().toSet()
+    }
+
+    /**
+     * Returns true iff all [names] are exact synonyms or ids of any type associated with [name]
+     */
     fun isSynonym(name: String, vararg names: String): Boolean {
-        val types = typeByNameOrID(name)
-        return names.all { nam -> types.any { type -> type.exactSynonyms.contains(nam) } }
+        val synonyms = synonyms(name)
+        return names.all { synonyms.contains(it) }
     }
 
+    /**
+     * The id, name, exact synonyms, and rough synonyms of all types associated with [name]
+     */
+    fun roughSynonyms(name: String): Set<String> {
+        val types = typeByNameOrID(name)
+        return types.map { it.exactSynonyms + it.roughSynonyms + it.id }.flatten().toSet()
+    }
+
+    /**
+     * Returns true iff all [names] are rough synonyms, exact synonyms, or ids of any type associated with [name]
+     */
     fun isRoughSynonym(name: String, vararg names: String): Boolean {
-        val types = typeByNameOrID(name)
-        return names.all { nam -> types.any { type -> type.exactSynonyms.contains(nam) || type.roughSynonyms.contains(name) } }
+        val roughSynonyms = roughSynonyms(name)
+        return names.all { roughSynonyms.contains(it) }
     }
 
+    /**
+     * Returns true iff subType transitively has an isA relationship with any element of [superTypeIds]
+     * @throws NotInSchema if any element of [superTypeIds] is not in the schema
+     */
     private fun isA(subType: Type, superTypeIds: Set<String>): Boolean {
         if (subType.isA intersects superTypeIds) return true
         return subType.isA.any { isA(get(it), superTypeIds) }
     }
 
+    /**
+     * Returns true iff [subType] is a subtype of [superType].
+     * @throws NotInSchema if either [subType] or [superType] is not in the schema
+     */
     fun isA(subType: String, superType: String): Boolean {
         val superTypeIds = typeByNameOrID(superType).map { it.id }.toSet()
         val subTypes = typeByNameOrID(subType)
         return subTypes.any { isA(it, superTypeIds) }
     }
 
+    /**
+     * Returns true iff [child] or any of its super or parent types
+     * is a part of any element of [goals].
+     */
     private fun partOf(child: Type, goals: Set<String>): Boolean {
-        if (goals.contains(child.id)) return true
+        if (child.partOf intersects goals) {
+            return true
+        }
         val toCheck = child.isA union child.partOf
         return toCheck.map { get(it) }.any { partOf(it, goals) }
     }
 
-    private fun allSuper(type: Type): Set<String> { // Only IDs
+    /**
+     * Returns all super type IDs of [type] (including itself)
+     */
+    private fun allSuper(type: Type): Set<String> {
         val idCollector = mutableSetOf<String>()
         stackWalking(type, { idCollector.add(it.id) }, { it.isA.map { get(it) } })
         return idCollector
     }
 
+    /**
+     * Returns true if [child] is part of [parent], meaning that they can have a parent/child relationship
+     */
     fun partOf(child: String, parent: String): Boolean {
+        val memoized = memo[child]?.get(parent)
+        if (memoized != null) {
+            return memoized
+        }
+
         val childTypes = typeByNameOrID(child)
         val goals = typeByNameOrID(parent).map { allSuper(it) }.flatten().toSet()
-        return childTypes.any { partOf(it, goals) }
+        val result = childTypes.any { partOf(it, goals) }
+
+        val memoEntry = memo[child]
+        if (memoEntry != null) memoEntry[parent] = result else memo[child] = mutableMapOf(parent to result)
+        return result
     }
 
+    /**
+     * Returns the type decorator associated with [id], creating one if necessary
+     */
+    private fun getOrDecorate(id: String): TypeDecorator {
+        return customIdToType[id] ?: TypeDecorator(id, BaseSchema.byID(id))
+    }
+
+    /**
+     * Helper function for functions that add some String to a property of a type.
+     * @throws AmbiguousTypeModification if [type] does not uniquely refer to a single type. Hint: use IDs.
+     */
+    private fun addHelper(type: String, operation: TypeDecorator.(String) -> Unit, vararg addition: String) {
+        val typeIDs = idByNameOrID(type)
+        checkIDSet(type, typeIDs)
+        val decor = getOrDecorate(get(typeIDs.first()).id)
+        addition.forEach { decor.operation(it) }
+        memo.clear()
+    }
+
+    private fun checkIDSet(name: String, id: Set<String>) {
+        if (id.size > 1) throw AmbiguousTypeModification(name, id)
+        if (id.isEmpty()) throw NotInSchema(name)
+    }
+
+    /**
+     * Adds all [synonym] as exact synonyms of [type]
+     * @throws AmbiguousTypeModification if [type] does not uniquely refer to a single type. Hint: use IDs.
+     */
     fun addSynonym(type: String, vararg synonym: String) {
-
+        addHelper(type, { addExactSynonym(it) }, *synonym)
     }
 
+    /**
+     * Adds all [synonym] as rough synonyms of [type]
+     * @throws AmbiguousTypeModification if [type] does not uniquely refer to a single type. Hint: use IDs.
+     */
+    fun addRoughSynonym(type: String, vararg synonym: String) {
+        addHelper(type, { addRoughSynonym(it) }, *synonym)
+    }
+
+    /**
+     * Adds [subType] as a subtype of [superType]
+     * @throws AmbiguousTypeModification if either [subType] or [superType] does not uniquely refer to a single type. Hint: use IDs.
+     */
     fun addIsA(subType: String, superType: String) {
-
+        val superTypeID = idByNameOrID(superType)
+        checkIDSet(superType, superTypeID)
+        addHelper(subType, { addIsA(it) }, superTypeID.first())
     }
 
+    /**
+     * Adds [child] as a part of [parent]
+     * @throws AmbiguousTypeModification if either [child] or [parent] does not uniquely refer to a single type. Hint: use IDs.
+     */
     fun addPartOf(child: String, parent: String) {
-
+        val parentID = idByNameOrID(parent)
+        checkIDSet(parent, parentID)
+        addHelper(child, { addPartOf(it) }, parentID.first())
     }
 
-    fun defineType(id: String, exactSynonyms: Set<String>, roughSynonyms: Set<String>, isA: Set<String>, partOf: Set<String>) {
-
+    /**
+     * @see MutableGenome.defineType
+     */
+    fun defineType(
+        id: String,
+        exactSynonyms: Set<String>,
+        roughSynonyms: Set<String>,
+        isA: Set<String>,
+        partOf: Set<String>
+    ) {
+        TypeDecorator(id, exactSynonyms, roughSynonyms, isA, partOf, null)
+        memo.clear()
     }
 
+    fun copy(): TypeSchema {
+        return TypeSchema(
+            customIdToType.entries.associate { (id, type) -> id to type.copy() }.toMutableMap(),
+            customNamesToIds.toMutableMap(),
+            memo.toMutableMap()
+        )
+    }
+
+    /**
+     * Outputs DOT format visualization of this schema
+     */
+    fun visualize(): String {
+        val sb = StringBuilder()
+        sb.appendLine("""
+            digraph {
+                node [shape = plaintext]
+        """.trimIndent())
+        val allIDs = customIdToType.keys.toSet() union BaseSchema.ids()
+        allIDs.forEach { id ->
+            val type = get(id)
+            sb.appendLine("""
+                "$id" [label = "type: $type
+                exact synonyms: ${type.exactSynonyms}
+                rough synonyms: ${type.roughSynonyms}
+                isA: ${type.isA}
+                partOf: ${type.partOf}
+                "]
+            """.trimIndent())
+            type.isA.forEach {
+                sb.appendLine("""
+                    "$id" -> "$it" [label = "isA" color = green]
+                """.trimIndent())
+            }
+            type.partOf.forEach {
+                sb.appendLine("""
+                    "$id" -> "$it" [label = "partOf" color = blue]
+                """.trimIndent())
+            }
+        }
+        sb.append("}")
+        return sb.toString()
+    }
 }
-//class TypeSchema private constructor(
-//    private val customRegistry: MutableMap<String, MutableSet<TypeDecorator>>,
-//    private val memo: MutableMap<String, MutableSet<String>>
-//) {
-//    internal constructor(): this(HashMap(), HashMap())
-//    private fun getOrNull(name: String): MutableSet<out Type>? = customRegistry[name] ?: BaseSchema[name]
-//    private fun get(name: String): MutableSet<out Type> = getOrNull(name) ?: throw NotInSequenceOntology(name)
-//
-//    fun contains(name: String) = getOrNull(name) != null
-//    private fun allIsA(type: Set<Type>): Set<Type> {
-//        val set = HashSet<Type>()
-//        val stack = Stack<Type>()
-//        stack.addAll(type)
-//        while (stack.isNotEmpty()) {
-//            val t = stack.pop()
-//            println("~t: ${t.names}")
-//            set.add(t)
-//            stack.addAll(t.isA.map { get(it.names.first()) }.flatten())
-//        }
-//        return set
-//    }
-//
-//    private fun allTypes(): Set<Type> {
-//        val customTypes = customRegistry.values.flatten().toSet()
-//        return customTypes union BaseSchema.values().flatten().filter { it !in customTypes }.toSet()
-//    }
-//
-//    private fun allPartOf(type: Set<Type>): Set<String> = emptySet() // TODO
-//    fun partOf(child: String, parent: String): Boolean {
-//        return true
-////        println("""
-////            =======================
-////            |child: $child
-////            |parent: $parent
-////        """.trimIndent())
-////        val parentType = get(parent)
-////        val childType = get(child)
-////        val goals = allIsA(parentType) union parentType
-////        println("|goals: ${goals.map { it.names }}")
-////        return childType.any { recPartOf(it, goals) }
-//    }
-//
-//    private fun recPartOf(child: Type, goals: Set<Type>): Boolean {
-//        println("---")
-//        println("|child: ${child.names}")
-//        if (child.partOf.any { it in goals }) {
-//            println("|FOUND ###")
-//            return true
-//        }
-//
-//        val toCheck = child.isA + child.partOf
-//        println("|toCheck: ${toCheck.map { it.names }}")
-//
-//        return toCheck.any { recPartOf(it, goals) }
-//    }
-//
-//    private fun isA(subType: Type, superType: Type): Boolean {
-//        return subType.isA.contains(superType) || subType.isA.any { isA(it, superType) }
-//    }
-//    fun isA(subType: String, superType: String): Boolean {
-//        val sub = get(subType)
-//        val sup = get(superType)
-//        return sub.any { a -> sup.any { b -> a.isA.contains(b) || isA(a, b) } }
-//    }
-//
-//    fun isSynonym(name: String, vararg synonym: String): Boolean {
-//        return false
-////        val synonyms = synoynms(name)
-////        return synonym.all { synonyms.contains(it) }
-//    }
-//
-//    fun synoynms(name: String): Set<String> {
-//        return emptySet()
-////        val type = get(name)
-////        return type.map { it.names }.flatten().toSet()
-//    }
-//
-//    private fun getOrDecorate(name: String): Set<TypeDecorator> {
-//        val custom = customRegistry[name]
-//        val base = BaseSchema[name]
-//        return custom ?: (base?.map {
-//            TypeDecorator(
-//                base = it,
-//                moreNames = LinkedHashSet(it.names),
-//                morePartOf = LinkedHashSet(it.partOf),
-//                moreIsA = LinkedHashSet(it.isA)
-//            )
-//        }?.toSet()
-//            ?: throw NotInSchema(name))
-//    }
-//
-//    private fun uniqueGetOrDecorate(name: String): TypeDecorator {
-//        val decor = getOrDecorate(name)
-//        if (decor.size > 1) throw AmbiguousTypeModification(name, decor.map { it.names })
-//        return decor.first()
-//    }
-//
-//    private fun uniqueGet(name: String): Type {
-//        val type = get(name)
-//        if (type.size > 1) throw AmbiguousTypeModification(name, type.map { it.names })
-//        return type.first()
-//    }
-//    fun addIsA(subType: String, superType: String) {
-////        uniqueGetOrDecorate(subType).addIsA(uniqueGet(superType))
-//    }
-//
-//    fun addPartOf(child: String, parent: String) {
-////        uniqueGetOrDecorate(child).addIsPartOf(uniqueGet(parent))
-//    }
-//
-//    fun addSynonym(name: String, vararg synonym: String) {
-////        uniqueGetOrDecorate(name).addSynonym(*synonym)
-//    }
-//
-//    fun defineType(
-//        names: List<String>,
-//        isA: List<String>,
-//        partOf: List<String>
-//    ) {
-////        TypeDecorator(
-////            base = null,
-////            moreNames = LinkedHashSet(names),
-////            morePartOf = LinkedHashSet(partOf.map { uniqueGet(it) }),
-////            moreIsA = LinkedHashSet(isA.map { uniqueGet(it) })
-////        )
-//    }
-//
-//    fun defineType(
-//        name: String,
-//        isA: String? = null,
-//        partOf: String? = null
-//    ) {
-////        defineType(
-////            listOf(name),
-////            if (isA == null) emptyList() else listOf(isA),
-////            if (partOf == null) emptyList() else listOf(partOf)
-////        )
-//    }
-//
-//    private fun enroll(name: String, type: TypeDecorator) {
-//        val existing = customRegistry[name]
-//        if (existing == null) {
-//            customRegistry[name] = mutableSetOf(type)
-//        } else {
-//            existing.add(type)
-//        }
-//    }
-//
-//    fun copy(): TypeSchema {
-//        return TypeSchema()
-//        // PLANNED: proper implementation
-//    }
-//
-//    private inner class TypeDecorator(
-//        val base: BaseSchema.BaseType?,
-//        val moreNames: MutableSet<String>,
-//        val morePartOf: MutableSet<Type>,
-//        val moreIsA: MutableSet<Type>
-//    ): Type {
-//
-//        /**
-//         * INVARIANTS:
-//         * 1. All names point to this in [customRegistry]
-//         * 2. allIsA is not cyclic
-//         * 3. allPartOf is not cyclic
-//         * 4. If base is null, no name is in the base registry
-//         */
-//        fun invariants(): Boolean {
-////            check(names.all {
-////                val existing = customRegistry[it]
-////                existing != null && existing.contains(this)
-////            }) { "1" }
-////            val allIsA = allIsA(setOf(this))
-////            check( isA(this, this) ) { "2" }
-////            val allPartOf = allPartOf(setOf(this))
-////            check(names.none { allPartOf.contains(it) }) { "3" }
-////            check(base != null || names.none { BaseSchema.contains(it) }) { "4" }
-//            return true
-//        }
-//
-//        init {
-////            names.forEach { enroll(it, this) }
-////            if (overlap(allIsA(setOf(this)), names)) throw CyclicType(names.toString())
-////            if (overlap(allPartOf(setOf(this)), names)) throw CyclicType(names.toString())
-////            assert { invariants() }
-//        }
-//
-//        private fun <T> overlap(set1: Set<T>, set2: Set<T>): Boolean = set1.intersect(set2).isNotEmpty()
-//        override val names: Set<String>
-//            get() = (base?.names ?: emptyList()).toSet().union(moreNames)
-//
-//        override val partOf: Set<Type>
-//            get() = (base?.partOf?.map { get(it.names.first()) }?.flatten()?.toSet() ?: emptySet()).union(morePartOf)
-//
-//        override val isA: Set<Type>
-//            get() = (base?.isA?.map { get(it.names.first()) }?.flatten()?.toSet() ?: emptySet()).union(moreIsA)
-//
-//        fun addSynonym(vararg synonym: String) {
-////            synonym.forEach { syn ->
-////                moreNames.add(syn)
-////                val existing = customRegistry[syn]
-////                if (existing == null) customRegistry[syn] = mutableSetOf(this) else existing.add(this)
-////            }
-//        }
-//
-//        fun addIsA(isA: Type) {
-////            if (overlap(allIsA(setOf(this)), isA.names)) throw CyclicType(names.toString())
-////            moreIsA.add(isA)
-////            assert { invariants() }
-//        }
-//
-//        fun addIsPartOf(partOf: Type) {
-////            if (overlap(allPartOf(setOf(this)), partOf.names)) throw CyclicType(names.toString())
-////            morePartOf.add(partOf)
-////            assert { invariants() }
-//        }
-//    }
-//
-//    fun visualize(): String {
-//        return "NOT YET IMPLEMENTED"
-////        val sb = StringBuilder()
-////        sb.appendLine(
-////            """digraph {
-////                    node [shape = plaintext]
-////            """.trimIndent()
-////        )
-////        val allTypes = customRegistry.keys.toSet().union(BaseSchema.keys().toSet()).map { get(it) }.flatten().toSet()
-////        for (type in allTypes) {
-////            sb.appendLine(
-////                """"$type" [label =
-////                   "Names: ${type.names}
-////                    IsA: ${type.isA.map { it.names.first() }}
-////                    PartOf: ${type.partOf.map { it.names.first() }}"]
-////                """.trimIndent()
-////            )
-////            type.isA.forEach {
-////                sb.appendLine("""
-////                    "$type" -> "$it" [color = blue label = "isA"]
-////                """.trimIndent())
-////            }
-////            type.partOf.forEach {
-////                sb.appendLine("""
-////                    "$type" -> "$it" [color = red label = "partOf"]
-////                """.trimIndent())
-////            }
-////
-////        }
-////        sb.append("}")
-////        return sb.toString()
-//    }
-//}

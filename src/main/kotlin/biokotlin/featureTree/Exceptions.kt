@@ -98,11 +98,11 @@ class NotInSchema(val type: String): Exception(
     """.trimIndent()
 )
 
-class AmbiguousTypeModification(val ambiguousName: String, val conflictingNames: Iterable<Iterable<String>>): Exception(
+class AmbiguousTypeModification(val ambiguousName: String, val conflictingIds: Iterable<String>): Exception(
     """
         $ambiguousName is a shared synonym across multiple types. To modify this type, you must specify a non-ambiguous
         name for it (hint: use SO IDs).
-        Conflicting names: $conflictingNames
+        Conflicting IDs: $conflictingIds
     """.trimIndent()
 )
 

@@ -257,8 +257,7 @@ internal class Graph private constructor(
                 check(id != null || children.isEmpty()) { "5: $this" }
                 check(multipleParentage || parents.size <= 1) { "6: $this" }
                 check(parents.all { it.children.contains(this) }) { "7: $this" }
-                check(type != "CDS" || phases.none { it == Phase.UNSPECIFIED }) { "8: $this" } // PLANNED: add CDS synonyms
-                //check(!schema.isSynonym(type, "CDS") || phases.none { it == Phase.UNSPECIFIED }) { "8: $this" }
+                check(!schema.isSynonym("CDS", type) || phases.none { it == Phase.UNSPECIFIED }) { "8: $this" }
                 check(!data.attributes.contains("Parent")) { "9: $this" }
                 check(parents.allUnique()) { "10: $this" }
                 check(id == null || byID[id] == this) { "11: $this" }
@@ -832,13 +831,13 @@ internal class Graph private constructor(
             textCorrecter: ((String) -> String)?, // PLANNED: robust convenience function framework
             parentResolver: ParentResolver?,
             multipleParentage: Boolean,
-            modifySchema: ((TypeSchema) -> Unit)? // PLANNED: implement
+            modifySchema: (TypeSchema.() -> Unit)?
             // PLANNED: dataCorrecter
         ): Graph {
             // PLANNED: concurrent reading of ### directive
-            if (modifySchema != null) TODO("Not yet supported")
 
             val graph = Graph(multipleParentage)
+            modifySchema?.invoke(graph.schema)
             FileReader(file).useLines { lines ->
                 var lineCounter = 0
                 for (line in lines) {

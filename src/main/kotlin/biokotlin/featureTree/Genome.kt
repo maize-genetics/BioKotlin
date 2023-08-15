@@ -40,40 +40,57 @@ sealed interface Genome : Parent {
     fun containsName(name: String): Boolean
 
     /**
-     * PLANNED: Implementation of TypeSchema
      * True iff [type] is in the type schema.
      */
-//    fun containsType(type: String): Boolean
+    fun containsType(type: String): Boolean
+
+    // PLANNED improve documentation of what it means to be an exact synonym
 
     /**
-     * PLANNED: Implementation of TypeSchema
-     * True iff [type1] and [type2] are synonyms for the same type.
-     * @throws NotInSchema if [type1] is not in the type schema.
+     * True iff all elements of [other] are exact synonyms of [name].
+     * Always false if [name] is not in the schema.
      */
-//    fun isSynonym(type1: String, type2: String): Boolean
+    fun isSynonym(name: String, vararg other: String): Boolean
 
     /**
-     * PLANNED: Implementation of TypeSchema
-     * All synonyms of [type].
+     * All exact synonyms of [type].
      * @throws NotInSchema if [type] is not in the type schema.
      */
-//    fun synonyms(type: String): Set<String>
+    fun synonyms(type: String): Set<String>
 
     /**
-     * PLANNED: Implementation of TypeSchema
+     * All rough and exact synonyms of [type]
+     * @throws NotInSchema if [type] is not in the type schema.
+     */
+    fun roughSynonyms(type: String): Set<String>
+
+    /**
+     * True iff all elements of [other] are rough synonyms of [name].
+     * Always false if [name] is not in the schema.
+     */
+    fun isRoughSynonym(name: String, vararg other: String): Boolean
+
+    /**
+     * True any type associated with the name [subType] is transitively a subtype of any type associated with the name
+     * [superType]
+     *
+     * @throws NotInSchema if [subType] or [superType] is not in the type schema..
+     */
+    fun isA(subType: String, superType: String): Boolean
+
+    /**
      * True iff [child] has a part-of relationship to [parent], either from the Sequence Ontology or due to manual
-     * definition of the type ([MutableGenome.defineType] or [MutableGenome.addPartOf]).
+     * definition of PLANNED: Implementation of TypeSchema the type ([MutableGenome.defineType] or [MutableGenome.addPartOf]).
      *
      * @throws NotInSchema if [child] or [parent] is not in the type schema.
      */
-//    fun partOf(child: String, parent: String): Boolean
+    fun partOf(child: String, parent: String): Boolean
 
     /**
-     * PLANNED: Implementation of TypeSchema
      * DOT format representation of the type schema where nodes represent a type and edges represent a part-Of relationship.
      * Can be visualized with DOT visualization tools, such as Graphviz.
      */
-//    fun visualizeSchema(): String
+    fun visualizeSchema(): String
 
     /**
      * If `true`, then a [Feature] within the [Genome] may have multiple parents. If `false`, no [Feature] in the
@@ -161,15 +178,35 @@ sealed interface MutableGenome : Genome, MutableParent {
     val topologicalModifications: Int
 
     /**
-     * PLANNED:
-     * @throws NotInSchema if any element of [isA] or [partOf] is not null but is not in the type schema.
+     * Defines a type with the specified properties.
+     * @param id the *unique* identifier for this type. May not be used as an ID or synonym of any other type.
+     * @param exactSynonyms the *exact* synonyms of this type.
+     * @param roughSynonyms broad synonyms or related terms
+     * @param isA a set of type names that are supertypes of this. All types associated with every name in this parameter
+     * will be considered supertypes of this new type.
+     * @param partOf a set of type names that this type is part of. This type will be considered a part of all types
+     * associated with all names in this parameter.
+     * @throws IllegalArgumentException if [id] is already present in the schema.
+     * @throws NotInSchema if any name in [isA] or [partOf] is not in the schema
+     * @throws CyclicType if specified [isA] or [partOf] relationships create a cyclic type definition
+     * @throws AmbiguousTypeModification if any name in [isA] or [partOf] does not uniquely define a single type. For example,
+     * if they are synonyms of multiple types. Hint: use IDs.
      */
-    fun defineType(name: List<String>, isA: List<String>, partOf: List<String>)
+    fun defineType(
+        id: String,
+        exactSynonyms: Set<String>,
+        roughSynonyms: Set<String>,
+        isA: Set<String>,
+        partOf: Set<String>
+    )
+
     /**
      * Makes [child] have a part-of relationship with [parent].
      *
      * @throws NotInSchema if [child] or [parent] is not in the type schema.
      * @throws CyclicType if [parent] is a part of [child]
+     * @throws AmbiguousTypeModification if [child] or [parent] do not uniquely define a single type. For example,
+     * if they are synonyms of multiple types. Hint: use IDs.
      */
     fun addPartOf(child: String, parent: String)
 
@@ -177,8 +214,27 @@ sealed interface MutableGenome : Genome, MutableParent {
      * Makes all [synonym] synonyms of [existing].
      *
      * @throws NotInSchema if [existing] is not in the type schema.
+     * @throws AmbiguousTypeModification if [existing] or any [synonym] do not uniquely define a single type. For example,
+     * if they are synonyms of multiple types. Hint: use IDs.
      */
     fun addSynonym(existing: String, vararg synonym: String)
+
+    /**
+     * Makes all [synonym] rough synonyms of [existing].
+     * @throws NotInSchema if [existing] is not in the type schema.
+     * @throws AmbiguousTypeModification if [existing] or any [synonym] do not uniquely define a single type. For example,
+     * if they are synonyms of multiple types. Hint: use IDs.
+     */
+    fun addRoughSynonym(existing: String, vararg synonym: String)
+
+    /**
+     * Makes [subType] a subtype of [superType].
+     * @throws NotInSchema if [subType] or [superType] is not in the type schema.
+     * @throws CyclicType if [superType] is a subtype of [subType] or if they are the same type.
+     * @throws AmbiguousTypeModification if [subType] or [superType] do not uniquely define a single type. For example,
+     * if they are synonyms of multiple types. Hint: use IDs.
+     */
+    fun addIsA(subType: String, superType: String)
 
     companion object {
         /**

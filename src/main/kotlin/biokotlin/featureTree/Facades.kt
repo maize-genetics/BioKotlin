@@ -220,14 +220,20 @@ internal value class IGenome(private val graph: Graph) : Genome {
     override fun containsID(id: String): Boolean = graph.containsID(id)
 
     override fun containsName(name: String): Boolean = graph.containsName(name)
-//    override fun containsType(type: String): Boolean = graph.schema.contains(type)
+    override fun containsType(type: String): Boolean = graph.schema.containsName(type)
 
-//    override fun isSynonym(type1: String, type2: String): Boolean = graph.schema.isSynonym(type1, type2)
+    override fun isSynonym(name: String, vararg other: String): Boolean = graph.schema.isSynonym(name, *other)
 
-//    override fun synonyms(type: String): Set<String> = graph.schema.synoynms(type)
-//    override fun partOf(child: String, parent: String): Boolean = graph.schema.partOf(child, parent)
+    override fun synonyms(type: String): Set<String> = graph.schema.synonyms(type)
 
-//    override fun visualizeSchema(): String = graph.schema.visualize()
+    override fun roughSynonyms(type: String): Set<String> = graph.schema.roughSynonyms(type)
+    override fun isRoughSynonym(name: String, vararg other: String): Boolean = graph.schema.isRoughSynonym(name, *other)
+
+    override fun isA(subType: String, superType: String): Boolean = graph.schema.isA(subType, superType)
+
+    override fun partOf(child: String, parent: String): Boolean = graph.schema.partOf(child, parent)
+
+    override fun visualizeSchema(): String = graph.schema.visualize()
 
     override val multipleParentage: Boolean
         get() = graph.multipleParentage
@@ -251,12 +257,17 @@ internal value class MGenome(private val graph: Graph) : MutableGenome {
 
     override fun byName(name: String): List<MutableFeature> = mutableFeature(graph.byName(name))
 
-    override fun defineType(name: List<String>, isA: List<String>, partOf: List<String>) {
-        graph.schema.defineType(name, isA, partOf)
+    override fun defineType(
+        id: String,
+        exactSynonyms: Set<String>,
+        roughSynonyms: Set<String>,
+        isA: Set<String>,
+        partOf: Set<String>
+    ) {
+        graph.schema.defineType(
+            id, exactSynonyms, roughSynonyms, isA, partOf
+        )
     }
-
-    //TODO convenience defineType
-
     override fun addPartOf(child: String, parent: String) {
         graph.schema.addPartOf(child, parent)
     }
@@ -265,20 +276,34 @@ internal value class MGenome(private val graph: Graph) : MutableGenome {
         graph.schema.addSynonym(existing, *synonym)
     }
 
+    override fun addRoughSynonym(existing: String, vararg synonym: String) {
+        graph.schema.addRoughSynonym(existing, *synonym)
+    }
+
+    override fun addIsA(subType: String, superType: String) {
+        graph.schema.addIsA(subType, superType)
+    }
+
     override fun mutable(): MutableGenome = copy()
 
     override fun immutable(): Genome = IGenome(graph.copy())
     override fun containsID(id: String): Boolean = graph.containsID(id)
 
     override fun containsName(name: String): Boolean = graph.containsName(name)
-//    override fun containsType(type: String): Boolean = graph.schema.contains(type)
-//
-//    override fun isSynonym(type1: String, type2: String): Boolean = graph.schema.isSynonym(type1, type2)
-//
-//    override fun synonyms(type: String): Set<String> = graph.schema.synoynms(type)
-//    override fun partOf(child: String, parent: String): Boolean = graph.schema.partOf(child, parent)
-//
-//    override fun visualizeSchema(): String = graph.schema.visualize()
+    override fun containsType(type: String): Boolean = graph.schema.containsName(type)
+
+    override fun isSynonym(name: String, vararg other: String): Boolean = graph.schema.isSynonym(name, *other)
+
+    override fun synonyms(type: String): Set<String> = graph.schema.synonyms(type)
+
+    override fun roughSynonyms(type: String): Set<String> = graph.schema.roughSynonyms(type)
+    override fun isRoughSynonym(name: String, vararg other: String): Boolean = graph.schema.isRoughSynonym(name, *other)
+
+    override fun isA(subType: String, superType: String): Boolean = graph.schema.isA(subType, superType)
+
+    override fun partOf(child: String, parent: String): Boolean = graph.schema.partOf(child, parent)
+
+    override fun visualizeSchema(): String = graph.schema.visualize()
 
     override val topologicalModifications: Int
         get() = graph.topo
