@@ -22,8 +22,8 @@ val RIGHT: ParentResolver
  * Narrowest potential parent, meaning the parent that is a descendant of all other parents, or throws [Exception]
  * if no such parent exists.
  */
-val NARROW: ParentResolver
-    get() = TODO("Not yet supported")
+//val NARROW: ParentResolver
+//    get() = TODO("Not yet supported")
 
 /**
  * Will use output of [fallback] if `this` throws an exception

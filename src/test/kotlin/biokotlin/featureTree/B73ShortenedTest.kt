@@ -466,7 +466,7 @@ class ShortenedTest : StringSpec({
                         val descendants = mutable.descendants()
                         shouldThrow<ConcurrentModificationException> {
                             descendants.forEach {
-                                if (it.id != null) {
+                                if (it.id != null && it.type == "gene") {
                                     it.insert(
                                         "my_seqid",
                                         "my_source",

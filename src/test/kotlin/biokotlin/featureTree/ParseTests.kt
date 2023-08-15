@@ -6,6 +6,10 @@ import io.kotest.matchers.shouldBe
 
 class ParseTests : StringSpec({
     "B73 Wrong Delim" {
+        shouldThrow<ParseException> {
+            Genome.fromFile("src/test/resources/biokotlin/featureTree/b73_wrong_delim.gff")
+        }
+        // Implicitly asserting that test correcter makes it now throw an exception
         Genome.fromFile(
             "src/test/resources/biokotlin/featureTree/b73_wrong_delim.gff",
             textCorrecter = { it.replace("!", "=") })
@@ -13,32 +17,34 @@ class ParseTests : StringSpec({
 
     "Multi Parent Resolved Properly" {
         Genome.fromFile("src/test/resources/biokotlin/featureTree/b73_multi_parent.gff", parentResolver = LEFT).apply {
-            val chrom = byID("1")!!
-            chrom.children.size shouldBe 0
+            val gene10 = byID("Zm00001eb000010")!!
+            gene10.children.size shouldBe 1
 
-            val mRNA = byID("Zm00001eb000010_T001")!!
+            val gene20 = byID("Zm00001eb000020")!!
+
+            val mRNA = byID("Zm00001eb000020_T002")!!
             mRNA.parents.size shouldBe 1
-
-            mRNA.parents shouldBe listOf(byID("Zm00001eb000010")!!)
-
+            mRNA.parents shouldBe listOf(gene20)
         }
 
         Genome.fromFile("src/test/resources/biokotlin/featureTree/b73_multi_parent.gff", parentResolver = RIGHT).apply {
-            val chrom = byID("1")!!
-            chrom.children.size shouldBe 1
+            val gene10 = byID("Zm00001eb000010")!!
+            gene10.children.size shouldBe 2
 
-            val mRNA = byID("Zm00001eb000010_T001")!!
+            val gene20 = byID("Zm00001eb000020")!!
+            gene20.children.size shouldBe 0
+
+            val mRNA = byID("Zm00001eb000020_T002")!!
             mRNA.parents.size shouldBe 1
-
-            mRNA.parents shouldBe listOf(byID("1")!!)
+            mRNA.parents shouldBe listOf(gene10)
         }
     }
 
     "Multiple Parents Not Resolved" {
         Genome.fromFile("src/test/resources/biokotlin/featureTree/b73_multi_parent.gff", multipleParentage = true)
             .apply {
-                val mRNA = byID("Zm00001eb000010_T001")!!
-                mRNA.parents shouldBe listOf(byID("Zm00001eb000010")!!, byID("1")!!)
+                val mRNA = byID("Zm00001eb000020_T002")!!
+                mRNA.parents shouldBe listOf(byID("Zm00001eb000020")!!, byID("Zm00001eb000010")!!)
             }
     }
 
