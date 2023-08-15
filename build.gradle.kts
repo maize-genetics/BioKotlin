@@ -70,7 +70,6 @@ dependencies {
     implementation("com.github.holgerbrandl:krangl:0.18")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
 
-    implementation("com.squareup.moshi:moshi:1.14.0")
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
@@ -96,7 +95,6 @@ dependencies {
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
-    implementation("com.beust:klaxon:5.5")
 
     implementation("io.github.oshai:kotlin-logging-jvm:5.0.0")
     implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.6")
