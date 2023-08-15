@@ -7,7 +7,7 @@ usage of the underlying mutable data types to the client (without risk of castin
 
 /**
  * Provides immutable representation of a [Feature]. This is a wrapper around a [Graph.DataNode] that limits the
- * to read operations.
+ * node to read operations.
  */
 @JvmInline
 internal value class IFeature(private val node: Graph.DataNode) : Feature {
