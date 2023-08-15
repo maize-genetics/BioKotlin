@@ -243,12 +243,12 @@ sealed interface MutableGenome : Genome, MutableParent {
          */
         fun fromFile(
             path: String,
-            textCorrecter: ((String) -> String)? = null,
+            textCorrector: ((String) -> String)? = null,
             parentResolver: ParentResolver? = null,
             multipleParentage: Boolean = false,
             modifySchema: ((TypeSchema) -> Unit)? = null,
         ): MutableGenome {
-            return MGenome(Graph.fromFile(path, textCorrecter, parentResolver, multipleParentage, modifySchema))
+            return MGenome(Graph.fromFile(path, textCorrector, parentResolver, multipleParentage, modifySchema))
         }
 
         /**
