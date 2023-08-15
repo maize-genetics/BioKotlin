@@ -12,7 +12,7 @@ sealed interface Feature : Parent {
     val type: String
 
     /**
-     * Non-negative, always less than or equal to [end].
+     * Positive, always less than or equal to [end].
      * For discontinuous features, equivalent to the minimum starting position among all ranges.
      */
     val start: Int
