@@ -23,6 +23,22 @@ sealed interface Parent {
     fun descendants(type: String? = null): Sequence<Feature>
 
     /**
+     * @return a [Feature] within the descendants of this [Parent] with ID attribute [id] or `null` if no such [Feature] exists.
+     */
+    fun byID(id: String): Feature?
+
+    /**
+     * @return a list of [Feature] within the descendants of this [Parent] containing all features whose Name attribute is [name]
+     */
+    fun byName(name: String): List<Feature>
+
+    /**
+     * @return String representation of all [Feature] in the tree rooted at this [Parent], as they would appear in a
+     * GFF file. Includes `this` if `this` is [Feature].
+     */
+    fun parentString(): String
+
+    /**
      * Iterates over [children]
      */
     operator fun iterator(): Iterator<Feature> = children.iterator()
@@ -81,4 +97,14 @@ sealed interface MutableParent : Parent {
         phase: Phase,
         attributes: Map<String, Iterable<String>>? = null
     ): MutableFeature
+
+    /**
+     * @return a [MutableFeature] within the descendants of this [MutableParent] with ID attribute [id] or `null` if no such [MutableFeature] exists.
+     */
+    override fun byID(id: String): MutableFeature?
+
+    /**
+     * @return a list of [MutableFeature] within the descendants of this [MutableParent] containing all features whose Name attribute is [name]
+     */
+    override fun byName(name: String): List<MutableFeature>
 }

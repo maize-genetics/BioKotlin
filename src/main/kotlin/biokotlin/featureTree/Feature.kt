@@ -70,6 +70,9 @@ sealed interface Feature : Parent {
     val length: Int
         get() = end - start + 1
 
+    val lengths: List<Int>
+        get() = ranges.map { it.last - it.first + 1 }
+
     /**
      * Discontinuous annotations are represented in [featureTree] as a single [Feature] object
      * with a [multiplicity] equal to the number of discontinuous segments of the annotation. [ranges] represents
@@ -119,6 +122,7 @@ sealed interface Feature : Parent {
      * Prepends this feature to [Parent.descendants].
      */
     fun subtree(): Sequence<Feature>
+
 }
 sealed interface MutableFeature : Feature, MutableParent {
     override var seqid: String

@@ -46,6 +46,11 @@ internal value class IFeature(private val node: Graph.DataNode) : Feature {
     override fun children(type: String?): List<Feature> = immutableFeature(node.children)
 
     override fun descendants(type: String?): Sequence<Feature> = node.descendants().map { IFeature(it) }
+    override fun byID(id: String): Feature? = node.byID(id)?.let { IFeature(it) }
+
+    override fun byName(name: String): List<Feature> = node.byName(name).map { IFeature(it) }
+
+    override fun parentString(): String = node.parentString()
 
     override fun toString() = node.asRow()
 
@@ -162,6 +167,11 @@ internal value class MFeature(private val node: Graph.DataNode) : MutableFeature
     override fun children(type: String?): List<MutableFeature> = mutableFeature(node.children)
 
     override fun descendants(type: String?): Sequence<MutableFeature> = node.descendants().map { MFeature(it) }
+    override fun byID(id: String): MutableFeature? = node.byID(id)?.let { MFeature(it) }
+
+    override fun byName(name: String): List<MutableFeature> = node.byName(name).map { MFeature(it) }
+
+    override fun parentString(): String = node.parentString()
 
     override fun sort(comparator: (Feature, Feature) -> Int) {
         node.sort(comparator)
@@ -241,6 +251,7 @@ internal value class IGenome(private val graph: Graph) : Genome {
     override fun children(type: String?): List<Feature> = immutableFeature(graph.root.children)
 
     override fun descendants(type: String?): Sequence<Feature> = graph.root.descendants().map { IFeature(it) }
+    override fun parentString(): String = graph.root.parentString()
 
     override fun toString(): String = graph.root.parentString()
 }
@@ -313,6 +324,7 @@ internal value class MGenome(private val graph: Graph) : MutableGenome {
     override fun children(type: String?): List<MutableFeature> = mutableFeature(graph.root.children)
 
     override fun descendants(type: String?): Sequence<MutableFeature> = graph.root.descendants().map { MFeature(it) }
+    override fun parentString(): String = graph.root.parentString()
 
     override fun insert(
         seqid: String,

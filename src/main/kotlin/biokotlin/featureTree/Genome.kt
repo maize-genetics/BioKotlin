@@ -18,18 +18,6 @@ sealed interface Genome : Parent {
     fun immutable(): Genome
 
     /**
-     * Constant-time lookup of a feature by its ID attribute.
-     * @return a [Feature] within this [Genome] with ID attribute [id] or `null` if no such [Feature] exists.
-     */
-    fun byID(id: String): Feature?
-
-    /**
-     * Constant-time lookup of a features by their Name attribute
-     * @return a list of [Feature] containing all features whose Name attribute is [name]
-     */
-    fun byName(name: String): List<Feature>
-
-    /**
      * True iff a feature with id property [id] exists in this genome.
      */
     fun containsID(id: String): Boolean

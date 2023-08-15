@@ -694,6 +694,14 @@ internal class Graph private constructor(
             assert { invariants() }
         }
 
+        fun byName(name: String): List<DataNode> {
+            return descendants().filter { it.name == name }.toList()
+        }
+
+        fun byID(id: String): DataNode? {
+            return descendants().find { it.id == id }
+        }
+
         /**
          * Creates deep copy of this node and all its descendants
          * @throws IllegalArgumentException if [multipleParentage] is true
