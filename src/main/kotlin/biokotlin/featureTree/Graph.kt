@@ -402,7 +402,7 @@ internal class Graph private constructor(
          * @see MutableFeature.ranges
          */
         val ranges: List<IntRange>
-            get() = del(ImmutableList(data.ranges))
+            get() = del(data.ranges.toList())
 
         /**
          * @see MutableFeature.score
@@ -437,7 +437,7 @@ internal class Graph private constructor(
          * @see Feature.phases
          */
         val phases: List<Phase>
-            get() = del(ImmutableList(data.phases))
+            get() = del(data.phases.toList())
 
 
         /**

@@ -19,16 +19,6 @@ internal fun Iterable<IntRange>.maximum(): Int {
 }
 
 /**
- * Prevents rep exposure of mutable lists
- */
-@JvmInline
-internal value class ImmutableList<E>(val list: List<E>) : List<E> by list
-
-/**
- * Prevents rep exposure of mutable maps
- */
-
-/**
  * Only applies assertions if -ea flag is enabled. Useful for expensive assertions.
  */
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
