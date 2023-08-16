@@ -130,7 +130,7 @@ sealed interface Genome : Parent {
             textCorrecter: ((String) -> String)? = null,
             parentResolver: ParentResolver? = null,
             multipleParentage: Boolean = false,
-            modifySchema: ((TypeSchema) -> Unit)? = null,
+            modifySchema: (TypeSchema.() -> Unit)? = null,
         ): Genome {
             return IGenome(Graph.fromFile(path, textCorrecter, parentResolver, multipleParentage, modifySchema))
         }
@@ -234,7 +234,7 @@ sealed interface MutableGenome : Genome, MutableParent {
             textCorrector: ((String) -> String)? = null,
             parentResolver: ParentResolver? = null,
             multipleParentage: Boolean = false,
-            modifySchema: ((TypeSchema) -> Unit)? = null,
+            modifySchema: (TypeSchema.() -> Unit)? = null,
         ): MutableGenome {
             return MGenome(Graph.fromFile(path, textCorrector, parentResolver, multipleParentage, modifySchema))
         }
