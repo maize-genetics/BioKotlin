@@ -1,0 +1,5 @@
+Chr1	TandemRepeatsFinder_v4.04	satellite	1	115	.	+	.	ID=SSR000001;Name=SSR000001;Unit=CCCTAAA;Length=115;Period=7;Copy=15.3
+Chr1	TandemRepeatsFinder_v4.04	satellite	1	106	.	+	.	ID=SSR000002;Name=SSR000002;Unit=CCCTAAAT;Length=106;Period=8;Copy=13.9
+Chr1	TandemRepeatsFinder_v4.04	satellite	3	90	.	+	.	ID=SSR000003;Name=SSR000003;Unit=CTAAATCCTTAATCCCTAAATCCCTAAACCT;Length=88;Period=31;Copy=2.9
+Chr1	TandemRepeatsFinder_v4.04	satellite	4	91	.	+	.	ID=SSR000004;Name=SSR000004;Unit=TAAATCCTAAATCCA;Length=88;Period=15;Copy=5.8
+Chr1	TandemRepeatsFinder_v4.04	satellite	3	106	.	+	.	ID=SSR000005;Name=SSR000005;Unit=CTAAATCCTAAATCCATAAATCCCTAAATCT;Length=104;Period=31;Copy=3.4

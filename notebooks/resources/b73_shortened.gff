@@ -1,0 +1,22 @@
+##gff-version 3
+# Shortened version of b73, for testing
+    chr1	assembly	chromosome	1	308452471	.	.	.	ID=1;Name=chromosome:Zm-B73-REFERENCE-NAM-5.0:1:1:308452471:1
+chr1	NAM	gene	34617	40204	.	+	.	ID=Zm00001eb000010;biotype=protein_coding;logic_name=cshl_gene
+chr1	NAM	mRNA	34617	40204	.	+	.	ID=Zm00001eb000010_T001;Parent=Zm00001eb000010;biotype=protein_coding;transcript_id=Zm00001eb000010_T001;canonical_transcript=1
+chr1	NAM	five_prime_UTR	34617	34721	.	+	.	Parent=Zm00001eb000010_T001
+chr1	NAM	exon	34617	35318	.	+	.	Parent=Zm00001eb000010_T001;Name=Zm00001eb000010_T001.exon.1;ensembl_end_phase=0;ensembl_phase=0;exon_id=Zm00001eb000010_T001.exon.1;rank=1
+chr1	NAM	exon	36037	36174	.	+	.	Parent=Zm00001eb000010_T001;Name=Zm00001eb000010_T001.exon.2;ensembl_end_phase=0;ensembl_phase=0;exon_id=Zm00001eb000010_T001.exon.2;rank=2
+chr1	NAM	CDS	34722	35318	.	+	0	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	CDS	36037	36174	.	+	0	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	CDS	36259	36504	.	+	0	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	CDS	36600	36713	.	+	0	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	CDS	36822	37004	.	+	0	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	CDS	37416	37633	.	+	0	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	CDS	38021	38366	.	+	1	ID=Zm00001eb000010_P001;Parent=Zm00001eb000010_T001;protein_id=Zm00001eb000010_P001
+chr1	NAM	three_prime_UTR	38367	38482	.	+	.	Parent=Zm00001eb000010_T001
+chr1	NAM	three_prime_UTR	38571	39618	.	+	.	Parent=Zm00001eb000010_T001
+chr1	NAM	gene	41214	46762	.	-	.	ID=Zm00001eb000020;biotype=protein_coding;logic_name=cshl_gene
+chr1	NAM	mRNA	41263	46050	.	-	.	ID=Zm00001eb000020_T002;Parent=Zm00001eb000020;biotype=protein_coding;transcript_id=Zm00001eb000020_T002
+chr1	NAM	five_prime_UTR	45914	46050	.	-	.	Parent=Zm00001eb000020_T002
+chr1	NAM	exon	41263	41588	.	-	.	Parent=Zm00001eb000020_T002;Name=Zm00001eb000020_T002.exon.1;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001eb000020_T002.exon.1;rank=8
+chr1	NAM	exon	41742	42375	.	-	.	Parent=Zm00001eb000020_T002;Name=Zm00001eb000020_T002.exon.2;ensembl_end_phase=-1;ensembl_phase=-1;exon_id=Zm00001eb000020_T002.exon.2;rank=7

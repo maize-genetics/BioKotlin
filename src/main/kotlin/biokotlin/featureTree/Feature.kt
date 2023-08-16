@@ -1,193 +1,251 @@
 package biokotlin.featureTree
 
-import biokotlin.genome.GenomicFeatures
-import io.ktor.util.pipeline.*
-
 /**
- * Represents a genomic feature in a GFF file as part of the [biokotlin.featureTree] framework. The properties of this
- * class and the [type] function represent the nine columns of data in a GFF file.
- * Descriptions for the properties of this class are taken from
- * [the specification of the GFF format](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md).
- * Subtypes of this within the feature tree framework class are circled:
- * <img src="feature_tree/features.svg" style="display: block; margin-left: auto; margin-right: auto">
- *
- * All subtypes may only be instantiated through [FeatureBuilder].
- *
+ * Represents a single annotation (feature) in a GFF (general feature format) file. Generally, these features correspond
+ * to a row in a gff file and have all the same properties.
  */
-sealed class Feature(
-    /**
-     * The ID of the landmark used to establish the coordinate system for the current feature. IDs may contain any characters, but must escape any characters not in the set [a-zA-Z0-9.:^*$@!+_?-|]. In particular, IDs may not contain unescaped whitespace and must not begin with an unescaped ">". Use URL escaping rules.
-     */
-    val seqid: String,
-    /**
-     * The source is a free text qualifier intended to describe the algorithm or operating procedure that generated this feature. Typically this is the name of a piece of software, such as "Genescan" or a database name, such as "Genbank." In effect, the source is used to extend the feature ontology by adding a qualifier to the type creating a new composite type that is a subclass of the type in the type column.
-     */
-    val source: String,
-    /**
-     * The start and end coordinates of the feature are given in positive 1-based integer coordinates, relative to the landmark given in column one. Start is always less than or equal to end. For features that cross the origin of a circular feature (e.g. most bacterial genomes, plasmids, and some viral genomes), the requirement for start to be less than or equal to end is satisfied by making end = the position of the end + the length of the landmark feature.
-     *
-     * For zero-length features, such as insertion sites, start equals end and the implied site is to the right of the indicated base in the direction of the landmark.
-     */
-    val start: Int,
-    /**
-     * The start and end coordinates of the feature are given in positive 1-based integer coordinates, relative to the landmark given in column one. Start is always less than or equal to end. For features that cross the origin of a circular feature (e.g. most bacterial genomes, plasmids, and some viral genomes), the requirement for start to be less than or equal to end is satisfied by making end = the position of the end + the length of the landmark feature.
-     *
-     * For zero-length features, such as insertion sites, start equals end and the implied site is to the right of the indicated base in the direction of the landmark.
-     */
-    val end: Int,
-    /**
-     * The score of the feature, a floating point number. As in earlier versions of the format, the semantics of the score are ill-defined. It is strongly recommended that E-values be used for sequence similarity features, and that P-values be used for ab initio gene prediction features.
-     *
-     * [Double.NaN] is used to represent features without a score.
-     */
-    val score: Double,
-    /**
-     * The strand of the feature. + for positive strand (relative to the landmark), - for minus strand, and . for features that are not stranded. In addition, ? can be used for features whose strandedness is relevant, but unknown.
-     */
-    val strand: Char,
-    /**
-     * For features of type "CDS", the phase indicates where the next codon begins relative to the 5' end (where the 5' end of the CDS is relative to the strand of the CDS feature) of the current CDS feature. For clarification the 5' end for CDS features on the plus strand is the feature's start and and the 5' end for CDS features on the minus strand is the feature's end. The phase is one of the integers 0, 1, or 2, indicating the number of bases forward from the start of the current CDS feature the next codon begins. A phase of "0" indicates that a codon begins on the first nucleotide of the CDS feature (i.e. 0 bases forward), a phase of "1" indicates that the codon begins at the second nucleotide of this CDS feature and a phase of "2" indicates that the codon begins at the third nucleotide of this region. Note that ‘Phase’ in the context of a GFF3 CDS feature should not be confused with the similar concept of frame that is also a common concept in bioinformatics. Frame is generally calculated as a value for a given base relative to the start of the complete open reading frame (ORF) or the codon (e.g. modulo 3) while CDS phase describes the start of the next codon relative to a given CDS feature.
-     *
-     * The phase is REQUIRED for all CDS features.
-     *
-     * Within the [biokotlin.featureTree] framework, CDS types are represented by the class
-     * [CodingSequence].
-     *
-     * -1 is used to represent features without a phase.
-     */
-    val phase: Int,
-    /**
-     * A list of feature attributes in the format tag=value. Multiple tag=value pairs are separated by semicolons. URL escaping rules are used for tags or values containing the following characters: ",=;". Spaces are allowed in this field, but tabs must be replaced with the %09 URL escape. Attribute values do not need to be and should not be quoted. The quotes should be included as part of the value by parsers and not stripped.
-     *
-     * Within the [biokotlin.featureTree] framework, atrributes are represented as map where the key is the tag and the value is the value.
-    Note that tags with multiple comma-seperated values as a single will be treated as a single value that contains literal commas.
+sealed interface Feature : Parent {
+    // PLANNED: Better documentation of these properties based on their definition in the GFF3 specification.
 
-    These tags have predefined meanings:
-
-    ID - Indicates the ID of the feature. The ID attribute is required for features that have children (e.g. gene and mRNAs), or for those that span multiple lines, but are optional for other features. IDs for each feature must be unique within the scope of the GFF file. In the case of discontinuous features (i.e. a single feature that exists over multiple genomic locations) the same ID may appear on multiple lines. All lines that share an ID must collectively represent a single feature.
-
-    Name -Display name for the feature. This is the name to be displayed to the user. Unlike IDs, there is no requirement that the Name be unique within the file.
-
-    Alias - A secondary name for the feature. It is suggested that this tag be used whenever a secondary identifier for the feature is needed, such as locus names and accession numbers. Unlike ID, there is no requirement that Alias be unique within the file.
-
-    Parent - Indicates the parent of the feature. A parent ID can be used to group exons into transcripts, transcripts into genes, an so forth. A feature may have multiple parents. Parent can only be used to indicate a partof relationship.
-
-    Target - Indicates the target of a nucleotide-to-nucleotide or protein-to-nucleotide alignment. The format of the value is "target_id start end [strand]", where strand is optional and may be "+" or "-". If the target_id contains spaces, they must be escaped as hex escape %20.
-
-    Gap - The alignment of the feature to the target if the two are not collinear (e.g. contain gaps). The alignment format is inspired from the CIGAR format described in the Exonerate documentation.
-
-    Derives_from - Used to disambiguate the relationship between one feature and another when the relationship is a temporal one rather than a purely structural "part of" one. This is needed for polycistronic genes. See "PATHOLOGICAL CASES" for further discussion.
-
-    Note - A free text note.
-
-    Dbxref - A database cross reference. See the section "Ontology Associations and Db Cross References" for details on the format.
-
-    Ontology_term - A cross reference to an ontology term. See the section "Ontology Associations and Db Cross References" for details.
-
-    Is_circular - A flag to indicate whether a feature is circular. See extended discussion below.
-
-     */
-    val attributes: Map<String, String>
-): Comparable<Feature> {
-    /**
-     * The type of this instance of [Feature].
-     */
-    abstract fun type(): FeatureType
+    val seqid: String
+    val source: String
+    val type: String
 
     /**
-     * The length of this [Feature]
+     * Positive, always less than or equal to [end].
+     * For discontinuous features, equivalent to the minimum starting position among all ranges.
      */
-    val length = end - start + 1
+    val start: Int
+        get() = ranges.minimum()
 
     /**
-     * [start] and [end] as an [IntRange].
+     * Positive, always greater than or equal to [start].
+     * For discontinuous features, equivalent to maximum ending position among all ranges.
      */
-    fun intRange(): IntRange = start..end
+    val end: Int
+        get() = ranges.maximum()
 
     /**
-     * Returns the [Feature] as it would appear as a row in a GFF file.
+     * Alias for `ranges[0]`
      */
-    override fun toString(): String {
-        val scoreString = if (score.isNaN()) "." else score.toString()
-
-        val phaseString = if (phase < 0) "." else phase.toString()
-
-        val attributesString = StringBuilder()
-        for ((tag, value) in attributes) {
-            attributesString.append(tag).append("=").append(value).append(";")
-
-        }
-        return "$seqid\t$source\t${type().gffName}\t$start\t$end\t$scoreString\t$strand\t$phaseString\t${attributesString}\n"
-    }
+    val range: IntRange
+        get() = ranges[0]
 
     /**
-     * Compares this and [other] for order. Returns zero if they are equal,
-     * a negative number if this is less than [other], or a positive number if this is greater than [other].
-     *
-     * Will first sort alphabetically by seqid. Breaks ties as follows:
-     * 1. Earlier start is first.
-     * 2. Later end is first.
-     * 3. Features are ordered by type:
-     * [Chromosome], [Scaffold], and [Contig] -> [Gene] -> [Transcript] -> [Exon] -> [Leader], [CodingSequence], and [Terminator]
-     *
-     * This means that generally features will be sorted before the features they contain.
+     * All start-end [IntRange]s that define this feature. Continuous features will only have one, while discontinuous
+     * features will have several. Size is equal to `phases.size`. All ranges are positive.
      */
-    override fun compareTo(other: Feature): Int {
-        if (seqid.compareTo(other.seqid) != 0) return seqid.compareTo(other.seqid)
-        if (start.compareTo(other.start) != 0) return start.compareTo(other.start)
-        if (other.end.compareTo(end) != 0) return other.end.compareTo(end)
-        if (this is AssemblyUnit && other !is AssemblyUnit) return -1
-        if (this is Gene && other !is Gene) return -1
-        if (this is Transcript && other !is Transcript) return -1
-        if (this is Exon && other !is Exon) return -1
-        return 0
-    }
+    val ranges: List<IntRange>
+    val score: Double?
+    val strand: Strand
+    /**
+     * Alias for `phases[0]`
+     */
+    val phase: Phase
+        get() = phases[0]
+
+    /**
+     * All phases for this feature. Continuous features will only have one, while discontinuous features
+     * will have several. Size is equal to `ranges.size`. A feature of type "CDS" (or synonym) may not have any
+     * [Phase.UNSPECIFIED] in its [phases] property.
+     */
+    val phases: List<Phase>
+
+    /**
+     * Alias for `parent[0]`
+     */
+    val parent: Parent
+        get() = parents[0]
+
+    val parents: List<Parent>
+    val genome: Genome
+
+    /**
+     * The ID attribute of this feature, or null if no such attribute
+     */
+    val id: String?
+    /**
+     * The length of the feature, equivalent to `end - start + 1`
+     */
+    val length: Int
+        get() = end - start + 1
+
+    val lengths: List<Int>
+        get() = ranges.map { it.last - it.first + 1 }
+
+    /**
+     * Discontinuous annotations are represented in [featureTree] as a single [Feature] object
+     * with a [multiplicity] equal to the number of discontinuous segments of the annotation. [ranges] represents
+     * all the start-end ranges of this discontinuous feature while [phases] represents all the phases.
+     */
+    val multiplicity: Int
+        get() = ranges.size
+
+    val discontinuous: Boolean
+        get() = multiplicity > 1
+
+    /**
+     * A name associated with this feature, as defined by the Name attribute. Null if no names
+     * are associated.
+     */
+    val name: String?
+
+    /**
+     * All names associated with this feature, as defined by the Name attribute. Empty list if no
+     * names are associated.
+     */
+    val names: List<String>
+
+    // PLANNED: More custom properties for special tags
+    // PLANNED: moveTo function
+
+    /**
+     * The [String] representation of this [Feature] as it appears as a row in a GFF file.
+     */
+    fun asRow(): String
+
+    /**
+     * All attribute values for [tag].
+     */
+    fun attribute(tag: String): List<String>
+
+    /**
+     * All attributes as tag-values pairs.
+     */
+    fun allAttributes(): Map<String, List<String>>
+
+    /**
+     * Return all ancestors of this feature in a depth-first order. Multiple parentage will result in duplicate values.
+     */
+    fun ancestors(): List<Parent>
+
+    /**
+     * Prepends this feature to [Parent.descendants].
+     */
+    fun subtree(): Sequence<Feature>
 
 }
+sealed interface MutableFeature : Feature, MutableParent {
+    override var seqid: String
+    override var source: String
+    override var score: Double?
+    override var strand: Strand
 
-/**
- * Enumerates the types of [Feature] that can exist. This class also stores the
- * names of the types as they appear in GFF files. Use [convert] to convert from the name
- * as it appears in a GFF to a [FeatureType].
- */
-enum class FeatureType(
-    /**
-     * The name of this type as it appears in a GFF file
-     */
-    val gffName: String,
-    ) {
-    CHROMOSOME("chromosome"),
-    SCAFFOLD("scaffold"),
-    CONTIG("contig"),
-    GENE("gene"),
+    override val parent: MutableParent
+        get() = parents[0]
+    override val parents: List<MutableParent>
+    override val genome: MutableGenome
 
     /**
-     * AKA mRNA
+     * @see Feature.name
+     * Setting this property will override all existing names and replace just with the set value.
+     * Setting this property to null will remove "Name" from attributes.
      */
-    TRANSCRIPT("mRNA"),
+    override var name: String?
 
     /**
-     * AKA 5' UTR
+     * @see Feature.names
+     * Setting this property will override all existing names and replace them with the set value.
+     * Setting this property to empty list will remove "Name" from attributes.
      */
-    LEADER("five_prime_UTR"),
-    EXON("exon"),
+    override var names: List<String>
+
 
     /**
-     * AKA CDS
+     * Deletes this [MutableFeature] from its [MutableGenome].
+     * Subsequent calls to read or write to this or any descendants that become orphaned as a result of this deletion
+     * will throw [DeletedAccessException].
      */
-    CODING_SEQUENCE("CDS"),
+    fun delete()
 
     /**
-     * AKA 3' UTR
+     * Associates [value] with [tag] in the attributes of this feature.
+     * @throws IllegalArgumentException if [tag] is "Parent". The "Parent" attribute is determined by the
+     * actual topology of the tree and cannot be directly modified.
+     * @throws IllegalArgumentException if [tag] is "ID" and [id] is not null.
      */
-    TERMINATOR("three_prime_UTR");
+    fun addAttribute(tag: String, value: String)
 
-    companion object {
-        fun convert(gffString: String): FeatureType {
-            for (type in values()) {
-                if (gffString == type.gffName) return type
-            }
-            throw IllegalArgumentException("Could not parse provided type \"$gffString\" into a FeatureType.")
-        }
-    }
+    /**
+     * Associates all elements of [values] with [tag] in the attributes of this feature.
+     * @throws IllegalArgumentException if [tag] is "Parent". The "Parent" attribute is determined by the
+     * actual topology of the tree and cannot be directly modified.
+     * @throws IllegalArgumentException if [tag] is "ID" and [values] has multiple elements or if [id] is not null.
+     */
+    fun addAttributes(tag: String, values: Iterable<String>)
+
+    /**
+     * Associates [tag] with [value] in the attributes of this feature. Removes all other associations with [tag]
+     * that may have existed prior.
+     * @throws IllegalArgumentException if [tag] is "Parent". The "Parent" attribute is determined by the
+     * actual topology of the tree and cannot be directly modified.
+     */
+    fun setAttribute(tag: String, value: String)
+
+    /**
+     * Associates [tag] with the elements of [values] in the attributes of this feature. Removes all other associations
+     * with [tag] that may have existed prior.
+     * @throws IllegalArgumentException if [tag] is "Parent".
+     * @throws IllegalArgumentException if [tag] is "ID" and [values] contains multiple elements.
+     * @throws IllegalArgumentException if values is empty.
+     * @throws IDConflict if [tag] is "ID" and any element of [values] is an ID of an existing feature.
+     */
+    fun setAttributes(tag: String, values: Iterable<String>)
+
+    /**
+     * Clears all associations with [tag] in the attributes of this feature.
+     * @throws IllegalArgumentException if [tag] is "Parent".
+     * @throws IllegalArgumentException if [tag] is "ID" and this feature has children.
+     * @throws DiscontinuousLacksID if [tag] is "ID" and this feature a multiplicity greater than 1.
+     */
+    fun clearAttribute(tag: String)
+
+    /**
+     * Adds a discontinuous region of this feature, with [range] and [phase].
+     * @throws DiscontinuousLacksID if [id] is null.
+     * @throws CDSUnspecifiedPhase if [phase] is [Phase.UNSPECIFIED] and [type] is "CDS" or synonym
+     */
+    fun addDiscontinuity(range: IntRange, phase: Phase)
+
+    /**
+     * Makes this feature continuous with a range [range].
+     * @param phase the new [MutableFeature.phase] of the feature, or null to keep [MutableFeature.phase] unchanged
+     */
+    fun setRange(range: IntRange, phase: Phase? = null)
+
+    /**
+     * Make this feature continuous with a phase [phase].
+     * @param range the new [MutableFeature.range] of the feature, or null to keep [MutableFeature.range] unchanged
+     * @throws CDSUnspecifiedPhase if type is "CDS" or a synonym and [phase] is [Phase.UNSPECIFIED]
+     */
+    fun setPhase(phase: Phase, range: IntRange? = null)
+
+    /**
+     * Sets the discontinuous region of the feature at [index] to be of [range] and [phase].
+     * @throws IllegalArgumentException if [index] >= [multiplicity]
+     * @throws CDSUnspecifiedPhase if type is "CDS" or a synonym and [phase] is [Phase.UNSPECIFIED].
+     */
+    fun setDiscontinuity(index: Int, range: IntRange, phase: Phase)
+
+    /**
+     * Sets the discontinuous regions of this feature to be those specified in [discontinuities].
+     * @throws CDSUnspecifiedPhase if type is "CDS" or a synonym and any [Phase] in [discontinuities] is [Phase.UNSPECIFIED].
+     * @throws DiscontinuousLacksID if [id] is null and [discontinuities] contains multiple elements.
+     */
+    fun setDiscontinuities(discontinuities: Iterable<Pair<IntRange, Phase>>)
+
+    override fun ancestors(): List<MutableParent>
+
+    /**
+     * Sets the [id] to [new].
+     * @throws IDConflict if [new] already exists within the [MutableGenome] that contains `this`
+     * @throws IllegalArgumentException if [new] is null and this feature has children.
+     * @throws DiscontinuousLacksID if [new] is null and this feature a multiplicity greater than 1.
+     */
+    fun setID(new: String?): Unit
+
+    /**
+     * Prepends this feature to [MutableParent.descendants].
+     */
+    override fun subtree(): Sequence<MutableFeature>
 }

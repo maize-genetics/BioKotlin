@@ -1,0 +1,6 @@
+##gff-version 3
+chr1	assembly	chromosome	1	308452471	.	.	.	ID=1;ID=2;Name=chromosome:Zm-B73-REFERENCE-NAM-5.0:1:1:308452471:1
+chr1	NAM	gene	34617	40204	.	+	.	ID=Zm00001eb000010;ID=3;biotype=protein_coding;logic_name=cshl_gene
+chr1	NAM	mRNA	34617	40204	.	+	.	ID=Zm00001eb000010_T001;ID=4;Parent=Zm00001eb000010;biotype=protein_coding;transcript_id=Zm00001eb000010_T001;canonical_transcript=1
+chr1	NAM	five_prime_UTR	34617	34721	.	+	.	Parent=Zm00001eb000010_T001
+chr1	NAM	exon	34617	35318	.	+	.	Parent=Zm00001eb000010_T001;Name=Zm00001eb000010_T001.exon.1;ensembl_end_phase=0;ensembl_phase=0;exon_id=Zm00001eb000010_T001.exon.1;rank=1
