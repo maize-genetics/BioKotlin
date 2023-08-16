@@ -97,6 +97,7 @@ sealed interface Feature : Parent {
     val names: List<String>
 
     // PLANNED: More custom properties for special tags
+    // PLANNED: moveTo function
 
     /**
      * The [String] representation of this [Feature] as it appears as a row in a GFF file.
