@@ -1,8 +1,6 @@
 package biokotlin.featureTree
 
-import java.io.File
-
-const val SO_PATH = "src/main/resources/featureTree/so.obo"
+val SO_RESOURCE = TypeSchema::class.java.getResourceAsStream("/featureTree/TypeSchema/so.obo")!!
 
 /**
  *
@@ -82,7 +80,7 @@ internal class BaseSchema private constructor() {
             // Populates registry with information from the so.obo file
             val partOfSynonyms = setOf("part_of", "member_of", "integral_part_of")
 
-            File(SO_PATH).useLines { lines ->
+            SO_RESOURCE.bufferedReader().useLines { lines ->
                 var isTerm = false
                 var id: String? = null
                 var exactSynonyms: MutableList<String> = mutableListOf()
