@@ -88,7 +88,7 @@ class ParseException internal constructor(
 )
 
 class DeletedAccessException internal constructor() :
-    Exception("Do not access deleted features or any of their previous descendants")
+    Exception("Do not access deleted features or any of their orphaned descendants")
 
 class NotInSchema(val type: String): Exception(
     """
