@@ -1,4 +1,4 @@
-import org.gradle.api.JavaVersion.VERSION_11
+import org.gradle.api.JavaVersion.VERSION_17
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // Note Kotlin version needs to be updated in both the buildscript and plugins.
@@ -11,7 +11,7 @@ version = "0.08"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.8.21")
+    val kotlinVersion by extra ("1.9.10")
 
     repositories {
         mavenCentral()
@@ -73,7 +73,7 @@ dependencies {
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
-    implementation("com.github.samtools:htsjdk:2.24.1")
+    implementation("com.github.samtools:htsjdk:4.0.1")
 
     // implementation("org.jetbrains.bio:bioinf-commons:0.0.9")
 
@@ -115,13 +115,13 @@ dependencies {
 //kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
-    sourceCompatibility = VERSION_11
-    targetCompatibility = VERSION_11
+    sourceCompatibility = VERSION_17
+    targetCompatibility = VERSION_17
     withSourcesJar()
 }
 
 tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "17"
 }
 
 tasks {

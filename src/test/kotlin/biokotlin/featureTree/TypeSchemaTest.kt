@@ -304,7 +304,7 @@ class TypeSchemaTest : StringSpec({
             }
         }
 
-        File("src/test/resources/biokotlin/featureTree/dotOutput/type_schema_test.dot")
+        File("src/test/resources/biokotlin/featureTree/type_schema_test.dot")
             .writeText(genome.visualizeSchema())
     }
 })
