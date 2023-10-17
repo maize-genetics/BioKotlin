@@ -51,8 +51,8 @@ class MAFToGVCF {
                                     var altAllele : String, var isVariant: Boolean, var alleleDepths : IntArray = intArrayOf(),
                                     var asmChrom : String = "", var asmStart : Int = -1, var asmEnd : Int = -1, var asmStrand : String="")
 
-    val refDepth = intArrayOf(1,0)
-    val altDepth = intArrayOf(0,1,0)
+    val refDepth = intArrayOf(30,0)
+    val altDepth = intArrayOf(0,30,0)
 
     /**
      * This method takes a mafFile and outputs a gvcf file to the specified path

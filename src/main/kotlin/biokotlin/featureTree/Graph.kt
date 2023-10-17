@@ -1,5 +1,6 @@
 package biokotlin.featureTree
 
+import biokotlin.util.bufferedReader
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -846,11 +847,11 @@ internal class Graph private constructor(
 
             val graph = Graph(multipleParentage)
             modifySchema?.invoke(graph.schema)
-            FileReader(file).useLines { lines ->
+            bufferedReader(file).useLines { lines ->
                 var lineCounter = 0
                 for (line in lines) {
                     lineCounter++
-
+                    if (line.isEmpty() || line.isBlank()) continue //skip blank lines
                     // PLANNED: comment support
                     if (line.startsWith("#")) {
                         logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
@@ -864,7 +865,8 @@ internal class Graph private constructor(
                     }
 
                     val split = corrected.split("\t")
-                    if (split.size != 9) throw parseException("Should contain 9 tab-delineated columns.")
+
+                    if (split.size != 9) throw parseException("Should contain 9 tab-delineated columns. ${corrected}")
 
                     val seqid = split[0]
                     val source = split[1]
