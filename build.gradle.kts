@@ -1,4 +1,3 @@
-import org.gradle.api.JavaVersion.VERSION_17
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // Note Kotlin version needs to be updated in both the buildscript and plugins.
@@ -21,13 +20,13 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         classpath(kotlin("serialization", version = kotlinVersion))
-        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.6.21")
+        classpath("org.jetbrains.dokka:dokka-gradle-plugin:$kotlinVersion")
     }
 }
 
 
 plugins {
-    val kotlinVersion = "1.8.21"
+    val kotlinVersion = "1.9.10"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
@@ -115,8 +114,6 @@ dependencies {
 //kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
-    sourceCompatibility = VERSION_17
-    targetCompatibility = VERSION_17
     withSourcesJar()
 }
 
