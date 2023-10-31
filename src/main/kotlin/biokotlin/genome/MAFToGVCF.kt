@@ -1,7 +1,6 @@
 package biokotlin.genome
 
 import biokotlin.genome.SeqRangeSort.alphaThenNumberSort
-import biokotlin.genome.SeqRangeSort.numberThenAlphaSort
 import biokotlin.seq.NucSeq
 import biokotlin.util.bufferedReader
 import htsjdk.samtools.SAMSequenceDictionary
@@ -89,7 +88,7 @@ class MAFToGVCF {
         twoGvcfs: Boolean = false,
         outJustGT: Boolean = false,
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
-        bgzipAndIndex: Boolean = true // if bgzip and index are not on the system path, this will fail
+        compressAndIndex: Boolean = true // if bgzip and index are not on the system path, this will fail
     ) {
 
         val refSeqs = fastaToNucSeq(referenceFile)
@@ -103,7 +102,7 @@ class MAFToGVCF {
             val sampleName = variantsMap.keys.first()
             val variants = variantsMap.values.first()
             exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
-            if (bgzipAndIndex) {
+            if (compressAndIndex) {
                 // compress and index the file with bgzip and tabix.
                 compressAndIndexFile(gvcfOutput)
             }
@@ -111,7 +110,7 @@ class MAFToGVCF {
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
                 val outputFile = exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
-                if (bgzipAndIndex) {
+                if (compressAndIndex) {
                     compressAndIndexFile(outputNames[index])
                 }
             }
