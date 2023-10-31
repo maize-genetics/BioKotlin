@@ -118,7 +118,7 @@ class MAFToGVCFTest : StringSpec({
         }
     }
     "test MAFToGVCF from createGVCF no sorting" {
-        MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName, sortMaf=false)
+        MAFToGVCF().createGVCFfromMAF(mafFile,refFile, outputFile, sampleName)
         println("Finished, output gvcf written to: ${outputFile}")
 
         //Load in the output GVCF  and the truth GVCF and verify that the output is correct
