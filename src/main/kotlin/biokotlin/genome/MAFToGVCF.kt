@@ -105,14 +105,14 @@ class MAFToGVCF {
             exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
             if (bgzipAndIndex) {
                 // compress and index the file with bgzip and tabix.
-                bgzipAndIndexGVCFfile(gvcfOutput)
+                compressAndIndexFile(gvcfOutput)
             }
         } else if (variantsMap.size == 2) {
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
                 val outputFile = exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
                 if (bgzipAndIndex) {
-                    bgzipAndIndexGVCFfile(outputNames[index])
+                    compressAndIndexFile(outputNames[index])
                 }
             }
         }

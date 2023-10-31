@@ -459,27 +459,25 @@ fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): Dat
  * This handles the case where there already exists a bgzipped file, however
  * it is still required to have the non-bzipped file present.
  *
- * TODO: This method exists in phgv2 - should it be deleted there and use this one?
- *
  * @return the filename of the bgzipped gvcf
  */
-fun bgzipAndIndexGVCFfile(gvcfFileName: String): String {
+fun compressAndIndexFile(fileName: String): String {
 
     try {
         // First bgzip the file
 
         // bgzip the file - needed to create index
         // use the -f option to overwrite any existing file
-        println("bgzipping  file ${gvcfFileName}")
-        val gvcfGzippedFile = gvcfFileName + ".gz"
+        println("bgzipping  file ${fileName}")
+        val gvcfGzippedFile = fileName + ".gz"
         var builder = ProcessBuilder("conda","run","-n","phgv2-conda",
-            "bgzip", "-f", gvcfFileName)
+            "bgzip", "-f", fileName)
 
         var process = builder.start()
         var error: Int = process.waitFor()
         if (error != 0) {
-            println("\nERROR $error creating bgzipped  version of file: $gvcfFileName")
-            throw IllegalStateException("bgzipAndIndexGVCFfile: error trying to bgzip file ${gvcfFileName}: ${error}")
+            println("\nERROR $error creating bgzipped  version of file: $fileName")
+            throw IllegalStateException("bgzipAndIndexGVCFfile: error trying to bgzip file ${fileName}: ${error}")
         }
 
         // File has been gzipped, now index it.
@@ -496,7 +494,7 @@ fun bgzipAndIndexGVCFfile(gvcfFileName: String): String {
         }
         return gvcfGzippedFile
     } catch (exc:Exception) {
-        throw IllegalStateException("bgzipAndIndexGVCFfile: error bgzipping and/or indexing file ${gvcfFileName}")
+        throw IllegalStateException("bgzipAndIndexGVCFfile: error bgzipping and/or indexing file ${fileName}")
     }
 
 }
