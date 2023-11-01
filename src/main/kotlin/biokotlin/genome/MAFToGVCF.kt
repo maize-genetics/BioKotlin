@@ -111,7 +111,7 @@ class MAFToGVCF {
             println("createGVCFFromMAF: variantsMap.size == 2")
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
-                val outputFile = exportVariantContext(sampleName, variants, outputNames[index], refSeqs)
+                val outputFile = exportVariantContext(name, variants, outputNames[index], refSeqs)
                 if (compressAndIndex) {
                     compressAndIndexFile(outputNames[index])
                 }
@@ -147,7 +147,7 @@ class MAFToGVCF {
                     //append _1 and _2 to the sampleName for the split genomes
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType))
+                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafRecords, refSeqs, fillGaps, outJustGT, outputType))
                 }.toMap()
             }
 
@@ -232,7 +232,9 @@ class MAFToGVCF {
             variantInfos.addAll(buildTempVariants(refGenomeSequence, record))
         }
 
-        if (fillGaps && outputType == OUTPUT_TYPE.gvcf ){
+        if (fillGaps && outputType == OUTPUT_TYPE.vcf ){
+            //If we are returning a VCF, we first need to determine where the missing regions are.  We can use FillInMissingVariantBlocks to do so.
+            //Then once we have the gaps filled in, we remove any referenceBlocks and we have out VCF with missing values.
             variantInfos = fillInMissingVariantBlocks(variantInfos, refGenomeSequence,false)
             variantInfos = removeRefBlocks(variantInfos)
         }
@@ -453,6 +455,7 @@ class MAFToGVCF {
             startingRef.append(refAlignment[currentAlignmentBp])
             startingAlt.append(altAlignment[currentAlignmentBp])
 
+            println("buildTempVariants: adding variant via buildIndel line 458")
             variantList += buildIndel(
                 chrom,
                 1,
@@ -505,6 +508,7 @@ class MAFToGVCF {
             } else {
                 //Check SNP, if SNP, write out the Previous refBlock and make a SNP VariantInfo, resetRefBlock
                 if (currentRefBlockBoundaries != Pair(-1, -1)) {
+                    println("buildTempVariants: adding variant via buildRefBLockVariantInfo line 511")
                     variantList += buildRefBlockVariantInfo(
                         refSequence,
                         chrom,
@@ -522,6 +526,7 @@ class MAFToGVCF {
                 if (refAlignment[currentAlignmentBp] != '-' && altAlignment[currentAlignmentBp] != '-') {
 
                     //Write out SNP
+                    println("buildTempVariants: adding variant vai buildSNP line 529")
                     variantList += buildSNP(
                         chrom,
                         currentRefBp,
@@ -598,7 +603,8 @@ class MAFToGVCF {
                     val refString = refStringBuilder.toString()
                     val altString = altStringBuilder.toString()
                     val startRefPos = currentRefBp - refString.length
-                    val startASMPos = currentASMBp - altString.length
+                    val startASMPos =  if(asmStrand=="-") {currentASMBp + altString.length}
+                    else {currentASMBp - altString.length}
                     if (refString == altString) {
                         currentRefBlockBoundaries = Pair(startRefPos, currentRefBp - 1)
                         currentAsmBlockBoundaries = if(asmStrand=="-"){Pair(currentASMBp + 1, startASMPos)}
@@ -606,7 +612,8 @@ class MAFToGVCF {
                     }
                     //also need to check whether the alt and ref Strings are the same length
                     //if they are process them into SNPs and ref blocks
-                    else if (refString.length == altString.length)
+                    else if (refString.length == altString.length) {
+                        println("buildTempVariants: adding variant via addAll line 591")
                         variantList.addAll(
                             processIdenticalLengthStrings(
                                 refString,
@@ -619,15 +626,18 @@ class MAFToGVCF {
                                 asmStrand
                             )
                         )
-                    else variantList += buildIndel(
-                        chrom,
-                        startRefPos,
-                        refString,
-                        altString,
-                        asmChrom,
-                        startASMPos,
-                        asmStrand
-                    )
+                    }else {
+                        println("buildTempVariants: adding variant via buildIndel line 600")
+                        variantList += buildIndel(
+                            chrom,
+                            startRefPos,
+                            refString,
+                            altString,
+                            asmChrom,
+                            startASMPos,
+                            asmStrand
+                        )
+                    }
                 }
 
             }
@@ -635,6 +645,7 @@ class MAFToGVCF {
 
         //Write out existing refBlock if we have one
         if (currentRefBlockBoundaries != Pair(-1, -1)) {
+            println("buildTempVariants: adding variant via buildRefBlockVariantInfo 615")
             variantList += buildRefBlockVariantInfo(
                 refSequence,
                 chrom,
