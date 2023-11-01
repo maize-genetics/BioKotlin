@@ -95,10 +95,11 @@ class MAFToGVCF {
         val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType)
         check(variantsMap.size == 1 || variantsMap.size == 2) {
             "Expected either 1" +
-                    " or 2 variant maps but there are ${variantsMap.size}"
+                    " or 2 variant ma   ps but there are ${variantsMap.size}"
         }
 
         if (variantsMap.size == 1) {
+            println("createGVCFFromMAF: variantsMap.size == 1")
             val sampleName = variantsMap.keys.first()
             val variants = variantsMap.values.first()
             exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
@@ -107,9 +108,10 @@ class MAFToGVCF {
                 compressAndIndexFile(gvcfOutput)
             }
         } else if (variantsMap.size == 2) {
+            println("createGVCFFromMAF: variantsMap.size == 2")
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
-                val outputFile = exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
+                val outputFile = exportVariantContext(sampleName, variants, outputNames[index], refSeqs)
                 if (compressAndIndex) {
                     compressAndIndexFile(outputNames[index])
                 }
@@ -144,6 +146,7 @@ class MAFToGVCF {
                 splitGenomes.mapIndexed { index, mafrecs ->
                     //append _1 and _2 to the sampleName for the split genomes
                     val genomeName = "${sampleName}_${index + 1}"
+                    println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
                     Pair(genomeName, buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType))
                 }.toMap()
             }
@@ -230,7 +233,7 @@ class MAFToGVCF {
         }
 
         if (fillGaps && outputType == OUTPUT_TYPE.gvcf ){
-            variantInfos = fillInMissingReferenceBlocks(variantInfos, refGenomeSequence)
+            variantInfos = fillInMissingVariantBlocks(variantInfos, refGenomeSequence,false)
             variantInfos = removeRefBlocks(variantInfos)
         }
         else if (fillGaps) {
@@ -301,7 +304,7 @@ class MAFToGVCF {
                             buildMissingRegion(varinfo.chr,
                                 previousInfo.endPos+1,
                                 varinfo.startPos-1,
-                                chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // 0-based for NucSeq
+                                chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // TODO plus 1 or not?  NucSeq is 0-based
                                 //refGenomeSequence.genotypeAsString(varinfo.chr, previousInfo.endPos+1,previousInfo.endPos+1),
                                 if(sameChr) varinfo.asmChrom else "",
                                 asmPositions.first,
@@ -402,11 +405,13 @@ class MAFToGVCF {
         check(refAlignment.length == altAlignment.length) { "Ref and Alt alignments are not the same size, chrom=${chrom}, refsize=${refAlignment.length}, altsize=${altAlignment.length}, score=${mafRecord.score}, refStart=${mafRecord.refRecord.start}, refSize=${mafRecord.refRecord.size},altStart=${mafRecord.altRecord.start}, altSize=${mafRecord.altRecord.size}" }
 
         var currentAlignmentBp = 0   //position in both alignment blocks
+        var asmStrand = mafRecord.altRecord.strand     //We need to keep track of the strand as well
+        check(asmStrand =="-" || asmStrand == "+") {"ASM Strand is not - or +."}
         var currentRefBp =
             mafRecord.refRecord.start   //position in ref sequence. That is, alignment bp minus dashes for REF line
-        var currentASMBp =
-            mafRecord.altRecord.start   //position in the alt sequence.  That is alignment bp minus dashes for ASM line
-        var asmStrand = mafRecord.altRecord.strand     //We need to keep track of the strand as well
+        var currentASMBp = if(asmStrand == "-") {mafRecord.altRecord.start + mafRecord.altRecord.size -1  }
+        else {mafRecord.altRecord.start}//position in the alt sequence.  That is alignment bp minus dashes for ASM line
+
         val asmChrom = mafRecord.altRecord.chromName.split(".").last()
         var currentRefBlockBoundaries = Pair(-1, -1)
         var currentAsmBlockBoundaries = Pair(-1, -1)
@@ -433,7 +438,12 @@ class MAFToGVCF {
                 }
                 if (altChar != '-') {
                     startingAlt.append(altChar)
-                    currentASMBp++
+                    if(asmStrand == "-") {
+                        currentASMBp--
+                    }
+                    else {
+                        currentASMBp++
+                    }
                 }
 
                 currentAlignmentBp++
@@ -454,7 +464,12 @@ class MAFToGVCF {
             )
 
             currentRefBp++
-            currentASMBp++
+            if(asmStrand == "-") {
+                currentASMBp--
+            }
+            else {
+                currentASMBp++
+            }
             currentAlignmentBp++
 
         }
@@ -464,29 +479,28 @@ class MAFToGVCF {
             if (refAlignment[currentAlignmentBp] == '-' && altAlignment[currentAlignmentBp] == '-') {
                 currentAlignmentBp++
             } else if (refAlignment[currentAlignmentBp] == altAlignment[currentAlignmentBp]) { //If the alleles match we have a reference block
-                if (currentRefBlockBoundaries == Pair(
-                        -1,
-                        -1
-                    )
-                ) { //Check to see if its the first base pair in a reference block
+                if (currentRefBlockBoundaries == Pair(-1,-1)){
+                    //Check to see if its the first base pair in a reference block
                     //New RefBlock
                     currentRefBlockBoundaries = Pair(currentRefBp, currentRefBp)
                 } else {//Otherwise its an existing RefBlock.
                     currentRefBlockBoundaries = Pair(currentRefBlockBoundaries.first, currentRefBp)
                 }
 
-                if (currentAsmBlockBoundaries == Pair(
-                        -1,
-                        -1
-                    )
-                ) { //Check to see if its the first bp for the assembly blocks
+                if (currentAsmBlockBoundaries == Pair(-1,-1)){
+                     //Check to see if its the first bp for the assembly blocks
                     currentAsmBlockBoundaries = Pair(currentASMBp, currentASMBp)
                 } else { //If it exists, just update.
                     currentAsmBlockBoundaries = Pair(currentAsmBlockBoundaries.first, currentASMBp)
                 }
 
                 currentRefBp++
-                currentASMBp++
+                if(asmStrand == "-") {
+                    currentASMBp--
+                }
+                else {
+                    currentASMBp++
+                }
                 currentAlignmentBp++
             } else {
                 //Check SNP, if SNP, write out the Previous refBlock and make a SNP VariantInfo, resetRefBlock
@@ -519,7 +533,12 @@ class MAFToGVCF {
                     )
 
                     currentRefBp++
-                    currentASMBp++
+                    if(asmStrand == "-") {
+                        currentASMBp--
+                    }
+                    else {
+                        currentASMBp++
+                    }
                     currentAlignmentBp++
                 } else {
                     //If an indel, append to the previous variant
@@ -564,7 +583,12 @@ class MAFToGVCF {
                         }
                         if (altAlignment[currentAlignmentBp] != '-') {
                             altStringBuilder.append(altAlignment[currentAlignmentBp])
-                            currentASMBp++
+                            if(asmStrand == "-") {
+                                currentASMBp--
+                            }
+                            else {
+                                currentASMBp++
+                            }
                         }
                         currentAlignmentBp++
                     }
@@ -577,7 +601,8 @@ class MAFToGVCF {
                     val startASMPos = currentASMBp - altString.length
                     if (refString == altString) {
                         currentRefBlockBoundaries = Pair(startRefPos, currentRefBp - 1)
-                        currentAsmBlockBoundaries = Pair(startASMPos, currentASMBp - 1)
+                        currentAsmBlockBoundaries = if(asmStrand=="-"){Pair(currentASMBp + 1, startASMPos)}
+                        else {Pair(startASMPos, currentASMBp -1)}
                     }
                     //also need to check whether the alt and ref Strings are the same length
                     //if they are process them into SNPs and ref blocks
@@ -624,88 +649,138 @@ class MAFToGVCF {
     }
 
     /**
-     * Function to fill in the missing reference blocks between MAF records.
+     * Function to fill in the missing variant blocks between MAF records.
+     * If fillWithRef is set to true it will make VariantBlocks, if false it will make missing blocks.
+     *
+     * This will also not return an assembly coordinate in the output VariantInfos.
+     * This is because Anchorwave did not find an alignment for these in-between regions.
+     * We could try to put in some coords but it gets very tricky to do so due to inversions.
      */
-    private fun fillInMissingReferenceBlocks(
-        tempVariantInfos: MutableList<AssemblyVariantInfo>,
-        refGenomeSequence: Map<String, NucSeq>
-    ): MutableList<AssemblyVariantInfo> {
-        //Checks whether reference positions are contiguous with no missing positions.
-        // If there are any gaps in coverage it inserts a reference block.
-        // This is necessary because combining GVCFs requires that they fully cover the reference genome.
-        //sort the resulting list by chromosome name and start position
-        tempVariantInfos.sortWith() { a, b ->
-            val chrcomp = a.chr.compareTo(b.chr)
-            if (chrcomp == 0) a.startPos.compareTo(b.startPos) else chrcomp
-        }
-
-        var previousInfo = AssemblyVariantInfo("NA", 0, 0, "", "", "", false)
-        val filledVariantList = mutableListOf<AssemblyVariantInfo>()
-        for (varinfo in tempVariantInfos) {
-            if (varinfo.chr == previousInfo.chr) {
-                check(varinfo.startPos > previousInfo.endPos) { "VariantInfo start <= previous end at ${varinfo.chr}:${varinfo.startPos}. Previous end was ${previousInfo.endPos} " }
-
-                //add a refblock if this start > previous end plus one
-                if (varinfo.startPos > previousInfo.endPos + 1) {
-                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
-                    val asmPositions =
-                        if (sameChr) Pair(previousInfo.endPos + 1, varinfo.startPos - 1) else Pair(-1, -1)
-                    filledVariantList.add(
-                        buildRefBlockVariantInfoZeroDepth(
-                            refGenomeSequence,
-                            varinfo.chr,
-                            Pair(previousInfo.endPos + 1, varinfo.startPos - 1),
-                            if (sameChr) varinfo.asmChrom else "",
-                            asmPositions,
-                            ""
-                        )
-                    )
-                }
-            } else {
-                //this is the first variant info in a chromosome
-                //  check the previous variant info to make sure it ended at the chromosome end
-                if (previousInfo.chr != "NA") {
-                    val previousChromEnd = refGenomeSequence.get(previousInfo.chr)!!.size()
-                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
-                    val asmPositions =
-                        if (sameChr) Pair(previousInfo.endPos + 1, varinfo.startPos - 1) else Pair(-1, -1)
-                    if (previousInfo.endPos < previousChromEnd) {
-                        filledVariantList.add(
-                            buildRefBlockVariantInfoZeroDepth(
-                                refGenomeSequence,
-                                previousInfo.chr,
-                                Pair(previousInfo.endPos + 1, previousChromEnd),
-                                if (sameChr) varinfo.asmChrom else "",
-                                asmPositions,
-                                ""
-                            )
-                        )
-                    }
-                }
-                // if this variant does not start at one add a ref block
-                if (varinfo.startPos > 1) {
-                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
-                    val asmPositions =
-                        if (sameChr) Pair(previousInfo.endPos + 1, varinfo.startPos - 1) else Pair(-1, -1)
-                    filledVariantList.add(
-                        buildRefBlockVariantInfoZeroDepth(
-                            refGenomeSequence,
-                            varinfo.chr,
-                            Pair(1, varinfo.startPos - 1),
-                            if (sameChr) varinfo.asmChrom else "",
-                            asmPositions,
-                            ""
-                        )
-                    )
-                }
-            }
-
-            filledVariantList.add(varinfo)
-            previousInfo = varinfo
-        }
-
-        return filledVariantList
-    }
+//    private fun fillInMissingReferenceBlocks(
+//        tempVariantInfos: MutableList<AssemblyVariantInfo>,
+//        refGenomeSequence: Map<String, NucSeq>
+//    ): MutableList<AssemblyVariantInfo> {
+//        //Checks whether reference positions are contiguous with no missing positions.
+//        // If there are any gaps in coverage it inserts a reference block.
+//        // This is necessary because combining GVCFs requires that they fully cover the reference genome.
+//        //sort the resulting list by chromosome name and start position
+//        val tempSortedList = tempVariantInfos
+//            .map { Pair(it.chr,it) }
+//            .toMutableList()
+//
+//        tempSortedList.sortWith() { a, b ->
+//            val chrcomp = a.first.compareTo(b.first)
+//            if (chrcomp == 0) a.second.startPos.compareTo(b.second.startPos) else chrcomp
+//
+//        }
+//
+//
+//        val finalSortedList = tempSortedList.map { it.second }
+//
+//        var previousInfo = AssemblyVariantInfo("NA", 0, 0, "", "", "", false)
+//        val filledVariantList = mutableListOf<AssemblyVariantInfo>()
+//        for (varinfo in finalSortedList) {
+//
+//            //Setting all the asm positions to be missing.  This is due to us not really knowing based on alignment where things need to be.
+//            val asmPositions = Pair(-1,-1)
+//            if (varinfo.chr == previousInfo.chr) {
+//                check(varinfo.startPos > previousInfo.endPos) {"VariantInfo start <= previous end at ${varinfo.chr}:${varinfo.startPos}. Previous end was ${previousInfo.endPos} "}
+//
+//                //add a refblock if this start > previous end plus one
+//                if (varinfo.startPos > previousInfo.endPos + 1) {
+//                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
+//
+//                    if(fillWithRef) {
+//                        filledVariantList.add(
+//                            buildRefBlockVariantInfoZeroDepth(
+//                                refGenomeSequence,
+//                                varinfo.chr,
+//                                Pair(previousInfo.endPos + 1, varinfo.startPos - 1),
+//                                if (sameChr) varinfo.asmChrom else "",
+//                                asmPositions,
+//                                ""
+//                            )
+//                        )
+//                    }
+//                    else {
+//                        filledVariantList.add(
+//                            buildMissingRegion(varinfo.chr,
+//                                previousInfo.endPos+1,
+//                                varinfo.startPos-1,
+//                                refGenomeSequence.genotypeAsString(Chromosome.instance(varinfo.chr), previousInfo.endPos+1,previousInfo.endPos+1),
+//                                if(sameChr) varinfo.asmChrom else "",
+//                                asmPositions.first,
+//                                asmPositions.second,
+//                                ""))
+//                    }
+//                }
+//            }
+//            else {
+//                //this is the first variant info in a chromosome
+//                //  check the previous variant info to make sure it ended at the chromosome end
+//                if (previousInfo.chr != "NA") {
+//                    val previousChromEnd = refGenomeSequence.chromosomeSize(Chromosome.instance(previousInfo.chr))
+//                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
+//                    if (previousInfo.endPos < previousChromEnd) {
+//                        if (fillWithRef) {
+//                            filledVariantList.add(
+//                                buildRefBlockVariantInfoZeroDepth(
+//                                    refGenomeSequence,
+//                                    previousInfo.chr,
+//                                    Pair(previousInfo.endPos + 1, previousChromEnd),
+//                                    if (sameChr) varinfo.asmChrom else "",
+//                                    asmPositions,
+//                                    ""
+//                                )
+//                            )
+//                        }
+//                        else {
+//                            filledVariantList.add(
+//                                buildMissingRegion(previousInfo.chr,
+//                                    previousInfo.endPos+1,
+//                                    previousChromEnd,
+//                                    refGenomeSequence.genotypeAsString(Chromosome.instance(previousInfo.chr), previousInfo.endPos+1,previousInfo.endPos+1),
+//                                    if(sameChr) varinfo.asmChrom else "",
+//                                    asmPositions.first,
+//                                    asmPositions.second,
+//                                    ""))
+//                        }
+//                    }
+//                }
+//                // if this variant does not start at one add a ref block
+//                if (varinfo.startPos > 1) {
+//                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
+//                    if(fillWithRef) {
+//                        filledVariantList.add(
+//                            buildRefBlockVariantInfoZeroDepth(
+//                                refGenomeSequence,
+//                                varinfo.chr,
+//                                Pair(1, varinfo.startPos - 1),
+//                                if (sameChr) varinfo.asmChrom else "",
+//                                asmPositions,
+//                                ""
+//                            )
+//                        )
+//                    }
+//                    else {
+//                        filledVariantList.add(
+//                            buildMissingRegion(varinfo.chr,
+//                                1,
+//                                varinfo.startPos-1,
+//                                refGenomeSequence.genotypeAsString(Chromosome.instance(varinfo.chr), 1,1),
+//                                if(sameChr) varinfo.asmChrom else "",
+//                                asmPositions.first,
+//                                asmPositions.second,
+//                                ""))
+//                    }
+//                }
+//            }
+//
+//            filledVariantList.add(varinfo)
+//            previousInfo = varinfo
+//        }
+//        return filledVariantList
+//    }
 
     /**
      * Function to convert a multi-bp substitution into a series of SNPs.  This allows the GVCF to pass a vcf-validator.
@@ -802,8 +877,14 @@ class MAFToGVCF {
         }
 
         val genotype = if (variantInfo.isVariant) {
-            listOf(alleles[1])
-        } else {
+            if(variantInfo.genotype == ".") {
+                listOf(Allele.NO_CALL)
+            }
+            else {
+                listOf(alleles[1])
+            }
+        }
+        else {
             listOf(alleles[0])
         }
 
@@ -828,7 +909,7 @@ class MAFToGVCF {
 
         val vcBuilder = VariantContextBuilder(".", chrom, startPos.toLong(), endPos.toLong(), alleles)
 
-        if (!variantInfo.isVariant) {
+        if (!variantInfo.isVariant || altAllele == ".") {
             vcBuilder.attribute("END", endPos)
         }
 
@@ -904,6 +985,10 @@ class MAFToGVCF {
      * We need to do this otherwise we will cover base pairs surrounding the indels.
      */
     private fun resizeRefBlockVariantInfo(variantInfo: AssemblyVariantInfo): AssemblyVariantInfo {
+        check(variantInfo.asmStrand=="-" || variantInfo.asmStrand=="+") {"ASM Strand is not + or -"}
+        val asmStart = variantInfo.asmStart
+        val asmEnd = if(variantInfo.asmStrand == "-") variantInfo.asmEnd+1 else variantInfo.asmEnd-1
+
         return AssemblyVariantInfo(
             variantInfo.chr,
             variantInfo.startPos,
@@ -914,8 +999,8 @@ class MAFToGVCF {
             variantInfo.isVariant,
             variantInfo.alleleDepths,
             variantInfo.asmChrom,
-            variantInfo.asmStart,
-            variantInfo.asmEnd - 1,
+            asmStart,
+            asmEnd,
             variantInfo.asmStrand
         )
     }
@@ -951,7 +1036,16 @@ class MAFToGVCF {
         assemblyStrand: String,
         startInsertion: Boolean = false
     ): AssemblyVariantInfo {
-        val assemblyEnd = if (startInsertion) assemblyStart else assemblyStart + altAlleles.length - 1
+        check(assemblyStrand == "+" || assemblyStrand=="-") {"Assembly Strand is not + or -"}
+        val assemblyEnd = if(startInsertion) {
+            assemblyStart
+        }
+        else if(assemblyStrand =="+") {
+            assemblyStart + altAlleles.length -1
+        }
+        else {
+            assemblyStart - altAlleles.length +1
+        }
 
         return AssemblyVariantInfo(
             chrom, position, position, altAlleles, refAlleles,
