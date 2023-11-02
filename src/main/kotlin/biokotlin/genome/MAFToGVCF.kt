@@ -94,12 +94,10 @@ class MAFToGVCF {
         val refSeqs = fastaToNucSeq(referenceFile)
         val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType)
         check(variantsMap.size == 1 || variantsMap.size == 2) {
-            "Expected either 1" +
-                    " or 2 variant ma   ps but there are ${variantsMap.size}"
+            "Expected either 1 or 2 variant maps but there are ${variantsMap.size}"
         }
 
         if (variantsMap.size == 1) {
-            println("createGVCFFromMAF: variantsMap.size == 1")
             val sampleName = variantsMap.keys.first()
             val variants = variantsMap.values.first()
             exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
@@ -108,7 +106,6 @@ class MAFToGVCF {
                 compressAndIndexFile(gvcfOutput)
             }
         } else if (variantsMap.size == 2) {
-            println("createGVCFFromMAF: variantsMap.size == 2")
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
                 val outputFile = exportVariantContext(name, variants, outputNames[index], refSeqs)
@@ -139,19 +136,21 @@ class MAFToGVCF {
             val splitGenomes = splitMafRecordsIntoTwoGenomes(mafRecords)
 
             if (splitGenomes.size == 1) {
-                println("${mafFile} had no overlapping blocks and was not split")
+                println("getVariantContextsfromMAF:twoGvcfs is true but only 1 genome in the MAF file. Processing the single genome")
                 mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType))
                 //mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refGenomeSequence))
             } else {
                 splitGenomes.mapIndexed { index, mafrecs ->
                     //append _1 and _2 to the sampleName for the split genomes
+
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafRecords, refSeqs, fillGaps, outJustGT, outputType))
+                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType))
                 }.toMap()
             }
 
         } else {
+            println("getVariantContextsfromMAF: Processing a single genome")
             mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType))
         }
 
@@ -228,6 +227,7 @@ class MAFToGVCF {
     ): List<VariantContext> {
         var variantInfos = mutableListOf<AssemblyVariantInfo>()
 
+        println("MAFToGVCF:buildVariantsForAllAlignments: mafRecords has ${mafRecords.size} records")
         for (record in mafRecords) {
             variantInfos.addAll(buildTempVariants(refGenomeSequence, record))
         }
@@ -262,6 +262,7 @@ class MAFToGVCF {
         // If there are any gaps in coverage it inserts a reference block.
         // This is necessary because combining GVCFs requires that they fully cover the reference genome.
         //sort the resulting list by chromosome name and start position
+        println("fillInMissingVariantBlocks: tempVariantInfos has ${tempVariantInfos.size} records")
         val tempSortedList = tempVariantInfos
             .map { Pair(it.chr,it) }
             .toMutableList()
@@ -306,7 +307,7 @@ class MAFToGVCF {
                             buildMissingRegion(varinfo.chr,
                                 previousInfo.endPos+1,
                                 varinfo.startPos-1,
-                                chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // TODO plus 1 or not?  NucSeq is 0-based
+                                chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // LCJ - phg has +1,  NucSeq is 0-based
                                 //refGenomeSequence.genotypeAsString(varinfo.chr, previousInfo.endPos+1,previousInfo.endPos+1),
                                 if(sameChr) varinfo.asmChrom else "",
                                 asmPositions.first,
@@ -341,7 +342,7 @@ class MAFToGVCF {
                                 buildMissingRegion(previousInfo.chr,
                                     previousInfo.endPos+1,
                                     previousChromEnd,
-                                    chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // 0-based for NucSeq
+                                    chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), //  LCJ - phg has +1,0-based for NucSeq
                                     //refGenomeSequence.genotypeAsString(Chromosome.instance(previousInfo.chr), previousInfo.endPos+1,previousInfo.endPos+1),
                                     if(sameChr) varinfo.asmChrom else "",
                                     asmPositions.first,
@@ -371,7 +372,7 @@ class MAFToGVCF {
                             buildMissingRegion(varinfo.chr,
                                 1,
                                 varinfo.startPos-1,
-                                chrSeq!![0,0].toString(), // 0-based for NucSeq
+                                chrSeq!![0,0].toString(), // LCJ - PHG has 1,1: 0-based for NucSeq
                                 //refGenomeSequence.genotypeAsString(Chromosome.instance(varinfo.chr), 1,1),
                                 if(sameChr) varinfo.asmChrom else "",
                                 asmPositions.first,
@@ -391,6 +392,7 @@ class MAFToGVCF {
 
     private fun buildMissingRegion(chrom: String, startPos: Int, endPos: Int, refAlleles : String,
                                    assemblyChrom: String, assemblyStart: Int, assemblyEnd : Int, assemblyStrand: String) : AssemblyVariantInfo {
+        println("buildMissingRegions: ${chrom}:${startPos}-${endPos}")
         return AssemblyVariantInfo(chrom, startPos, endPos, ".",refAlleles, ".", true, missingDepth, assemblyChrom, assemblyStart, assemblyEnd, assemblyStrand)
     }
     /**
@@ -424,8 +426,8 @@ class MAFToGVCF {
         //The refAllele will be the ref string up to and including that position, without dashes.
         //The altAllele will be the alt string up to and including that position, without dashes.
         if ((refAlignment[currentAlignmentBp] == '-' || altAlignment[currentAlignmentBp] == '-') && currentRefBp == 1) {
-            val startingAlt = java.lang.StringBuilder()
-            val startingRef = java.lang.StringBuilder()
+            val startingAlt = StringBuilder()
+            val startingRef = StringBuilder()
 
             val asmCurrentStart = currentASMBp //Keep track of the initial asmStart position.
 
@@ -455,7 +457,7 @@ class MAFToGVCF {
             startingRef.append(refAlignment[currentAlignmentBp])
             startingAlt.append(altAlignment[currentAlignmentBp])
 
-            println("buildTempVariants: adding variant via buildIndel line 458")
+            println("buildTempVariants: adding variant via buildIndel line 458, reflen=${startingRef.length}, altlen=${startingAlt.length}")
             variantList += buildIndel(
                 chrom,
                 1,
@@ -525,8 +527,8 @@ class MAFToGVCF {
                 //Make sure they both are not '-', If so its a SNP
                 if (refAlignment[currentAlignmentBp] != '-' && altAlignment[currentAlignmentBp] != '-') {
 
-                    //Write out SNP
                     println("buildTempVariants: adding variant vai buildSNP line 529")
+                    //Write out SNP
                     variantList += buildSNP(
                         chrom,
                         currentRefBp,
@@ -561,14 +563,14 @@ class MAFToGVCF {
                     val altStringBuilder = StringBuilder()
 
                     if (prefix == null) {
-                        val allele = refSequence.get(chrom)!!.get(currentRefBp).toString()
+                        val allele = refSequence[chrom]!!.get(currentRefBp-1).toString() // LCJ - phg has currentRefBp, I did -1
                         refStringBuilder.append(allele)
                         altStringBuilder.append(allele)
                     } else if (!prefix.isVariant) {
                         //the prefix is a ref block
                         if (prefix.endPos - prefix.startPos + 1 > 1) variantList += resizeRefBlockVariantInfo(prefix)
                         val startRefPos = prefix.endPos
-                        val allele = refSequence.get(chrom)!!.get(startRefPos).toString()
+                        val allele = refSequence[chrom]!!.get(startRefPos-1).toString() // LCJ: -1 ?
                         refStringBuilder.append(allele)
                         altStringBuilder.append(allele)
                     } else {
@@ -627,7 +629,7 @@ class MAFToGVCF {
                             )
                         )
                     }else {
-                        println("buildTempVariants: adding variant via buildIndel line 600")
+                        println("buildTempVariants: adding variant via buildIndel line 630,refLen=${refString.length}, altLen=${altString.length}")
                         variantList += buildIndel(
                             chrom,
                             startRefPos,
@@ -658,140 +660,6 @@ class MAFToGVCF {
 
         return variantList
     }
-
-    /**
-     * Function to fill in the missing variant blocks between MAF records.
-     * If fillWithRef is set to true it will make VariantBlocks, if false it will make missing blocks.
-     *
-     * This will also not return an assembly coordinate in the output VariantInfos.
-     * This is because Anchorwave did not find an alignment for these in-between regions.
-     * We could try to put in some coords but it gets very tricky to do so due to inversions.
-     */
-//    private fun fillInMissingReferenceBlocks(
-//        tempVariantInfos: MutableList<AssemblyVariantInfo>,
-//        refGenomeSequence: Map<String, NucSeq>
-//    ): MutableList<AssemblyVariantInfo> {
-//        //Checks whether reference positions are contiguous with no missing positions.
-//        // If there are any gaps in coverage it inserts a reference block.
-//        // This is necessary because combining GVCFs requires that they fully cover the reference genome.
-//        //sort the resulting list by chromosome name and start position
-//        val tempSortedList = tempVariantInfos
-//            .map { Pair(it.chr,it) }
-//            .toMutableList()
-//
-//        tempSortedList.sortWith() { a, b ->
-//            val chrcomp = a.first.compareTo(b.first)
-//            if (chrcomp == 0) a.second.startPos.compareTo(b.second.startPos) else chrcomp
-//
-//        }
-//
-//
-//        val finalSortedList = tempSortedList.map { it.second }
-//
-//        var previousInfo = AssemblyVariantInfo("NA", 0, 0, "", "", "", false)
-//        val filledVariantList = mutableListOf<AssemblyVariantInfo>()
-//        for (varinfo in finalSortedList) {
-//
-//            //Setting all the asm positions to be missing.  This is due to us not really knowing based on alignment where things need to be.
-//            val asmPositions = Pair(-1,-1)
-//            if (varinfo.chr == previousInfo.chr) {
-//                check(varinfo.startPos > previousInfo.endPos) {"VariantInfo start <= previous end at ${varinfo.chr}:${varinfo.startPos}. Previous end was ${previousInfo.endPos} "}
-//
-//                //add a refblock if this start > previous end plus one
-//                if (varinfo.startPos > previousInfo.endPos + 1) {
-//                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
-//
-//                    if(fillWithRef) {
-//                        filledVariantList.add(
-//                            buildRefBlockVariantInfoZeroDepth(
-//                                refGenomeSequence,
-//                                varinfo.chr,
-//                                Pair(previousInfo.endPos + 1, varinfo.startPos - 1),
-//                                if (sameChr) varinfo.asmChrom else "",
-//                                asmPositions,
-//                                ""
-//                            )
-//                        )
-//                    }
-//                    else {
-//                        filledVariantList.add(
-//                            buildMissingRegion(varinfo.chr,
-//                                previousInfo.endPos+1,
-//                                varinfo.startPos-1,
-//                                refGenomeSequence.genotypeAsString(Chromosome.instance(varinfo.chr), previousInfo.endPos+1,previousInfo.endPos+1),
-//                                if(sameChr) varinfo.asmChrom else "",
-//                                asmPositions.first,
-//                                asmPositions.second,
-//                                ""))
-//                    }
-//                }
-//            }
-//            else {
-//                //this is the first variant info in a chromosome
-//                //  check the previous variant info to make sure it ended at the chromosome end
-//                if (previousInfo.chr != "NA") {
-//                    val previousChromEnd = refGenomeSequence.chromosomeSize(Chromosome.instance(previousInfo.chr))
-//                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
-//                    if (previousInfo.endPos < previousChromEnd) {
-//                        if (fillWithRef) {
-//                            filledVariantList.add(
-//                                buildRefBlockVariantInfoZeroDepth(
-//                                    refGenomeSequence,
-//                                    previousInfo.chr,
-//                                    Pair(previousInfo.endPos + 1, previousChromEnd),
-//                                    if (sameChr) varinfo.asmChrom else "",
-//                                    asmPositions,
-//                                    ""
-//                                )
-//                            )
-//                        }
-//                        else {
-//                            filledVariantList.add(
-//                                buildMissingRegion(previousInfo.chr,
-//                                    previousInfo.endPos+1,
-//                                    previousChromEnd,
-//                                    refGenomeSequence.genotypeAsString(Chromosome.instance(previousInfo.chr), previousInfo.endPos+1,previousInfo.endPos+1),
-//                                    if(sameChr) varinfo.asmChrom else "",
-//                                    asmPositions.first,
-//                                    asmPositions.second,
-//                                    ""))
-//                        }
-//                    }
-//                }
-//                // if this variant does not start at one add a ref block
-//                if (varinfo.startPos > 1) {
-//                    val sameChr = (varinfo.asmChrom == previousInfo.asmChrom)
-//                    if(fillWithRef) {
-//                        filledVariantList.add(
-//                            buildRefBlockVariantInfoZeroDepth(
-//                                refGenomeSequence,
-//                                varinfo.chr,
-//                                Pair(1, varinfo.startPos - 1),
-//                                if (sameChr) varinfo.asmChrom else "",
-//                                asmPositions,
-//                                ""
-//                            )
-//                        )
-//                    }
-//                    else {
-//                        filledVariantList.add(
-//                            buildMissingRegion(varinfo.chr,
-//                                1,
-//                                varinfo.startPos-1,
-//                                refGenomeSequence.genotypeAsString(Chromosome.instance(varinfo.chr), 1,1),
-//                                if(sameChr) varinfo.asmChrom else "",
-//                                asmPositions.first,
-//                                asmPositions.second,
-//                                ""))
-//                    }
-//                }
-//            }
-//
-//            filledVariantList.add(varinfo)
-//            previousInfo = varinfo
-//        }
-//        return filledVariantList
-//    }
 
     /**
      * Function to convert a multi-bp substitution into a series of SNPs.  This allows the GVCF to pass a vcf-validator.
@@ -955,6 +823,7 @@ class MAFToGVCF {
         currentAssemblyBoundaries: Pair<Int, Int>,
         assemblyStrand: String
     ): AssemblyVariantInfo {
+        // LCJ - added -1, phg had currentRefBlockBoundaries.first
         return AssemblyVariantInfo(
             chrom, currentRefBlockBoundaries.first, currentRefBlockBoundaries.second, "REF",
             refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), ".", false,
@@ -975,12 +844,13 @@ class MAFToGVCF {
         currentAssemblyBoundaries: Pair<Int, Int>,
         assemblyStrand: String
     ): AssemblyVariantInfo {
+        // LCJ - added -1 to currentRefBlockBoundaries.first (PHG had currentRefBlockBoundaries.first)
         return AssemblyVariantInfo(
             chrom,
             currentRefBlockBoundaries.first,
             currentRefBlockBoundaries.second,
             "REF",
-            refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(),
+            refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), // LCJ - ref has just first
             ".",
             false,
             intArrayOf(0, 0),

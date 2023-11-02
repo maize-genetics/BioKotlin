@@ -541,6 +541,7 @@ fun splitMafRecordsIntoTwoGenomes(mafRecords: List<MAFRecord>) : List<List<MAFRe
     genome2.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){ name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
     //genome2.sortWith(compareBy({ Chromosome.instance(it.refRecord.chromName.split(".").last()) }, { it.refRecord.start }))
 
+    println("splitMafRecordsIntoTwoGenomes: genome1 size: ${genome1.size}, genome2 size: ${genome2.size}")
     return listOf(genome1, genome2)
 }
 
