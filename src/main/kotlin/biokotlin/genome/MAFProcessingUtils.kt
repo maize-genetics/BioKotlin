@@ -6,6 +6,7 @@ import com.google.common.collect.RangeMap
 import com.google.common.collect.Sets
 import com.google.common.collect.TreeRangeMap
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.BufferedReader
@@ -470,31 +471,30 @@ fun compressAndIndexFile(fileName: String): String {
         // use the -f option to overwrite any existing file
         println("bgzipping  file ${fileName}")
         val gvcfGzippedFile = fileName + ".gz"
-        var builder = ProcessBuilder("conda","run","-n","phgv2-conda",
-            "bgzip", "-f", fileName)
+        var builder = ProcessBuilder("bgzip", "-f", fileName)
 
         var process = builder.start()
         var error: Int = process.waitFor()
         if (error != 0) {
-            println("\nERROR $error creating bgzipped  version of file: $fileName")
-            throw IllegalStateException("bgzipAndIndexGVCFfile: error trying to bgzip file ${fileName}: ${error}")
+            println("\nERROR $error creating bgzipped  version of file: ${fileName}. Please ensure bgzip is installed and in your path")
+            throw IllegalStateException("compressAndIndexFile: error trying to bgzip file ${fileName}: ${error}")
         }
 
         // File has been gzipped, now index it.
         // Use the -f option to overwrite any existing index
         // We will use bcftools to create the csi index
-        // ORiginal PHG used tabix, we wnat csi indexes to allow for large genomes e.g wheat.
+        // ORiginal PHG used tabix, we want csi indexes to allow for large genomes e.g wheat.
         // TileDB supports .csi indexed files.
-        builder = ProcessBuilder("conda","run","-n","phgv2-conda","bcftools", "index", "-c",gvcfGzippedFile)
+        builder = ProcessBuilder("bcftools", "index", "-c",gvcfGzippedFile)
         process = builder.start()
         error = process.waitFor()
         if (error != 0) {
-            println("\nERROR $error creating tabix indexed  version of file: $gvcfGzippedFile")
-            throw IllegalStateException("bgzipAndIndexGVCFfile: error trying to run bcftools index -c on file ${gvcfGzippedFile}: ${error}")
+            println("\nERROR $error creating csi  indexed  version of file: ${gvcfGzippedFile}. Please ensure bcftools are installed and in your path")
+            throw IllegalStateException("compressAndIndexFile: error trying to run bcftools index -c on file ${gvcfGzippedFile}: ${error}")
         }
         return gvcfGzippedFile
     } catch (exc:Exception) {
-        throw IllegalStateException("bgzipAndIndexGVCFfile: error bgzipping and/or indexing file ${fileName}")
+        throw IllegalStateException("compressAndIndexFile: error bgzipping and/or indexing file ${fileName}")
     }
 
 }
@@ -648,7 +648,11 @@ fun augmentList(target: MutableList<MAFRecord>, source: List<MAFRecord>)  {
     target.addAll(addedBlocks)
 }
 
-
+/**
+ * This function takes a  MafRecord, a start and an end position.  From the MafRecord it extracts the
+ * part of the ref and alt blocks that fall within the range [start,end].  It returns a new MafRecord.
+ * If the MafRecord does not fall within the range [start,end] then it returns null.
+ */
 fun extractSubMafRecord(start: Int, end: Int, mafRecord: MAFRecord) : MAFRecord? {
     //if the maf record starts after end return null
     //if the maf record ends before start return null
@@ -680,6 +684,10 @@ fun extractSubMafRecord(start: Int, end: Int, mafRecord: MAFRecord) : MAFRecord?
 
 }
 
+/**
+ * This function extracts a subblock from a MAF record.  The subblock is defined by the indices
+ * passed as paramters.  The indices are the start and end indices of the subblock in the alignment.
+ */
 fun extractAlignmentBlock(block: AlignmentBlock, indices: IntArray) : AlignmentBlock {
     val dash = '-'
     val subBlock = block.alignment.substring(indices[0], indices[1] + 1)
@@ -692,6 +700,12 @@ fun extractAlignmentBlock(block: AlignmentBlock, indices: IntArray) : AlignmentB
     return AlignmentBlock(block.chromName, subStart, numberOfNonDashChar, block.strand, block.chrSize, subBlock)
 }
 
+/**
+ * This function returns the indices of the start and end of the non-gap characters
+ * in a sequence.  The gap is defined as a dash '-'.  The start and end parameteres
+ * determine where in the sequence to make the search for the non-gap chahacters.
+ * An IntArray is returned with the start and end indices of the non-gap characters.
+ */
 fun indexOfNonGapCharacters(seq: String, start: Int, end: Int) : IntArray {
     var index = 0
     var nonDashCount = 0

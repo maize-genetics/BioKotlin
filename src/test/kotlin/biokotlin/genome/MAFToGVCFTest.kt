@@ -197,13 +197,11 @@ class MAFToGVCFTest : StringSpec({
         outputVariants.size shouldBe truthVariants.size
 
         for(variant in outputVariants) {
-            println("processing variant: ${variant.contig}:${variant.start} asm_start:${variant.getAttribute("ASM_Start")}, asm_end:${variant.getAttribute("ASM_End")}")
             if (!truthMap.containsKey(Position(variant.contig, variant.start))) {
                 fail("No matching variant found: ${variant.contig}:${variant.start}")
             }
             val matchingTruth = truthMap[Position(variant.contig, variant.start)]!!
 
-            println("truth variant: ${matchingTruth.contig}:${matchingTruth.start} asm_start:${matchingTruth.getAttribute("ASM_Start")}, asm_end:${matchingTruth.getAttribute("ASM_End")}")
             //Check END
             variant.end shouldBe matchingTruth.end
             //Check alleles
