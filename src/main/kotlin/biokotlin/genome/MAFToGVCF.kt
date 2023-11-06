@@ -307,7 +307,7 @@ class MAFToGVCF {
                             buildMissingRegion(varinfo.chr,
                                 previousInfo.endPos+1,
                                 varinfo.startPos-1,
-                                chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // LCJ - phg has +1,  NucSeq is 0-based
+                                chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), // -1,  NucSeq is 0-based
                                 //refGenomeSequence.genotypeAsString(varinfo.chr, previousInfo.endPos+1,previousInfo.endPos+1),
                                 if(sameChr) varinfo.asmChrom else "",
                                 asmPositions.first,
@@ -342,7 +342,7 @@ class MAFToGVCF {
                                 buildMissingRegion(previousInfo.chr,
                                     previousInfo.endPos+1,
                                     previousChromEnd,
-                                    chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), //  LCJ - phg has +1,0-based for NucSeq
+                                    chrSeq!![previousInfo.endPos, previousInfo.endPos].toString(), //  -1, 0-based for NucSeq
                                     //refGenomeSequence.genotypeAsString(Chromosome.instance(previousInfo.chr), previousInfo.endPos+1,previousInfo.endPos+1),
                                     if(sameChr) varinfo.asmChrom else "",
                                     asmPositions.first,
@@ -372,7 +372,7 @@ class MAFToGVCF {
                             buildMissingRegion(varinfo.chr,
                                 1,
                                 varinfo.startPos-1,
-                                chrSeq!![0,0].toString(), // LCJ - PHG has 1,1: 0-based for NucSeq
+                                chrSeq!![0,0].toString(), //  0-based for NucSeq
                                 //refGenomeSequence.genotypeAsString(Chromosome.instance(varinfo.chr), 1,1),
                                 if(sameChr) varinfo.asmChrom else "",
                                 asmPositions.first,
@@ -563,14 +563,14 @@ class MAFToGVCF {
                     val altStringBuilder = StringBuilder()
 
                     if (prefix == null) {
-                        val allele = refSequence[chrom]!!.get(currentRefBp-1).toString() // LCJ - phg has currentRefBp, I did -1
+                        val allele = refSequence[chrom]!!.get(currentRefBp-1).toString() // -1,NucSeq is 0-based
                         refStringBuilder.append(allele)
                         altStringBuilder.append(allele)
                     } else if (!prefix.isVariant) {
                         //the prefix is a ref block
                         if (prefix.endPos - prefix.startPos + 1 > 1) variantList += resizeRefBlockVariantInfo(prefix)
                         val startRefPos = prefix.endPos
-                        val allele = refSequence[chrom]!!.get(startRefPos-1).toString() // LCJ: -1 ?
+                        val allele = refSequence[chrom]!!.get(startRefPos-1).toString() //  -1, NucSeq is 0-based
                         refStringBuilder.append(allele)
                         altStringBuilder.append(allele)
                     } else {
@@ -823,7 +823,7 @@ class MAFToGVCF {
         currentAssemblyBoundaries: Pair<Int, Int>,
         assemblyStrand: String
     ): AssemblyVariantInfo {
-        // LCJ - added -1, phg had currentRefBlockBoundaries.first
+        // -1, NucSeq is 0-based
         return AssemblyVariantInfo(
             chrom, currentRefBlockBoundaries.first, currentRefBlockBoundaries.second, "REF",
             refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), ".", false,
@@ -844,13 +844,13 @@ class MAFToGVCF {
         currentAssemblyBoundaries: Pair<Int, Int>,
         assemblyStrand: String
     ): AssemblyVariantInfo {
-        // LCJ - added -1 to currentRefBlockBoundaries.first (PHG had currentRefBlockBoundaries.first)
+        //  -1 to currentRefBlockBoundaries.first, NucSeq is 0-based
         return AssemblyVariantInfo(
             chrom,
             currentRefBlockBoundaries.first,
             currentRefBlockBoundaries.second,
             "REF",
-            refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), // LCJ - ref has just first
+            refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), // -1 as NucSeq is 0-based
             ".",
             false,
             intArrayOf(0, 0),
