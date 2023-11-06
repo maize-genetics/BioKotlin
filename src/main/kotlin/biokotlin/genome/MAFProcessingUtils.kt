@@ -1,6 +1,12 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
+import com.google.common.collect.Range
+import com.google.common.collect.RangeMap
+import com.google.common.collect.Sets
+import com.google.common.collect.TreeRangeMap
+import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.BufferedReader
@@ -24,7 +30,7 @@ import java.util.stream.Collectors
 // Data class to be used when creating a dataFrame for chrom percent coverage statistics
 // This may be used if can get Kotlin DataFrame vs Krangl DataFrame to work.
 data class ChromStats(val contig: String, val numRegionBPs: Int, val percentCov: Double, val percentId: Double)
-
+private val logger = KotlinLogging.logger {}
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, outputDir:String) {
 
     // There will be 2 wiggle files created: 1 for identity and 1 for coverage
@@ -447,4 +453,334 @@ fun getCoverageIdentityPercentForMAF(mafFile:String, region:String = "all"): Dat
     }.toDataFrame()
     return df
 }
+/**
+ * function to bgzip and create tabix index on a gvcf file
+ *
+ * This method uses the -f option on  bgzip to overwrite any existing files
+ * This handles the case where there already exists a bgzipped file, however
+ * it is still required to have the non-bzipped file present.
+ *
+ * @return the filename of the bgzipped gvcf
+ */
+fun compressAndIndexFile(fileName: String): String {
 
+    try {
+        // First bgzip the file
+
+        // bgzip the file - needed to create index
+        // use the -f option to overwrite any existing file
+        println("bgzipping  file ${fileName}")
+        val gvcfGzippedFile = fileName + ".gz"
+        var builder = ProcessBuilder("bgzip", "-f", fileName)
+
+        var process = builder.start()
+        var error: Int = process.waitFor()
+        if (error != 0) {
+            println("\nERROR $error creating bgzipped  version of file: ${fileName}. Please ensure bgzip is installed and in your path")
+            throw IllegalStateException("compressAndIndexFile: error trying to bgzip file ${fileName}: ${error}")
+        }
+
+        // File has been gzipped, now index it.
+        // Use the -f option to overwrite any existing index
+        // We will use bcftools to create the csi index
+        // ORiginal PHG used tabix, we want csi indexes to allow for large genomes e.g wheat.
+        // TileDB supports .csi indexed files.
+        builder = ProcessBuilder("bcftools", "index", "-c",gvcfGzippedFile)
+        process = builder.start()
+        error = process.waitFor()
+        if (error != 0) {
+            println("\nERROR $error creating csi  indexed  version of file: ${gvcfGzippedFile}. Please ensure bcftools are installed and in your path")
+            throw IllegalStateException("compressAndIndexFile: error trying to run bcftools index -c on file ${gvcfGzippedFile}: ${error}")
+        }
+        return gvcfGzippedFile
+    } catch (exc:Exception) {
+        throw IllegalStateException("compressAndIndexFile: error bgzipping and/or indexing file ${fileName}")
+    }
+
+}
+
+fun splitMafRecordsIntoTwoGenomes(mafRecords: List<MAFRecord>) : List<List<MAFRecord>> {
+    //split maf records into two non-overlapping sets
+    //since the maf records are ordered by reference chr, start they can be handled sequentially
+
+    println("Splitting genomes")
+    val genome1 = mutableListOf<MAFRecord>()
+    val genome2 = mutableListOf<MAFRecord>()
+
+    var lastGenome1Record = mafRecords.first()
+    genome1.add(lastGenome1Record)
+
+    mafRecords.drop(1).forEach { record ->
+        if (recordsOverlap(lastGenome1Record, record)) genome2.add(record)
+        else {
+            lastGenome1Record = record
+            genome1.add(record)
+        }
+    }
+
+    //do any genome2 records overlap? If so, throw an exception
+    println("Checking for overlaps in second genome")
+    for (ndx in 1 until genome2.size) {
+        if (recordsOverlap(genome2[ndx - 1], genome2[ndx])) {
+            val record1 = genome2[ndx - 1]
+            val record2 = genome2[ndx]
+            throw IllegalStateException("Genome2 records overlap: " +
+                    "${record1.refRecord.chromName}:${record1.refRecord.start} to ${record1.refRecord.start + record1.refRecord.size - 1} and " +
+                    "${record2.refRecord.chromName}:${record2.refRecord.start} to ${record2.refRecord.start + record2.refRecord.size - 1}")
+        }
+    }
+
+    //both genomes should cover all positions, so
+    //add sequence from genome2 missing in genome1 to genome1
+    augmentList(genome1, genome2)
+    genome1.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){ name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+    //genome1.sortWith(compareBy({ Chromosome.instance(it.refRecord.chromName.split(".").last()) }, { it.refRecord.start }))
+
+    //add sequence from genome1 missing in genome2 to genome2
+    augmentList(genome2, genome1)
+    genome2.sortedWith(compareBy(SeqRangeSort.alphaThenNumberSort){ name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
+    //genome2.sortWith(compareBy({ Chromosome.instance(it.refRecord.chromName.split(".").last()) }, { it.refRecord.start }))
+
+    println("splitMafRecordsIntoTwoGenomes: genome1 size: ${genome1.size}, genome2 size: ${genome2.size}")
+    return listOf(genome1, genome2)
+}
+
+private fun recordsOverlap(mafRecord1: MAFRecord, mafRecord2: MAFRecord) : Boolean {
+    return when {
+        //chromosome names are not the same -> no overlap
+        mafRecord1.refRecord.chromName != mafRecord2.refRecord.chromName -> false
+        //record1 end comes before record2 -> no overlap
+        mafRecord1.refRecord.start + mafRecord1.refRecord.size <= mafRecord2.refRecord.start -> false
+        //record1 start comes after record2 -> no overlap
+        mafRecord1.refRecord.start >= mafRecord2.refRecord.start + mafRecord2.refRecord.size -> false
+        //otherwise -> overlap
+        else -> true
+    }
+}
+
+/**
+ * [target] is a mutable list of maf records that are assumed to be sorted by chromosome and start. If there are
+ * reference positions present in source that are absent from target then the sequence for those positions
+ * will be added to target.
+ * MAF start positions are 0-based numbers
+ */
+fun augmentList(target: MutableList<MAFRecord>, source: List<MAFRecord>)  {
+    /**
+    target assumed to be sorted.
+    This method will add blocks or parts of blocks from source not covered in target.
+    It follows these steps:
+    1.  Sorts the records by chromosome
+    2. Create a RangeMap from source list
+    3.  For each cheomosome
+    a. For each gap in target list
+    1. make a range of the entire gap
+    2. find the blocks from source that overlap the gap range
+    3. extract maf records from those blocks that fall within the gap, this will require block splitting
+    4. add those records to target
+     **/
+
+    //create a map of chromosome name -> RangeMap
+    val chromToRangesSRC = mutableMapOf<String, ArrayList<MAFRecord>>()
+    val chromToRanges = mutableMapOf<String, RangeMap<Int, MAFRecord>>() // needed for pulling sequence from submap
+    for (mafrec in source) {
+        val chrom = mafrec.refRecord.chromName
+        // this needed for creating the list of gap ranges
+        var chrMAFRecList = chromToRangesSRC[chrom]
+        if (chrMAFRecList == null) {
+            chrMAFRecList = ArrayList<MAFRecord>()
+            chromToRangesSRC[chrom] =  chrMAFRecList
+        }
+        chrMAFRecList!!.add( mafrec)
+
+        // create a map of chromosome name -> RangeMap
+        // This one needed for getting subranges later from the gaps
+        var chrMap = chromToRanges[chrom]
+        if (chrMap == null) {
+            chrMap = TreeRangeMap.create()
+            chromToRanges[chrom] = chrMap
+        }
+        val start = mafrec.refRecord.start
+        val end = mafrec.refRecord.start + mafrec.refRecord.size - 1
+        chrMap!!.put(Range.closed(start,end), mafrec)
+    }
+
+    // GEt the target positions
+    // This creates a map of chromName (key) to a list of MAFtoGVCFPlugin.MAFRecords (value)
+    val chromToRangesTGT = target.groupBy{it.refRecord.chromName}
+
+    val addedBlocks = mutableListOf <MAFRecord>()
+    // Not all chromosomes will be in both target and src
+    println("augmentList: number of chromosomes in chromToMAFRecords = ${chromToRangesSRC.keys.size}")
+    for (chrom in chromToRangesSRC.keys) {
+        val srcRanges = chromToRangesSRC[chrom]
+        val tgtRanges = chromToRangesTGT[chrom]
+
+        if (tgtRanges == null) {
+            addedBlocks.addAll(srcRanges!!.toList())
+            println("augmentList: NO target ranges for chrom ${chrom} - adding all ranges from source chrom ${chrom} to target's list")
+            continue
+        }
+
+        val newRanges = findGaps(tgtRanges!!,srcRanges!!)
+        if (newRanges == null) {
+            println("augmentList: newRanges for chrom ${chrom} is NULL ,continue")
+            continue
+        }
+
+        println("augmentList: found gaps: process gaps for chrom ${chrom}, number of gaps=${newRanges.size}")
+        // take those ranges, run through Peter's code to get sequence
+        for (gap in newRanges) {
+
+            val sourceRangeMap = chromToRanges[chrom]
+            if (sourceRangeMap != null) {
+                val gapRecords = sourceRangeMap.subRangeMap(gap).asMapOfRanges()
+                if (gapRecords.size > 0) {
+                    for (sourceRecord in gapRecords.values) {
+                        val subRecord = extractSubMafRecord(gap.lowerEndpoint(),gap.upperEndpoint(), sourceRecord)
+                        if (subRecord != null) addedBlocks.add(subRecord)
+                    }
+                }
+            }
+        }
+    }
+
+    println("augmentList at end: size of addedBlocks ${addedBlocks.size}")
+    target.addAll(addedBlocks)
+}
+
+/**
+ * This function takes a  MafRecord, a start and an end position.  From the MafRecord it extracts the
+ * part of the ref and alt blocks that fall within the range [start,end].  It returns a new MafRecord.
+ * If the MafRecord does not fall within the range [start,end] then it returns null.
+ */
+fun extractSubMafRecord(start: Int, end: Int, mafRecord: MAFRecord) : MAFRecord? {
+    //if the maf record starts after end return null
+    //if the maf record ends before start return null
+    //if the maf record falls entirely with [start,end] return mafRecord
+    //else extract the parts of the ref and alt blocks between start and end to a new mafRecord
+    val mafRecordStart = mafRecord.refRecord.start
+    val mafRecordEnd = mafRecord.refRecord.start + mafRecord.refRecord.size - 1
+    return when {
+        mafRecordStart > end -> null
+        mafRecordEnd < start -> null
+        mafRecordStart >= start && mafRecordEnd <= end -> mafRecord
+        else -> {
+            //return only part of the ref and alt blocks
+            //which part?
+            val newStart = kotlin.math.max(start, mafRecordStart)
+            val newEnd = kotlin.math.min(end, mafRecordEnd)
+            val refBlock = mafRecord.refRecord.alignment
+            val blockStart = if (newStart == start) newStart - mafRecordStart else mafRecordStart
+            val blockEnd = blockStart + (newEnd - newStart)
+            val blockIndices = indexOfNonGapCharacters(refBlock, blockStart, blockEnd)
+            //val blockIndices = indexOfNonGapCharacters(refBlock, newStart - start, newEnd - start)
+
+            MAFRecord(mafRecord.score,
+                extractAlignmentBlock(mafRecord.refRecord, blockIndices),
+                extractAlignmentBlock(mafRecord.altRecord, blockIndices)
+            )
+        }
+    }
+
+}
+
+/**
+ * This function extracts a subblock from a MAF record.  The subblock is defined by the indices
+ * passed as paramters.  The indices are the start and end indices of the subblock in the alignment.
+ */
+fun extractAlignmentBlock(block: AlignmentBlock, indices: IntArray) : AlignmentBlock {
+    val dash = '-'
+    val subBlock = block.alignment.substring(indices[0], indices[1] + 1)
+    val subStart = if (indices[0] == 0) block.start else {
+        val skipBlock = block.alignment.substring(0, indices[0])
+        val numberNonDash = skipBlock.count { it != dash }
+        block.start + numberNonDash
+    }
+    val numberOfNonDashChar = subBlock.count { it != dash }
+    return AlignmentBlock(block.chromName, subStart, numberOfNonDashChar, block.strand, block.chrSize, subBlock)
+}
+
+/**
+ * This function returns the indices of the start and end of the non-gap characters
+ * in a sequence.  The gap is defined as a dash '-'.  The start and end parameteres
+ * determine where in the sequence to make the search for the non-gap chahacters.
+ * An IntArray is returned with the start and end indices of the non-gap characters.
+ */
+fun indexOfNonGapCharacters(seq: String, start: Int, end: Int) : IntArray {
+    var index = 0
+    var nonDashCount = 0
+    val DASH = '-'
+    var nonDashTarget = start + 1
+    while (nonDashCount < nonDashTarget) {
+        if (seq[index++] != DASH ) nonDashCount++
+    }
+    val startIndex = index - 1
+    nonDashTarget = end + 1
+    while (nonDashCount < nonDashTarget) {
+        if (seq[index++] != DASH ) nonDashCount++
+    }
+    val endIndex = index - 1
+
+    return intArrayOf(startIndex, endIndex)
+}
+/**
+ * Method takes 2 lists of Maf Records, returns the gaps indicating which
+ * positions appear in the source that are not in the target.  The calling
+ * method then augments the target with sequence from the gaps indicated
+ * by the findGaps method.
+ */
+fun findGaps(target: List<MAFRecord>, source: List<MAFRecord>):List<Range<Int>>? {
+
+    val positionsSource = mutableSetOf<Int>()
+    val positionsTarget = mutableSetOf<Int>()
+
+    for (mafrec in target) {
+        val start = mafrec.refRecord.start
+        for ( position  in start until mafrec.refRecord.start + mafrec.refRecord.size) {
+            positionsTarget.add(position)
+        }
+    }
+
+    for (mafrec in source) {
+        val start = mafrec.refRecord.start
+        for ( position  in start until mafrec.refRecord.start + mafrec.refRecord.size) {
+            positionsSource.add(position)
+        }
+    }
+
+    // get positions contained in positionSource that aren't contained in positionsTarget
+    val addedTgtPos = Sets.difference(positionsSource, positionsTarget)
+
+    // Now make ranges of those positions
+    return rangesFromPositions(addedTgtPos.toList())
+}
+
+// Take a list of ordered ints, creates ranges from those that are consecutive
+fun rangesFromPositions(positions:List<Int>): List<Range<Int>>? {
+    val rangeList = mutableListOf<Range<Int>>()
+    if (positions == null || positions.size == 0) {
+        return null
+    }
+    if (positions.size == 1) {
+        rangeList.add(Range.closed(positions[0],positions[0]))
+        return rangeList
+    }
+
+    val sortedPositions = positions.sorted()
+    var prevIndex = 0
+    var index = 1
+    var start = prevIndex
+    while (index < positions.size ) {
+        while (sortedPositions[index] == sortedPositions[prevIndex]+1) {
+            index++
+            prevIndex++
+            if (index == positions.size) break
+        }
+        val newRange = Range.closed(sortedPositions[start],sortedPositions[prevIndex])
+        rangeList.add(newRange)
+        start = index
+        prevIndex = index
+        index++
+    }
+    return rangeList
+}
