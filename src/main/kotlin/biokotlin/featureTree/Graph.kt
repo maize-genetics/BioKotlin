@@ -854,7 +854,8 @@ internal class Graph private constructor(
                     if (line.isEmpty() || line.isBlank()) continue //skip blank lines
                     // PLANNED: comment support
                     if (line.startsWith("#")) {
-                        logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
+                        // This has been known to print over 4000 lines of comments in a single file, which is not useful.
+                        //logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
                         continue
                     }
 
