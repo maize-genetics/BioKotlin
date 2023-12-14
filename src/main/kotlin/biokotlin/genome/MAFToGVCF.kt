@@ -54,7 +54,8 @@ data class MAFRecord(val score: Double, val refRecord: AlignmentBlock, val altRe
 data class AssemblyVariantInfo(
     var chr: String, var startPos: Int, var endPos: Int, var genotype: String, var refAllele: String,
     var altAllele: String, var isVariant: Boolean, var alleleDepths: IntArray = intArrayOf(),
-    var asmChrom: String = "", var asmStart: Int = -1, var asmEnd: Int = -1, var asmStrand: String = ""
+    var asmChrom: String = "", var asmStart: Int = -1, var asmEnd: Int = -1, var asmStrand: String = "",
+    var isMissing: Boolean = false
 )
 
 val refDepth = intArrayOf(30, 0)
@@ -411,6 +412,10 @@ class MAFToGVCF {
         val asmChrom = mafRecord.altRecord.chromName.split(".").last()
         var currentRefBlockBoundaries = Pair(-1, -1)
         var currentAsmBlockBoundaries = Pair(-1, -1)
+
+        var currentRefNBlockBoundaries = Pair(-1, -1)
+        var currentAsmNBlockBoundaries = Pair(-1, -1)
+
         val variantList = mutableListOf<AssemblyVariantInfo>()
 
         //Does the refAlignment or the altAlignment start with a dash(gap)?
@@ -475,6 +480,25 @@ class MAFToGVCF {
             if (refAlignment[currentAlignmentBp] == '-' && altAlignment[currentAlignmentBp] == '-') {
                 currentAlignmentBp++
             } else if (refAlignment[currentAlignmentBp] == altAlignment[currentAlignmentBp]) { //If the alleles match we have a reference block
+
+                //TODO: repetitive code
+                // generate missing N-block, if needed
+                if (currentRefNBlockBoundaries != Pair(-1, -1)) {
+                    variantList += buildRefBlockVariantInfo(
+                        refSequence,
+                        chrom,
+                        currentRefNBlockBoundaries,
+                        asmChrom,
+                        currentAsmNBlockBoundaries,
+                        asmStrand,
+                        true
+                    )
+
+                }
+                //resetRefNBlock
+                currentRefNBlockBoundaries = Pair(-1, -1)
+                currentAsmNBlockBoundaries = Pair(-1, -1)
+
                 if (currentRefBlockBoundaries == Pair(-1,-1)){
                     //Check to see if its the first base pair in a reference block
                     //New RefBlock
@@ -499,6 +523,7 @@ class MAFToGVCF {
                 }
                 currentAlignmentBp++
             } else {
+                // TODO: this is just handling the previous reference block. Might need to look for Sam's bug here
                 //Check SNP, if SNP, write out the Previous refBlock and make a SNP VariantInfo, resetRefBlock
                 if (currentRefBlockBoundaries != Pair(-1, -1)) {
                     variantList += buildRefBlockVariantInfo(
@@ -514,19 +539,59 @@ class MAFToGVCF {
                 currentRefBlockBoundaries = Pair(-1, -1)
                 currentAsmBlockBoundaries = Pair(-1, -1)
 
+                // TODO: here
                 //Make sure they both are not '-', If so its a SNP
                 if (refAlignment[currentAlignmentBp] != '-' && altAlignment[currentAlignmentBp] != '-') {
 
-                    //Write out SNP
-                    variantList += buildSNP(
-                        chrom,
-                        currentRefBp,
-                        refAlignment[currentAlignmentBp],
-                        altAlignment[currentAlignmentBp],
-                        asmChrom,
-                        currentASMBp,
-                        asmStrand
-                    )
+                    // if alt is N, then we have a missing block
+                    // handle similarly to ref block, but with missing GT
+                    if (altAlignment[currentAlignmentBp] == 'N') {
+                        if (currentRefNBlockBoundaries == Pair(-1,-1)){
+                            //Check to see if its the first base pair in an N block
+                            //New RefNBlock
+                            currentRefNBlockBoundaries = Pair(currentRefBp, currentRefBp)
+                        } else {//Otherwise its an existing RefNBlock.
+                            currentRefNBlockBoundaries = Pair(currentRefNBlockBoundaries.first, currentRefBp)
+                        }
+
+                        if (currentAsmNBlockBoundaries == Pair(-1,-1)){
+                            //Check to see if its the first bp for the assembly N blocks
+                            currentAsmNBlockBoundaries = Pair(currentASMBp, currentASMBp)
+                        } else { //If it exists, just update.
+                            currentAsmNBlockBoundaries = Pair(currentAsmNBlockBoundaries.first, currentASMBp)
+                        }
+
+
+                    } else { // if alt isn't N, then it really is just a SNP
+
+                        //TODO: repetitive code
+                        // generate missing N-block, if needed
+                        if (currentRefNBlockBoundaries != Pair(-1, -1)) {
+                            variantList += buildRefBlockVariantInfo(
+                                refSequence,
+                                chrom,
+                                currentRefNBlockBoundaries,
+                                asmChrom,
+                                currentAsmNBlockBoundaries,
+                                asmStrand,
+                                true
+                            )
+                        }
+                        //resetRefNBlock
+                        currentRefNBlockBoundaries = Pair(-1, -1)
+                        currentAsmNBlockBoundaries = Pair(-1, -1)
+
+                        //Write out SNP
+                        variantList += buildSNP(
+                            chrom,
+                            currentRefBp,
+                            refAlignment[currentAlignmentBp],
+                            altAlignment[currentAlignmentBp],
+                            asmChrom,
+                            currentASMBp,
+                            asmStrand
+                        )
+                    }
 
                     currentRefBp++
                     if(asmStrand == "-") {
@@ -536,10 +601,35 @@ class MAFToGVCF {
                         currentASMBp++
                     }
                     currentAlignmentBp++
+
                 } else {
+                    // TODO: repetitive code
+                    // generate missing N-block, if needed
+                    if (currentRefNBlockBoundaries != Pair(-1, -1)) {
+                        variantList += buildRefBlockVariantInfo(
+                            refSequence,
+                            chrom,
+                            currentRefNBlockBoundaries,
+                            asmChrom,
+                            currentAsmNBlockBoundaries,
+                            asmStrand,
+                            true
+                        )
+                    }
+                    //resetRefNBlock
+                    currentRefNBlockBoundaries = Pair(-1, -1)
+                    currentAsmNBlockBoundaries = Pair(-1, -1)
+
+                    variantList.forEach{println(it)}
+                    println("i\n")
+
+
                     //If an indel, append to the previous variant
                     val prefix = if (variantList.isEmpty()) null else variantList.removeLast()
 
+
+                    variantList.forEach{println(it)}
+                    println("o\n")
                     //If the previous variant is a refblock , drop the last nucleotide to resize the refblock then append it to the variantList
                     //The final nucleotide will be used to start the new indel
 
@@ -555,13 +645,17 @@ class MAFToGVCF {
                         val allele = refSequence[chrom]!!.get(currentRefBp-1).toString() // -1,NucSeq is 0-based
                         refStringBuilder.append(allele)
                         altStringBuilder.append(allele)
+                        //TODO HERE IS PROBLEM
                     } else if (!prefix.isVariant) {
                         //the prefix is a ref block
                         if (prefix.endPos - prefix.startPos + 1 > 1) variantList += resizeRefBlockVariantInfo(prefix)
                         val startRefPos = prefix.endPos
-                        val allele = refSequence[chrom]!!.get(startRefPos-1).toString() //  -1, NucSeq is 0-based
-                        refStringBuilder.append(allele)
-                        altStringBuilder.append(allele)
+
+                        val refAllele = refSequence[chrom]!!.get(startRefPos - 1).toString() //  -1, NucSeq is 0-based
+                        val altAllele = if(prefix.isMissing) { "N" } else { refAllele }
+
+                        refStringBuilder.append(refAllele)
+                        altStringBuilder.append(altAllele)
                     } else {
                         //the prefix is a SNP or an indel
                         refStringBuilder.append(prefix.refAllele)
@@ -741,17 +835,23 @@ class MAFToGVCF {
             listOf<Allele>(Allele.create(refAllele, true), Allele.create(altAllele, false), Allele.NON_REF_ALLELE)
         }
 
-        val genotype = if (variantInfo.isVariant) {
-            if(variantInfo.genotype == ".") {
-                listOf(Allele.NO_CALL)
+        val genotype = if (variantInfo.isMissing) {
+            listOf(Allele.NO_CALL)
+        } else {
+            if (variantInfo.isVariant) {
+                if(variantInfo.genotype == ".") {
+                    listOf(Allele.NO_CALL)
+                }
+                else {
+                    listOf(alleles[1])
+                }
             }
             else {
-                listOf(alleles[1])
+                listOf(alleles[0])
             }
         }
-        else {
-            listOf(alleles[0])
-        }
+
+
 
         val plArray = if(variantInfo.isVariant) {
             altPL
@@ -807,13 +907,15 @@ class MAFToGVCF {
         currentRefBlockBoundaries: Pair<Int, Int>,
         assemblyChrom: String,
         currentAssemblyBoundaries: Pair<Int, Int>,
-        assemblyStrand: String
+        assemblyStrand: String,
+        isMissing: Boolean = false
     ): AssemblyVariantInfo {
         // -1, NucSeq is 0-based
+        println(isMissing)
         return AssemblyVariantInfo(
             chrom, currentRefBlockBoundaries.first, currentRefBlockBoundaries.second, "REF",
             refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), ".", false,
-            refDepth, assemblyChrom, currentAssemblyBoundaries.first, currentAssemblyBoundaries.second, assemblyStrand
+            refDepth, assemblyChrom, currentAssemblyBoundaries.first, currentAssemblyBoundaries.second, assemblyStrand, isMissing
         )
     }
 
@@ -868,7 +970,8 @@ class MAFToGVCF {
             variantInfo.asmChrom,
             asmStart,
             asmEnd,
-            variantInfo.asmStrand
+            variantInfo.asmStrand,
+            variantInfo.isMissing
         )
     }
 
