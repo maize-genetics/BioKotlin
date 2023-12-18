@@ -620,16 +620,9 @@ class MAFToGVCF {
                     currentRefNBlockBoundaries = Pair(-1, -1)
                     currentAsmNBlockBoundaries = Pair(-1, -1)
 
-                    variantList.forEach{println(it)}
-                    println("i\n")
-
-
                     //If an indel, append to the previous variant
                     val prefix = if (variantList.isEmpty()) null else variantList.removeLast()
 
-
-                    variantList.forEach{println(it)}
-                    println("o\n")
                     //If the previous variant is a refblock , drop the last nucleotide to resize the refblock then append it to the variantList
                     //The final nucleotide will be used to start the new indel
 
@@ -737,6 +730,19 @@ class MAFToGVCF {
                 asmStrand
             )
         }
+        //Write out existing NBlocks, if we have one
+        if (currentRefNBlockBoundaries != Pair(-1, -1)) {
+            variantList += buildRefBlockVariantInfo(
+                refSequence,
+                chrom,
+                currentRefNBlockBoundaries,
+                asmChrom,
+                currentAsmNBlockBoundaries,
+                asmStrand,
+                true
+            )
+        }
+
 
         return variantList
     }
@@ -911,7 +917,6 @@ class MAFToGVCF {
         isMissing: Boolean = false
     ): AssemblyVariantInfo {
         // -1, NucSeq is 0-based
-        println(isMissing)
         return AssemblyVariantInfo(
             chrom, currentRefBlockBoundaries.first, currentRefBlockBoundaries.second, "REF",
             refSequence[chrom]!!.get(currentRefBlockBoundaries.first - 1).toString(), ".", false,
