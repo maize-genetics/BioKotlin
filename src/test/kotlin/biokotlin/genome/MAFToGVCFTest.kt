@@ -1172,9 +1172,7 @@ fun createTruthNs(outputFile: String) {
                     "Chr01\t1\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=4;ASM_Start=1;ASM_Strand=+;END=4\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr01\t5\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=7;ASM_Start=5;ASM_Strand=+;END=7\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr01\t8\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=10;ASM_Start=8;ASM_Strand=+;END=10\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t11\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=11;ASM_Start=11;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr01\t12\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=13;ASM_Start=12;ASM_Strand=+;END=13\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t14\t.\tC\tNGTA,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=17;ASM_Start=14;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t11\t.\tGCTC\tCNNNGTA,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=17;ASM_Start=11;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t15\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=18;ASM_Start=18;ASM_Strand=+;END=15\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr01\t16\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=19;ASM_Start=19;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t17\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=20;ASM_Start=20;ASM_Strand=+;END=17\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
@@ -1190,66 +1188,53 @@ fun createTruthNs(outputFile: String) {
                     "Chr01\t32\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=50;ASM_Start=38;ASM_Strand=+;END=44\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr01\t45\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=53;ASM_Start=51;ASM_Strand=+;END=47\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr01\t48\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=59;ASM_Start=54;ASM_Strand=+;END=53\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t54\t.\tCAC\tC,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=60;ASM_Start=60;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr01\t57\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=63;ASM_Start=61;ASM_Strand=+;END=59\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t60\t.\tCCACC\tN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=64;ASM_Start=64;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t54\t.\tCACACTCCACC\tCNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=64;ASM_Start=60;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t65\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=68;ASM_Start=65;ASM_Strand=+;END=68\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr01\t69\t.\tA\tAAA,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=71;ASM_Start=69;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t70\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=74;ASM_Start=72;ASM_Strand=+;END=72\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t73\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=76;ASM_Start=75;ASM_Strand=+;END=74\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t75\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=77;ASM_Start=77;ASM_Strand=+;END=75\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t76\t.\tT\tNATAA,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=82;ASM_Start=78;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t73\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=75;ASM_Start=75;ASM_Strand=+;END=73\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                    "Chr01\t74\t.\tCGT\tCNNATAA,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=82;ASM_Start=76;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t77\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=89;ASM_Start=83;ASM_Strand=+;END=83\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t84\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=90;ASM_Start=90;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr01\t85\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=91;ASM_Start=91;ASM_Strand=+;END=85\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t86\t.\tG\tNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=95;ASM_Start=92;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t84\t.\tGCG\tANNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=95;ASM_Start=90;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t87\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=96;ASM_Start=96;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t88\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=101;ASM_Start=97;ASM_Strand=+;END=92\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t93\t.\tG\tGTT,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=104;ASM_Start=102;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr01\t94\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=106;ASM_Start=105;ASM_Strand=+;END=95\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t96\t.\tA\tNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=109;ASM_Start=107;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t93\t.\tGCGA\tGTTNNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=109;ASM_Start=102;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t97\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=113;ASM_Start=110;ASM_Strand=+;END=100\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t101\t.\tGAC\tG,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=114;ASM_Start=114;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr01\t104\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=118;ASM_Start=115;ASM_Strand=+;END=107\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr01\t108\t.\tC\tNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=121;ASM_Start=119;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t101\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=114;ASM_Start=114;ASM_Strand=+;END=101\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                    "Chr01\t102\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=121;ASM_Start=115;ASM_Strand=+;END=108\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr01\t109\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=125;ASM_Start=122;ASM_Strand=+;END=112\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr01\t113\t.\tG\tANN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=128;ASM_Start=126;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t114\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=132;ASM_Start=129;ASM_Strand=+;END=117\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr01\t118\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=133;ASM_Start=133;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t119\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=137;ASM_Start=134;ASM_Strand=+;END=122\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr01\t123\t.\tG\tGTCNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=144;ASM_Start=138;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr01\t124\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=146;ASM_Start=145;ASM_Strand=+;END=125\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr01\t126\t.\tC\tNNNNNAT,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=153;ASM_Start=147;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr01\t124\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=145;ASM_Start=145;ASM_Strand=+;END=124\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                    "Chr01\t125\t.\tGC\tGNNNNNAT,<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=153;ASM_Start=146;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr01\t127\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr01;ASM_End=156;ASM_Start=154;ASM_Strand=+;END=129\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t3\t.\tN\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=13;ASM_Start=11;ASM_Strand=+;END=5\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t6\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=14;ASM_Start=14;ASM_Strand=+;END=6\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr02\t7\t.\tCTA\tN,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=15;ASM_Start=15;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr02\t10\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=22;ASM_Start=16;ASM_Strand=+;END=16\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t17\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=23;ASM_Start=23;ASM_Strand=+;END=17\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr02\t18\t.\tA\tNNNNNTAT,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=31;ASM_Start=24;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr02\t3\t.\tN\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=12;ASM_Start=11;ASM_Strand=+;END=4\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                    "Chr02\t5\t.\tNGCTA\tNNN,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=15;ASM_Start=13;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr02\t10\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=21;ASM_Start=16;ASM_Strand=+;END=15\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                    "Chr02\t16\t.\tTCA\tTNNNNNNTAT,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=31;ASM_Start=22;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr02\t19\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=35;ASM_Start=32;ASM_Strand=+;END=22\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr02\t23\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=157;ASM_Start=158;ASM_Strand=-;END=24\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr02\t25\t.\tACC\tA,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=156;ASM_Start=156;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr02\t18\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=155;ASM_Start=152;ASM_Strand=-;END=31\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
+                    "Chr02\t28\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=152;ASM_Start=155;ASM_Strand=-;END=31\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr02\t32\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=148;ASM_Start=151;ASM_Strand=-;END=35\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                     "Chr02\t36\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=147;ASM_Start=147;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr02\t37\t.\tCTG\tC,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=146;ASM_Start=146;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr02\t40\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=145;ASM_Start=142;ASM_Strand=-;END=43\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
+                    "Chr02\t40\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=142;ASM_Start=145;ASM_Strand=-;END=43\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr02\t44\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=141;ASM_Start=141;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr02\t45\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=140;ASM_Start=140;ASM_Strand=-;END=45\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t46\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=139;ASM_Start=136;ASM_Strand=-;END=49\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr02\t50\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=135;ASM_Start=135;ASM_Strand=-;END=50\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t51\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=134;ASM_Start=132;ASM_Strand=-;END=53\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr02\t54\t.\tCCC\tN,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=131;ASM_Start=131;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr02\t46\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=136;ASM_Start=139;ASM_Strand=-;END=49\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
+                    "Chr02\t50\t.\tGCGCCCC\tGNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=131;ASM_Start=135;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr02\t57\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=130;ASM_Start=130;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr02\t58\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=122;ASM_Start=129;ASM_Strand=-;END=65\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t66\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=121;ASM_Start=119;ASM_Strand=-;END=68\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
-                    "Chr02\t69\t.\tTCA\tN,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=118;ASM_Start=118;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
-                    "Chr02\t72\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=117;ASM_Start=114;ASM_Strand=-;END=6\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
+                    "Chr02\t58\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=123;ASM_Start=129;ASM_Strand=-;END=64\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                    "Chr02\t65\t.\tGGGCTCA\tGNNNN,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=118;ASM_Start=122;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
+                    "Chr02\t72\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=114;ASM_Start=117;ASM_Strand=-;END=75\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr02\t76\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=113;ASM_Start=113;ASM_Strand=-\tGT:AD:DP:PL\t1:0,30,0:30:90,90,0\n" +
                     "Chr02\t77\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=112;ASM_Start=112;ASM_Strand=-;END=77\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n" +
                     "Chr02\t78\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=106;ASM_Start=111;ASM_Strand=-;END=83\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                    "Chr02\t84\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=105;ASM_Start=101;ASM_Strand=-;END=88\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n"
+                    "Chr02\t84\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=Chr02;ASM_End=101;ASM_Start=105;ASM_Strand=-;END=88\tGT:AD:DP:PL\t.:30,0:30:0,90,90\n"
         )
     }
 }

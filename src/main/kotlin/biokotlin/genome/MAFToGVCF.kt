@@ -539,7 +539,6 @@ class MAFToGVCF {
                 currentRefBlockBoundaries = Pair(-1, -1)
                 currentAsmBlockBoundaries = Pair(-1, -1)
 
-                // TODO: here
                 //Make sure they both are not '-', If so its a SNP
                 if (refAlignment[currentAlignmentBp] != '-' && altAlignment[currentAlignmentBp] != '-') {
 
@@ -621,7 +620,7 @@ class MAFToGVCF {
                     currentAsmNBlockBoundaries = Pair(-1, -1)
 
                     //If an indel, append to the previous variant
-                    val prefix = if (variantList.isEmpty()) null else variantList.removeLast()
+                    var prefix = if (variantList.isEmpty()) null else variantList.removeLast()
 
                     //If the previous variant is a refblock , drop the last nucleotide to resize the refblock then append it to the variantList
                     //The final nucleotide will be used to start the new indel
@@ -634,25 +633,44 @@ class MAFToGVCF {
                     val refStringBuilder = StringBuilder()
                     val altStringBuilder = StringBuilder()
 
-                    if (prefix == null) {
-                        val allele = refSequence[chrom]!!.get(currentRefBp-1).toString() // -1,NucSeq is 0-based
-                        refStringBuilder.append(allele)
-                        altStringBuilder.append(allele)
-                        //TODO HERE IS PROBLEM
-                    } else if (!prefix.isVariant) {
-                        //the prefix is a ref block
-                        if (prefix.endPos - prefix.startPos + 1 > 1) variantList += resizeRefBlockVariantInfo(prefix)
-                        val startRefPos = prefix.endPos
+                    var prefixStartsWithMissing = true
 
-                        val refAllele = refSequence[chrom]!!.get(startRefPos - 1).toString() //  -1, NucSeq is 0-based
-                        val altAllele = if(prefix.isMissing) { "N" } else { refAllele }
+                    while(prefixStartsWithMissing) {
 
-                        refStringBuilder.append(refAllele)
-                        altStringBuilder.append(altAllele)
-                    } else {
-                        //the prefix is a SNP or an indel
-                        refStringBuilder.append(prefix.refAllele)
-                        altStringBuilder.append(prefix.altAllele)
+                        if (prefix == null) {
+                            val allele = refSequence[chrom]!!.get(currentRefBp-1).toString() // -1,NucSeq is 0-based
+                            refStringBuilder.insert(0, allele)
+                            altStringBuilder.insert(0, allele)
+                            prefixStartsWithMissing = false
+                        } else if (!prefix.isVariant && !prefix.isMissing) {
+                            //the prefix is a ref block
+                            if (prefix.endPos - prefix.startPos + 1 > 1) variantList += resizeRefBlockVariantInfo(prefix)
+                            val startRefPos = prefix.endPos
+
+                            val refAllele = refSequence[chrom]!!.get(startRefPos - 1).toString() //  -1, NucSeq is 0-based
+
+                            refStringBuilder.insert(0, refAllele)
+                            altStringBuilder.insert(0, refAllele)
+                            prefixStartsWithMissing = false
+
+                        } else if(!prefix.isVariant) {
+                            // the prefix is an N-block
+                            // append and get the previous variant context for prefix
+
+                            val refAllele = refSequence[chrom]!!.get(IntRange(prefix.startPos-1, prefix.endPos-1))
+
+                            refStringBuilder.insert(0, refAllele)
+                            altStringBuilder.insert(0, "N".repeat(refAllele.size()))
+
+
+                            prefix = if (variantList.isEmpty()) null else variantList.removeLast()
+
+                        } else {
+                            //the prefix is a SNP or an indel
+                            refStringBuilder.insert(0, prefix.refAllele)
+                            altStringBuilder.insert(0, prefix.altAllele)
+                            prefixStartsWithMissing = false
+                        }
                     }
 
                     //walk until the indel ends (both sequences are non-gap) or until the end of the block is reached
@@ -764,6 +782,8 @@ class MAFToGVCF {
         val variantList = mutableListOf<AssemblyVariantInfo>()
         var block = Pair(-1, -1)
         var asmBlock = Pair(-1, -1)
+        var NBlock = Pair(-1, -1)
+        var asmNBlock = Pair(-1, -1)
         for (index in 0 until refString.length) {
 
             if (refString[index] != altString[index]) {
@@ -774,19 +794,46 @@ class MAFToGVCF {
                     asmBlock = Pair(-1, -1)
                 }
 
-                //add the SNP
-                variantList.add(
-                    buildSNP(
-                        chrom,
-                        startPos + index,
-                        refString[index],
-                        altString[index],
-                        assemblyChrom,
-                        asmStartPos + index,
-                        asmStrand
+                // case missing block
+                if(altString[index] == 'N') {
+                    if(NBlock.first == -1) {
+                        NBlock = Pair(startPos + index, startPos + index)
+                        asmNBlock = Pair(asmStartPos + index, asmStartPos + index)
+                    } else {
+                        NBlock = Pair(NBlock.first, startPos + index)
+                        asmNBlock = Pair(asmNBlock.first, asmStartPos + index)
+                    }
+
+                } else { // case SNP
+                    // add previous missing block if there is one
+                    if (NBlock.first > -1) {
+                        variantList.add(buildRefBlockVariantInfo(refseq, chrom, NBlock, assemblyChrom, asmNBlock, asmStrand, true))
+                        NBlock = Pair(-1, -1)
+                        asmNBlock = Pair(-1, -1)
+                    }
+
+                    //add the SNP
+                    variantList.add(
+                        buildSNP(
+                            chrom,
+                            startPos + index,
+                            refString[index],
+                            altString[index],
+                            assemblyChrom,
+                            asmStartPos + index,
+                            asmStrand
+                        )
                     )
-                )
+                }
+
             } else if (block.first == -1) {
+                // add the previous missing block if there is one
+                if (NBlock.first > -1) {
+                    variantList.add(buildRefBlockVariantInfo(refseq, chrom, NBlock, assemblyChrom, asmNBlock, asmStrand, true))
+                    NBlock = Pair(-1, -1)
+                    asmNBlock = Pair(-1, -1)
+                }
+
                 block = Pair(startPos + index, startPos + index)
                 asmBlock = Pair(asmStartPos + index, asmStartPos + index)
             } else {
@@ -794,6 +841,11 @@ class MAFToGVCF {
                 asmBlock = Pair(asmBlock.first, asmStartPos + index)
             }
 
+        }
+
+        // if the final position was in a missing block add that
+        if (NBlock.first > -1) {
+            variantList.add(buildRefBlockVariantInfo(refseq, chrom, NBlock, assemblyChrom, asmNBlock, asmStrand, true))
         }
 
         //if the final position was in a ref block add that
