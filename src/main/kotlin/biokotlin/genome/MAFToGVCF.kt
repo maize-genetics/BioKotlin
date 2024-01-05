@@ -89,11 +89,12 @@ class MAFToGVCF {
         twoGvcfs: Boolean = false,
         outJustGT: Boolean = false,
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
-        compressAndIndex: Boolean = true // if bgzip and bcftools are not on the system path, this will fail
+        compressAndIndex: Boolean = true, // if bgzip and bcftools are not on the system path, this will fail
+        delAsSymbolic: Boolean = false // if true, replace all deletion records with symbolic alleles
     ) {
 
         val refSeqs = fastaToNucSeq(referenceFile)
-        val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType)
+        val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType, delAsSymbolic)
         check(variantsMap.size == 1 || variantsMap.size == 2) {
             "Expected either 1 or 2 variant maps but there are ${variantsMap.size}"
         }
@@ -129,7 +130,8 @@ class MAFToGVCF {
         fillGaps: Boolean = false,
         twoGvcfs: Boolean = false,
         outJustGT: Boolean = false,
-        outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf
+        outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
+        delAsSymbolic: Boolean
     ): Map<String, List<VariantContext>> {
 
         val mafRecords = loadMAFRecords(mafFile)
@@ -138,20 +140,20 @@ class MAFToGVCF {
 
             if (splitGenomes.size == 1) {
                 println("getVariantContextsfromMAF:twoGvcfs is true but only 1 genome in the MAF file. Processing the single genome")
-                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType))
+                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic))
             } else {
                 splitGenomes.mapIndexed { index, mafrecs ->
                     //append _1 and _2 to the sampleName for the split genomes
 
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType))
+                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic))
                 }.toMap()
             }
 
         } else {
             println("getVariantContextsfromMAF: Processing a single genome")
-            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType))
+            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic))
         }
 
     }
@@ -223,7 +225,8 @@ class MAFToGVCF {
         refGenomeSequence: Map<String, NucSeq>,
         fillGaps: Boolean,
         outJustGT: Boolean,
-        outputType: OUTPUT_TYPE
+        outputType: OUTPUT_TYPE,
+        delAsSymbolic: Boolean
     ): List<VariantContext> {
         var variantInfos = mutableListOf<AssemblyVariantInfo>()
 
@@ -241,7 +244,7 @@ class MAFToGVCF {
             variantInfos = fillInMissingVariantBlocks(variantInfos, refGenomeSequence, true)
         }
 
-        return createVariantContextsFromInfo(sampleName, variantInfos, outJustGT)
+        return createVariantContextsFromInfo(sampleName, variantInfos, outJustGT, delAsSymbolic)
     }
 
     fun removeRefBlocks(variantInfos: MutableList<AssemblyVariantInfo>) : MutableList<AssemblyVariantInfo> {
@@ -865,16 +868,17 @@ class MAFToGVCF {
     fun createVariantContextsFromInfo(
         sampleName: String,
         variantInfos: List<AssemblyVariantInfo>,
-        outJustGT: Boolean
+        outJustGT: Boolean,
+        delAsSymbolic: Boolean
     ): List<VariantContext> {
-        return variantInfos.map { convertVariantInfoToContext(sampleName, it,outJustGT) }
+        return variantInfos.map { convertVariantInfoToContext(sampleName, it,outJustGT, delAsSymbolic) }
     }
 
     /**
      * Function to turn the AssemblyVariantInfo into an actual VariantContext.
      * If the Assembly annotations are not in the VariantInfo, we do not add them into the VariantContext.
      */
-    fun convertVariantInfoToContext(sampleName: String, variantInfo: AssemblyVariantInfo, outJustGT:Boolean): VariantContext {
+    fun convertVariantInfoToContext(sampleName: String, variantInfo: AssemblyVariantInfo, outJustGT:Boolean, delAsSymbolic: Boolean): VariantContext {
         val startPos = variantInfo.startPos
         val endPos = variantInfo.endPos
         val refAllele = variantInfo.refAllele
@@ -890,7 +894,11 @@ class MAFToGVCF {
         val alleles = if (altAllele == "." || refAllele == altAllele) {
             listOf<Allele>(Allele.create(refAllele, true), Allele.NON_REF_ALLELE)
         } else {
-            listOf<Allele>(Allele.create(refAllele, true), Allele.create(altAllele, false), Allele.NON_REF_ALLELE)
+            if (delAsSymbolic && altAllele.length < refAllele.length) {
+                listOf<Allele>(Allele.create(refAllele.substring(0, 1), true), Allele.SV_SIMPLE_DEL, Allele.NON_REF_ALLELE)
+            } else {
+                listOf<Allele>(Allele.create(refAllele, true), Allele.create(altAllele, false), Allele.NON_REF_ALLELE)
+            }
         }
 
         val genotype = if (variantInfo.isMissing) {
@@ -932,7 +940,7 @@ class MAFToGVCF {
 
         val vcBuilder = VariantContextBuilder(".", chrom, startPos.toLong(), endPos.toLong(), alleles)
 
-        if (!variantInfo.isVariant || altAllele == ".") {
+        if (!variantInfo.isVariant || altAllele == "." || alleles.contains(Allele.SV_SIMPLE_DEL)) {
             vcBuilder.attribute("END", endPos)
         }
 
@@ -1075,7 +1083,7 @@ class MAFToGVCF {
         }
 
         return AssemblyVariantInfo(
-            chrom, position, position, altAlleles, refAlleles,
+            chrom, position, position + refAlleles.length - 1, altAlleles, refAlleles,
             altAlleles, true, altDepth, assemblyChrom, assemblyStart, assemblyEnd, assemblyStrand
         )
     }

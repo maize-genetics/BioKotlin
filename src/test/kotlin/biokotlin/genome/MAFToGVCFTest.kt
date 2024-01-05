@@ -45,8 +45,16 @@ class MAFToGVCFTest : StringSpec({
     val diploidCML103File1 = "${testingDir}/CML103_1.gvcf"
     val diploidCML103File2 = "${testingDir}/CML103_2.gvcf"
 
+    val cml103symDel_outputFile = "${testingDir}/CML103_symDel.gvcf"
+    val diploidCML103symDelFile1 = "${testingDir}/CML103_symDel_1.gvcf"
+    val diploidCML103symDelFile2 = "${testingDir}/CML103_symDel_2.gvcf"
+
+
     val truthCML103gvcfFile1 = "${testingDir}/CML103_truth1.gvcf"
     val truthCML103gvcfFile2 = "${testingDir}/CML103_truth2.gvcf"
+
+    val truthCML103gvcfWithSymDelFile1 = "${testingDir}/CML103_symDel_truth1.gvcf"
+    val truthCML103gvcfWithSymDelFile2 = "${testingDir}/CML103_symDel_truth2.gvcf"
 
     val mafDir = "${testingDir}/maf_dir_test"
     val mafDirDoesNotExist = "${testingDir}/maf_dir_does_not_exist"
@@ -87,6 +95,11 @@ class MAFToGVCFTest : StringSpec({
     createTruthGVCFCML103_1Genome(truthCML103gvcfFile1)
     // Create the known overlapping GVCF truth file for 2nd diploid
     createTruthGVCFCML103_2Genome(truthCML103gvcfFile2)
+
+    // Create the known overlapping GVCF truth file for 1st diploid with symbolic deletions
+    createTruthGVCFCML103symDel_1Genome(truthCML103gvcfWithSymDelFile1)
+    // Create the known overlapping GVCF truth file for 1st diploid with symbolic deletions
+    createTruthGVCFCML103symDel_2Genome(truthCML103gvcfWithSymDelFile2)
 
     // Create ref, maf, and truth GVCF for Ns testing
     createRefWithN(refNFile)
@@ -410,6 +423,96 @@ class MAFToGVCFTest : StringSpec({
     }
 
 
+    "Test CM Overlapping DiploidMAF with Symbolic Deletions" {
+        createOverlappingCML103DiploidMAF(cml103DiploidMafFile)
+
+        // NOTE - this needs a different ref file than is needed for the simpleMaf
+        // and simpleDiploid MAF test cases.
+        createOverlappingDiploidRef(diploidRefFile)
+        MAFToGVCF().createGVCFfromMAF(cml103DiploidMafFile,diploidRefFile,cml103symDel_outputFile,"CML103",twoGvcfs=true,fillGaps=false,compressAndIndex=false, delAsSymbolic = true)
+
+        // verify the first gvcf file - the truth file was created during setup
+        //Load in the output GVCF  and the truth GVCF and verify that the output is correct
+        var truthVariantIterator = VCFFileReader(File(truthCML103gvcfWithSymDelFile1), false).iterator()
+        var truthVariants = mutableListOf<VariantContext>()
+        while (truthVariantIterator.hasNext()) {
+            truthVariants.add(truthVariantIterator.next())
+        }
+        var truthMap = truthVariants.associateBy { Position(it.contig, it.start) }
+
+        var outputVariantIterator = VCFFileReader(File(diploidCML103symDelFile1), false).iterator()
+        var outputVariants = mutableListOf<VariantContext>()
+        while (outputVariantIterator.hasNext()) {
+            outputVariants.add(outputVariantIterator.next())
+        }
+
+        outputVariants.size shouldBe truthVariants.size
+
+        for (variant in outputVariants) {
+            if (!truthMap.containsKey(Position(variant.contig, variant.start))) {
+                fail("No matching variant found: ${variant.contig}:${variant.start}")
+            }
+
+            val matchingTruth = truthMap[Position(variant.contig, variant.start)]!!
+
+            variant.end shouldBe matchingTruth.end
+            //Check alleles
+            variant.alleles.toTypedArray() contentEquals matchingTruth.alleles.toTypedArray() shouldBe true
+            //Check GT
+            (matchingTruth.getGenotype(0).genotypeString == variant.getGenotype(0).genotypeString) shouldBe true
+            //Check AD
+            (matchingTruth.getGenotype(0).ad contentEquals variant.getGenotype(0).ad) shouldBe true
+            //Check ASM Contig
+            (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
+            //Check ASM Start
+            (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
+            //Check ASM END
+            (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
+            //Check ASM Strand
+            (matchingTruth.getAttribute("ASM_Strand") == variant.getAttribute("ASM_Strand")) shouldBe true
+        }
+
+        // verify the second vcf - note we are using truthGVCFFile2 and dipolodOutputFile2
+        truthVariantIterator = VCFFileReader(File(truthCML103gvcfWithSymDelFile2), false).iterator()
+        truthVariants = mutableListOf<VariantContext>()
+        while (truthVariantIterator.hasNext()) {
+            truthVariants.add(truthVariantIterator.next())
+        }
+        truthMap = truthVariants.associateBy { Position(it.contig, it.start) }
+
+        outputVariantIterator = VCFFileReader(File(diploidCML103symDelFile2), false).iterator()
+        outputVariants = mutableListOf<VariantContext>()
+        while (outputVariantIterator.hasNext()) {
+            outputVariants.add(outputVariantIterator.next())
+        }
+
+        outputVariants.size shouldBe truthVariants.size
+
+        for (variant in outputVariants) {
+            if (!truthMap.containsKey(Position(variant.contig, variant.start))) {
+                fail("No matching variant found: ${variant.contig}:${variant.start}")
+            }
+
+            val matchingTruth = truthMap[Position(variant.contig, variant.start)]!!
+
+            variant.end shouldBe matchingTruth.end
+            //Check alleles
+            variant.alleles.toTypedArray() contentEquals matchingTruth.alleles.toTypedArray() shouldBe true
+            //Check GT
+            (matchingTruth.getGenotype(0).genotypeString == variant.getGenotype(0).genotypeString) shouldBe true
+            //Check AD
+            (matchingTruth.getGenotype(0).ad contentEquals variant.getGenotype(0).ad) shouldBe true
+            //Check ASM Contig
+            (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
+            //Check ASM Start
+            (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
+            //Check ASM END
+            (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
+            //Check ASM Strand
+            (matchingTruth.getAttribute("ASM_Strand") == variant.getAttribute("ASM_Strand")) shouldBe true
+        }
+    }
+
     "testMAFsWithNs" {
         MAFToGVCF().createGVCFfromMAF(mafFileNs,refNFile,outputFileNs,sampleName,fillGaps=false,compressAndIndex=false)
 
@@ -435,7 +538,6 @@ class MAFToGVCFTest : StringSpec({
             }
             val matchingTruth = truthMap[Position(variant.contig, variant.start)]!!
 
-            println(variant.start)
             //Check END
             variant.end shouldBe matchingTruth.end
             //Check alleles
@@ -1145,6 +1247,210 @@ fun createTruthGVCFCML103_2Genome(outputFile: String) {
     }
 }
 
+/**
+ * Function to create the truth GVCF file for CML103 overlapping gvcf 1 with symbolic deletions
+ */
+fun createTruthGVCFCML103symDel_1Genome(outputFile: String) {
+    File(outputFile).bufferedWriter().use { output ->
+        output.write("##fileformat=VCFv4.2\n" +
+                "##FORMAT=<ID=AD,Number=3,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed\">\n" +
+                "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth (only filtered reads used for calling)\">\n" +
+                "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n" +
+                "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n" +
+                "##FORMAT=<ID=PL,Number=3,Type=Integer,Description=\"Normalized, Phred-scaled likelihoods for genotypes as defined in the VCF specification\">\n" +
+                "##INFO=<ID=AF,Number=3,Type=Integer,Description=\"Allele Frequency\">\n" +
+                "##INFO=<ID=ASM_Chr,Number=1,Type=String,Description=\"Assembly chromosome\">\n" +
+                "##INFO=<ID=ASM_End,Number=1,Type=Integer,Description=\"Assembly end position\">\n" +
+                "##INFO=<ID=ASM_Start,Number=1,Type=Integer,Description=\"Assembly start position\">\n" +
+                "##INFO=<ID=ASM_Strand,Number=1,Type=String,Description=\"Assembly strand\">\n" +
+                "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n" +
+                "##INFO=<ID=END,Number=1,Type=Integer,Description=\"Stop position of the interval\">\n" +
+                "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n" +
+                "##contig=<ID=chr7,length=461>\n" +
+                "##contig=<ID=chr10,length=59>\n" +
+                "##contig=<ID=chr1,length=100>\n" +
+                "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tB97\n" +
+                "chr1\t1\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310098;ASM_Start=53310098;ASM_Strand=+;END=1\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr1\t2\t.\tG\tAAAA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310102;ASM_Start=53310099;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t3\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310103;ASM_Start=53310103;ASM_Strand=+;END=3\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr1\t4\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310104;ASM_Start=53310104;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t5\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310105;ASM_Start=53310105;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t6\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310106;ASM_Start=53310106;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t7\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310107;ASM_Start=53310107;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t8\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310108;ASM_Start=53310108;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t9\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310109;ASM_Start=53310109;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t10\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310110;ASM_Start=53310110;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t11\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310113;ASM_Start=53310111;ASM_Strand=+;END=13\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr1\t14\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310114;ASM_Start=53310114;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t15\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t16\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t17\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=42\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t12\t.\tA\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+;END=13\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t14\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344244;ASM_Start=81344244;ASM_Strand=+;END=14\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t15\t.\tA\tAT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344246;ASM_Start=81344245;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t16\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344249;ASM_Start=81344247;ASM_Strand=+;END=18\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t19\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344250;ASM_Start=81344250;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t20\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344253;ASM_Start=81344251;ASM_Strand=+;END=22\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t23\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344254;ASM_Start=81344254;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t24\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344257;ASM_Start=81344255;ASM_Strand=+;END=26\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t27\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344258;ASM_Start=81344258;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t28\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344259;ASM_Start=81344259;ASM_Strand=+;END=28\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t29\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344260;ASM_Start=81344260;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t30\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344264;ASM_Start=81344261;ASM_Strand=+;END=33\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t34\t.\tA\tAGTT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344268;ASM_Start=81344265;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t35\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344269;ASM_Start=81344269;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t36\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344277;ASM_Start=81344270;ASM_Strand=+;END=43\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t44\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344278;ASM_Start=81344278;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t45\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344279;ASM_Start=81344279;ASM_Strand=+;END=45\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t46\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344280;ASM_Start=81344280;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t47\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344281;ASM_Start=81344281;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t48\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344284;ASM_Start=81344282;ASM_Strand=+;END=50\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t50\t.\tC\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344276;ASM_Start=81344276;ASM_Strand=+;END=52\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t53\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344284;ASM_Start=81344277;ASM_Strand=+;END=60\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t451\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444249;ASM_Start=81444247;ASM_Strand=+;END=453\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t454\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444250;ASM_Start=81444250;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t455\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444252;ASM_Start=81444251;ASM_Strand=+;END=456\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t457\t.\tT\tTCCC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444256;ASM_Start=81444253;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t458\t.\tG\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444257;ASM_Start=81444257;ASM_Strand=+;END=460\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t461\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444258;ASM_Start=81444258;ASM_Strand=+;END=461\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t1\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310098;ASM_Start=53310098;ASM_Strand=+;END=1\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t2\t.\tG\tAAAA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310102;ASM_Start=53310099;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t3\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310103;ASM_Start=53310103;ASM_Strand=+;END=3\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t4\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310104;ASM_Start=53310104;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t5\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310105;ASM_Start=53310105;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t6\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310106;ASM_Start=53310106;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t7\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310107;ASM_Start=53310107;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t8\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310108;ASM_Start=53310108;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t9\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310109;ASM_Start=53310109;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t10\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310110;ASM_Start=53310110;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t11\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310113;ASM_Start=53310111;ASM_Strand=+;END=13\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t14\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310114;ASM_Start=53310114;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t15\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t16\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t17\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=42\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t43\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436820;ASM_Start=436819;ASM_Strand=+;END=44\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t45\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436821;ASM_Start=436821;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t46\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436822;ASM_Start=436822;ASM_Strand=+;END=46\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t47\t.\tC\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436823;ASM_Start=436823;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t48\t.\tT\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436824;ASM_Start=436824;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t49\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436825;ASM_Start=436825;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t50\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436827;ASM_Start=436826;ASM_Strand=+;END=51\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n"
+        )
+    }
+
+}
+
+/**
+ * Function to create the truth GVCF file for CML103 overlapping gvcf 2 with symbolic deletions
+ */
+fun createTruthGVCFCML103symDel_2Genome(outputFile: String) {
+    File(outputFile).bufferedWriter().use { output ->
+        output.write( "##fileformat=VCFv4.2\n" +
+                "##FORMAT=<ID=AD,Number=3,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed\">\n" +
+                "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth (only filtered reads used for calling)\">\n" +
+                "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n" +
+                "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n" +
+                "##FORMAT=<ID=PL,Number=3,Type=Integer,Description=\"Normalized, Phred-scaled likelihoods for genotypes as defined in the VCF specification\">\n" +
+                "##INFO=<ID=AF,Number=3,Type=Integer,Description=\"Allele Frequency\">\n" +
+                "##INFO=<ID=ASM_Chr,Number=1,Type=String,Description=\"Assembly chromosome\">\n" +
+                "##INFO=<ID=ASM_End,Number=1,Type=Integer,Description=\"Assembly end position\">\n" +
+                "##INFO=<ID=ASM_Start,Number=1,Type=Integer,Description=\"Assembly start position\">\n" +
+                "##INFO=<ID=ASM_Strand,Number=1,Type=String,Description=\"Assembly strand\">\n" +
+                "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n" +
+                "##INFO=<ID=END,Number=1,Type=Integer,Description=\"Stop position of the interval\">\n" +
+                "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">\n" +
+                "##contig=<ID=chr7,length=461>\n" +
+                "##contig=<ID=chr10,length=59>\n" +
+                "##contig=<ID=chr1,length=100>\n" +
+                "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tB97\n" +
+                "chr1\t1\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310098;ASM_Start=53310098;ASM_Strand=+;END=1\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr1\t2\t.\tG\tAAAA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310102;ASM_Start=53310099;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t3\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310103;ASM_Start=53310103;ASM_Strand=+;END=3\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr1\t4\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310104;ASM_Start=53310104;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t5\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310105;ASM_Start=53310105;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t6\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310106;ASM_Start=53310106;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t7\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310107;ASM_Start=53310107;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t8\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310108;ASM_Start=53310108;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t9\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310109;ASM_Start=53310109;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t10\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310110;ASM_Start=53310110;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t11\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310113;ASM_Start=53310111;ASM_Strand=+;END=13\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr1\t14\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310114;ASM_Start=53310114;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t15\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t16\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr1\t17\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=42\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t12\t.\tA\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+;END=13\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t14\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344244;ASM_Start=81344244;ASM_Strand=+;END=14\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t15\t.\tA\tAT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344246;ASM_Start=81344245;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t16\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344249;ASM_Start=81344247;ASM_Strand=+;END=18\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t19\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344250;ASM_Start=81344250;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t20\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344251;ASM_Start=81344251;ASM_Strand=+;END=20\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t21\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344245;ASM_Start=81344244;ASM_Strand=+;END=22\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t23\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344246;ASM_Start=81344246;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t24\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344249;ASM_Start=81344247;ASM_Strand=+;END=26\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t27\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344250;ASM_Start=81344250;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t28\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344251;ASM_Start=81344251;ASM_Strand=+;END=28\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t29\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344252;ASM_Start=81344252;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t30\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344256;ASM_Start=81344253;ASM_Strand=+;END=33\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t34\t.\tA\tAGTT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344260;ASM_Start=81344257;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t35\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344261;ASM_Start=81344261;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t36\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344269;ASM_Start=81344262;ASM_Strand=+;END=43\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t44\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344270;ASM_Start=81344270;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t45\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344271;ASM_Start=81344271;ASM_Strand=+;END=45\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t46\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344272;ASM_Start=81344272;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t47\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344273;ASM_Start=81344273;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t48\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344275;ASM_Start=81344274;ASM_Strand=+;END=49\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t50\t.\tG\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344276;ASM_Start=81344276;ASM_Strand=+;END=52\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t53\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344284;ASM_Start=81344277;ASM_Strand=+;END=60\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t451\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444249;ASM_Start=81444247;ASM_Strand=+;END=453\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t454\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444250;ASM_Start=81444250;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t455\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444252;ASM_Start=81444251;ASM_Strand=+;END=456\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr7\t457\t.\tT\tTCCC,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444256;ASM_Start=81444253;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t458\t.\tG\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444257;ASM_Start=81444257;ASM_Strand=+;END=460\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t461\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81444258;ASM_Start=81444258;ASM_Strand=+;END=461\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t1\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310098;ASM_Start=53310098;ASM_Strand=+;END=1\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t2\t.\tG\tAAAA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310102;ASM_Start=53310099;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t3\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310103;ASM_Start=53310103;ASM_Strand=+;END=3\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t4\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310104;ASM_Start=53310104;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t5\t.\tA\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310105;ASM_Start=53310105;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t6\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310106;ASM_Start=53310106;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t7\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310107;ASM_Start=53310107;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t8\t.\tT\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310108;ASM_Start=53310108;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t9\t.\tG\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310109;ASM_Start=53310109;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t10\t.\tA\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310110;ASM_Start=53310110;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t11\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310113;ASM_Start=53310111;ASM_Strand=+;END=13\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t14\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436791;ASM_Start=436790;ASM_Strand=+;END=15\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t16\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436792;ASM_Start=436792;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t17\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436793;ASM_Start=436793;ASM_Strand=+;END=17\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t18\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436794;ASM_Start=436794;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t19\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436796;ASM_Start=436795;ASM_Strand=+;END=20\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t21\t.\tT\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436797;ASM_Start=436797;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t22\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436798;ASM_Start=436798;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t23\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436799;ASM_Start=436799;ASM_Strand=+;END=23\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t24\t.\tT\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436800;ASM_Start=436800;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t25\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436801;ASM_Start=436801;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t26\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436803;ASM_Start=436802;ASM_Strand=+;END=27\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t28\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436804;ASM_Start=436804;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t29\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436805;ASM_Start=436805;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t30\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436808;ASM_Start=436806;ASM_Strand=+;END=32\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t33\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436809;ASM_Start=436809;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t34\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436810;ASM_Start=436810;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t35\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436811;ASM_Start=436811;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t36\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436812;ASM_Start=436812;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t37\t.\tC\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436813;ASM_Start=436813;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t38\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436815;ASM_Start=436814;ASM_Strand=+;END=39\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t40\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436816;ASM_Start=436816;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t41\t.\tC\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436817;ASM_Start=436817;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t42\t.\tT\tG,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436818;ASM_Start=436818;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t43\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436820;ASM_Start=436819;ASM_Strand=+;END=44\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t45\t.\tG\tC,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436821;ASM_Start=436821;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t46\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436822;ASM_Start=436822;ASM_Strand=+;END=46\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
+                "chr10\t47\t.\tC\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436823;ASM_Start=436823;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t48\t.\tT\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436824;ASM_Start=436824;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t49\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436825;ASM_Start=436825;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr10\t50\t.\tC\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=436827;ASM_Start=436826;ASM_Strand=+;END=51\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n"
+        )
+    }
+}
 
 /**
  * Function to create the truth GVCF file for N-heavy GVCF
