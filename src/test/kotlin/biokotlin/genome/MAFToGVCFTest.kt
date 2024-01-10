@@ -429,7 +429,7 @@ class MAFToGVCFTest : StringSpec({
         // NOTE - this needs a different ref file than is needed for the simpleMaf
         // and simpleDiploid MAF test cases.
         createOverlappingDiploidRef(diploidRefFile)
-        MAFToGVCF().createGVCFfromMAF(cml103DiploidMafFile,diploidRefFile,cml103symDel_outputFile,"CML103",twoGvcfs=true,fillGaps=false,compressAndIndex=false, delAsSymbolic = true)
+        MAFToGVCF().createGVCFfromMAF(cml103DiploidMafFile,diploidRefFile,cml103symDel_outputFile,"CML103",twoGvcfs=true,fillGaps=false,compressAndIndex=false, delAsSymbolic = true, maxDeletionSize = 1)
 
         // verify the first gvcf file - the truth file was created during setup
         //Load in the output GVCF  and the truth GVCF and verify that the output is correct
@@ -1285,7 +1285,7 @@ fun createTruthGVCFCML103symDel_1Genome(outputFile: String) {
                 "chr1\t15\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr1\t16\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr1\t17\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=42\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                "chr7\t12\t.\tA\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+;END=13\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t12\t.\tAA\tA,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr7\t14\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344244;ASM_Start=81344244;ASM_Strand=+;END=14\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                 "chr7\t15\t.\tA\tAT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344246;ASM_Start=81344245;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr7\t16\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344249;ASM_Start=81344247;ASM_Strand=+;END=18\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
@@ -1378,7 +1378,7 @@ fun createTruthGVCFCML103symDel_2Genome(outputFile: String) {
                 "chr1\t15\t.\tA\tT,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310115;ASM_Start=53310115;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr1\t16\t.\tG\tA,<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310116;ASM_Start=53310116;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr1\t17\t.\tT\t<NON_REF>\t.\t.\tASM_Chr=chr6;ASM_End=53310142;ASM_Start=53310117;ASM_Strand=+;END=42\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
-                "chr7\t12\t.\tA\t<DEL>,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+;END=13\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
+                "chr7\t12\t.\tAA\tA,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344243;ASM_Start=81344243;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr7\t14\t.\tA\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344244;ASM_Start=81344244;ASM_Strand=+;END=14\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +
                 "chr7\t15\t.\tA\tAT,<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344246;ASM_Start=81344245;ASM_Strand=+\tGT:AD:DP:PL\t1:0,30,0:30:90,0,90\n" +
                 "chr7\t16\t.\tG\t<NON_REF>\t.\t.\tASM_Chr=chr4;ASM_End=81344249;ASM_Start=81344247;ASM_Strand=+;END=18\tGT:AD:DP:PL\t0:30,0:30:0,90,90\n" +

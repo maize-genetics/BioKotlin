@@ -90,14 +90,16 @@ class MAFToGVCF {
         outJustGT: Boolean = false,
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
         compressAndIndex: Boolean = true, // if bgzip and bcftools are not on the system path, this will fail
-        delAsSymbolic: Boolean = false // if true, replace all deletion records with symbolic alleles
+        delAsSymbolic: Boolean = false, // if true, replace deletion records with symbolic alleles
+        maxDeletionSize: Int = 0 // if delAsSymbolic is true, replace deletions longer than this size with symbolic alleles
     ) {
 
         val refSeqs = fastaToNucSeq(referenceFile)
-        val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType, delAsSymbolic)
+        val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType, delAsSymbolic, maxDeletionSize)
         check(variantsMap.size == 1 || variantsMap.size == 2) {
             "Expected either 1 or 2 variant maps but there are ${variantsMap.size}"
         }
+        check(maxDeletionSize >= 0) {"maxDeletion size must be non-negative. Current value is $maxDeletionSize"}
 
         if (variantsMap.size == 1) {
             val sampleName = variantsMap.keys.first()
@@ -131,7 +133,8 @@ class MAFToGVCF {
         twoGvcfs: Boolean = false,
         outJustGT: Boolean = false,
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
-        delAsSymbolic: Boolean
+        delAsSymbolic: Boolean,
+        maxDeletionSize: Int
     ): Map<String, List<VariantContext>> {
 
         val mafRecords = loadMAFRecords(mafFile)
@@ -140,20 +143,20 @@ class MAFToGVCF {
 
             if (splitGenomes.size == 1) {
                 println("getVariantContextsfromMAF:twoGvcfs is true but only 1 genome in the MAF file. Processing the single genome")
-                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic))
+                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic, maxDeletionSize))
             } else {
                 splitGenomes.mapIndexed { index, mafrecs ->
                     //append _1 and _2 to the sampleName for the split genomes
 
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic))
+                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize))
                 }.toMap()
             }
 
         } else {
             println("getVariantContextsfromMAF: Processing a single genome")
-            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic))
+            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize))
         }
 
     }
@@ -226,7 +229,8 @@ class MAFToGVCF {
         fillGaps: Boolean,
         outJustGT: Boolean,
         outputType: OUTPUT_TYPE,
-        delAsSymbolic: Boolean
+        delAsSymbolic: Boolean,
+        maxDeletionSize: Int
     ): List<VariantContext> {
         var variantInfos = mutableListOf<AssemblyVariantInfo>()
 
@@ -244,7 +248,7 @@ class MAFToGVCF {
             variantInfos = fillInMissingVariantBlocks(variantInfos, refGenomeSequence, true)
         }
 
-        return createVariantContextsFromInfo(sampleName, variantInfos, outJustGT, delAsSymbolic)
+        return createVariantContextsFromInfo(sampleName, variantInfos, outJustGT, delAsSymbolic, maxDeletionSize)
     }
 
     fun removeRefBlocks(variantInfos: MutableList<AssemblyVariantInfo>) : MutableList<AssemblyVariantInfo> {
@@ -869,16 +873,17 @@ class MAFToGVCF {
         sampleName: String,
         variantInfos: List<AssemblyVariantInfo>,
         outJustGT: Boolean,
-        delAsSymbolic: Boolean
+        delAsSymbolic: Boolean,
+        maxDeletionSize: Int
     ): List<VariantContext> {
-        return variantInfos.map { convertVariantInfoToContext(sampleName, it,outJustGT, delAsSymbolic) }
+        return variantInfos.map { convertVariantInfoToContext(sampleName, it,outJustGT, delAsSymbolic, maxDeletionSize) }
     }
 
     /**
      * Function to turn the AssemblyVariantInfo into an actual VariantContext.
      * If the Assembly annotations are not in the VariantInfo, we do not add them into the VariantContext.
      */
-    fun convertVariantInfoToContext(sampleName: String, variantInfo: AssemblyVariantInfo, outJustGT:Boolean, delAsSymbolic: Boolean): VariantContext {
+    fun convertVariantInfoToContext(sampleName: String, variantInfo: AssemblyVariantInfo, outJustGT:Boolean, delAsSymbolic: Boolean, maxDeletionSize: Int): VariantContext {
         val startPos = variantInfo.startPos
         val endPos = variantInfo.endPos
         val refAllele = variantInfo.refAllele
@@ -894,7 +899,8 @@ class MAFToGVCF {
         val alleles = if (altAllele == "." || refAllele == altAllele) {
             listOf<Allele>(Allele.create(refAllele, true), Allele.NON_REF_ALLELE)
         } else {
-            if (delAsSymbolic && altAllele.length < refAllele.length) {
+            // if delAsSymbolic is true, then we have to check if the deletion is large enough to be symbolic
+            if (delAsSymbolic && (refAllele.length - altAllele.length > maxDeletionSize)) {
                 listOf<Allele>(Allele.create(refAllele.substring(0, 1), true), Allele.SV_SIMPLE_DEL, Allele.NON_REF_ALLELE)
             } else {
                 listOf<Allele>(Allele.create(refAllele, true), Allele.create(altAllele, false), Allele.NON_REF_ALLELE)
