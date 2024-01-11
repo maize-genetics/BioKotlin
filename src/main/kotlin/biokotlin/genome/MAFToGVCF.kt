@@ -141,8 +141,8 @@ class MAFToGVCF {
         twoGvcfs: Boolean = false,
         outJustGT: Boolean = false,
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
-        delAsSymbolic: Boolean,
-        maxDeletionSize: Int
+        delAsSymbolic: Boolean = false,
+        maxDeletionSize: Int = 0
     ): Map<String, List<VariantContext>> {
 
         val mafRecords = loadMAFRecords(mafFile)
