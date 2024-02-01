@@ -75,9 +75,9 @@ class NucSeq2BitTest : StringSpec({
     }
 */
     "Test conversion of X to N in DNA" {
-        shouldThrow<java.lang.IllegalStateException> { NucSeq2Bit("GCXT") }
-        NucSeq2Bit("GCXT", convertStates = true).seq() shouldBe "GCNT"
-        NucSeq2Bit("GCxT", convertStates = true).seq() shouldBe "GCNT"
+        shouldThrow<java.lang.IllegalStateException> { NucSeq2Bit("GCXT", convertStates=false) }
+        NucSeq2Bit("GCXT").seq() shouldBe "GCNT"
+        NucSeq2Bit("GCxT").seq() shouldBe "GCNT"
         NucSeq2Bit("GCNT").seq() shouldBe "GCNT"
     }
 

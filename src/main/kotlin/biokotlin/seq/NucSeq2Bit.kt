@@ -24,11 +24,11 @@ import java.util.stream.Collectors
  * Factoring for method for creating [NucSeq2Bit].
  * @param seq sequence in a String
  * @param preferredNucSet the preferred sequence either [NUC.DNA] or [NUC.RNA]
- * @param checkStates is true the states will be checked, and unless convert states it will reject all non - (A,C,G,T,U,N)
- * @param convertStates is true it will convert all non - (A,C,G,T,U,N) to N
+ * @param checkStates if true the states will be checked, and unless convert states it will reject all non - (A,C,G,T,U,N)
+ * @param convertStates if true it will convert all non - (A,C,G,T,U,N) to N
  */
 internal fun NucSeq2Bit(seq: String, preferredNucSet: NucSet = NUC.DNA, checkStates: Boolean = true,
-                        convertStates: Boolean = false): NucSeq2Bit {
+                        convertStates: Boolean = true): NucSeq2Bit {
     val seqs2B = NucSeq2Bit.seqStringTo2Bit(seq, checkStates, convertStates)
     return when (preferredNucSet) {
         NUC.DNA, NUC.AmbiguousDNA -> DNASeq2Bit(seqs2B)

@@ -62,17 +62,17 @@ fun Seq(seq: String): NucSeq {
  * ```
  *
  */
-fun NucSeq(vararg seq: String): NucSeq {
+fun NucSeq(vararg seq: String, convertStates: Boolean = true): NucSeq {
     val seqS = seq.joinToString(separator = "")
-    return if(seqS.length < 1_000_000) NucSeqByteEncode(seqS) else NucSeq2Bit(seqS)
+    return if(seqS.length < 1_000_000) NucSeqByteEncode(seqS) else NucSeq2Bit(seqS,convertStates=convertStates)
 }
 
 /**Create a NucSeq with a specified NucSet
  *
  * @param preferredNucSet can be [NUC.DNA],[NUC.RNA],[NUC.AmbiguousDNA] or [NUC.AmbiguousRNA]
  * */
-fun NucSeq(seq: String, preferredNucSet: NucSet): NucSeq {
-    return if(seq.length < 1_000_000) NucSeqByteEncode(seq, preferredNucSet) else NucSeq2Bit(seq, preferredNucSet)
+fun NucSeq(seq: String, preferredNucSet: NucSet,convertStates: Boolean = true): NucSeq {
+    return if(seq.length < 1_000_000) NucSeqByteEncode(seq, preferredNucSet) else NucSeq2Bit(seq, preferredNucSet,convertStates=convertStates)
 }
 
 //fun NucSeq(seq: List<NUC>): NucSeq = TODO()

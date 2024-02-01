@@ -10,6 +10,7 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.nield.kotlinstatistics.median
+import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
 
@@ -228,6 +229,44 @@ class SeqByteTest : StringSpec({
     "ungap" {
         NucSeq("AC-GTG-GTGA-").ungap() shouldBe dnaSeq
         NucSeq("AC-GUG-GUGA-").ungap() shouldBe rnaSeq
+    }
+
+    "Test NucSeq large sequence store" {
+
+        // RandomNucSeq below will create a NucSeq of 1_000_002 bases
+        // This verifies NucSeq still works with large sequences after
+        // the change to NucSeq2Bit convertStates default change
+        // The call to RandonNucSeq would throw an exception if it
+        // could not create the sequence (it calls NucSeq() with default parameter for convertStates)
+        //
+        val bigSeq = RandomNucSeq(1_000_002)
+        bigSeq.size() shouldBe 1_000_002
+
+        val random = Random(0)
+        val baseBytes = ByteArray(1000002)
+        val nucBytes = NUC.DNA.map { it.utf8 }.toByteArray()
+        for (i in baseBytes.indices) {
+            baseBytes[i]=nucBytes[random.nextInt(nucBytes.size)]
+        }
+
+        // Create a large string that contains lower case bases
+        val bigStringSB = StringBuilder()
+        // testString is 110 bases long
+        val testString = "aaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNCaaggttCCNNC"
+
+        // Create seq with length > 1_000_000
+        for (i in 0 until 10000) {
+            bigStringSB.append(testString)
+        }
+        bigStringSB.toString().length shouldBe 1100000
+
+        // test with default convertStates value - should work (default is true)
+        val seqWithLowerCase = NucSeq(bigStringSB.toString())
+        seqWithLowerCase.size() shouldBe 1100000
+
+        // Test when convertStates is false - should fail as all bases must be UPPER case
+        shouldThrow<IllegalStateException> { NucSeq(bigStringSB.toString(), convertStates = false) }
+
     }
 
     /**
