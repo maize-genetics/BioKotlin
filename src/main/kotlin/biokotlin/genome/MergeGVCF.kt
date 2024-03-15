@@ -1,12 +1,12 @@
 package biokotlin.genome
 
+import biokotlin.util.bufferedReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.lang.IllegalStateException
 
 fun mergeGVCF(gvcfDir: String, outputVCF: String) {
 
@@ -41,7 +41,6 @@ private fun buildVariantsAssumeRefMultithread(
     val chromTime = System.nanoTime()
     val chroms = graph.chromosomes().map { it.name }.toHashSet()
     println("Time Spent Building Chrom List: ${(System.nanoTime() - chromTime) / 1e9} seconds.")
-
 
     val inputFilesChannel = Channel<File>()
     val snpChannel = Channel<Pair<SimpleVariant, String>>()
@@ -136,6 +135,8 @@ data class SimpleVariant(
     val altAllele: String
 )
 
+data class Position(val chr: String, val position: Int)
+
 suspend fun processSnps(
     snpChannel: Channel<Pair<SimpleVariant, String>>,
     snpMap: MutableMap<Position, ByteArray>,
@@ -145,7 +146,8 @@ suspend fun processSnps(
 ) = withContext(Dispatchers.Default) {
 
     for ((currentParsed, fileName) in snpChannel) {
-        val currentPos = Position.of(Chromosome.instance(currentParsed.chr), currentParsed.start)
+
+        val currentPos = Position(currentParsed.chr, currentParsed.start)
 
         // Get the existing allele array or make a new one if not in map
         val alleleArray = snpMap[currentPos] ?: ByteArray(numFiles) { 0.toByte() }
@@ -156,5 +158,107 @@ suspend fun processSnps(
             ?: throw IllegalStateException("Error Finding alt allele in lookup: $currentParsed")
         snpMap[currentPos] = alleleArray
     }
+
+}
+
+suspend fun processGVCFFileForSNPs(
+    inputFilesChannel: Channel<File>,
+    snpChannel: Channel<Pair<SimpleVariant, String>>,
+    chroms: Set<String>,
+    handleNs: Boolean = false
+) = withContext(Dispatchers.Default) {
+    for (file in inputFilesChannel) {
+        val fileName = file.name
+        println("Processing file: ${fileName}")
+        val reader = bufferedReader("${file.path}")
+
+        val currentFileStartTime = System.nanoTime()
+        var previousRecordParsed: SimpleVariant? = null
+        var currentLine = reader.readLine()
+        while (currentLine != null) {
+            if (currentLine.startsWith("#")) {
+                currentLine = reader.readLine()
+                continue
+            }
+
+            val currentParsed = parseSingleGVCFLine(currentLine)
+            if (!chroms.contains(currentParsed.chr)) {
+                previousRecordParsed = currentParsed
+                currentLine = reader.readLine()
+                continue
+            }
+
+            //If handleNs is true, we need to input the N positions which are skipped as they are not in the gVCF
+            if (handleNs && previousRecordParsed != null
+                && currentParsed.chr == previousRecordParsed.chr //make sure the chroms are the same
+                && currentParsed.start > previousRecordParsed.end + 1
+            ) { //make sure we actually have a gap
+                for (gappedPos in previousRecordParsed.end + 1 until currentParsed.start) {
+                    snpChannel.send(Pair(SimpleVariant(currentParsed.chr, gappedPos, gappedPos, "", "N"), fileName))
+                }
+            }
+            previousRecordParsed = currentParsed
+
+            //Here we need to check for a SNP or INDEL or Missing.
+            //if it is  we update the byteArray with the correct allele <INS> or <DEL> for insertions and N for missing
+            //They can be filtered out later.
+            if (currentParsed.altAllele != "<NON_REF>" && currentParsed.altAllele != "") {
+                //means we have a SNP
+                //First check to see if it is a new SNP
+                snpChannel.send(Pair(currentParsed, fileName))
+            }
+
+            currentLine = reader.readLine()
+        }
+
+        reader.close()
+        val currentFileEndTime = System.nanoTime()
+        println("Time spent reading file ${fileName}: ${(currentFileEndTime - currentFileStartTime) / 1E9} seconds")
+    }
+}
+
+private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
+
+    val lineSplit = currentLine.split("\t")
+    // Need to check for indel/refblock
+    val chrom = lineSplit[0]
+    val start = lineSplit[1].toInt()
+    val refAllele = lineSplit[3]
+    val altAlleles = lineSplit[4].split(",").filter { it != "<NON_REF>" }
+    val infos = lineSplit[7].split(";")
+    val endAnno = infos.filter { it.startsWith("END") }
+    val end = if (endAnno.size == 1) {
+        endAnno.first().split("=")[1].toInt()
+    } else {
+        start
+    }
+    val genotype = lineSplit[9].split(":")
+    val gtCall = genotype.first()
+
+    if (refAllele.length == 1 && altAlleles.isEmpty()) {
+        // refBlock
+        return SimpleVariant(chrom, start, end, refAllele, "")
+    } else if (refAllele.length == 1 && altAlleles.first().length == 1) {
+        // SNP
+        if (gtCall == "0" || gtCall == "0/0" || gtCall == "0|0") {
+            // Monomorphic, treat like refBlock
+            return SimpleVariant(chrom, start, end, refAllele, "")
+
+        } else if (gtCall == "1" || gtCall == "1/1" || gtCall == "1|1") {
+            // True homozygous SNP
+            return SimpleVariant(chrom, start, end, refAllele, altAlleles.first())
+        } else {
+            // likely het, can skip for now.
+        }
+    } else {
+        // indel or something abnormal, can ignore for now
+        return if (refAllele.length > altAlleles.first().length) {
+            // DEL
+            SimpleVariant(chrom, start, end, refAllele, "<DEL>")
+        } else {
+            SimpleVariant(chrom, start, end, refAllele, "<INS>")
+        }
+    }
+    return SimpleVariant("", -1, -1, "", "")
 
 }
