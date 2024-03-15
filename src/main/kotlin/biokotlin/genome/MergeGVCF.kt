@@ -27,9 +27,8 @@ private fun buildVariantsAssumeRefMultithread(
 
     val fileSt = System.nanoTime()
     files.mapIndexed { index, file ->
-        fileNameToIndexMap["${file.name}"] = index
+        fileNameToIndexMap[file.name] = index
     }
-
     println("Time Spent Building File List: ${(System.nanoTime() - fileSt) / 1e9} seconds.")
 
     val alleleLookupSt = System.nanoTime()
@@ -37,10 +36,6 @@ private fun buildVariantsAssumeRefMultithread(
     println("Time Spent Building allele Lookup: ${(System.nanoTime() - alleleLookupSt) / 1e9} seconds.")
 
     val snpMap = mutableMapOf<Position, ByteArray>()
-
-    val chromTime = System.nanoTime()
-    val chroms = graph.chromosomes().map { it.name }.toHashSet()
-    println("Time Spent Building Chrom List: ${(System.nanoTime() - chromTime) / 1e9} seconds.")
 
     val inputFilesChannel = Channel<File>()
     val snpChannel = Channel<Pair<SimpleVariant, String>>()
@@ -54,8 +49,8 @@ private fun buildVariantsAssumeRefMultithread(
         }
 
         // For the number of threads on the machine, set up
-        val workerThreads = (1..numThreads).map { threadNum ->
-            launch { processGVCFFileForSNPs(inputFilesChannel, snpChannel, chroms, handleNs) }
+        val workerThreads = (1..numThreads).map { _ ->
+            launch { processGVCFFileForSNPs(inputFilesChannel, snpChannel, handleNs) }
         }
 
         launch {
@@ -70,7 +65,7 @@ private fun buildVariantsAssumeRefMultithread(
         }
     }
 
-    println("Total Time spent reading the files Multithreaded: ${(System.nanoTime() - startTimeReading) / 1e9} seconds.  Size of SnpMap: ${snpMap.size}")
+    println("Total Time spent reading the files Multithreading: ${(System.nanoTime() - startTimeReading) / 1e9} seconds.  Size of SnpMap: ${snpMap.size}")
     // Do the rest of the code now that we have the snpMap
 
     val refRangeToPathStTime = System.nanoTime()
@@ -81,7 +76,7 @@ private fun buildVariantsAssumeRefMultithread(
 
 
     val rangeMapStartTime = System.nanoTime()
-    // Build the rangemap for the SNPList:
+    // Build the range map for the SNPList:
     val rangeMap = buildRangeMap(graph)
     val rangeMapEndTime = System.nanoTime()
     println("Time Spent Building RangeMap: ${(rangeMapEndTime - rangeMapStartTime) / 1E9} seconds.")
@@ -164,56 +159,54 @@ suspend fun processSnps(
 suspend fun processGVCFFileForSNPs(
     inputFilesChannel: Channel<File>,
     snpChannel: Channel<Pair<SimpleVariant, String>>,
-    chroms: Set<String>,
     handleNs: Boolean = false
 ) = withContext(Dispatchers.Default) {
+
     for (file in inputFilesChannel) {
+
         val fileName = file.name
-        println("Processing file: ${fileName}")
-        val reader = bufferedReader("${file.path}")
+        println("Processing file: $fileName")
+        bufferedReader("${file.path}").use { reader ->
 
-        val currentFileStartTime = System.nanoTime()
-        var previousRecordParsed: SimpleVariant? = null
-        var currentLine = reader.readLine()
-        while (currentLine != null) {
-            if (currentLine.startsWith("#")) {
-                currentLine = reader.readLine()
-                continue
-            }
-
-            val currentParsed = parseSingleGVCFLine(currentLine)
-            if (!chroms.contains(currentParsed.chr)) {
-                previousRecordParsed = currentParsed
-                currentLine = reader.readLine()
-                continue
-            }
-
-            //If handleNs is true, we need to input the N positions which are skipped as they are not in the gVCF
-            if (handleNs && previousRecordParsed != null
-                && currentParsed.chr == previousRecordParsed.chr //make sure the chroms are the same
-                && currentParsed.start > previousRecordParsed.end + 1
-            ) { //make sure we actually have a gap
-                for (gappedPos in previousRecordParsed.end + 1 until currentParsed.start) {
-                    snpChannel.send(Pair(SimpleVariant(currentParsed.chr, gappedPos, gappedPos, "", "N"), fileName))
+            val currentFileStartTime = System.nanoTime()
+            var previousRecordParsed: SimpleVariant? = null
+            var currentLine = reader.readLine()
+            while (currentLine != null) {
+                if (currentLine.startsWith("#")) {
+                    currentLine = reader.readLine()
+                    continue
                 }
-            }
-            previousRecordParsed = currentParsed
 
-            //Here we need to check for a SNP or INDEL or Missing.
-            //if it is  we update the byteArray with the correct allele <INS> or <DEL> for insertions and N for missing
-            //They can be filtered out later.
-            if (currentParsed.altAllele != "<NON_REF>" && currentParsed.altAllele != "") {
-                //means we have a SNP
-                //First check to see if it is a new SNP
-                snpChannel.send(Pair(currentParsed, fileName))
+                val currentParsed = parseSingleGVCFLine(currentLine)
+
+                //If handleNs is true, we need to input the N positions which are skipped as they are not in the gVCF
+                if (handleNs && previousRecordParsed != null
+                    && currentParsed.chr == previousRecordParsed.chr //make sure the chroms are the same
+                    && currentParsed.start > previousRecordParsed.end + 1
+                ) { //make sure we actually have a gap
+                    for (gappedPos in previousRecordParsed.end + 1 until currentParsed.start) {
+                        snpChannel.send(Pair(SimpleVariant(currentParsed.chr, gappedPos, gappedPos, "", "N"), fileName))
+                    }
+                }
+                previousRecordParsed = currentParsed
+
+                // Here we need to check for an SNP or INDEL or Missing.
+                // if it is  we update the byteArray with the correct allele <INS> or <DEL> for insertions and N for missing
+                // They can be filtered out later.
+                if (currentParsed.altAllele != "<NON_REF>" && currentParsed.altAllele != "") {
+                    // means we have a SNP
+                    // First check to see if it is a new SNP
+                    snpChannel.send(Pair(currentParsed, fileName))
+                }
+
+                currentLine = reader.readLine()
             }
 
-            currentLine = reader.readLine()
+            val currentFileEndTime = System.nanoTime()
+            println("Time spent reading file ${fileName}: ${(currentFileEndTime - currentFileStartTime) / 1E9} seconds")
+
         }
 
-        reader.close()
-        val currentFileEndTime = System.nanoTime()
-        println("Time spent reading file ${fileName}: ${(currentFileEndTime - currentFileStartTime) / 1E9} seconds")
     }
 }
 
