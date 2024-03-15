@@ -1,6 +1,7 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
+import com.google.common.collect.RangeMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -70,6 +71,7 @@ private fun buildVariantsAssumeRefMultithread(
 
     val refRangeToPathStTime = System.nanoTime()
     // Convert the paths to the needed file:
+    // Map<ReferenceRange, Map<taxon: String, List<HaplotypeNode>>>
     val refRangeToPathMap = convertPathsToRefRangeMap(paths)
     val refRangeToPathEndTime = System.nanoTime()
     println("Time Spent Building RangeMap: ${(refRangeToPathEndTime - refRangeToPathStTime) / 1E9} seconds.")
@@ -132,7 +134,7 @@ data class SimpleVariant(
 
 data class Position(val chr: String, val position: Int)
 
-suspend fun processSnps(
+private suspend fun processSnps(
     snpChannel: Channel<Pair<SimpleVariant, String>>,
     snpMap: MutableMap<Position, ByteArray>,
     numFiles: Int,
@@ -156,7 +158,7 @@ suspend fun processSnps(
 
 }
 
-suspend fun processGVCFFileForSNPs(
+private suspend fun processGVCFFileForSNPs(
     inputFilesChannel: Channel<File>,
     snpChannel: Channel<Pair<SimpleVariant, String>>,
     handleNs: Boolean = false
@@ -254,4 +256,74 @@ private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
     }
     return SimpleVariant("", -1, -1, "", "")
 
+}
+
+private fun convertPathsToRefRangeMap(paths: Map<String, List<List<HaplotypeNode>>>): Map<ReferenceRange, Map<String, List<HaplotypeNode>>> {
+    val outputMap = mutableMapOf<ReferenceRange, MutableMap<String, MutableList<HaplotypeNode>>>()
+
+    for ((taxon, path) in paths) {
+        for (gametePath in path) {
+            for (node in gametePath) {
+                val refRange = node.referenceRange()
+                val currentRefRangeMap = outputMap[refRange] ?: mutableMapOf()
+                val currentHapListForTaxa = currentRefRangeMap[taxon] ?: mutableListOf()
+                currentHapListForTaxa.add(node)
+                currentRefRangeMap[taxon] = currentHapListForTaxa
+                outputMap[refRange] = currentRefRangeMap
+            }
+        }
+    }
+    return outputMap
+}
+
+private fun outputBatchesOfSNPs(
+    outputFilePrefix: String,
+    batchSize: Int = 1_000_000,
+    numThreads: Int = 15,
+    snpMap: Map<Position, ByteArray>,
+    taxaList: List<String>,
+    gvcfFileNameToIndexInByteArray: Map<String, Int>,
+    alleleLookup: Map<Byte, String>,
+    refRangePathMap: Map<ReferenceRange, Map<String, List<HaplotypeNode>>>,
+    rangeMap: RangeMap<Position, ReferenceRange>,
+    refSeq: GenomeSequence,
+    makeDiploid: Boolean = true
+) {
+
+    writeOutHeaderFile("${outputFilePrefix}_header.txt", taxaList)
+
+    //Create the batches first
+    val batches = snpMap.keys.toSortedSet().chunked(batchSize)
+    val outputFileAndBatchChannel = Channel<Pair<String, List<Position>>>()
+
+    runBlocking {
+        launch {
+            for ((index, batch) in batches.withIndex()) {
+                outputFileAndBatchChannel.send(Pair("${outputFilePrefix}_batch${index}.txt", batch))
+            }
+            outputFileAndBatchChannel.close()
+        }
+
+        //For the number of threads on the machine, set up
+        val workerThreads = (1..numThreads).map { threadNum ->
+            launch {
+                processGVCFOutputBatch(
+                    outputFileAndBatchChannel,
+                    snpMap,
+                    gvcfFileNameToIndexInByteArray,
+                    alleleLookup,
+                    refRangePathMap,
+                    rangeMap,
+                    refSeq,
+                    makeDiploid
+                )
+            }
+        }
+
+        //Create a coroutine to make sure all the async coroutines are done processing, then close the result channel.
+        //If this is not here, this will run forever.
+        launch {
+            workerThreads.forEach { it.join() }
+        }
+    }
 }
