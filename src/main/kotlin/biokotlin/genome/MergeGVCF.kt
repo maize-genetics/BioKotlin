@@ -1,7 +1,11 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
+import biokotlin.util.createGenericVCFHeaders
 import com.google.common.collect.RangeMap
+import htsjdk.variant.variantcontext.writer.Options
+import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
+import htsjdk.variant.vcf.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -132,7 +136,21 @@ data class SimpleVariant(
     val altAllele: String
 )
 
-data class Position(val chr: String, val position: Int)
+data class Position(val chr: String, val position: Int) : Comparable<Position> {
+    override fun compareTo(other: Position): Int {
+        return if (this.chr == other.chr) {
+            this.position - other.position
+        } else {
+            try {
+                this.chr.toInt() - other.chr.toInt()
+            } catch (e: NumberFormatException) {
+                // If we can't convert to an int, we will just compare the strings
+                this.chr.compareTo(other.chr)
+            }
+        }
+    }
+
+}
 
 private suspend fun processSnps(
     snpChannel: Channel<Pair<SimpleVariant, String>>,
@@ -326,4 +344,17 @@ private fun outputBatchesOfSNPs(
             workerThreads.forEach { it.join() }
         }
     }
+}
+
+private fun writeOutHeaderFile(outputFile: String, taxaList: List<String>) {
+    val vcfOutputWriterBuilder = VariantContextWriterBuilder().unsetOption(Options.INDEX_ON_THE_FLY)
+
+    vcfOutputWriterBuilder.setOutputFile(outputFile)
+        .setOutputFileType(VariantContextWriterBuilder.OutputType.VCF)
+        .setOption(Options.ALLOW_MISSING_FIELDS_IN_HEADER)
+        .build()
+        .use { writer ->
+            writer.writeHeader(createGenericVCFHeaders(taxaList.sorted()))
+        }
+
 }
