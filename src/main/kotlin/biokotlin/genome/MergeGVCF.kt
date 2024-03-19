@@ -37,7 +37,7 @@ open class ReferenceRange(val chr: String, val start: Int, val end: Int) : Compa
     }
 }
 
-class Position(chr: String, val position: Int): ReferenceRange(chr, position, position)
+class Position(chr: String, val position: Int) : ReferenceRange(chr, position, position)
 
 fun mergeGVCF(gvcfDir: String, outputVCF: String) {
 
@@ -119,7 +119,7 @@ private fun buildVariantsAssumeRefMultithread(
 
     outputBatchesOfSNPs(
         outputFile,
-        batchSize(),
+        batchSize = 1_000_000,
         numThreads,
         snpMap,
         taxaList,
@@ -294,7 +294,9 @@ private fun convertPathsToRefRangeMap(paths: Map<String, List<List<HaplotypeNode
             }
         }
     }
+
     return outputMap
+
 }
 
 private fun outputBatchesOfSNPs(
