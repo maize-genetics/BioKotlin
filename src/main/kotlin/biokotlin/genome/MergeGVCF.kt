@@ -14,6 +14,31 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 
+data class SimpleVariant(
+    val chr: String,
+    val start: Int,
+    val end: Int,
+    val refAllele: String,
+    val altAllele: String
+)
+
+open class ReferenceRange(val chr: String, val start: Int, val end: Int) : Comparable<ReferenceRange> {
+    override fun compareTo(other: ReferenceRange): Int {
+        return if (this.chr == other.chr) {
+            this.start - other.start
+        } else {
+            try {
+                this.chr.toInt() - other.chr.toInt()
+            } catch (e: NumberFormatException) {
+                // If we can't convert to an int, we will just compare the strings
+                this.chr.compareTo(other.chr)
+            }
+        }
+    }
+}
+
+class Position(chr: String, val position: Int): ReferenceRange(chr, position, position)
+
 fun mergeGVCF(gvcfDir: String, outputVCF: String) {
 
     val gvcfFiles = File(gvcfDir).walk().filter { it.extension == "g.vcf" }
@@ -126,30 +151,6 @@ private fun createAlleleLookup(): Pair<Map<Byte, String>, Map<String, Byte>> {
     val alleleToByteMap = byteToAlelleMap.map { Pair(it.value, it.key) }
         .toMap()
     return Pair(byteToAlelleMap, alleleToByteMap)
-
-}
-
-data class SimpleVariant(
-    val chr: String,
-    val start: Int,
-    val end: Int,
-    val refAllele: String,
-    val altAllele: String
-)
-
-data class Position(val chr: String, val position: Int) : Comparable<Position> {
-    override fun compareTo(other: Position): Int {
-        return if (this.chr == other.chr) {
-            this.position - other.position
-        } else {
-            try {
-                this.chr.toInt() - other.chr.toInt()
-            } catch (e: NumberFormatException) {
-                // If we can't convert to an int, we will just compare the strings
-                this.chr.compareTo(other.chr)
-            }
-        }
-    }
 
 }
 
@@ -312,7 +313,7 @@ private fun outputBatchesOfSNPs(
 
     writeOutHeaderFile("${outputFilePrefix}_header.txt", taxaList)
 
-    //Create the batches first
+    // Create the batches first
     val batches = snpMap.keys.toSortedSet().chunked(batchSize)
     val outputFileAndBatchChannel = Channel<Pair<String, List<Position>>>()
 
@@ -324,7 +325,7 @@ private fun outputBatchesOfSNPs(
             outputFileAndBatchChannel.close()
         }
 
-        //For the number of threads on the machine, set up
+        // For the number of threads on the machine, set up
         val workerThreads = (1..numThreads).map { threadNum ->
             launch {
                 processGVCFOutputBatch(
@@ -340,8 +341,8 @@ private fun outputBatchesOfSNPs(
             }
         }
 
-        //Create a coroutine to make sure all the async coroutines are done processing, then close the result channel.
-        //If this is not here, this will run forever.
+        // Create a coroutine to make sure all the async coroutines are done processing, then close the result channel.
+        // If this is not here, this will run forever.
         launch {
             workerThreads.forEach { it.join() }
         }
@@ -400,8 +401,8 @@ suspend fun processGVCFOutputBatch(
                     val genotypes = pathIdsByTaxon[taxon]!!
 
                     val genotypeAlleles = genotypes
-                        .map { it.gvcfIdToFilePath()[it.gvcfFileID()] } //Get out the file path
-                        .map { gvcfFileNameToIndexInByteArray[File(it).name] } //Get out the index into the byte array for this file at this refRange
+                        .map { it.gvcfIdToFilePath()[it.gvcfFileID()] } // Get out the file path
+                        .map { gvcfFileNameToIndexInByteArray[File(it).name] } // Get out the index into the byte array for this file at this refRange
                         .filterNotNull()
                         .map { genotypeArray[it] }
                         .map { alleleLookup[it] }
