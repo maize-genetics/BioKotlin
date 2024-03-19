@@ -1,6 +1,7 @@
 package biokotlin.genome
 
 import biokotlin.util.bufferedReader
+import biokotlin.util.bufferedWriter
 import biokotlin.util.createGenericVCFHeaders
 import com.google.common.collect.RangeMap
 import htsjdk.variant.variantcontext.writer.Options
@@ -277,6 +278,7 @@ private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
 }
 
 private fun convertPathsToRefRangeMap(paths: Map<String, List<List<HaplotypeNode>>>): Map<ReferenceRange, Map<String, List<HaplotypeNode>>> {
+
     val outputMap = mutableMapOf<ReferenceRange, MutableMap<String, MutableList<HaplotypeNode>>>()
 
     for ((taxon, path) in paths) {
@@ -342,6 +344,85 @@ private fun outputBatchesOfSNPs(
         //If this is not here, this will run forever.
         launch {
             workerThreads.forEach { it.join() }
+        }
+    }
+}
+
+suspend fun processGVCFOutputBatch(
+    outputFileAndBatchChannel: Channel<Pair<String, List<Position>>>,
+    snpMap: Map<Position, ByteArray>,
+    gvcfFileNameToIndexInByteArray: Map<String, Int>,
+    alleleLookup: Map<Byte, String>,
+    refRangePathMap: Map<ReferenceRange, Map<String, List<HaplotypeNode>>>,
+    rangeMap: RangeMap<Position, ReferenceRange>,
+    refSeq: GenomeSequence,
+    makeDiploid: Boolean
+) = withContext(Dispatchers.Default) {
+
+    for ((fileName, snpPositions) in outputFileAndBatchChannel) {
+        bufferedWriter(fileName).use { writer ->
+            "1       1       .       T       <INS>,<DEL>     .       .       .       GT "
+            for (variantPos in snpPositions) {
+
+                // Use the position to look up the Refrange and the corresponding path hapIds
+                val genotypeArray = snpMap[variantPos]!!
+                // Check genotypeArray for Ref Vs missing and skip if that's the case
+                if (genotypeArray.filter { it == 0x0.toByte() || it == 0x5.toByte() }.size == genotypeArray.size) {
+                    continue
+                }
+                val refRange = rangeMap[variantPos]
+                if (refRange == null) {
+                    continue
+                }
+
+                val pathIdsByTaxon = refRangePathMap[refRange]!!
+
+                // Build Alleles
+                val altAlleles = genotypeArray.map { alleleLookup[it] }
+                    .filterNotNull()
+                    .filter { it != "REF" && it != "N" }
+                    .toSet()
+
+                val refAllele = refSeq.genotypeAsString(variantPos.chromosome, variantPos.position)
+
+                val alleleToIdMap = altAlleles.mapIndexed { index, s -> Pair(s, index + 1) }.toMap()
+
+                writer.write(
+                    "${variantPos.chromosome.name}\t${variantPos.position}\t.\t${refAllele}\t${
+                        altAlleles.joinToString(
+                            ","
+                        )
+                    }\t.\t.\t.\tGT\t"
+                )
+
+
+                val genotypeList = pathIdsByTaxon.keys.toSortedSet().map { taxon ->
+                    val genotypes = pathIdsByTaxon[taxon]!!
+
+                    val genotypeAlleles = genotypes
+                        .map { it.gvcfIdToFilePath()[it.gvcfFileID()] } //Get out the file path
+                        .map { gvcfFileNameToIndexInByteArray[File(it).name] } //Get out the index into the byte array for this file at this refRange
+                        .filterNotNull()
+                        .map { genotypeArray[it] }
+                        .map { alleleLookup[it] }
+                        .map {
+                            if (it == "REF") {
+                                "0"
+                            } else if (it == "N") {
+                                "."
+                            } else {
+                                alleleToIdMap[it] ?: "."
+                            }
+                        }
+                    if (genotypeAlleles.size == 1 && makeDiploid) {
+                        "${genotypeAlleles.first()}/${genotypeAlleles.first()}"
+                    } else {
+                        "${genotypeAlleles[0]}/${genotypeAlleles[1]}"
+                    }
+                }
+
+                writer.write("${genotypeList.joinToString("\t")}\n")
+            }
         }
     }
 }
