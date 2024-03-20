@@ -629,21 +629,21 @@ class MAFToGVCFTest : StringSpec({
             output.write("##maf version=1 scoring=Tba.v8\n\n")
 
             output.write("a\tscore=23262.0\n")
-            output.write("s\tB73.chr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
-            output.write("s\tB97.chr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+            output.write("s\tchr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+            output.write("s\tchr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
 
             output.write("a\tscore=5062.0\n")
-            output.write("s\tB73.chr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
-            output.write("s\tB97.chr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n\n")
+            output.write("s\tchr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
+            output.write("s\tchr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n\n")
 
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             // we need a chr10 in here to test sorting the maf records
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
         }
     }
@@ -653,18 +653,18 @@ fun createMAFFileWithEIQlines(outputFile: String) {
         output.write("##maf version=1 scoring=Tba.v8\n\n")
 
         output.write("a\tscore=23262.0\n")
-        output.write("s\tB73.chr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
-        output.write("e\tB73.chr7\t8\t38\t+\t59\tI\n")
-        output.write("s\tB97.chr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+        output.write("s\tchr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+        output.write("e\tchr7\t8\t38\t+\t59\tI\n")
+        output.write("s\tchr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
 
         output.write("a\tscore=5062.0\n")
-        output.write("s\tB73.chr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
-        output.write("s\tB97.chr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n")
-        output.write("q\tB97.chr4\t\t\t\t\t9933259999---\n\n")
+        output.write("s\tchr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
+        output.write("s\tchr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n")
+        output.write("q\tchr4\t\t\t\t\t9933259999---\n\n")
 
         output.write("a\tscore=6636.0\n")
-        output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-        output.write("s\tB97.chr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n")
+        output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+        output.write("s\tchr6\t53310097\t40\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n")
 
     }
 }
@@ -673,21 +673,21 @@ fun createMAFFileWithEIQlines(outputFile: String) {
             output.write("##maf version=1 scoring=Tba.v8\n\n")
 
             output.write("a\tscore=23262.0\n")
-            output.write("s\tB73.chr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
-            output.write("s\tB97.chr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+            output.write("s\tchr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+            output.write("s\tchr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
 
             output.write("a\tscore=5062.0\n")
-            output.write("s\tB73.chr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
-            output.write("s\tB97.chr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n\n")
+            output.write("s\tchr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
+            output.write("s\tchr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n\n")
 
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t45\t - 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t - 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             // we need a chr10 in here to test sorting the maf records
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
         }
     }
@@ -701,39 +701,39 @@ fun createMAFFileWithEIQlines(outputFile: String) {
 
             //first genome
             output.write("a\tscore=23262.0\n")
-            output.write("s\tB73.chr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
-            output.write("s\tB97.chr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+            output.write("s\tchr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+            output.write("s\tchr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
 
             output.write("a\tscore=5062.0\n")
-            output.write("s\tB73.chr7\t450\t11\t+\t158545518\tTAAAGAT---GGGT\n")
-            output.write("s\tB97.chr4\t81444246\t11\t+\t 187371129\tTAAGGATCCC---T\n\n")
+            output.write("s\tchr7\t450\t11\t+\t158545518\tTAAAGAT---GGGT\n")
+            output.write("s\tchr4\t81444246\t11\t+\t 187371129\tTAAGGATCCC---T\n\n")
 
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             // we need a chr10 in here to test sorting the maf records
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             //second genome, same as the first
             output.write("a\tscore=23262.0\n")
-            output.write("s\tB73.chr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
-            output.write("s\tB97.chr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+            output.write("s\tchr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+            output.write("s\tchr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
 
             output.write("a\tscore=5062.0\n")
-            output.write("s\tB73.chr7\t450\t11\t+\t158545518\tTAAAGAT---GGGT\n")
-            output.write("s\tB97.chr4\t81444246\t11\t+\t 187371129\tTAAGGATCCC---T\n\n")
+            output.write("s\tchr7\t450\t11\t+\t158545518\tTAAAGAT---GGGT\n")
+            output.write("s\tchr4\t81444246\t11\t+\t 187371129\tTAAGGATCCC---T\n\n")
 
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             // we need a chr10 in here to test sorting the maf records
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tB97.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
         }
     }
@@ -772,35 +772,35 @@ fun createNsMAFFile(outputFile: String) {
             // NO overlapping entries for this one, so initial gvcf 2 will not have any chr1 entries.
             // All entries should be added when we process the gaps.
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr1\t0\t42\t+\t59\tAG---GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tCML103.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr1\t0\t42\t+\t59\tAG---GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             output.write("a\tscore=23262.0\n")
-            output.write("s\tB73.chr7\t12\t38\t+\t461\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
-            output.write("s\tCML103.chr4\t81344243\t41\t+\t187371129\t-AATGGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+            output.write("s\tchr7\t12\t38\t+\t461\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+            output.write("s\tchr4\t81344243\t41\t+\t187371129\t-AATGGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
 
             // overlaps chr9 alignment above.  Note the corresponding REF sequence matches where the positions overlap
             // IE - the ref sequence is consistent in the 2 MAF entries where the positions overlap
             output.write("a\tscore=23260.0\n")
-            output.write("s\tB73.chr7\t20\t40\t+\t461\tTGTTAACCAAATGA---ATTGTCTCTTACGGTGCACACTTGTA\n")
-            output.write("s\tCML103.chr4\t81344243\t41\t+\t187371129\tTGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG--CACTTGTA\n\n")
+            output.write("s\tchr7\t20\t40\t+\t461\tTGTTAACCAAATGA---ATTGTCTCTTACGGTGCACACTTGTA\n")
+            output.write("s\tchr4\t81344243\t41\t+\t187371129\tTGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG--CACTTGTA\n\n")
 
             // nothing overlaps this one
             output.write("a\tscore=5062.0\n")
-            output.write("s\tB73.chr7\t450\t11\t+\t461\tTAAAGAT---GGGT\n")
-            output.write("s\tCML103.chr4\t81444246\t11\t+\t187371129\tTAAGGATCCCG--T\n\n")
+            output.write("s\tchr7\t450\t11\t+\t461\tTAAAGAT---GGGT\n")
+            output.write("s\tchr4\t81444246\t11\t+\t187371129\tTAAGGATCCCG--T\n\n")
 
 
             // we need a chr10 in here to test sorting the maf records. Note the corresponding REF sequence matches where the positions overla
             // IE - the ref sequence is consistent in the 2 MAF entries where the positions overlap
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr10\t0\t42\t+\t59\tAG---GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
-            output.write("s\tCML103.chr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+            output.write("s\tchr10\t0\t42\t+\t59\tAG---GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             // this one overlaps chr10 entry above. Note the corresponding REF sequence matches where the positions overla
             output.write("a\tscore=6636.0\n")
-            output.write("s\tB73.chr10\t13\t38\t+\t59\tCAGTCAATCTTACACACTTGGGGCCTACTGGGCCTACT\n")
-            output.write("s\tCML103.chr6\t436789\t38\t + 151104725\tCACTGAAAATATCAATCTTACACACTTGGGGCCTATCT\n\n")
+            output.write("s\tchr10\t13\t38\t+\t59\tCAGTCAATCTTACACACTTGGGGCCTACTGGGCCTACT\n")
+            output.write("s\tchr6\t436789\t38\t + 151104725\tCACTGAAAATATCAATCTTACACACTTGGGGCCTATCT\n\n")
 
         }
     }

@@ -408,7 +408,7 @@ class MAFToGVCF {
      */
     fun buildTempVariants(refSequence: Map<String, NucSeq>, mafRecord: MAFRecord): List<AssemblyVariantInfo> {
         //Build a list of VariantInfos for each alignment state
-        val chrom = mafRecord.refRecord.chromName.split(".").last()
+        val chrom = mafRecord.refRecord.chromName
 
         val refAlignment = mafRecord.refRecord.alignment
         val altAlignment = mafRecord.altRecord.alignment
@@ -424,7 +424,7 @@ class MAFToGVCF {
         var currentASMBp = if(asmStrand == "-") {mafRecord.altRecord.start + mafRecord.altRecord.size -1  }
         else {mafRecord.altRecord.start}//position in the alt sequence.  That is alignment bp minus dashes for ASM line
 
-        val asmChrom = mafRecord.altRecord.chromName.split(".").last()
+        val asmChrom = mafRecord.altRecord.chromName
         var currentRefBlockBoundaries = Pair(-1, -1)
         var currentAsmBlockBoundaries = Pair(-1, -1)
 
