@@ -3,7 +3,9 @@ package biokotlin.genome
 import biokotlin.util.bufferedReader
 import biokotlin.util.bufferedWriter
 import biokotlin.util.createGenericVCFHeaders
+import com.google.common.collect.Range
 import com.google.common.collect.RangeMap
+import com.google.common.collect.TreeRangeMap
 import htsjdk.variant.variantcontext.writer.Options
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.*
@@ -411,6 +413,19 @@ suspend fun processGVCFOutputBatch(
             }
         }
     }
+}
+
+private fun buildRangeMap(graph: HaplotypeGraph): RangeMap<Position, PositionRange> {
+    val rangeMap = TreeRangeMap.create<Position, PositionRange>()
+    for (refRange in graph.referenceRanges()) {
+        rangeMap.put(
+            Range.closed(
+                Position.of(refRange.chromosome(), refRange.start()),
+                Position.of(refRange.chromosome(), refRange.end())
+            ), refRange
+        )
+    }
+    return rangeMap
 }
 
 private fun writeOutHeaderFile(outputFile: String, taxaList: List<String>) {
