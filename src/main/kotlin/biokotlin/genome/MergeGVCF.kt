@@ -22,23 +22,6 @@ data class SimpleVariant(
     val altAllele: String
 )
 
-open class ReferenceRange(val chr: String, val start: Int, val end: Int) : Comparable<ReferenceRange> {
-    override fun compareTo(other: ReferenceRange): Int {
-        return if (this.chr == other.chr) {
-            this.start - other.start
-        } else {
-            try {
-                this.chr.toInt() - other.chr.toInt()
-            } catch (e: NumberFormatException) {
-                // If we can't convert to an int, we will just compare the strings
-                this.chr.compareTo(other.chr)
-            }
-        }
-    }
-}
-
-class Position(chr: String, val position: Int) : ReferenceRange(chr, position, position)
-
 fun mergeGVCF(gvcfDir: String, outputVCF: String) {
 
     val gvcfFiles = File(gvcfDir).walk().filter { it.extension == "g.vcf" }
@@ -101,7 +84,7 @@ private fun buildVariantsAssumeRefMultithread(
 
     val refRangeToPathStTime = System.nanoTime()
     // Convert the paths to the needed file:
-    // Map<ReferenceRange, Map<taxon: String, List<HaplotypeNode>>>
+    // Map<PositionRange, Map<taxon: String, List<HaplotypeNode>>>
     val refRangeToPathMap = convertPathsToRefRangeMap(paths)
     val refRangeToPathEndTime = System.nanoTime()
     println("Time Spent Building RangeMap: ${(refRangeToPathEndTime - refRangeToPathStTime) / 1E9} seconds.")
@@ -278,9 +261,9 @@ private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
 
 }
 
-private fun convertPathsToRefRangeMap(paths: Map<String, List<List<HaplotypeNode>>>): Map<ReferenceRange, Map<String, List<HaplotypeNode>>> {
+private fun convertPathsToRefRangeMap(paths: Map<String, List<List<HaplotypeNode>>>): Map<PositionRange, Map<String, List<HaplotypeNode>>> {
 
-    val outputMap = mutableMapOf<ReferenceRange, MutableMap<String, MutableList<HaplotypeNode>>>()
+    val outputMap = mutableMapOf<PositionRange, MutableMap<String, MutableList<HaplotypeNode>>>()
 
     for ((taxon, path) in paths) {
         for (gametePath in path) {
@@ -307,8 +290,8 @@ private fun outputBatchesOfSNPs(
     taxaList: List<String>,
     gvcfFileNameToIndexInByteArray: Map<String, Int>,
     alleleLookup: Map<Byte, String>,
-    refRangePathMap: Map<ReferenceRange, Map<String, List<HaplotypeNode>>>,
-    rangeMap: RangeMap<Position, ReferenceRange>,
+    refRangePathMap: Map<PositionRange, Map<String, List<HaplotypeNode>>>,
+    rangeMap: RangeMap<Position, PositionRange>,
     refSeq: GenomeSequence,
     makeDiploid: Boolean = true
 ) {
@@ -356,8 +339,8 @@ suspend fun processGVCFOutputBatch(
     snpMap: Map<Position, ByteArray>,
     gvcfFileNameToIndexInByteArray: Map<String, Int>,
     alleleLookup: Map<Byte, String>,
-    refRangePathMap: Map<ReferenceRange, Map<String, List<HaplotypeNode>>>,
-    rangeMap: RangeMap<Position, ReferenceRange>,
+    refRangePathMap: Map<PositionRange, Map<String, List<HaplotypeNode>>>,
+    rangeMap: RangeMap<Position, PositionRange>,
     refSeq: GenomeSequence,
     makeDiploid: Boolean
 ) = withContext(Dispatchers.Default) {
