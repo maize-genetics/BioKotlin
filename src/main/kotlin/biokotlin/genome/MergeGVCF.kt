@@ -371,12 +371,12 @@ suspend fun processGVCFOutputBatch(
                     .filter { it != "REF" && it != "N" }
                     .toSet()
 
-                val refAllele = refSeq.genotypeAsString(variantPos.chromosome, variantPos.position)
+                val refAllele = refSeq.genotypeAsString(variantPos.contig, variantPos.position)
 
                 val alleleToIdMap = altAlleles.mapIndexed { index, s -> Pair(s, index + 1) }.toMap()
 
                 writer.write(
-                    "${variantPos.chromosome.name}\t${variantPos.position}\t.\t${refAllele}\t${
+                    "${variantPos.contig}\t${variantPos.position}\t.\t${refAllele}\t${
                         altAlleles.joinToString(
                             ","
                         )
