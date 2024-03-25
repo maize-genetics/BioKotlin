@@ -5,10 +5,7 @@ import biokotlin.seq.NucSeq
 import biokotlin.util.bufferedReader
 import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.samtools.SAMSequenceRecord
-import htsjdk.variant.variantcontext.Allele
-import htsjdk.variant.variantcontext.GenotypeBuilder
-import htsjdk.variant.variantcontext.VariantContext
-import htsjdk.variant.variantcontext.VariantContextBuilder
+import htsjdk.variant.variantcontext.*
 import htsjdk.variant.variantcontext.writer.Options
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.*
@@ -109,9 +106,14 @@ class MAFToGVCF {
         }
         check(maxDeletionSize >= 0) {"maxDeletion size must be non-negative. Current value is $maxDeletionSize"}
 
+        // Need to give the comparator a list of contigs - Create this list from the reference sequence
+        val contigList = refSeqs.keys.toList().sorted()
         if (variantsMap.size == 1) {
             val sampleName = variantsMap.keys.first()
-            val variants = variantsMap.values.first()
+
+            // sort the variants by contig and position.
+            val variants = variantsMap.values.first().sortedWith(VariantContextComparator(contigList))
+
             exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
             if (compressAndIndex) {
                 // compress and index the file with bgzip and tabix.
@@ -120,7 +122,8 @@ class MAFToGVCF {
         } else if (variantsMap.size == 2) {
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
-                val outputFile = exportVariantContext(name, variants, outputNames[index], refSeqs)
+                val sortedVariants = variants.sortedWith(VariantContextComparator(contigList))
+                val outputFile = exportVariantContext(name, sortedVariants, outputNames[index], refSeqs)
                 if (compressAndIndex) {
                     compressAndIndexFile(outputNames[index])
                 }
