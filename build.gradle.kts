@@ -37,6 +37,7 @@ plugins {
     //https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
+    application
     id("org.jetbrains.dokka") version "1.6.21"
     `java-library`
     `maven-publish`
@@ -50,6 +51,7 @@ apply {
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
     maven("https://maven.imagej.net/content/groups/public/")
     maven("https://jitpack.io")
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
@@ -125,6 +127,13 @@ tasks.withType<KotlinCompile>().configureEach {
 
 tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
+}
+
+application {
+    mainClass.set("biokotlin.cli.BioKotlin")
+
+    // Set name of generated scripts in bin/
+    applicationName = "biokotlin"
 }
 
 /**
@@ -347,6 +356,11 @@ tasks.test {
         events("passed", "skipped", "failed")
     }
 }
+
+tasks.jar {
+    from(sourceSets.main.get().output)
+}
+
 
 publishing {
     publications {
