@@ -212,7 +212,7 @@ class MAFToGVCFTest : StringSpec({
         // THis tests the cli version of the MAFToGVCF converter
         val mafToGcfConverter = MafToGvcfConverter()
         val result =
-            mafToGcfConverter.test("--maf-file ${mafFile} --output-file ${outputFile} --reference-file ${refFile} --sample-name ${sampleName} -c")
+            mafToGcfConverter.test("--maf-file ${mafFile} --output-file ${outputFile} --reference-file ${refFile} --sample-name ${sampleName} --compress-off")
 
         assertEquals(0, result.statusCode)
         val truthVariantIterator = VCFFileReader(File(truthGVCFFile),false).iterator()
