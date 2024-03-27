@@ -62,7 +62,7 @@ repositories {
 dependencies {
     val kotlinVersion = rootProject.extra["kotlinVersion"]
 
-    implementation("com.github.ajalt.clikt:clikt:4.2.0")
+    implementation("com.github.ajalt.clikt:clikt:4.2.2")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
