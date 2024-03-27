@@ -10,7 +10,7 @@ version = "0.13"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.9.10")
+    val kotlinVersion by extra("1.9.10")
 
     repositories {
         mavenCentral()
@@ -136,7 +136,6 @@ tasks {
  */
 application {
     mainClass.set("biokotlin.cli.BioKotlinKt")
-    mainClassName = "biokotlin.cli.BioKotlinKt"
 
     // Set name of generated scripts in bin/
     applicationName = "biokotlin"
