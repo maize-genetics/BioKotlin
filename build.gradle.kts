@@ -129,9 +129,14 @@ tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
 }
 
+/**
+ * I can only get this to work if I use "mainClassName", even though
+ * the documentation says to use "mainClass". Without "mainClassName" I
+ * get an error that the main class is not set.
+ */
 application {
     mainClass.set("biokotlin.cli.BioKotlinKt")
-    mainClassName = "BioKotlinKt"
+    mainClassName = "biokotlin.cli.BioKotlinKt"
 
     // Set name of generated scripts in bin/
     applicationName = "biokotlin"
