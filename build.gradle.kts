@@ -350,7 +350,7 @@ val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
     mustRunAfter(dokkaHtml)
     group = JavaBasePlugin.DOCUMENTATION_GROUP
-    description = "BioKotlin: ${property("version")}"
+    description = "BioKotlin: ${project.version}"
     archiveClassifier.set("javadoc")
     from(dokkaHtml.outputDirectory)
 }
