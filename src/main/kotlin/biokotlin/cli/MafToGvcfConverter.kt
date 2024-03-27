@@ -8,7 +8,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.int
 
-class MafToGvcfConverter: CliktCommand(help="Create a GVCF file from a MAF file"){
+class MafToGvcfConverter : CliktCommand(help = "Create a GVCF file from a MAF file") {
     val referenceFile by option(help = "Path to local Reference FASTA file")
         .default("")
         .validate {
@@ -42,24 +42,32 @@ class MafToGvcfConverter: CliktCommand(help="Create a GVCF file from a MAF file"
         }
 
     // For the flag options that default to false:  if you include the flag, the value is true, if you do not include the flag, the value is false
-    val fillGaps by option("-f",help = "Defaults to FALSE: If true, and the maf file does not fully cover the reference genome, any gaps\n" +
-            " *     in coverage will be filled in with reference blocks.")
-        .flag(default=false)
+    val fillGaps by option(
+        "-f",
+        help = "Defaults to FALSE: If true, and the maf file does not fully cover the reference genome, any gaps\n" +
+                " *     in coverage will be filled in with reference blocks."
+    )
+        .flag(default = false)
 
     val twoGvcfs by option(help = "Defaults to FALSE: Output just the GT flag.  If set to false(default) will output DP, AD and PL fields")
-        .flag(default=false)
+        .flag(default = false)
 
     val delAsSymbolic by option(help = "Defaults to FALSE: If true, deletions larger than maxDeletionSize (see below) will be represented with the symbolic allele <DEL>.")
-        .flag(default=false)
+        .flag(default = false)
 
-    val outJustGT by option(help = "Defaults to FALSE: If true, it indicates the input maf was created from a diploid alignment and should\n" +
-            " *     be used to create two separate gVCF files")
-        .flag(default=false)
+    val outJustGT by option(
+        help = "Defaults to FALSE: If true, it indicates the input maf was created from a diploid alignment and should\n" +
+                " *     be used to create two separate gVCF files"
+    )
+        .flag(default = false)
 
     // For the flag options that default to TRUE- if you include the flag, the value is TRUE. if you do not include the flag, the value is true
     // You must use the secondary name (here it is the --compress-off flag) to set the value to false.
-    val compressAndIndex by option( "-c",help = "Defaults to TRUE: Run bgzip and bcftools index -c on the output file. if bgzip and bcftools are not on the system path, this will fail")
-        .flag("--compress-off",default = true)
+    val compressAndIndex by option(
+        "-c",
+        help = "Defaults to TRUE: Run bgzip and bcftools index -c on the output file. if bgzip and bcftools are not on the system path, this will fail"
+    )
+        .flag("--compress-off", default = true)
 
     val outputType by option(help = "Type of dataset to export: choices are gvcf or vcf, defaults to gvcf")
         .default("gvcf")
