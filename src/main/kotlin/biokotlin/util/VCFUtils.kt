@@ -1,6 +1,21 @@
 package biokotlin.util
 
 import htsjdk.variant.vcf.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+
+/**
+ * Data class to represent a simple VCF variant
+ */
+data class SimpleVariant(
+    val chr: String,
+    val start: Int,
+    val end: Int,
+    val refAllele: String,
+    val altAllele: String
+)
 
 /**
  * Function creates generic headers for a g/VCF file
@@ -45,5 +60,80 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
     headerLines.add(VCFInfoHeaderLine("ASM_Strand", 1, VCFHeaderLineType.String, "Assembly strand"))
 
     return VCFHeader(headerLines, taxaNames)
+
+}
+
+fun parseGVCFFile2(gvcfFile: String): Sequence<SimpleVariant> {
+    bufferedReader(gvcfFile).useLines { lines ->
+        return lines
+            .filter { !it.startsWith("#") }
+            .map { parseSingleGVCFLine(it) }
+    }
+}
+
+fun parseGVCFFile(gvcfFile: String): Channel<SimpleVariant> {
+
+    val channel = Channel<SimpleVariant>(100)
+    CoroutineScope(Dispatchers.IO).launch {
+
+        bufferedReader(gvcfFile).useLines { lines ->
+            lines
+                .filter { !it.startsWith("#") }
+                .map { parseSingleGVCFLine(it) }
+                .forEach { channel.send(it) }
+            channel.close()
+        }
+
+    }
+    return channel
+
+}
+
+/**
+ * Function to parse a gVCF line into a SimpleVariant object
+ */
+private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
+
+    val lineSplit = currentLine.split("\t")
+    // Need to check for indel / refblock
+    val chrom = lineSplit[0]
+    val start = lineSplit[1].toInt()
+    val refAllele = lineSplit[3]
+    val altAlleles = lineSplit[4].split(",").filter { it != "<NON_REF>" }
+    val infos = lineSplit[7].split(";")
+    val endAnno = infos.filter { it.startsWith("END") }
+    val end = if (endAnno.size == 1) {
+        endAnno.first().split("=")[1].toInt()
+    } else {
+        start
+    }
+    val genotype = lineSplit[9].split(":")
+    val gtCall = genotype.first()
+
+    if (refAllele.length == 1 && altAlleles.isEmpty()) {
+        // refBlock
+        return SimpleVariant(chrom, start, end, refAllele, "")
+    } else if (refAllele.length == 1 && altAlleles.first().length == 1) {
+        // SNP
+        if (gtCall == "0" || gtCall == "0/0" || gtCall == "0|0") {
+            // Monomorphic, treat like refBlock
+            return SimpleVariant(chrom, start, end, refAllele, "")
+
+        } else if (gtCall == "1" || gtCall == "1/1" || gtCall == "1|1") {
+            // True homozygous SNP
+            return SimpleVariant(chrom, start, end, refAllele, altAlleles.first())
+        } else {
+            // likely het, can skip for now.
+        }
+    } else {
+        // indel or something abnormal, can ignore for now
+        return if (refAllele.length > altAlleles.first().length) {
+            // DEL
+            SimpleVariant(chrom, start, end, refAllele, "<DEL>")
+        } else {
+            SimpleVariant(chrom, start, end, refAllele, "<INS>")
+        }
+    }
+    return SimpleVariant("", -1, -1, "", "")
 
 }
