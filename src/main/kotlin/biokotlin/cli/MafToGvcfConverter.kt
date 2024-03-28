@@ -8,6 +8,12 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.int
 
+/**
+ * This class is a subclass of CliktCommand and is used to create a GVCF file from a MAF file.
+ * It provides users a means of access to BioKotlin's MAFToGVCF functionality from the command line.
+ *
+ * Any file restrictions from the MAFToGVCF class are relevant here.
+ */
 class MafToGvcfConverter : CliktCommand(help = "Create a GVCF file from a MAF file") {
     val referenceFile by option(help = "Path to local Reference FASTA file")
         .default("")
