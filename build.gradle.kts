@@ -10,7 +10,7 @@ version = "0.13"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra ("1.9.10")
+    val kotlinVersion by extra("1.9.10")
 
     repositories {
         mavenCentral()
@@ -31,12 +31,13 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
     // Shadow allows for the creation of fat jars (all dependencies)
-    id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 
     //This is used for code generation for DataFrame Schema, however, it does not work
     //https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
+    application
     id("org.jetbrains.dokka") version "1.6.21"
     `java-library`
     `maven-publish`
@@ -50,6 +51,7 @@ apply {
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
     maven("https://maven.imagej.net/content/groups/public/")
     maven("https://jitpack.io")
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
@@ -59,6 +61,8 @@ repositories {
 
 dependencies {
     val kotlinVersion = rootProject.extra["kotlinVersion"]
+
+    implementation("com.github.ajalt.clikt:clikt:4.2.2")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
@@ -123,6 +127,13 @@ tasks.withType<KotlinCompile>().configureEach {
 
 tasks {
     println("Source directories: ${sourceSets["main"].allSource.srcDirs}")
+}
+
+application {
+    mainClass.set("biokotlin.cli.BioKotlinKt")
+
+    // Set name of generated scripts in bin/
+    applicationName = "biokotlin"
 }
 
 /**
@@ -334,7 +345,7 @@ val dokkaJar by tasks.creating(Jar::class) {
     dependsOn(dokkaHtml)
     mustRunAfter(dokkaHtml)
     group = JavaBasePlugin.DOCUMENTATION_GROUP
-    description = "BioKotlin: ${property("version")}"
+    description = "BioKotlin: ${project.version}"
     archiveClassifier.set("javadoc")
     from(dokkaHtml.outputDirectory)
 }
@@ -345,6 +356,11 @@ tasks.test {
         events("passed", "skipped", "failed")
     }
 }
+
+tasks.jar {
+    from(sourceSets.main.get().output)
+}
+
 
 publishing {
     publications {
