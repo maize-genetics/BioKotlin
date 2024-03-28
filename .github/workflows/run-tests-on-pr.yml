@@ -24,7 +24,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2.4.2
         with:
-          gradle-version: 7.6
+          gradle-version: 8.7
           generate-job-summary: false
       - run: gradle build
       - name: Publish Test Report

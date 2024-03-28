@@ -1,3 +1,4 @@
+import biokotlin.cli.MafToGvcfConverter
 import biokotlin.genome.MAFToGVCF
 import biokotlin.genome.SeqRangeSort
 import biokotlin.genome.getMAFblocks
@@ -7,6 +8,9 @@ import io.kotest.assertions.fail
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import java.io.File
+import com.github.ajalt.clikt.testing.test
+import org.junit.jupiter.api.Assertions.assertEquals
+
 
 data class Position (val contig: String, val position: Int) : Comparable<Position> {
     override fun compareTo(other: Position): Int {
@@ -16,6 +20,7 @@ data class Position (val contig: String, val position: Int) : Comparable<Positio
         return this.contig.compareTo(other.contig)
     }
 }
+
 
 class MAFToGVCFTest : StringSpec({
     val sampleName = "B97"
@@ -106,6 +111,8 @@ class MAFToGVCFTest : StringSpec({
     createNsMAFFile(mafFileNs)
     createTruthNs(truthGVCFFileNs)
 
+
+
     "Test sorting alpha and numeric" {
         //val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
         var records = mutableListOf<String>("1A","2A","10B", "10A", "2B","1B")
@@ -156,7 +163,103 @@ class MAFToGVCFTest : StringSpec({
         mafEQblocks.get(1).size shouldBe 4 // second entry 2 has 4 lines
 
     }
+
+    "Test MAFToGVCFConverter CLI clikt parameters" {
+        // THis tests the cli version of the MAFToGVCF converter
+
+        // Test missing reference file
+        val createMAFToGVCF = MafToGvcfConverter()
+        val missingRefFile =
+            createMAFToGVCF.test("--maf-file ${mafFile}, --output-file ${outputFile}, --sample-name ${sampleName}")
+        assertEquals(missingRefFile.statusCode, 1)
+        assertEquals(
+            "Usage: maf-to-gvcf-converter [<options>]\n" +
+                    "\n" +
+                    "Error: invalid value for --reference-file: --reference-file must not be blank\n", missingRefFile.output
+        )
+
+        // Test missing outputFile
+        val resultMissingOutput =
+            createMAFToGVCF.test("--maf-file ${mafFile}  --reference-file ${refFile} --sample-name ${sampleName}")
+        assertEquals(resultMissingOutput.statusCode, 1)
+        assertEquals(
+            "Usage: maf-to-gvcf-converter [<options>]\n" +
+                    "\n" +
+                    "Error: invalid value for --output-file: --output-file/-o must not be blank\n", resultMissingOutput.output
+        )
+
+        // Test missing mafFile
+        val resultMissingMaf =
+            createMAFToGVCF.test("--output-file ${outputFile}  --reference-file ${refFile} --sample-name ${sampleName}")
+        assertEquals(resultMissingMaf.statusCode, 1)
+        assertEquals(
+            "Usage: maf-to-gvcf-converter [<options>]\n" +
+                    "\n" +
+                    "Error: invalid value for --maf-file: --maf-file must not be blank\n", resultMissingMaf.output
+        )
+
+        // Test missing sampleName
+        val resultMissingSampleName =
+            createMAFToGVCF.test("--output-file ${outputFile}  --reference-file ${refFile} --maf-file ${mafFile}")
+        assertEquals(resultMissingSampleName.statusCode, 1)
+        assertEquals(
+            "Usage: maf-to-gvcf-converter [<options>]\n" +
+                    "\n" +
+                    "Error: invalid value for --sample-name: --sample-name must not be blank\n", resultMissingSampleName.output
+        )
+    }
+    "Test MAFToGVCF called from clikt" {
+        // THis tests the cli version of the MAFToGVCF converter
+        val mafToGcfConverter = MafToGvcfConverter()
+        val result =
+            mafToGcfConverter.test("--maf-file ${mafFile} --output-file ${outputFile} --reference-file ${refFile} --sample-name ${sampleName} --compress-off")
+
+        assertEquals(0, result.statusCode)
+        val truthVariantIterator = VCFFileReader(File(truthGVCFFile),false).iterator()
+        val truthVariants = mutableListOf<VariantContext>()
+        while(truthVariantIterator.hasNext()) {
+            truthVariants.add(truthVariantIterator.next())
+        }
+        val truthMap = truthVariants.associateBy { Position(it.contig, it.start) }
+
+        val outputVariantIterator = VCFFileReader(File(outputFile), false).iterator()
+        val outputVariants = mutableListOf<VariantContext>()
+        while(outputVariantIterator.hasNext()) {
+            outputVariants.add(outputVariantIterator.next())
+        }
+
+        //mafBlocks.size shouldBe 4
+        outputVariants.size shouldBe truthVariants.size
+
+        for(variant in outputVariants) {
+            if(!truthMap.containsKey(Position(variant.contig, variant.start))) {
+                fail("No matching variant found: ${variant.contig}:${variant.start}")
+            }
+            val matchingTruth = truthMap[Position(variant.contig, variant.start)]!!
+
+            //Check END
+            variant.end shouldBe matchingTruth.end
+            //Check alleles
+            variant.alleles.toTypedArray() contentEquals matchingTruth.alleles.toTypedArray() shouldBe true
+            //Check GT
+            (matchingTruth.getGenotype(0).genotypeString == variant.getGenotype(0).genotypeString) shouldBe true
+            //Check AD
+            (matchingTruth.getGenotype(0).ad contentEquals variant.getGenotype(0).ad) shouldBe true
+            //Check ASM Contig
+            (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
+            //Check ASM Start
+            (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
+            //Check ASM END
+            (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
+            //Check ASM Strand
+            (matchingTruth.getAttribute("ASM_Strand") == variant.getAttribute("ASM_Strand")) shouldBe true
+
+        }
+
+    }
+
     "testSimpleMAFs" {
+        println("using mafFile ${mafFile}")
         MAFToGVCF().createGVCFfromMAF(mafFile,refFile,outputFile,sampleName,fillGaps=false,compressAndIndex=false)
 
         val truthVariantIterator = VCFFileReader(File(truthGVCFFile),false).iterator()
