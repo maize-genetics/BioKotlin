@@ -3,6 +3,17 @@ package biokotlin.util
 import htsjdk.variant.vcf.*
 
 /**
+ * Data class to represent a simple VCF variant
+ */
+data class SimpleVariant(
+    val chr: String,
+    val start: Int,
+    val end: Int,
+    val refAllele: String,
+    val altAllele: String
+)
+
+/**
  * Function creates generic headers for a g/VCF file
  */
 fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
