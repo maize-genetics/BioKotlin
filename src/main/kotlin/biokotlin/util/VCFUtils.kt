@@ -32,8 +32,12 @@ data class SimpleVariant(
 
     fun isRefBlock() = refAllele.length == 1 && altAllele.isEmpty()
 
-    fun isSNP() = refAllele.length == 1 && altAllele.first().length == 1
-
+    fun isSNP(): Boolean {
+        if (refAllele.length != 1) return false
+        altAllele.find { it.length != 1 }?.let { return false }
+        return true
+    }
+    
     fun isIndel() = refAllele.length > 1 || altAllele.first().length > 1
 
     fun isDEL() = refAllele.length > altAllele.first().length
