@@ -20,3 +20,22 @@ data class Position(val contig: String, val position: Int) : Comparable<Position
     }
 
 }
+
+data class PositionRange(val start: Position, val end: Position) : Comparable<PositionRange> {
+
+    init {
+        require(start.contig == end.contig) { "Start and end positions must be on the same contig." }
+        require(start.position <= end.position) { "Start position must be less than or equal to end position." }
+    }
+
+    val contig = start.contig
+
+    override fun compareTo(other: PositionRange): Int {
+        return start.compareTo(other.start)
+    }
+
+    override fun toString(): String {
+        return "${start.contig}:${start.position}-${end.position}"
+    }
+
+}
