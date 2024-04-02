@@ -38,7 +38,10 @@ data class SimpleVariant(
         return true
     }
 
-    fun isIndel() = refAllele.length > 1 || altAllele.first().length > 1
+    fun isIndel(): Boolean {
+        altAllele.find { it.length != refAllele.length }?.let { return true }
+        return false
+    }
 
     fun isDEL(): Boolean {
         altAllele.find { refAllele.length > it.length }?.let { return true }
