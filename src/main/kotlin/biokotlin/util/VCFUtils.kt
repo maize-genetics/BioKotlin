@@ -90,6 +90,9 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 
 }
 
+/**
+ * Function to parse a VCF file into a map of ALT headers and a channel of SimpleVariant objects.
+ */
 fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
 
     val headerMetaData = VCFFileReader(File(filename), false).use { reader ->
