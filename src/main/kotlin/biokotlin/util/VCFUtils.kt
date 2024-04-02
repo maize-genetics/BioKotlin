@@ -19,6 +19,13 @@ data class SimpleVariant(
     val refAllele: String,
     val altAllele: List<String>
 ) {
+
+    init {
+        require(start >= 1) { "Start position must be greater than or equal to 1." }
+        require(end >= 1) { "End position must be greater than or equal to 1." }
+        require(start <= end) { "Start position must be less than or equal to end position." }
+    }
+
     override fun toString(): String {
         return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele')"
     }
