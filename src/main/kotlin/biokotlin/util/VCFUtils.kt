@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Data class to represent a simple VCF variant
@@ -89,7 +90,11 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 
 }
 
-fun parseGVCFFile(gvcfFile: String): Channel<SimpleVariant> {
+fun parseGVCFFile(gvcfFile: String): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
+
+    val headerMetaData = VCFFileReader(File(gvcfFile), false).use { reader ->
+        parseALTHeader(reader.fileHeader)
+    }
 
     val channel = Channel<SimpleVariant>(100)
     CoroutineScope(Dispatchers.IO).launch {
@@ -103,7 +108,7 @@ fun parseGVCFFile(gvcfFile: String): Channel<SimpleVariant> {
         }
 
     }
-    return channel
+    return headerMetaData to channel
 
 }
 
