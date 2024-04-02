@@ -1,6 +1,5 @@
 package biokotlin.util
 
-import biokotlin.terry.SimpleVariant
 import htsjdk.variant.vcf.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +15,13 @@ data class SimpleVariant(
     val end: Int,
     val refAllele: String,
     val altAllele: String
-)
+
+) {
+    override fun toString(): String {
+        return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele')"
+    }
+
+}
 
 /**
  * Function creates generic headers for a g/VCF file
