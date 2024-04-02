@@ -135,31 +135,7 @@ private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
     val genotype = lineSplit[9].split(":")
     val gtCall = genotype.first()
 
-    if (refAllele.length == 1 && altAlleles.isEmpty()) {
-        // refBlock
-        return SimpleVariant(chrom, start, end, refAllele, "")
-    } else if (refAllele.length == 1 && altAlleles.first().length == 1) {
-        // SNP
-        if (gtCall == "0" || gtCall == "0/0" || gtCall == "0|0") {
-            // Monomorphic, treat like refBlock
-            return SimpleVariant(chrom, start, end, refAllele, "")
-
-        } else if (gtCall == "1" || gtCall == "1/1" || gtCall == "1|1") {
-            // True homozygous SNP
-            return SimpleVariant(chrom, start, end, refAllele, altAlleles.first())
-        } else {
-            // likely het, can skip for now.
-        }
-    } else {
-        // indel or something abnormal, can ignore for now
-        return if (refAllele.length > altAlleles.first().length) {
-            // DEL
-            SimpleVariant(chrom, start, end, refAllele, "<DEL>")
-        } else {
-            SimpleVariant(chrom, start, end, refAllele, "<INS>")
-        }
-    }
-    return SimpleVariant("", -1, -1, "", "")
+    return SimpleVariant(chrom, start, end, refAllele, altAlleles)
 
 }
 
