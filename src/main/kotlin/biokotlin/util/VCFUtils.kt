@@ -30,6 +30,16 @@ data class SimpleVariant(
         return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele')"
     }
 
+    fun isRefBlock() = refAllele.length == 1 && altAllele.isEmpty()
+
+    fun isSNP() = refAllele.length == 1 && altAllele.first().length == 1
+
+    fun isIndel() = refAllele.length > 1 || altAllele.first().length > 1
+
+    fun isDEL() = refAllele.length > altAllele.first().length
+
+    fun isINS() = refAllele.length < altAllele.first().length
+
 }
 
 // Making Number a string as VCF allows for '.'
