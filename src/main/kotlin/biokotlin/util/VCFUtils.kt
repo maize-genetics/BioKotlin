@@ -17,8 +17,7 @@ data class SimpleVariant(
     val start: Int,
     val end: Int,
     val refAllele: String,
-    val altAllele: String
-
+    val altAllele: List<String>
 ) {
     override fun toString(): String {
         return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele')"
