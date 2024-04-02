@@ -90,16 +90,16 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 
 }
 
-fun parseGVCFFile(gvcfFile: String): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
+fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
 
-    val headerMetaData = VCFFileReader(File(gvcfFile), false).use { reader ->
+    val headerMetaData = VCFFileReader(File(filename), false).use { reader ->
         parseALTHeader(reader.fileHeader)
     }
 
     val channel = Channel<SimpleVariant>(100)
     CoroutineScope(Dispatchers.IO).launch {
 
-        bufferedReader(gvcfFile).useLines { lines ->
+        bufferedReader(filename).useLines { lines ->
             lines
                 .filter { !it.startsWith("#") }
                 .map { parseSingleGVCFLine(it) }
