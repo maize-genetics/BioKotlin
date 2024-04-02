@@ -2,6 +2,10 @@ package biokotlin.util
 
 import biokotlin.terry.SimpleVariant
 import htsjdk.variant.vcf.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 
 /**
  * Data class to represent a simple VCF variant
@@ -57,6 +61,24 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
     headerLines.add(VCFInfoHeaderLine("ASM_Strand", 1, VCFHeaderLineType.String, "Assembly strand"))
 
     return VCFHeader(headerLines, taxaNames)
+
+}
+
+fun parseGVCFFile(gvcfFile: String): Channel<SimpleVariant> {
+
+    val channel = Channel<SimpleVariant>(100)
+    CoroutineScope(Dispatchers.IO).launch {
+
+        bufferedReader(gvcfFile).useLines { lines ->
+            lines
+                .filter { !it.startsWith("#") }
+                .map { parseSingleGVCFLine(it) }
+                .forEach { channel.send(it) }
+            channel.close()
+        }
+
+    }
+    return channel
 
 }
 
