@@ -37,10 +37,14 @@ data class SimpleVariant(
         altAllele.find { it.length != 1 }?.let { return false }
         return true
     }
-    
+
     fun isIndel() = refAllele.length > 1 || altAllele.first().length > 1
 
-    fun isDEL() = refAllele.length > altAllele.first().length
+    fun isDEL(): Boolean {
+        val refLength = refAllele.length
+        altAllele.find { refLength > it.length }?.let { return true }
+        return false
+    }
 
     fun isINS() = refAllele.length < altAllele.first().length
 
