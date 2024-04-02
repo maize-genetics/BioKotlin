@@ -1,5 +1,7 @@
 package biokotlin.util
 
+import biokotlin.genome.Position
+import biokotlin.genome.SampleGamete
 import htsjdk.variant.vcf.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,24 @@ data class SimpleVariant(
         return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele')"
     }
 
+}
+
+// Making Number a string as VCF allows for '.'
+// id is the ID of the ALT header (i.e. sequence checksum or other unique identifier)
+// description is a description of the ALT header
+// source is the source of the sequence
+// sampleGamete is the sample name and gamete number
+// regions is a list of regions that the sequence is found in
+// checksum is the checksum of the sequence
+// refRange is the range of the reference sequence that the sequence is found in
+// refChecksum is the checksum of the reference sequence
+data class AltHeaderMetaData(
+    val id: String, val description: String, val source: String, val sampleGamete: SampleGamete,
+    val regions: List<Pair<Position, Position>>, val checksum: String, val refRange: String,
+    val refChecksum: String = ""
+) {
+    fun sampleName() = sampleGamete.name
+    fun gamete() = sampleGamete.gameteId
 }
 
 /**
