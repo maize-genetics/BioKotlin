@@ -4,13 +4,13 @@ data class Position(val contig: String, val position: Int) : Comparable<Position
 
     override fun compareTo(other: Position): Int {
         return if (this.contig == other.contig) {
-            this.position - other.position
+            position - other.position
         } else {
             try {
-                this.contig.toInt() - other.contig.toInt()
+                contig.toInt() - other.contig.toInt()
             } catch (e: NumberFormatException) {
                 // If we can't convert contigs to an int, then compare the strings
-                this.contig.compareTo(other.contig)
+                contig.compareTo(other.contig)
             }
         }
     }
@@ -21,21 +21,31 @@ data class Position(val contig: String, val position: Int) : Comparable<Position
 
 }
 
-data class PositionRange(val start: Position, val end: Position) : Comparable<PositionRange> {
+data class PositionRange(val contig: String, val start: Int, val end: Int) : Comparable<PositionRange> {
 
-    init {
+    constructor(start: Position, end: Position) : this(start.contig, start.position, end.position) {
         require(start.contig == end.contig) { "Start and end positions must be on the same contig." }
-        require(start.position <= end.position) { "Start position must be less than or equal to end position." }
     }
 
-    val contig = start.contig
+    init {
+        require(start <= end) { "Start position must be less than or equal to end position." }
+    }
 
     override fun compareTo(other: PositionRange): Int {
-        return start.compareTo(other.start)
+        return if (this.contig == other.contig) {
+            start - other.start
+        } else {
+            try {
+                contig.toInt() - other.contig.toInt()
+            } catch (e: NumberFormatException) {
+                // If we can't convert contigs to an int, then compare the strings
+                contig.compareTo(other.contig)
+            }
+        }
     }
 
     override fun toString(): String {
-        return "${start.contig}:${start.position}-${end.position}"
+        return "${contig}:${start}-${end}"
     }
 
 }
