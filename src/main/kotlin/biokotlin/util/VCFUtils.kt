@@ -21,9 +21,9 @@ data class SimpleVariant(
 ) {
 
     init {
-        require(start >= 1) { "Start position must be greater than or equal to 1." }
-        require(end >= 1) { "End position must be greater than or equal to 1." }
-        require(start <= end) { "Start position must be less than or equal to end position." }
+        require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
+        require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
+        require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
     }
 
     override fun toString(): String {
