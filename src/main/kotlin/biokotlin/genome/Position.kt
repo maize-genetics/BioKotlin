@@ -1,6 +1,14 @@
 package biokotlin.genome
 
+/**
+ * Data class to represent a position on a contig.
+ * Position is 1-based
+ */
 data class Position(val contig: String, val position: Int) : Comparable<Position> {
+
+    init {
+        require(position >= 1) { "Position must be greater than or equal to 1. Position: $position" }
+    }
 
     override fun compareTo(other: Position): Int {
         return if (this.contig == other.contig) {
@@ -28,7 +36,9 @@ data class PositionRange(val contig: String, val start: Int, val end: Int) : Com
     }
 
     init {
-        require(start <= end) { "Start position must be less than or equal to end position." }
+        require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
+        require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
+        require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
     }
 
     override fun compareTo(other: PositionRange): Int {
