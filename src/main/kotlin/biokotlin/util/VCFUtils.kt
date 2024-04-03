@@ -34,6 +34,8 @@ data class SimpleVariant(
         return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele', numSamples=${samples.size})"
     }
 
+    fun sample(index: Int) = samples[index]
+
     fun genotype(sample: String): List<String> {
         val sampleIndex = samples.indexOf(sample)
         if (genotypesSplit[sampleIndex].contains("|"))
