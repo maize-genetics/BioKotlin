@@ -162,7 +162,7 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
         bufferedReader(filename).useLines { lines ->
             lines
                 .filter { !it.startsWith("#") }
-                .forEach { channel.send(async { parseSingleGVCFLine(it, samples) }) }
+                .forEach { channel.send(async { parseSingleVCFLine(it, samples) }) }
             channel.close()
         }
 
@@ -172,9 +172,10 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
 }
 
 /**
- * Function to parse a gVCF line into a SimpleVariant object
+ * Function to parse a (g)VCF line into a SimpleVariant object
+ * #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  Sample1 Sample2
  */
-private fun parseSingleGVCFLine(currentLine: String, samples: List<String>): SimpleVariant {
+private fun parseSingleVCFLine(currentLine: String, samples: List<String>): SimpleVariant {
 
     val lineSplit = currentLine.split("\t")
     // Need to check for indel / refblock
