@@ -11,14 +11,14 @@ import java.io.File
  * Data class to represent a simple VCF variant
  */
 data class SimpleVariant(
-    val chr: String,
+    val contig: String,
     val start: Int,
     val end: Int,
     val refAllele: String,
     val altAllele: List<String>,
     val samples: List<String>,
     val genotypes: List<String>
-) {
+) : Comparable<SimpleVariant> {
 
     init {
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
@@ -27,7 +27,20 @@ data class SimpleVariant(
     }
 
     override fun toString(): String {
-        return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele', numSamples=${samples.size})"
+        return "SimpleVariant(contig='$contig', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele', numSamples=${samples.size})"
+    }
+
+    override fun compareTo(other: SimpleVariant): Int {
+        return if (contig == other.contig) {
+            start - other.start
+        } else {
+            try {
+                contig.toInt() - other.contig.toInt()
+            } catch (e: NumberFormatException) {
+                // If we can't convert contigs to an int, then compare the strings
+                this.contig.compareTo(other.contig)
+            }
+        }
     }
 
     fun sample(index: Int) = samples[index]
