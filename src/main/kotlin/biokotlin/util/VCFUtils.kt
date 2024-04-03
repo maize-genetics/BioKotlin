@@ -15,7 +15,7 @@ data class SimpleVariant(
     val start: Int,
     val end: Int,
     val refAllele: String,
-    val altAllele: List<String>,
+    val altAlleles: List<String>,
     val samples: List<String>,
     val genotypes: List<String>
 ) : Comparable<SimpleVariant> {
@@ -24,10 +24,11 @@ data class SimpleVariant(
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
         require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
+        require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
     }
 
     override fun toString(): String {
-        return "SimpleVariant(contig='$contig', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele', numSamples=${samples.size})"
+        return "SimpleVariant(contig='$contig', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAlleles', numSamples=${samples.size})"
     }
 
     override fun compareTo(other: SimpleVariant): Int {
@@ -58,26 +59,26 @@ data class SimpleVariant(
         return genotypes[sampleIndex].split("/")
     }
 
-    fun isRefBlock() = refAllele.length == 1 && altAllele.isEmpty()
+    fun isRefBlock() = refAllele.length == 1 && altAlleles.isEmpty()
 
     fun isSNP(): Boolean {
         if (refAllele.length != 1) return false
-        altAllele.find { it.length != 1 }?.let { return false }
+        altAlleles.find { it.length != 1 }?.let { return false }
         return true
     }
 
     fun isIndel(): Boolean {
-        altAllele.find { it.length != refAllele.length }?.let { return true }
+        altAlleles.find { it.length != refAllele.length }?.let { return true }
         return false
     }
 
     fun isDEL(): Boolean {
-        altAllele.find { refAllele.length > it.length }?.let { return true }
+        altAlleles.find { refAllele.length > it.length }?.let { return true }
         return false
     }
 
     fun isINS(): Boolean {
-        altAllele.find { refAllele.length < it.length }?.let { return true }
+        altAlleles.find { refAllele.length < it.length }?.let { return true }
         return false
     }
 
