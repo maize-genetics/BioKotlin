@@ -3,10 +3,8 @@ package biokotlin.util
 import biokotlin.genome.Position
 import biokotlin.genome.SampleGamete
 import htsjdk.variant.vcf.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -19,10 +17,8 @@ data class SimpleVariant(
     val refAllele: String,
     val altAllele: List<String>,
     val samples: List<String>,
-    val genotypes: String
+    val genotypes: List<String>
 ) {
-
-    private val genotypesSplit by lazy { genotypes.split(":") }
 
     init {
         require(start >= 1) { "Start position must be greater than or equal to 1." }
@@ -38,15 +34,15 @@ data class SimpleVariant(
 
     fun genotype(sample: String): List<String> {
         val sampleIndex = samples.indexOf(sample)
-        if (genotypesSplit[sampleIndex].contains("|"))
-            return genotypesSplit[sampleIndex].split("|")
-        return genotypesSplit[sampleIndex].split("/")
+        if (genotypes[sampleIndex].contains("|"))
+            return genotypes[sampleIndex].split("|")
+        return genotypes[sampleIndex].split("/")
     }
 
     fun genotype(sampleIndex: Int): List<String> {
-        if (genotypesSplit[sampleIndex].contains("|"))
-            return genotypesSplit[sampleIndex].split("|")
-        return genotypesSplit[sampleIndex].split("/")
+        if (genotypes[sampleIndex].contains("|"))
+            return genotypes[sampleIndex].split("|")
+        return genotypes[sampleIndex].split("/")
     }
 
     fun isRefBlock() = refAllele.length == 1 && altAllele.isEmpty()
@@ -141,21 +137,20 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 /**
  * Function to parse a VCF file into a map of ALT headers and a channel of SimpleVariant objects.
  */
-fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
+fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel<Deferred<SimpleVariant>>> {
 
     val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
         val metaData = parseALTHeader(reader.fileHeader)
         Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
-    val channel = Channel<SimpleVariant>(100)
+    val channel = Channel<Deferred<SimpleVariant>>(100)
     CoroutineScope(Dispatchers.IO).launch {
 
         bufferedReader(filename).useLines { lines ->
             lines
                 .filter { !it.startsWith("#") }
-                .map { parseSingleGVCFLine(it, samples) }
-                .forEach { channel.send(it) }
+                .forEach { channel.send(async { parseSingleGVCFLine(it, samples) }) }
             channel.close()
         }
 
@@ -183,7 +178,7 @@ private fun parseSingleGVCFLine(currentLine: String, samples: List<String>): Sim
         start
     }
 
-    val genotype = lineSplit[9]
+    val genotype = lineSplit[9].split(":")
 
     return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotype)
 
