@@ -48,9 +48,7 @@ data class SimpleVariant(
 
     fun genotype(sample: String): List<String> {
         val sampleIndex = samples.indexOf(sample)
-        if (genotypes[sampleIndex].contains("|"))
-            return genotypes[sampleIndex].split("|")
-        return genotypes[sampleIndex].split("/")
+        return genotype(sampleIndex)
     }
 
     fun genotype(sampleIndex: Int): List<String> {
