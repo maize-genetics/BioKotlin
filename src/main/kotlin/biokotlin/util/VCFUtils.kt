@@ -18,8 +18,11 @@ data class SimpleVariant(
     val end: Int,
     val refAllele: String,
     val altAllele: List<String>,
-    val samples: List<String>
+    val samples: List<String>,
+    val genotypes: String
 ) {
+
+    private val genotypesSplit by lazy { genotypes.split(":") }
 
     init {
         require(start >= 1) { "Start position must be greater than or equal to 1." }
@@ -29,6 +32,19 @@ data class SimpleVariant(
 
     override fun toString(): String {
         return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele', numSamples=${samples.size})"
+    }
+
+    fun genotype(sample: String): List<String> {
+        val sampleIndex = samples.indexOf(sample)
+        if (genotypesSplit[sampleIndex].contains("|"))
+            return genotypesSplit[sampleIndex].split("|")
+        return genotypesSplit[sampleIndex].split("/")
+    }
+
+    fun genotype(sampleIndex: Int): List<String> {
+        if (genotypesSplit[sampleIndex].contains("|"))
+            return genotypesSplit[sampleIndex].split("|")
+        return genotypesSplit[sampleIndex].split("/")
     }
 
     fun isRefBlock() = refAllele.length == 1 && altAllele.isEmpty()
@@ -164,10 +180,10 @@ private fun parseSingleGVCFLine(currentLine: String, samples: List<String>): Sim
     } else {
         start
     }
-    val genotype = lineSplit[9].split(":")
-    val gtCall = genotype.first()
 
-    return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples)
+    val genotype = lineSplit[9]
+
+    return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotype)
 
 }
 
