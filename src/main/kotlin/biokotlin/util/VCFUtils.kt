@@ -17,7 +17,8 @@ data class SimpleVariant(
     val start: Int,
     val end: Int,
     val refAllele: String,
-    val altAllele: List<String>
+    val altAllele: List<String>,
+    val samples: List<String>
 ) {
 
     init {
@@ -27,7 +28,7 @@ data class SimpleVariant(
     }
 
     override fun toString(): String {
-        return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele')"
+        return "SimpleVariant(chr='$chr', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAllele', numSamples=${samples.size})"
     }
 
     fun isRefBlock() = refAllele.length == 1 && altAllele.isEmpty()
@@ -124,8 +125,9 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
  */
 fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
 
-    val headerMetaData = VCFFileReader(File(filename), false).use { reader ->
-        parseALTHeader(reader.fileHeader)
+    val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
+        val metaData = parseALTHeader(reader.fileHeader)
+        Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
     val channel = Channel<SimpleVariant>(100)
@@ -134,7 +136,7 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
         bufferedReader(filename).useLines { lines ->
             lines
                 .filter { !it.startsWith("#") }
-                .map { parseSingleGVCFLine(it) }
+                .map { parseSingleGVCFLine(it, samples) }
                 .forEach { channel.send(it) }
             channel.close()
         }
@@ -147,7 +149,7 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
 /**
  * Function to parse a gVCF line into a SimpleVariant object
  */
-private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
+private fun parseSingleGVCFLine(currentLine: String, samples: List<String>): SimpleVariant {
 
     val lineSplit = currentLine.split("\t")
     // Need to check for indel / refblock
@@ -165,7 +167,7 @@ private fun parseSingleGVCFLine(currentLine: String): SimpleVariant {
     val genotype = lineSplit[9].split(":")
     val gtCall = genotype.first()
 
-    return SimpleVariant(chrom, start, end, refAllele, altAlleles)
+    return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples)
 
 }
 
