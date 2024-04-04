@@ -26,6 +26,11 @@ class VCFUtilsTest {
                     assert(simpleVariant.altAlleles.size == 1) { "Number of ALT alleles is not 1: ${simpleVariant.altAlleles.size}" }
                     assert(simpleVariant.altAlleles[0] == "T") { "ALT allele is not T: ${simpleVariant.altAlleles[0]}" }
                     assert(simpleVariant.samples.size == 1) { "Number of samples is not 1: ${simpleVariant.samples.size}" }
+                    assert(simpleVariant.samples[0] == "LineA") { "Sample is not LineA: ${simpleVariant.samples[0]}" }
+                    assert(simpleVariant.genotypes.size == 1) { "Number of genotypes is not 1: ${simpleVariant.genotypes.size}" }
+                    assert(simpleVariant.genotypes[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
+                    assert(simpleVariant.isPhased(0)) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
+                    assert(simpleVariant.isPhased("LineA")) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
                 }
             }
         }
