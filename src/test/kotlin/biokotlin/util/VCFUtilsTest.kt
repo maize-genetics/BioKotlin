@@ -14,9 +14,9 @@ class VCFUtilsTest {
         val simpleVariants = result.second
 
         var numVariants = 0
-        return runBlocking {
+        runBlocking {
             for (variant in simpleVariants) {
-                val variant = variant.await()
+                val simpleVariant = variant.await()
                 numVariants++
             }
         }
