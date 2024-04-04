@@ -13,11 +13,15 @@ class VCFUtilsTest {
         val result = parseVCFFile(filename)
         val simpleVariants = result.second
 
+        var numVariants = 0
         return runBlocking {
             for (variant in simpleVariants) {
-                println(variant.await())
+                val variant = variant.await()
+                numVariants++
             }
         }
+
+        assert(numVariants == 5125) { "Number of variants is not 5125: $numVariants" }
 
     }
 
