@@ -20,7 +20,12 @@ data class SimpleVariant(
     val genotypes: List<String>
 ) : Comparable<SimpleVariant> {
 
+    val isRefBlock: Boolean
+
     init {
+        isRefBlock = (samples.indices).find { sampleIndex ->
+            genotype(sampleIndex).find { it != 0 } != null
+        } == null
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
         require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
@@ -76,10 +81,6 @@ data class SimpleVariant(
      */
     fun isPhased(sampleIndex: Int): Boolean {
         return !genotypes[sampleIndex].contains("/")
-    }
-
-    fun isRefBlock(): Boolean {
-        return refAllele.length == 1 && altAlleles.isEmpty()
     }
 
     fun isSNP(): Boolean {
