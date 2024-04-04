@@ -51,15 +51,14 @@ data class SimpleVariant(
 
     fun sample(index: Int) = samples[index]
 
-    fun genotype(sample: String): List<String> {
-        val sampleIndex = samples.indexOf(sample)
-        return genotype(sampleIndex)
+    fun genotype(sample: String): List<Int> {
+        return genotype(samples.indexOf(sample))
     }
 
-    fun genotype(sampleIndex: Int): List<String> {
+    fun genotype(sampleIndex: Int): List<Int> {
         if (genotypes[sampleIndex].contains("|"))
-            return genotypes[sampleIndex].split("|")
-        return genotypes[sampleIndex].split("/")
+            return genotypes[sampleIndex].split("|").map { it.toInt() }
+        return genotypes[sampleIndex].split("/").map { it.toInt() }
     }
 
     fun isPhased(sample: String): Boolean {
