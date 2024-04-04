@@ -34,11 +34,11 @@ class VCFUtilsTest {
                     assert(simpleVariant.sample(0) == "LineA") { "Sample is not LineA: ${simpleVariant.samples[0]}" }
                     assert(simpleVariant.genotypes.size == 1) { "Number of genotypes is not 1: ${simpleVariant.genotypes.size}" }
                     assert(simpleVariant.genotypes[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
-                    assert(simpleVariant.genotype(0)[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
-                    assert(simpleVariant.genotype("LineA")[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
+                    assert(simpleVariant.genotype(0)[0] == 1) { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
+                    assert(simpleVariant.genotype("LineA")[0] == 1) { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
                     assert(simpleVariant.isPhased(0)) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
                     assert(simpleVariant.isPhased("LineA")) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
-                    assert(!simpleVariant.isRefBlock()) { "Variant is a reference block" }
+                    assert(!simpleVariant.isRefBlock) { "Variant is a reference block" }
                 } else if (numVariants == 100) {
                     hundredVariant = simpleVariant
                     assert(tenthVariant < hundredVariant) { "Tenth variant is not less than hundredth variant" }
