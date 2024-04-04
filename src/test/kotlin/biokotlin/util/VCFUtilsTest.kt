@@ -17,6 +17,7 @@ class VCFUtilsTest {
         runBlocking {
             lateinit var tenthVariant: SimpleVariant
             lateinit var hundredVariant: SimpleVariant
+            lateinit var threeThounsandVariant: SimpleVariant
             for (variant in simpleVariants) {
                 val simpleVariant = variant.await()
                 numVariants++
@@ -30,13 +31,20 @@ class VCFUtilsTest {
                     assert(simpleVariant.altAlleles[0] == "T") { "ALT allele is not T: ${simpleVariant.altAlleles[0]}" }
                     assert(simpleVariant.samples.size == 1) { "Number of samples is not 1: ${simpleVariant.samples.size}" }
                     assert(simpleVariant.samples[0] == "LineA") { "Sample is not LineA: ${simpleVariant.samples[0]}" }
+                    assert(simpleVariant.sample(0) == "LineA") { "Sample is not LineA: ${simpleVariant.samples[0]}" }
                     assert(simpleVariant.genotypes.size == 1) { "Number of genotypes is not 1: ${simpleVariant.genotypes.size}" }
                     assert(simpleVariant.genotypes[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
+                    assert(simpleVariant.genotype(0)[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
+                    assert(simpleVariant.genotype("LineA")[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
                     assert(simpleVariant.isPhased(0)) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
                     assert(simpleVariant.isPhased("LineA")) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
+                    assert(!simpleVariant.isRefBlock()) { "Variant is a reference block" }
                 } else if (numVariants == 100) {
                     hundredVariant = simpleVariant
                     assert(tenthVariant < hundredVariant) { "Tenth variant is not less than hundredth variant" }
+                } else if (numVariants == 3000) {
+                    threeThounsandVariant = simpleVariant
+                    assert(hundredVariant < threeThounsandVariant) { "Hundredth variant is not less than three thousandth variant" }
                 }
             }
         }
