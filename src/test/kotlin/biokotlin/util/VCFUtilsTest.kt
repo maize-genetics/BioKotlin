@@ -1,6 +1,6 @@
 package biokotlin.util
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 
 class VCFUtilsTest {
@@ -15,10 +15,13 @@ class VCFUtilsTest {
 
         var numVariants = 0
         runBlocking {
+            lateinit var tenthVariant: SimpleVariant
+            lateinit var hundredVariant: SimpleVariant
             for (variant in simpleVariants) {
                 val simpleVariant = variant.await()
                 numVariants++
                 if (numVariants == 10) {
+                    tenthVariant = simpleVariant
                     assert(simpleVariant.contig == "1") { "Contig is not 1: ${simpleVariant.contig}" }
                     assert(simpleVariant.start == 144) { "Start is not 144: ${simpleVariant.start}" }
                     assert(simpleVariant.end == 144) { "End is not 144: ${simpleVariant.end}" }
@@ -31,6 +34,9 @@ class VCFUtilsTest {
                     assert(simpleVariant.genotypes[0] == "1") { "Genotype is not 1: ${simpleVariant.genotypes[0]}" }
                     assert(simpleVariant.isPhased(0)) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
                     assert(simpleVariant.isPhased("LineA")) { "Genotype is not phased: ${simpleVariant.genotypes[0]}" }
+                } else if (numVariants == 100) {
+                    hundredVariant = simpleVariant
+                    assert(tenthVariant < hundredVariant) { "Tenth variant is not less than hundredth variant" }
                 }
             }
         }
