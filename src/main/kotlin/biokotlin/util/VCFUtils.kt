@@ -62,7 +62,22 @@ data class SimpleVariant(
         return genotypes[sampleIndex].split("/")
     }
 
-    fun isRefBlock() = refAllele.length == 1 && altAlleles.isEmpty()
+    fun isPhased(sample: String): Boolean {
+        return isPhased(samples.indexOf(sample))
+    }
+
+    /**
+     * Function to check if a sample is phased.
+     * A sample is phased if it contains '|' between the genotype.
+     * This checks for '/' as a haploid sample will be considered phased.
+     */
+    fun isPhased(sampleIndex: Int): Boolean {
+        return !genotypes[sampleIndex].contains("/")
+    }
+
+    fun isRefBlock(): Boolean {
+        return refAllele.length == 1 && altAlleles.isEmpty()
+    }
 
     fun isSNP(): Boolean {
         if (refAllele.length != 1) return false
