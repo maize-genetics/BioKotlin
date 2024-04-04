@@ -183,7 +183,9 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
 private fun parseSingleVCFLine(currentLine: String, samples: List<String>): SimpleVariant {
 
     val lineSplit = currentLine.split("\t")
-    // Need to check for indel / refblock
+
+    require(lineSplit.size == samples.size + 9) { "Number of columns should be ${samples.size + 9}. But found: ${lineSplit.size}" }
+
     val chrom = lineSplit[0]
     val start = lineSplit[1].toInt()
     val refAllele = lineSplit[3]
@@ -196,9 +198,11 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>): Simp
         start
     }
 
-    val genotype = lineSplit[9].split(":")
+    val genotypes = lineSplit
+        .drop(9)
+        .map { it.split(":")[0] }
 
-    return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotype)
+    return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
 
 }
 
