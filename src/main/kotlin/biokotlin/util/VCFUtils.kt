@@ -61,6 +61,10 @@ data class SimpleVariant(
         return genotypes[sampleIndex].split("/").map { it.toInt() }
     }
 
+    fun allele(index: Int): String {
+        return if (index == 0) refAllele else altAlleles[index - 1]
+    }
+
     fun isPhased(sample: String): Boolean {
         return isPhased(samples.indexOf(sample))
     }
