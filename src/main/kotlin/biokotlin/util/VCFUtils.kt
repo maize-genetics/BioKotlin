@@ -74,8 +74,17 @@ data class SimpleVariant(
         return genotypes[sampleIndex].split("/").map { if (it == ".") -1 else it.toInt() }
     }
 
+    /**
+     * Function to get the allele given the allele index from the genotype.
+     * The allele index 0 is the reference allele, and the rest are the alternate alleles.
+     * If the allele index is -1, then the allele is missing (.).
+     */
     fun allele(index: Int): String {
-        return if (index == 0) refAllele else altAlleles[index - 1]
+        return when (index) {
+            -1 -> "."
+            0 -> refAllele
+            else -> altAlleles[index - 1]
+        }
     }
 
     fun isPhased(sample: String): Boolean {
