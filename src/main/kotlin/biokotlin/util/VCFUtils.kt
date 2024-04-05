@@ -17,7 +17,8 @@ data class SimpleVariant(
     val refAllele: String,
     val altAlleles: List<String>,
     val samples: List<String>,
-    val genotypes: List<String>
+    val genotypes: List<String>,
+    val originalText: String? = null // For debugging - parseVCFFile(<filename>, debug = true)
 ) : Comparable<SimpleVariant> {
 
     val isRefBlock: Boolean
@@ -228,7 +229,10 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 /**
  * Function to parse a VCF file into a map of ALT headers and a channel of SimpleVariant objects.
  */
-fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel<Deferred<SimpleVariant>>> {
+fun parseVCFFile(
+    filename: String,
+    debug: Boolean = false
+): Pair<Map<String, AltHeaderMetaData>, Channel<Deferred<SimpleVariant>>> {
 
     val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
         val metaData = parseALTHeader(reader.fileHeader)
@@ -241,7 +245,7 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
         bufferedReader(filename).useLines { lines ->
             lines
                 .filter { !it.startsWith("#") }
-                .forEach { channel.send(async { parseSingleVCFLine(it, samples) }) }
+                .forEach { channel.send(async { parseSingleVCFLine(it, samples, debug) }) }
             channel.close()
         }
 
@@ -254,7 +258,7 @@ fun parseVCFFile(filename: String): Pair<Map<String, AltHeaderMetaData>, Channel
  * Function to parse a (g)VCF line into a SimpleVariant object
  * #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  Sample1 Sample2
  */
-private fun parseSingleVCFLine(currentLine: String, samples: List<String>): SimpleVariant {
+private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug: Boolean): SimpleVariant {
 
     val lineSplit = currentLine.split("\t")
 
@@ -276,7 +280,11 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>): Simp
         .drop(9)
         .map { it.split(":")[0] }
 
-    return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
+    if (debug) {
+        return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes, currentLine)
+    } else {
+        return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
+    }
 
 }
 
