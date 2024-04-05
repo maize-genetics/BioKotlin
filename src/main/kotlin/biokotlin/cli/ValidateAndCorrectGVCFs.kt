@@ -1,5 +1,6 @@
 package biokotlin.cli
 
+import biokotlin.genome.fastaToNucSeq
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -37,6 +38,20 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
     }
 
     override fun run() {
+
+        // Map of <contig, NucSeq>
+        val refSeqGenome = fastaToNucSeq(referenceFile)
+
+        // Get list of input GVCF files from the input directory
+        val inputFiles = File(inputDir)
+            .walk()
+            .filter {
+                it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
+                        it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz"))
+            }
+            .map { it.absolutePath }
+            .toList()
+
         TODO()
     }
 
