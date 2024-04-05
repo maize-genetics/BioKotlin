@@ -109,10 +109,24 @@ data class SimpleVariant(
         return !genotypes[sampleIndex].contains("/")
     }
 
+    /**
+     * Function to check if this is a variant.
+     * A variant is a site where the genotype is not 0/0 for all samples.
+     */
+    fun isVariant(): Boolean {
+        val numAlleles = (samples.indices)
+            .flatMap { sampleIndex -> genotype(sampleIndex) }
+            .distinct()
+            .size
+        return numAlleles > 1
+    }
+
+    /**
+     * Function to check if this is an SNP.
+     * An SNP is a variant where the length of the reference allele is 1.
+     */
     fun isSNP(): Boolean {
-        if (refAllele.length != 1) return false
-        altAlleles.find { it.length != 1 }?.let { return false }
-        return true
+        return if (length() != 1) false else isVariant()
     }
 
     fun isIndel(): Boolean {
