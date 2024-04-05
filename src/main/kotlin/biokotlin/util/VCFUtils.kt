@@ -62,10 +62,16 @@ data class SimpleVariant(
         return genotype(samples.indexOf(sample))
     }
 
+    /**
+     * Function to get the genotype of a sample.
+     * The returned list of integers are the allele indices.
+     * Allele index 0 is the reference allele, and the rest are the alternate alleles.
+     * If the genotype is missing, the value will be -1.
+     */
     fun genotype(sampleIndex: Int): List<Int> {
         if (genotypes[sampleIndex].contains("|"))
-            return genotypes[sampleIndex].split("|").map { it.toInt() }
-        return genotypes[sampleIndex].split("/").map { it.toInt() }
+            return genotypes[sampleIndex].split("|").map { if (it == ".") -1 else it.toInt() }
+        return genotypes[sampleIndex].split("/").map { if (it == ".") -1 else it.toInt() }
     }
 
     fun allele(index: Int): String {
