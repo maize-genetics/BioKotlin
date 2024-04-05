@@ -59,4 +59,38 @@ class VCFUtilsTest {
 
     }
 
+    @Test
+    fun testReadingVCF() {
+
+        val filename = "data/test/vcf/mdp_genotype.vcf"
+
+        val result = parseVCFFile(filename)
+        val simpleVariants = result.second
+
+        return runBlocking {
+            for (variant in simpleVariants) {
+                variant.await()
+                // println(variant.await())
+            }
+        }
+
+    }
+
+    @Test
+    fun testReadingVCFwithALT() {
+
+        val filename = "data/test/vcf/testMultipleFilesHaplotypeGraph.vcf"
+
+        val result = parseVCFFile(filename)
+        val simpleVariants = result.second
+
+        return runBlocking {
+            for (variant in simpleVariants) {
+                variant.await()
+                // println(variant.await())
+            }
+        }
+
+    }
+
 }
