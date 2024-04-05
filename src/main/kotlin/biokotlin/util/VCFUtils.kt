@@ -30,11 +30,19 @@ data class SimpleVariant(
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
         require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
+        require(altAlleles.size == altAlleles.distinct().size) { "ALT alleles must be unique. Found duplicates: $altAlleles" }
+        require(samples.size == genotypes.size) { "Number of samples and genotypes do not match. Samples: ${samples.size} Genotypes: ${genotypes.size}" }
         genotypes
             .forEach {
                 require(it.matches(Regex("[0-9.]+(/[0-9.]+|\\|[0-9.]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
                 require(!(it.contains("/") && it.contains("|"))) { "Genotype $it is not in the correct format. Can't contain / and |" }
             }
+        val numAlleles = altAlleles.size + 1
+        (samples.indices).forEach { sampleIndex ->
+            genotype(sampleIndex).forEach { alleleIndex ->
+                require(alleleIndex < numAlleles) { "Allele $alleleIndex should be less than the number of alleles: $numAlleles (number of alt alleles + 1 reference allele)" }
+            }
+        }
     }
 
     override fun toString(): String {
