@@ -29,6 +29,7 @@ data class SimpleVariant(
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
         require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
+        require(refAllele.length == 1 || refAllele.length == length()) { "Reference allele must be 1 base pair or the same length as the variant. Reference: $refAllele" }
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
         require(altAlleles.size == altAlleles.distinct().size) { "ALT alleles must be unique. Found duplicates: $altAlleles" }
         require(samples.size == genotypes.size) { "Number of samples and genotypes do not match. Samples: ${samples.size} Genotypes: ${genotypes.size}" }
