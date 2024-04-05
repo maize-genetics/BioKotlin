@@ -129,8 +129,13 @@ data class SimpleVariant(
         return if (length() != 1) false else isVariant()
     }
 
+    /**
+     * Function to check if this is an indel.
+     * An indel is a variant where the length of one or more variants
+     * is not the same as the reference allele.
+     */
     fun isIndel(): Boolean {
-        altAlleles.find { it.length != refAllele.length }?.let { return true }
+        altAlleles.find { it.length != length() }?.let { return true }
         return false
     }
 
