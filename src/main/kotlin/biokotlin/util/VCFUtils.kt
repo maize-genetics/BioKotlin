@@ -32,7 +32,7 @@ data class SimpleVariant(
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
         genotypes
             .forEach {
-                require(it.matches(Regex("[0-9]+(/[0-9]+|\\|[0-9]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
+                require(it.matches(Regex("[0-9.]+(/[0-9.]+|\\|[0-9.]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
                 require(!(it.contains("/") && it.contains("|"))) { "Genotype $it is not in the correct format. Can't contain / and |" }
             }
     }
