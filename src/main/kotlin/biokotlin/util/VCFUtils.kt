@@ -269,7 +269,7 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>): Simp
     val end = if (endAnno.size == 1) {
         endAnno.first().split("=")[1].toInt()
     } else {
-        start
+        start + refAllele.length - 1
     }
 
     val genotypes = lineSplit
