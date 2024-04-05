@@ -56,6 +56,8 @@ data class SimpleVariant(
 
     fun sample(index: Int) = samples[index]
 
+    fun length() = end - start + 1
+
     fun genotype(sample: String): List<Int> {
         return genotype(samples.indexOf(sample))
     }
