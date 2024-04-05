@@ -139,8 +139,13 @@ data class SimpleVariant(
         return false
     }
 
+    /**
+     * Function to check if this is a deletion.
+     * A deletion is a variant where the length of one or more variants
+     * is less than the reference allele.
+     */
     fun isDEL(): Boolean {
-        altAlleles.find { refAllele.length > it.length }?.let { return true }
+        altAlleles.find { length() > it.length }?.let { return true }
         return false
     }
 
