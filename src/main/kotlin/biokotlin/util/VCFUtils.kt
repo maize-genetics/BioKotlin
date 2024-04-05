@@ -64,17 +64,35 @@ data class SimpleVariant(
         }
     }
 
+    /**
+     * Function to get the sample name with given index.
+     */
     fun sample(index: Int) = samples[index]
 
+    /**
+     * Function to get the length of the variant.
+     * The length is the number of base pairs
+     * of the reference allele associated with this.
+     * The start and end positions are inclusive.
+     * The reference allele recorded my only be
+     * a single base pair, which is the first base pair
+     * of the reference sequence.
+     */
     fun length() = end - start + 1
 
+    /**
+     * Function to get the genotype of a sample.
+     * The returned list of integers are the allele indices for each ploidy.
+     * Allele index 0 is the reference allele, and the rest are the alternate alleles.
+     * If the genotype is missing, the value will be -1.
+     */
     fun genotype(sample: String): List<Int> {
         return genotype(samples.indexOf(sample))
     }
 
     /**
      * Function to get the genotype of a sample.
-     * The returned list of integers are the allele indices.
+     * The returned list of integers are the allele indices for each ploidy.
      * Allele index 0 is the reference allele, and the rest are the alternate alleles.
      * If the genotype is missing, the value will be -1.
      */
@@ -97,6 +115,11 @@ data class SimpleVariant(
         }
     }
 
+    /**
+     * Function to check if a sample is phased.
+     * A sample is phased if it contains '|' between the genotype.
+     * This checks for '/' as a haploid sample will be considered phased.
+     */
     fun isPhased(sample: String): Boolean {
         return isPhased(samples.indexOf(sample))
     }
