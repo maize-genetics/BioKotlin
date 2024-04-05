@@ -149,8 +149,13 @@ data class SimpleVariant(
         return false
     }
 
+    /**
+     * Function to check if this is an insertion.
+     * An insertion is a variant where the length of one or more variants
+     * is greater than the reference allele.
+     */
     fun isINS(): Boolean {
-        altAlleles.find { refAllele.length < it.length }?.let { return true }
+        altAlleles.find { length() < it.length }?.let { return true }
         return false
     }
 
