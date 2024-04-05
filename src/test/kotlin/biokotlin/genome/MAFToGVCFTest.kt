@@ -1,5 +1,6 @@
 import biokotlin.cli.MafToGvcfConverter
 import biokotlin.genome.MAFToGVCF
+import biokotlin.genome.Position
 import biokotlin.genome.SeqRangeSort
 import biokotlin.genome.getMAFblocks
 import htsjdk.variant.variantcontext.VariantContext
@@ -10,17 +11,6 @@ import io.kotest.matchers.shouldBe
 import java.io.File
 import com.github.ajalt.clikt.testing.test
 import org.junit.jupiter.api.Assertions.assertEquals
-
-
-data class Position (val contig: String, val position: Int) : Comparable<Position> {
-    override fun compareTo(other: Position): Int {
-        if (this.contig == other.contig) {
-            return this.position.compareTo(other.position)
-        }
-        return this.contig.compareTo(other.contig)
-    }
-}
-
 
 class MAFToGVCFTest : StringSpec({
     val sampleName = "B97"
