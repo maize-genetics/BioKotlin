@@ -17,8 +17,9 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
     val referenceFile by option(help = "Full path to reference fasta file")
         .required()
 
-    init {
+    override fun run() {
 
+        // Checks to ensure that the input and output directories and reference file exist
         if (!File(inputDir).isDirectory) {
             throw IllegalArgumentException("Input GVCF directory does not exist: $inputDir")
         }
@@ -35,10 +36,6 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
             throw IllegalArgumentException("Reference FASTA file does not exist: $referenceFile")
         }
 
-    }
-
-    override fun run() {
-
         // Map of <contig, NucSeq>
         val refSeqGenome = fastaToNucSeq(referenceFile)
 
@@ -53,6 +50,7 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
             .toList()
 
         TODO()
+
     }
 
 }
