@@ -1,6 +1,7 @@
 package biokotlin.cli
 
 import biokotlin.genome.fastaToNucSeq
+import biokotlin.util.bufferedWriter
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -49,7 +50,24 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
             .map { it.absolutePath }
             .toList()
 
-        TODO()
+        inputFiles.forEach { inputFile ->
+
+            val outputFile = "$outputDir/${File(inputFile).name}"
+            val logFile = "$outputDir/${File(inputFile).name}.log"
+
+            println()
+            println("Input GVCF file: $inputFile")
+            println("Output GVCF file: $outputFile")
+            println("Log file: $logFile")
+
+            bufferedWriter(outputFile).use { writer ->
+                bufferedWriter(logFile).use { logWriter ->
+                    TODO()
+                }
+
+            }
+
+        }
 
     }
 
