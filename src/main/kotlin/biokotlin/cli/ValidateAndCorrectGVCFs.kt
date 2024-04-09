@@ -40,6 +40,7 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
             throw IllegalArgumentException("Reference FASTA file does not exist: $referenceFile")
         }
 
+        // Reference from FASTA file considered the correct reference sequences
         // Map of <contig, NucSeq>
         val refSeqGenome = fastaToNucSeq(referenceFile)
 
@@ -53,6 +54,7 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
             .map { it.absolutePath }
             .toList()
 
+        // Iterate through each GVCF file from the input directory
         inputFiles.forEach { inputFile ->
 
             val outputFile = "$outputDir/${File(inputFile).name}"
@@ -76,6 +78,9 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
 
                         runBlocking {
 
+                            // Iterate through each variant in the GVCF file
+                            // The work creating the deferred list is done in the parseVCFFile function
+                            // and is multithreaded
                             for (deferred in deferredVariants) {
                                 val variant = deferred.await()
                                 val refSeq = variant.refAllele
@@ -96,7 +101,7 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
                             }
 
                         }
-                        
+
                     }
 
                 }
@@ -106,3 +111,5 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
         }
 
     }
+
+}
