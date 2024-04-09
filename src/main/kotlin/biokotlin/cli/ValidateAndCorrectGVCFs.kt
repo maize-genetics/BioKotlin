@@ -1,7 +1,9 @@
 package biokotlin.cli
 
 import biokotlin.genome.fastaToNucSeq
+import biokotlin.util.bufferedReader
 import biokotlin.util.bufferedWriter
+import biokotlin.util.parseVCFFile
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -62,7 +64,18 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
 
             bufferedWriter(outputFile).use { writer ->
                 bufferedWriter(logFile).use { logWriter ->
-                    TODO()
+
+                    // Write the header lines to the output GVCF file
+                    bufferedReader(inputFile).useLines { lines ->
+                        lines.takeWhile { it.startsWith("#") }.forEach { line ->
+                            writer.write("$line\n")
+                        }
+
+                        val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
+
+                        TODO()
+                    }
+
                 }
 
             }
@@ -70,5 +83,3 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
         }
 
     }
-
-}
