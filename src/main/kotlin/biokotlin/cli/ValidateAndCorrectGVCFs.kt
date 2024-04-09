@@ -7,6 +7,7 @@ import biokotlin.util.parseVCFFile
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF files") {
@@ -73,7 +74,29 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
 
                         val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
 
-                        TODO()
+                        runBlocking {
+
+                            for (deferred in deferredVariants) {
+                                val variant = deferred.await()
+                                val refSeq = variant.refAllele
+                                val start = variant.start
+                                val refSeqLength = refSeq.length
+                                val refSeqFromGenome =
+                                    refSeqGenome[variant.contig]?.get(start - 1 until start + refSeqLength - 1)?.seq()
+
+                                // If the reference sequence from the genome is the same as the reference sequence
+                                // in the variant, write to the output GVCF file
+                                // Otherwise, write to the log file
+                                if (refSeqFromGenome == refSeq) {
+                                    writer.write("${variant.originalText}\n")
+                                } else {
+                                    logWriter.write("Reference: $refSeqFromGenome\n")
+                                    logWriter.write("${variant.originalText}\n")
+                                }
+                            }
+
+                        }
+                        
                     }
 
                 }
