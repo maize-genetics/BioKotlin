@@ -24,21 +24,13 @@ class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF f
     override fun run() {
 
         // Checks to ensure that the input and output directories and reference file exist
-        if (!File(inputDir).isDirectory) {
-            throw IllegalArgumentException("Input GVCF directory does not exist: $inputDir")
-        }
+        require(File(inputDir).isDirectory) { "Input GVCF directory does not exist: $inputDir" }
 
-        if (!File(outputDir).isDirectory) {
-            throw IllegalArgumentException("Output GVCF directory does not exist: $outputDir")
-        }
+        require(File(outputDir).isDirectory) { "Output GVCF directory does not exist: $outputDir" }
 
-        if (File(inputDir).absolutePath == File(outputDir).absolutePath) {
-            throw IllegalArgumentException("Input and output GVCF directories are the same: $inputDir")
-        }
+        require(File(inputDir).absolutePath != File(outputDir).absolutePath) { "Input and output GVCF directories are the same: $inputDir" }
 
-        if (!File(referenceFile).isFile) {
-            throw IllegalArgumentException("Reference FASTA file does not exist: $referenceFile")
-        }
+        require(File(referenceFile).isFile) { "Reference FASTA file does not exist: $referenceFile" }
 
         // Reference from FASTA file considered the correct reference sequences
         // Map of <contig, NucSeq>
