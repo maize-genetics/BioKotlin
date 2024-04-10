@@ -9,9 +9,12 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import kotlinx.coroutines.runBlocking
+import org.apache.logging.log4j.LogManager
 import java.io.File
 
 class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
+
+    private val myLogger = LogManager.getLogger(ValidateGVCFs::class.java)
 
     val inputDir by option(help = "Full path to input GVCF file directory")
         .required()
@@ -60,10 +63,9 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
             val outputFile = "$outputDir/${File(inputFile).name}"
             val logFile = "$outputDir/${File(inputFile).name}.log"
 
-            println()
-            println("Input GVCF file: $inputFile")
-            println("Output GVCF file: $outputFile")
-            println("Log file: $logFile")
+            myLogger.info("\nInput GVCF file: $inputFile")
+            myLogger.info("Output GVCF file: $outputFile")
+            myLogger.info("Log file: $logFile")
 
             bufferedWriter(outputFile).use { writer ->
                 bufferedWriter(logFile).use { logWriter ->
