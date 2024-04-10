@@ -13,5 +13,5 @@ class BioKotlin : CliktCommand() {
 }
 
 fun main(args: Array<String>) = BioKotlin()
-    .subcommands(MafToGvcfConverter(), ValidateAndCorrectGVCFs())
+    .subcommands(MafToGvcfConverter(), ValidateGVCFs())
     .main(args)

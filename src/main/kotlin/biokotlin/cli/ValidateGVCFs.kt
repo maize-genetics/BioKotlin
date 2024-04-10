@@ -10,7 +10,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
-class ValidateAndCorrectGVCFs : CliktCommand(help = "Validate and correct GVCF files") {
+class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
 
     val inputDir by option(help = "Full path to input GVCF file directory")
         .required()
