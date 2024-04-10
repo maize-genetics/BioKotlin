@@ -1,5 +1,6 @@
 package biokotlin.cli
 
+import biokotlin.util.setupDebugLogging
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 
@@ -9,6 +10,11 @@ import com.github.ajalt.clikt.core.subcommands
  *
  */
 class BioKotlin : CliktCommand() {
+
+    init {
+        setupDebugLogging()
+    }
+
     override fun run() = Unit
 }
 
