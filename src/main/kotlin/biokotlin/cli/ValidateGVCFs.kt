@@ -5,6 +5,7 @@ import biokotlin.util.bufferedReader
 import biokotlin.util.bufferedWriter
 import biokotlin.util.parseVCFFile
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import kotlinx.coroutines.runBlocking
@@ -20,6 +21,13 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
 
     val referenceFile by option(help = "Full path to reference fasta file")
         .required()
+
+    val correct by option(
+        help = "If true, fix incorrect reference sequences in the output GVCF file. " +
+                "If false, filter out incorrect reference sequences in the output GVCF file" +
+                "Default is false."
+    )
+        .flag(default = false)
 
     override fun run() {
 
@@ -87,6 +95,10 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                                 if (refSeqFromGenome == refSeq) {
                                     writer.write("${variant.originalText}\n")
                                 } else {
+                                    if (correct) {
+                                        val correctRecord = variant.originalText?.replace(refSeq, refSeqFromGenome!!)
+                                        writer.write("$correctRecord\n")
+                                    }
                                     logWriter.write("Reference: $refSeqFromGenome\n")
                                     logWriter.write("${variant.originalText}\n")
                                 }
