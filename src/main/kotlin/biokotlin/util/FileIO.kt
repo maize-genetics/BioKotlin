@@ -2,10 +2,13 @@
 
 package biokotlin.util
 
+import org.apache.logging.log4j.LogManager
 import java.io.*
 import java.net.URL
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
+
+private val myLogger = LogManager.getLogger("biokotlin.util.FileIO")
 
 fun bufferedReader(filename: String): BufferedReader {
     return try {
@@ -33,8 +36,8 @@ fun bufferedWriter(filename: String, append: Boolean = false): BufferedWriter {
             BufferedWriter(OutputStreamWriter(FileOutputStream(File(filename), append)))
         }
     } catch (e: java.lang.Exception) {
-        println("bufferedWriter: problem getting writer for: $filename")
-        println("bufferedWriter: ${e.message}")
+        myLogger.error("bufferedWriter: problem getting writer for: $filename")
+        myLogger.error("bufferedWriter: ${e.message}")
         throw IllegalArgumentException("bufferedWriter: problem getting writer for: $filename  error: ${e.message}")
     }
 }
