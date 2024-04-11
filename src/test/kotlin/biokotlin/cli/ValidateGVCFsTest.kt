@@ -1,16 +1,51 @@
 package biokotlin.cli
 
 import biokotlin.util.getChecksum
+import biokotlin.util.setupDebugLogging
 import com.github.ajalt.clikt.testing.test
 import org.apache.logging.log4j.LogManager
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
+import java.io.File
 
-@ExtendWith(TestExtension::class)
 class ValidateGVCFsTest {
 
     private val myLogger = LogManager.getLogger(ValidateGVCFsTest::class.java)
+
+    companion object {
+
+        // the next line converts Windows \ to linux / in the user home path
+        private val userHome = System.getProperty("user.home").replace('\\', '/')
+        private val tempDir = "$userHome/temp/biokotlinTests/tempDir/"
+        val testOutputGVCFDir = "${tempDir}outputGVCFDir/"
+        val testLineAGvcfOutput = "${testOutputGVCFDir}LineA.g.vcf/"
+        val testLineAGvcfDiffRefOutput = "${testOutputGVCFDir}LineA-DiffRef.g.vcf/"
+
+        const val gvcfInputDir = "data/test/gvcf/"
+
+        const val refFasta = "data/test/ref/Ref.fa"
+        const val lineAGvcf = "${gvcfInputDir}LineA.g.vcf"
+        const val lineAGvcfDiffRef = "${gvcfInputDir}LineA-DiffRef.g.vcf"
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            setupDebugLogging()
+
+            File(tempDir).mkdirs()
+            File(testOutputGVCFDir).mkdirs()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun teardown() {
+            File(tempDir).deleteRecursively()
+            File(testOutputGVCFDir).deleteRecursively()
+        }
+
+    }
 
     @Test
     fun testValidateGVCFs() {
@@ -20,22 +55,22 @@ class ValidateGVCFsTest {
         // --reference-file /Users/tmc46/projects/scan_gvcf_wei-yun/Zh-RIMHU001-REFERENCE-PanAnd-1.0.fa --correct
 
         val result = ValidateGVCFs().test(
-            "--input-dir ${TestExtension.gvcfInputDir} --output-dir ${TestExtension.testOutputGVCFDir} --reference-file ${TestExtension.refFasta} --correct"
+            "--input-dir ${gvcfInputDir} --output-dir ${testOutputGVCFDir} --reference-file ${refFasta} --correct"
         )
 
         myLogger.info("testValidateGVCFs: result output: ${result.output}")
 
         assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
-        var checksum1 = getChecksum(TestExtension.lineAGvcf)
-        var checksum2 = getChecksum(TestExtension.testLineAGvcfOutput)
+        var checksum1 = getChecksum(lineAGvcf)
+        var checksum2 = getChecksum(testLineAGvcfOutput)
 
         myLogger.info("testValidateGVCFs.vcf expected checksum1: $checksum1")
         myLogger.info("testValidateGVCFs.vcf actual checksum2: $checksum2")
 
         assertEquals(checksum1, checksum2, "testValidateGVCFs.vcf checksums do not match")
 
-        var checksum3 = getChecksum(TestExtension.testLineAGvcfDiffRefOutput)
+        var checksum3 = getChecksum(testLineAGvcfDiffRefOutput)
 
         myLogger.info("testValidateGVCFs.vcf actual checksum3: $checksum3")
 
