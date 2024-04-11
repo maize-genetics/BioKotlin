@@ -98,8 +98,23 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                                     writer.write("${variant.originalText}\n")
                                 } else {
                                     if (correct) {
-                                        val correctRecord = variant.originalText?.replace(refSeq, refSeqFromGenome!!)
-                                        writer.write("$correctRecord\n")
+
+                                        var currentIndex = -1
+                                        var thirdIndex = -1
+                                        var fourthIndex = -1
+                                        repeat(4) { count ->
+                                            currentIndex = variant.originalText?.indexOf("\t", currentIndex + 1) ?: -1
+                                            when (count) {
+                                                2 -> thirdIndex = currentIndex
+                                                3 -> fourthIndex = currentIndex
+                                            }
+                                        }
+
+                                        writer.write(variant.originalText?.substring(0, thirdIndex + 1) ?: "")
+                                        writer.write(refSeqFromGenome)
+                                        writer.write(variant.originalText?.substring(fourthIndex) ?: "")
+                                        writer.write("\n")
+
                                     }
                                     logWriter.write("Reference: $refSeqFromGenome\n")
                                     logWriter.write("${variant.originalText}\n")
