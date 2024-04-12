@@ -1,6 +1,8 @@
 package biokotlin.util
 
 import biokotlin.genome.PositionRange
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -19,22 +21,36 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
     data class GVCFReader(
         val range: PositionRange,
         val variant: SimpleVariant,
-        val altHeaders: List<String>,
-        val deferredVariants: List<String>
+        val altHeaders: Map<String, AltHeaderMetaData>,
+        val deferredVariants: Channel<Deferred<SimpleVariant>>
     )
 
     runBlocking {
 
-        // Range Map
-        val gvcfReaders = sortedMapOf<PositionRange, GVCFReader>()
+        val gvcfReaders = mutableListOf<GVCFReader>()
 
         // Iterate through each GVCF file from the input directory
         inputFiles.forEach { inputFile ->
+            println("Reading: $inputFile")
             val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
-            val firstVariant = deferredVariants.receive().await()
-            require(firstVariant.samples.size == 1) { "Number of samples is not 1: file: $inputFile num of samples: ${firstVariant.samples.size}" }
+            val variant = deferredVariants.receive().await()
+            require(variant.samples.size == 1) { "Number of samples is not 1: file: $inputFile num of samples: ${variant.samples.size}" }
+            gvcfReaders.add(GVCFReader(variant.positionRange, variant, altHeaders, deferredVariants))
+        }
+
+        gvcfReaders.sortBy { it.range }
+
+        gvcfReaders.forEach {
+            println("Range: ${it.range}")
+            println("Variant: ${it.variant}")
         }
 
     }
 
+}
+
+fun main() {
+    val inputDir = "data/test/gvcf"
+    val outputFile = "data/test/gvcf/merged.g.vcf"
+    mergeGVCFs(inputDir, outputFile)
 }
