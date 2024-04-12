@@ -1,5 +1,6 @@
 package biokotlin.cli
 
+import biokotlin.util.mergeGVCFs
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -23,8 +24,8 @@ class MergeGVCFs : CliktCommand(help = "Merge GVCF files into Single VCF file") 
 
         require(!File(outputFile).isFile) { "Output file already exists: $outputFile" }
 
-        TODO("Not yet implemented")
-        
+        mergeGVCFs(inputDir, outputFile)
+
     }
 
 }
