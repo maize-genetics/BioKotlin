@@ -133,7 +133,7 @@ tasks {
 }
 
 application {
-    mainClass.set("biokotlin.cli.BioKotlinKt")
+    mainClass.set("biokotlin.cli.BiokotlinKt")
 
     // Set name of generated scripts in bin/
     applicationName = "biokotlin"

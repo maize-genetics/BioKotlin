@@ -9,7 +9,7 @@ import com.github.ajalt.clikt.core.subcommands
  * It is a subclass of CliktCommand and is used to provide users a BioKotlin command line interface.
  *
  */
-class BioKotlin : CliktCommand() {
+class Biokotlin : CliktCommand() {
 
     init {
         setupDebugLogging()
@@ -18,6 +18,6 @@ class BioKotlin : CliktCommand() {
     override fun run() = Unit
 }
 
-fun main(args: Array<String>) = BioKotlin()
+fun main(args: Array<String>) = Biokotlin()
     .subcommands(MafToGvcfConverter(), ValidateGVCFs())
     .main(args)
