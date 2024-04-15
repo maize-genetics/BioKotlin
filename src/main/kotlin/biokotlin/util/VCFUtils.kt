@@ -1,7 +1,6 @@
 package biokotlin.util
 
 import biokotlin.genome.Position
-import biokotlin.genome.PositionRange
 import biokotlin.genome.SampleGamete
 import htsjdk.variant.vcf.*
 import kotlinx.coroutines.*
@@ -23,7 +22,6 @@ data class SimpleVariant(
 ) : Comparable<SimpleVariant> {
 
     val isRefBlock: Boolean
-    val positionRange by lazy { PositionRange(contig, start, end) }
 
     init {
         isRefBlock = (samples.indices).find { sampleIndex ->
