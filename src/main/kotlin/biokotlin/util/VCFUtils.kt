@@ -1,6 +1,7 @@
 package biokotlin.util
 
 import biokotlin.genome.Position
+import biokotlin.genome.PositionRange
 import biokotlin.genome.SampleGamete
 import htsjdk.variant.vcf.*
 import kotlinx.coroutines.*
@@ -21,16 +22,77 @@ data class SimpleVariant(
     val originalText: String? = null // For debugging - parseVCFFile(<filename>, debug = true)
 ) : Comparable<SimpleVariant> {
 
+    /**
+     * The length is the number of base pairs
+     * of the reference allele associated with this.
+     * The start and end positions are inclusive.
+     * The reference allele recorded my only be
+     * a single base pair, which is the first base pair
+     * of the reference sequence.
+     */
+    val length = end - start + 1
+
     val isRefBlock: Boolean
 
+    /**
+     * An SNP is a variant where the length of the reference allele
+     * and all alternate alleles length is 1.
+     */
+    val isSNP: Boolean
+
+    /**
+     * Function to check if this is a variant.
+     * A variant is a site where the genotype is not 0/0 for all samples.
+     */
+    val isVariant: Boolean
+
+    /**
+     * Function to check if this is an indel.
+     * An indel is a variant where the length of one or more variants
+     * is not the same as the reference allele.
+     */
+    val isIndel: Boolean
+
+    /**
+     * Function to check if this is a deletion.
+     * A deletion is a variant where the length of one or more variants
+     * is less than the reference allele.
+     */
+    val isDEL: Boolean
+
+    /**
+     * Function to check if this is an insertion.
+     * An insertion is a variant where the length of one or more variants
+     * is greater than the reference allele.
+     */
+    val isINS: Boolean
+
+    val positionRange by lazy { PositionRange(contig, start, end) }
+    val startPosition by lazy { Position(contig, start) }
+    val endPosition by lazy { Position(contig, end) }
+
     init {
-        isRefBlock = (samples.indices).find { sampleIndex ->
-            genotype(sampleIndex).find { it != 0 } != null
-        } == null
+
+        isRefBlock = (samples.indices)
+            .flatMap { sampleIndex -> genotype(sampleIndex) }
+            .find { it != 0 } == null
+
+        isVariant = (samples.indices)
+            .flatMap { sampleIndex -> genotype(sampleIndex) }
+            .find { it != 0 } != null
+
+        isSNP = (length == 1) && altAlleles.find { it.length != 1 } == null && isVariant
+
+        isIndel = altAlleles.find { it.length != length } != null
+
+        isDEL = altAlleles.find { length > it.length } != null
+
+        isINS = altAlleles.find { length < it.length } != null
+
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
         require(start <= end) { "Start position must be less than or equal to end position. Start: $start End: $end" }
-        require(refAllele.length == 1 || refAllele.length == length()) { "Reference allele must be 1 base pair or the same length as the variant. Reference: $refAllele" }
+        require(refAllele.length == 1 || refAllele.length == length) { "Reference allele must be 1 base pair or the same length as the variant. Reference: $refAllele" }
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
         require(altAlleles.size == altAlleles.distinct().size) { "ALT alleles must be unique. Found duplicates: $altAlleles" }
         require(samples.size == genotypes.size) { "Number of samples and genotypes do not match. Samples: ${samples.size} Genotypes: ${genotypes.size}" }
@@ -45,6 +107,7 @@ data class SimpleVariant(
                 require(alleleIndex < numAlleles) { "Allele $alleleIndex should be less than the number of alleles: $numAlleles (number of alt alleles + 1 reference allele)" }
             }
         }
+
     }
 
     override fun toString(): String {
@@ -70,17 +133,6 @@ data class SimpleVariant(
     fun sample(index: Int) = samples[index]
 
     /**
-     * Function to get the length of the variant.
-     * The length is the number of base pairs
-     * of the reference allele associated with this.
-     * The start and end positions are inclusive.
-     * The reference allele recorded my only be
-     * a single base pair, which is the first base pair
-     * of the reference sequence.
-     */
-    fun length() = end - start + 1
-
-    /**
      * Function to get the genotype of a sample.
      * The returned list of integers are the allele indices for each ploidy.
      * Allele index 0 is the reference allele, and the rest are the alternate alleles.
@@ -100,6 +152,10 @@ data class SimpleVariant(
         if (genotypes[sampleIndex].contains("|"))
             return genotypes[sampleIndex].split("|").map { if (it == ".") -1 else it.toInt() }
         return genotypes[sampleIndex].split("/").map { if (it == ".") -1 else it.toInt() }
+    }
+
+    fun genotypeStrs(sampleIndex: Int): List<String> {
+        return genotype(sampleIndex).map { allele(it) }
     }
 
     /**
@@ -133,56 +189,6 @@ data class SimpleVariant(
         return !genotypes[sampleIndex].contains("/")
     }
 
-    /**
-     * Function to check if this is a variant.
-     * A variant is a site where the genotype is not 0/0 for all samples.
-     */
-    fun isVariant(): Boolean {
-        val numAlleles = (samples.indices)
-            .flatMap { sampleIndex -> genotype(sampleIndex) }
-            .distinct()
-            .size
-        return numAlleles > 1
-    }
-
-    /**
-     * Function to check if this is an SNP.
-     * An SNP is a variant where the length of the reference allele is 1.
-     */
-    fun isSNP(): Boolean {
-        return if (length() != 1) false else isVariant()
-    }
-
-    /**
-     * Function to check if this is an indel.
-     * An indel is a variant where the length of one or more variants
-     * is not the same as the reference allele.
-     */
-    fun isIndel(): Boolean {
-        altAlleles.find { it.length != length() }?.let { return true }
-        return false
-    }
-
-    /**
-     * Function to check if this is a deletion.
-     * A deletion is a variant where the length of one or more variants
-     * is less than the reference allele.
-     */
-    fun isDEL(): Boolean {
-        altAlleles.find { length() > it.length }?.let { return true }
-        return false
-    }
-
-    /**
-     * Function to check if this is an insertion.
-     * An insertion is a variant where the length of one or more variants
-     * is greater than the reference allele.
-     */
-    fun isINS(): Boolean {
-        altAlleles.find { length() < it.length }?.let { return true }
-        return false
-    }
-
 }
 
 // Making Number a string as VCF allows for '.'
@@ -201,6 +207,48 @@ data class AltHeaderMetaData(
 ) {
     fun sampleName() = sampleGamete.name
     fun gamete() = sampleGamete.gameteId
+}
+
+data class VCFReader(
+    val altHeaders: Map<String, AltHeaderMetaData>,
+    private val deferredVariants: Channel<Deferred<SimpleVariant>>
+) {
+
+    private var deferredVariant: Deferred<SimpleVariant>? = null
+
+    init {
+        advanceVariant()
+    }
+
+    /**
+     * Function to get the current variant in the VCF file.
+     */
+    fun variant(): SimpleVariant? {
+        return runBlocking { deferredVariant?.await() }
+    }
+
+    /**
+     * Function to advance to the next variant in the VCF file.
+     */
+    fun advanceVariant() {
+        runBlocking {
+            val result = deferredVariants.receiveCatching()
+            deferredVariant = if (result.isSuccess) {
+                result.getOrNull()
+            } else {
+                null
+            }
+        }
+    }
+
+}
+
+/**
+ * Function to create a VCF reader from a file.
+ */
+fun vcfReader(inputFile: String): VCFReader {
+    val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
+    return VCFReader(altHeaders, deferredVariants)
 }
 
 /**
