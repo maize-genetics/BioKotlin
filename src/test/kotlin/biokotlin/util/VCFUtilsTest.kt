@@ -41,10 +41,10 @@ class VCFUtilsTest {
                     assert(!simpleVariant.isRefBlock) { "Variant is a reference block" }
                     assert(simpleVariant.allele(0) == "A") { "Allele is not A: ${simpleVariant.allele(0)}" }
                     assert(simpleVariant.allele(1) == "T") { "Allele is not T: ${simpleVariant.allele(1)}" }
-                    assert(!simpleVariant.isSNP()) { "Variant is a SNP" }
-                    assert(!simpleVariant.isIndel()) { "Variant is an indel" }
-                    assert(!simpleVariant.isDEL()) { "Variant is a DEL" }
-                    assert(!simpleVariant.isINS()) { "Variant is an INS" }
+                    assert(simpleVariant.isSNP) { "Variant is not a SNP" }
+                    assert(!simpleVariant.isIndel) { "Variant is an indel" }
+                    assert(!simpleVariant.isDEL) { "Variant is a DEL" }
+                    assert(!simpleVariant.isINS) { "Variant is an INS" }
                 } else if (numVariants == 100) {
                     hundredVariant = simpleVariant
                     assert(tenthVariant < hundredVariant) { "Tenth variant is not less than hundredth variant" }
