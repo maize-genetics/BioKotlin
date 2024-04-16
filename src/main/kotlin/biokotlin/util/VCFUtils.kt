@@ -67,6 +67,8 @@ data class SimpleVariant(
      */
     val isINS: Boolean
 
+    val isSpanningDeletion: Boolean
+
     val positionRange by lazy { PositionRange(contig, start, end) }
     val startPosition by lazy { Position(contig, start) }
     val endPosition by lazy { Position(contig, end) }
@@ -88,6 +90,8 @@ data class SimpleVariant(
         isDEL = altAlleles.find { length > it.length } != null
 
         isINS = altAlleles.find { length < it.length } != null
+
+        isSpanningDeletion = altAlleles.find { it == "*" } != null
 
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
