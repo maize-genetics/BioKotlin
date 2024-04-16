@@ -18,12 +18,6 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         .map { it.absolutePath }
         .toList()
 
-    data class GVCFReader(
-        val range: PositionRange,
-        val variant: SimpleVariant,
-        val altHeaders: Map<String, AltHeaderMetaData>,
-        val deferredVariants: Channel<Deferred<SimpleVariant>>
-    )
 
     runBlocking {
 
@@ -51,8 +45,7 @@ private fun createVariantContext(
     reference: String,
     samples: List<String>,
     altAlleles: Set<String>,
-    genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>
-    variantsUsed: List<SimpleVariant>
+    genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>    variantsUsed: List<SimpleVariant>
 ): VariantContext {
 
     val refAllele = alleleRef(reference)
