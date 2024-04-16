@@ -1,9 +1,13 @@
 package biokotlin.util
 
-import biokotlin.genome.PositionRange
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
+import biokotlin.genome.Position
+import htsjdk.variant.variantcontext.Allele
+import htsjdk.variant.variantcontext.GenotypeBuilder
+import htsjdk.variant.variantcontext.VariantContext
+import htsjdk.variant.variantcontext.VariantContextBuilder
+import htsjdk.variant.variantcontext.writer.Options
+import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
+import htsjdk.variant.vcf.VCFHeader
 import java.io.File
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
@@ -18,25 +22,64 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         .map { it.absolutePath }
         .toList()
 
+    val samples = mutableListOf<String>()
 
-    runBlocking {
-
-        val gvcfReaders = mutableListOf<GVCFReader>()
-
-        // Iterate through each GVCF file from the input directory
-        inputFiles.forEach { inputFile ->
-            println("Reading: $inputFile")
-            val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
-            val variant = deferredVariants.receive().await()
+    val gvcfReaders = inputFiles.map { inputFile ->
+        val reader = vcfReader(inputFile)
+        val variant = reader.variant()
+        if (variant == null) {
+            throw IllegalArgumentException("No variant found in file: $inputFile")
+        } else {
             require(variant.samples.size == 1) { "Number of samples is not 1: file: $inputFile num of samples: ${variant.samples.size}" }
-            gvcfReaders.add(GVCFReader(variant.positionRange, variant, altHeaders, deferredVariants))
+        }
+        if (samples.contains(variant.samples[0])) {
+            throw IllegalArgumentException("Duplicate sample: ${variant.samples[0]} in file: $inputFile")
+        } else {
+            samples.add(variant.samples[0])
+        }
+        reader
+    }.toTypedArray()
+
+    gvcfReaders.sortBy { it.variant()?.samples?.get(0) }
+    samples.sort()
+
+    VariantContextWriterBuilder()
+        .unsetOption(Options.INDEX_ON_THE_FLY)
+        .setOutputFile(File(outputFile))
+        .setOutputFileType(VariantContextWriterBuilder.OutputType.VCF)
+        .setOption(Options.ALLOW_MISSING_FIELDS_IN_HEADER)
+        .build()
+        .use { writer ->
+
+            val header = VCFHeader(createGenericVCFHeaders(samples))
+            writer.writeHeader(header)
+
+            var currentPosition = nextPosition(gvcfReaders)
+            while (currentPosition != null) {
+
+                val variantsAtPosition = gvcfReaders
+                    .mapNotNull { it.variant() }
+                    .filter { it.positionRange.contains(currentPosition!!) }
+
+                val hasSNP = variantsAtPosition.find { it.isSNP } != null
+
+                val hasIndel = variantsAtPosition.find { it.isIndel } != null
+
+                when {
+                    hasSNP && !hasIndel -> {
+                        val variantContext = snp(gvcfReaders, currentPosition, samples)
+                        writer.add(variantContext)
+                    }
+                }
+
+                currentPosition = nextPosition(gvcfReaders, currentPosition)
+
+            }
+
         }
 
-        gvcfReaders.sortBy { it.range }
+}
 
-        gvcfReaders.forEach {
-            println("Range: ${it.range}")
-            println("Variant: ${it.variant}")
 private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, samples: List<String>): VariantContext {
 
     var refAllele: String? = null
@@ -109,7 +152,8 @@ private fun createVariantContext(
     reference: String,
     samples: List<String>,
     altAlleles: Set<String>,
-    genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>    variantsUsed: List<SimpleVariant>
+    genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>
+    variantsUsed: List<SimpleVariant>
 ): VariantContext {
 
     val refAllele = alleleRef(reference)
@@ -117,6 +161,7 @@ private fun createVariantContext(
     val alleleMap = mutableMapOf<String, Allele>()
     alleleMap[reference] = refAllele
     altAlleles.forEach { alleleMap[it] = alleleAlt(it) }
+
     val genotypes = genotypes.mapIndexed { index, (phased, alleles) ->
 
         val alleleObjs = alleles
@@ -194,7 +239,8 @@ private fun alleleAlt(allele: String): Allele {
 }
 
 fun main() {
-    val inputDir = "data/test/gvcf"
-    val outputFile = "data/test/gvcf/merged.g.vcf"
+    // val inputDir = "data/test/gvcf"
+    val inputDir = "/Users/tmc46/projects/scan_gvcf_wei-yun/input"
+    val outputFile = "data/test/merged.vcf"
     mergeGVCFs(inputDir, outputFile)
 }
