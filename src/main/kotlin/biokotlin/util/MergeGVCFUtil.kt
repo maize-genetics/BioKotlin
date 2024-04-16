@@ -37,8 +37,72 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         gvcfReaders.forEach {
             println("Range: ${it.range}")
             println("Variant: ${it.variant}")
+private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, samples: List<String>): VariantContext {
+
+    var refAllele: String? = null
+    var altAlleles: MutableSet<String> = mutableSetOf()
+    val variantsUsed = mutableListOf<SimpleVariant>()
+    val genotypes: List<Pair<Boolean, List<String>>> = gvcfReaders
+        .map { it.variant() }
+        .map { variant ->
+            when (variant) {
+                null -> Pair(false, listOf(".")) // No call
+                else -> {
+                    if (variant.positionRange.contains(currentPosition!!)) {
+
+                        val variantRef = when {
+                            variant.isRefBlock -> {
+                                val refIndex = currentPosition.position - variant.start
+                                if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
+                            }
+
+                            variant.isSNP -> variant.refAllele
+                            else -> null
+                        }
+
+                        if (refAllele == null) {
+                            refAllele = variantRef
+                        } else if (variantRef == null) {
+                            // Do nothing
+                        } else {
+                            require(refAllele == variantRef) { "Reference alleles are not the same: $refAllele, $variantRef" }
+                        }
+
+                        when {
+                            variant.isSNP -> {
+                                variantsUsed.add(variant)
+                                altAlleles.addAll(variant.altAlleles)
+                                Pair(variant.isPhased(0), variant.genotypeStrs(0))
+                            }
+
+                            variant.isRefBlock -> {
+                                variantsUsed.add(variant)
+                                val ploidy = variant.genotypeStrs(0).size
+                                Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
+                            }
+
+                            else -> {
+                                Pair(false, listOf(".")) // No call
+                            }
+                        }
+
+                    } else {
+                        Pair(false, listOf(".")) // No call
+                    }
+                }
+            }
         }
 
+    return createVariantContext(
+        currentPosition,
+        refAllele ?: error("Reference allele is null"),
+        samples,
+        altAlleles,
+        genotypes,
+        variantsUsed
+    )
+
+}
 
 private fun createVariantContext(
     position: Position,
@@ -53,7 +117,6 @@ private fun createVariantContext(
     val alleleMap = mutableMapOf<String, Allele>()
     alleleMap[reference] = refAllele
     altAlleles.forEach { alleleMap[it] = alleleAlt(it) }
-
     val genotypes = genotypes.mapIndexed { index, (phased, alleles) ->
 
         val alleleObjs = alleles
