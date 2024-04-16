@@ -100,6 +100,31 @@ private fun createVariantContext(
         .make()
 
 }
+
+private fun nextPosition(gvcfReaders: Array<VCFReader>, currentPosition: Position? = null): Position? {
+
+    // Sort current variants by start position
+    // Get the minimum start position
+    val sortedVariants = gvcfReaders.filter { it.variant() != null }.sortedBy { it.variant()!!.positionRange }
+    if (sortedVariants.isEmpty()) return null
+    val minPosition = sortedVariants.first().variant()!!.startPosition
+
+    // If no current position, return the minimum position
+    if ((currentPosition == null) || (minPosition > currentPosition)) return minPosition
+
+    val nextLowestVariant = sortedVariants.find { it.variant()!!.startPosition > currentPosition }
+
+    val lowestEndVariant = sortedVariants.minBy { it.variant()!!.endPosition }
+    return if (nextLowestVariant == null) {
+        lowestEndVariant.advanceVariant()
+        nextPosition(gvcfReaders, currentPosition)
+    } else {
+        if (lowestEndVariant.variant()!!.endPosition < nextLowestVariant.variant()!!.startPosition) {
+            lowestEndVariant.advanceVariant()
+            nextPosition(gvcfReaders, currentPosition)
+        } else {
+            nextLowestVariant.variant()!!.startPosition
+        }
     }
 
 }
