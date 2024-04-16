@@ -212,7 +212,7 @@ data class AltHeaderMetaData(
 data class VCFReader(
     val altHeaders: Map<String, AltHeaderMetaData>,
     private val deferredVariants: Channel<Deferred<SimpleVariant>>
-) {
+) : Iterator<SimpleVariant> {
 
     private var deferredVariant: Deferred<SimpleVariant>? = null
 
@@ -222,6 +222,9 @@ data class VCFReader(
 
     /**
      * Function to get the current variant in the VCF file.
+     * This doesn't advance to the next variant.
+     * Every call to this function will return the same variant until advanceVariant is called.
+     * Returns null if there are no more variants.
      */
     fun variant(): SimpleVariant? {
         return runBlocking { deferredVariant?.await() }
@@ -229,6 +232,7 @@ data class VCFReader(
 
     /**
      * Function to advance to the next variant in the VCF file.
+     * Use this in conjunction with variant() to get the next variant.
      */
     fun advanceVariant() {
         runBlocking {
@@ -239,6 +243,22 @@ data class VCFReader(
                 null
             }
         }
+    }
+
+    /**
+     * Function to check if there are more variants in the VCF file.
+     */
+    override fun hasNext(): Boolean {
+        return deferredVariant != null
+    }
+
+    /**
+     * Function to get the next variant in the VCF file.
+     */
+    override fun next(): SimpleVariant {
+        val result = variant()
+        advanceVariant()
+        return result ?: throw NoSuchElementException()
     }
 
 }
