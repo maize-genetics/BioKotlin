@@ -49,6 +49,14 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
 }
 
+private fun alleleRef(allele: String): Allele {
+    return Allele.create(allele, true)
+}
+
+private fun alleleAlt(allele: String): Allele {
+    return Allele.create(allele, false)
+}
+
 fun main() {
     val inputDir = "data/test/gvcf"
     val outputFile = "data/test/gvcf/merged.g.vcf"
