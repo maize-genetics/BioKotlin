@@ -266,8 +266,8 @@ data class VCFReader(
 /**
  * Function to create a VCF reader from a file.
  */
-fun vcfReader(inputFile: String): VCFReader {
-    val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
+fun vcfReader(inputFile: String, debug: Boolean = false): VCFReader {
+    val (altHeaders, deferredVariants) = parseVCFFile(inputFile, debug)
     return VCFReader(altHeaders, deferredVariants)
 }
 
