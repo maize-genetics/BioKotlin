@@ -218,9 +218,11 @@ data class VCFReader(
     private val deferredVariants: Channel<Deferred<SimpleVariant>>
 ) : Iterator<SimpleVariant> {
 
-    private var deferredVariant: Deferred<SimpleVariant>? = null
+    private var currentVariant: Deferred<SimpleVariant>? = null
+    private var nextVariant: Deferred<SimpleVariant>? = null
 
     init {
+        advanceVariant()
         advanceVariant()
     }
 
@@ -231,7 +233,11 @@ data class VCFReader(
      * Returns null if there are no more variants.
      */
     fun variant(): SimpleVariant? {
-        return runBlocking { deferredVariant?.await() }
+        return runBlocking { currentVariant?.await() }
+    }
+
+    internal fun lookAhead(): SimpleVariant? {
+        return runBlocking { nextVariant?.await() }
     }
 
     /**
@@ -239,9 +245,10 @@ data class VCFReader(
      * Use this in conjunction with variant() to get the next variant.
      */
     fun advanceVariant() {
+        currentVariant = nextVariant
         runBlocking {
             val result = deferredVariants.receiveCatching()
-            deferredVariant = if (result.isSuccess) {
+            nextVariant = if (result.isSuccess) {
                 result.getOrNull()
             } else {
                 null
@@ -253,7 +260,7 @@ data class VCFReader(
      * Function to check if there are more variants in the VCF file.
      */
     override fun hasNext(): Boolean {
-        return deferredVariant != null
+        return currentVariant != null
     }
 
     /**
