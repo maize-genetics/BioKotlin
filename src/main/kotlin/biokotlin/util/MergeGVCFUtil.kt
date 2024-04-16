@@ -45,6 +45,61 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
             println("Variant: ${it.variant}")
         }
 
+
+private fun createVariantContext(
+    position: Position,
+    reference: String,
+    samples: List<String>,
+    altAlleles: Set<String>,
+    genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>
+    variantsUsed: List<SimpleVariant>
+): VariantContext {
+
+    val refAllele = alleleRef(reference)
+
+    val alleleMap = mutableMapOf<String, Allele>()
+    alleleMap[reference] = refAllele
+    altAlleles.forEach { alleleMap[it] = alleleAlt(it) }
+
+    val genotypes = genotypes.mapIndexed { index, (phased, alleles) ->
+
+        val alleleObjs = alleles
+            .map { allele ->
+                when (allele) {
+                    "." -> Allele.NO_CALL
+
+                    "REF" -> refAllele
+
+                    else -> {
+                        val result = alleleMap[allele]
+                        if (result == null) {
+                            println("current position: $position")
+                            variantsUsed.forEach { variant ->
+                                println("Variant: $variant")
+                            }
+                            throw IllegalArgumentException("Allele not found: $allele")
+                        }
+                        result
+                    }
+                }
+            }
+
+        GenotypeBuilder(samples[index], alleleObjs)
+            .phased(phased)
+            .make()
+
+    }
+
+    return VariantContextBuilder()
+        .source(".")
+        .alleles(alleleMap.values)
+        .chr(position.contig)
+        .start(position.position.toLong())
+        .stop(position.position.toLong())
+        .genotypes(genotypes)
+        .make()
+
+}
     }
 
 }
