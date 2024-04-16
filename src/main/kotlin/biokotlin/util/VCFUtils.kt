@@ -324,9 +324,9 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 /**
  * Function to parse a VCF file into a map of ALT headers and a channel of SimpleVariant objects.
  */
-fun parseVCFFile(
+private fun parseVCFFile(
     filename: String,
-    debug: Boolean = false
+    debug: Boolean
 ): Pair<Map<String, AltHeaderMetaData>, Channel<Deferred<SimpleVariant>>> {
 
     val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
