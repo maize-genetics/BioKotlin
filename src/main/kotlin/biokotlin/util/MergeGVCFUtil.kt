@@ -22,6 +22,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         .map { it.absolutePath }
         .toList()
 
+    // List of samples, one per input GVCF file
     val samples = mutableListOf<String>()
 
     val gvcfReaders = inputFiles.map { inputFile ->
@@ -40,9 +41,11 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         reader
     }.toTypedArray()
 
+    // sort GVCF readers and samples by sample name
     gvcfReaders.sortBy { it.variant()?.samples?.get(0) }
     samples.sort()
 
+    // Write the merged VCF file, using the HTSJDK VariantContextWriterBuilder
     VariantContextWriterBuilder()
         .unsetOption(Options.INDEX_ON_THE_FLY)
         .setOutputFile(File(outputFile))
@@ -54,6 +57,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
             val header = VCFHeader(createGenericVCFHeaders(samples))
             writer.writeHeader(header)
 
+            // Initial position is the minimum start position of all GVCF files
             var currentPosition = nextPosition(gvcfReaders)
             while (currentPosition != null) {
 
@@ -62,9 +66,10 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
                     .filter { it.positionRange.contains(currentPosition!!) }
 
                 val hasSNP = variantsAtPosition.find { it.isSNP } != null
-
                 val hasIndel = variantsAtPosition.find { it.isIndel } != null
 
+                // This is set up to handle SNPs that doesn't overlap with indels
+                // But can be expanded to handle other types of variants
                 when {
                     hasSNP && !hasIndel -> {
                         val variantContext = snp(gvcfReaders, currentPosition, samples)
@@ -72,6 +77,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
                     }
                 }
 
+                // Advance the GVCF readers to the next position
                 currentPosition = nextPosition(gvcfReaders, currentPosition)
 
             }
@@ -80,6 +86,10 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
 }
 
+/**
+ * Creates a VariantContext for the current position, given the variants
+ * at that position from the GVCF readers.
+ */
 private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, samples: List<String>): VariantContext {
 
     var refAllele: String? = null
@@ -89,47 +99,60 @@ private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, sample
         .map { it.variant() }
         .map { variant ->
             when (variant) {
-                null -> Pair(false, listOf(".")) // No call
+                null -> Pair(false, listOf(".")) // No call, since no variant at position for this sample
                 else -> {
                     if (variant.positionRange.contains(currentPosition!!)) {
 
                         val variantRef = when {
+
+                            // Get the reference allele from the reference block if present
+                            // Otherwise, reference allele will be determined by the first SNP
                             variant.isRefBlock -> {
                                 val refIndex = currentPosition.position - variant.start
                                 if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
                             }
 
                             variant.isSNP -> variant.refAllele
+
                             else -> null
+
                         }
 
                         if (refAllele == null) {
                             refAllele = variantRef
                         } else if (variantRef == null) {
-                            // Do nothing
+                            // Do nothing, wasn't able to get the reference allele from the reference block
                         } else {
                             require(refAllele == variantRef) { "Reference alleles are not the same: $refAllele, $variantRef" }
                         }
 
                         when {
+
+                            // If the variant is an SNP, use the variant's alleles
                             variant.isSNP -> {
                                 variantsUsed.add(variant)
                                 altAlleles.addAll(variant.altAlleles)
                                 Pair(variant.isPhased(0), variant.genotypeStrs(0))
                             }
 
+                            // If the variant is a reference block, use REF.
+                            // REF will be changed to the actual reference allele when
+                            // creating the VariantContext
                             variant.isRefBlock -> {
                                 variantsUsed.add(variant)
                                 val ploidy = variant.genotypeStrs(0).size
                                 Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
                             }
 
+                            // Don't think this will be executed, as positions that have
+                            // indels will not be processed by this method
                             else -> {
                                 Pair(false, listOf(".")) // No call
                             }
+
                         }
 
-                    } else {
+                    } else { // Current variant for this sample doesn't represent the current position
                         Pair(false, listOf(".")) // No call
                     }
                 }
@@ -147,6 +170,9 @@ private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, sample
 
 }
 
+/**
+ * Creates a VariantContext for the current position.
+ */
 private fun createVariantContext(
     position: Position,
     reference: String,
@@ -213,8 +239,18 @@ private fun nextPosition(gvcfReaders: Array<VCFReader>, currentPosition: Positio
     // If no current position, return the minimum position
     if ((currentPosition == null) || (minPosition > currentPosition)) return minPosition
 
+    // Get the variant with the next lowest start position
+    // that's greater than the current position.
+    // If there's no such variant, this set to null
     val nextLowestVariant = sortedVariants.find { it.variant()!!.startPosition > currentPosition }
 
+    // Get the variant with the lowest end position.
+    // If no nextLowestVariant found, advance that variant,
+    // and recursively call this method.
+    // Second case, if the lowest end position is less than the
+    // next lowest start position, advance that variant,
+    // and recursively call this method.
+    // Otherwise, return the next lowest start position.
     val lowestEndVariant = sortedVariants.minBy { it.variant()!!.endPosition }
     return if (nextLowestVariant == null) {
         lowestEndVariant.advanceVariant()
@@ -230,10 +266,16 @@ private fun nextPosition(gvcfReaders: Array<VCFReader>, currentPosition: Positio
 
 }
 
+/**
+ * Creates a HTSJDK reference allele.
+ */
 private fun alleleRef(allele: String): Allele {
     return Allele.create(allele, true)
 }
 
+/**
+ * Creates a HTSJDK alternate allele.
+ */
 private fun alleleAlt(allele: String): Allele {
     return Allele.create(allele, false)
 }
