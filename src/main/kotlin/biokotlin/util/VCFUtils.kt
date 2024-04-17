@@ -215,7 +215,7 @@ data class AltHeaderMetaData(
 
 data class VCFReader(
     val altHeaders: Map<String, AltHeaderMetaData>,
-    private val deferredVariants: Channel<Deferred<SimpleVariant>>
+    private val variants: Channel<SimpleVariant>
 ) : Iterator<SimpleVariant> {
 
     private var currentVariant: SimpleVariant? = null
@@ -247,9 +247,9 @@ data class VCFReader(
     fun advanceVariant() {
         currentVariant = nextVariant
         runBlocking {
-            val result = deferredVariants.receiveCatching()
+            val result = variants.receiveCatching()
             nextVariant = if (result.isSuccess) {
-                result.getOrNull()?.await()
+                result.getOrNull()
             } else {
                 null
             }
@@ -278,8 +278,8 @@ data class VCFReader(
  * Function to create a VCF reader from a file.
  */
 fun vcfReader(inputFile: String, debug: Boolean = false): VCFReader {
-    val (altHeaders, deferredVariants) = parseVCFFile(inputFile, debug)
-    return VCFReader(altHeaders, deferredVariants)
+    val (altHeaders, variants) = parseVCFFile(inputFile, debug)
+    return VCFReader(altHeaders, variants)
 }
 
 /**
@@ -334,20 +334,20 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 private fun parseVCFFile(
     filename: String,
     debug: Boolean
-): Pair<Map<String, AltHeaderMetaData>, Channel<Deferred<SimpleVariant>>> {
+): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
 
     val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
         val metaData = parseALTHeader(reader.fileHeader)
         Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
-    val channel = Channel<Deferred<SimpleVariant>>(100)
+    val channel = Channel<SimpleVariant>(100)
     CoroutineScope(Dispatchers.IO).launch {
 
         bufferedReader(filename).useLines { lines ->
             lines
                 .filter { !it.startsWith("#") }
-                .forEach { channel.send(async { parseSingleVCFLine(it, samples, debug) }) }
+                .forEach { channel.send(parseSingleVCFLine(it, samples, debug)) }
             channel.close()
         }
 
