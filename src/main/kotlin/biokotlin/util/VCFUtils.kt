@@ -4,8 +4,11 @@ import biokotlin.genome.Position
 import biokotlin.genome.PositionRange
 import biokotlin.genome.SampleGamete
 import htsjdk.variant.vcf.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -221,6 +224,13 @@ data class VCFReader(
     private var currentVariant: SimpleVariant? = null
     private var nextVariant: SimpleVariant? = null
 
+    // Cache variants to avoid runBlocking for every
+    // advanceVariant call. Don't overfill cache to avoid
+    // queue from having to resize.
+    private val variantCacheSize = 105
+    private val variantCacheFillSize = (variantCacheSize * 0.95).toInt()
+    private val variantCache = ArrayDeque<SimpleVariant>(variantCacheSize)
+
     init {
         advanceVariant()
         advanceVariant()
@@ -246,14 +256,31 @@ data class VCFReader(
      */
     fun advanceVariant() {
         currentVariant = nextVariant
-        runBlocking {
-            val result = variants.receiveCatching()
-            nextVariant = if (result.isSuccess) {
-                result.getOrNull()
-            } else {
-                null
-            }
+        val tempVariant = variantCache.removeFirstOrNull()
+        if (tempVariant == null) {
+            fillCache()
+            nextVariant = variantCache.removeFirstOrNull()
+        } else {
+            nextVariant = tempVariant
         }
+    }
+
+    private fun fillCache() {
+
+        runBlocking {
+
+            do {
+                val result = variants.receiveCatching()
+                val variant = if (result.isSuccess) {
+                    result.getOrNull()
+                } else {
+                    null
+                }
+                variant?.let { variantCache.add(it) }
+            } while (variant != null && variantCache.size < variantCacheFillSize)
+
+        }
+
     }
 
     /**
