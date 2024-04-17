@@ -8,9 +8,14 @@ import htsjdk.variant.variantcontext.VariantContextBuilder
 import htsjdk.variant.variantcontext.writer.Options
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.VCFHeader
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import java.io.File
+import kotlin.system.measureNanoTime
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
+
+    val variantContextChannel = Channel<Deferred<VariantContextInfo?>>(100)
 
     // Get list of input GVCF files from the input directory
     val inputFiles = File(inputDir)
@@ -45,6 +50,65 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
     gvcfReaders.sortBy { it.variant()?.samples?.get(0) }
     samples.sort()
 
+    CoroutineScope(Dispatchers.IO).launch {
+
+        // Initial position is the minimum start position of all GVCF files
+        var currentPosition = nextPosition(gvcfReaders)
+        while (currentPosition != null) {
+
+            val variants = gvcfReaders
+                .map { it.variant() }
+                .toTypedArray()
+
+            val thisPosition = currentPosition
+
+            variantContextChannel.send(async {
+                createVariantContext(samples, variants, thisPosition)
+            })
+
+            // Advance the GVCF readers to the next position
+            currentPosition = nextPosition(gvcfReaders, currentPosition)
+
+        }
+
+        variantContextChannel.close()
+
+    }
+
+    runBlocking {
+        writeOutputVCF(outputFile, samples, variantContextChannel)
+    }
+
+}
+
+private fun createVariantContext(
+    samples: List<String>,
+    variants: Array<SimpleVariant?>,
+    currentPosition: Position
+): VariantContextInfo? {
+
+    val variantsAtPosition = variants
+        .filterNotNull()
+        .filter { it.positionRange.contains(currentPosition) }
+
+    val hasSNP = variantsAtPosition.find { it.isSNP } != null
+    val hasIndel = variantsAtPosition.find { it.isIndel } != null
+
+    // This is set up to handle SNPs that doesn't overlap with indels
+    // But can be expanded to handle other types of variants
+    when {
+        hasSNP && !hasIndel -> return snp(variants, currentPosition, samples)
+        else -> return null
+    }
+
+}
+
+private suspend fun writeOutputVCF(
+    outputFile: String,
+    samples: List<String>,
+    variantContextChannel: Channel<Deferred<VariantContextInfo?>>
+) {
+
     // Write the merged VCF file, using the HTSJDK VariantContextWriterBuilder
     VariantContextWriterBuilder()
         .unsetOption(Options.INDEX_ON_THE_FLY)
@@ -57,30 +121,15 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
             val header = VCFHeader(createGenericVCFHeaders(samples))
             writer.writeHeader(header)
 
-            // Initial position is the minimum start position of all GVCF files
-            var currentPosition = nextPosition(gvcfReaders)
-            while (currentPosition != null) {
-
-                val variantsAtPosition = gvcfReaders
-                    .mapNotNull { it.variant() }
-                    .filter { it.positionRange.contains(currentPosition!!) }
-
-                val hasSNP = variantsAtPosition.find { it.isSNP } != null
-                val hasIndel = variantsAtPosition.find { it.isIndel } != null
-
-                // This is set up to handle SNPs that doesn't overlap with indels
-                // But can be expanded to handle other types of variants
-                when {
-                    hasSNP && !hasIndel -> {
-                        val variantContext = snp(gvcfReaders, currentPosition, samples)
-                        writer.add(variantContext)
-                    }
-                }
-
-                // Advance the GVCF readers to the next position
-                currentPosition = nextPosition(gvcfReaders, currentPosition)
-
+            var timeWriting = 0L
+            for (deferred in variantContextChannel) {
+                val variantContext = deferred.await()?.let { createVariantContext(it) }
+                measureNanoTime {
+                    if (variantContext != null) writer.add(variantContext)
+                }.let { timeWriting += it }
             }
+
+            println("Time writing VCF: ${timeWriting / 1e9} secs.")
 
         }
 
@@ -90,18 +139,17 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
  * Creates a VariantContext for the current position, given the variants
  * at that position from the GVCF readers.
  */
-private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, samples: List<String>): VariantContext {
+private fun snp(variants: Array<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContextInfo {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
     val variantsUsed = mutableListOf<SimpleVariant>()
-    val genotypes: List<Pair<Boolean, List<String>>> = gvcfReaders
-        .map { it.variant() }
+    val genotypes: List<Pair<Boolean, List<String>>> = variants
         .map { variant ->
             when (variant) {
                 null -> Pair(false, listOf(".")) // No call, since no variant at position for this sample
                 else -> {
-                    if (variant.positionRange.contains(currentPosition!!)) {
+                    if (variant.positionRange.contains(currentPosition)) {
 
                         val variantRef = when {
 
@@ -159,7 +207,7 @@ private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, sample
             }
         }
 
-    return createVariantContext(
+    return VariantContextInfo(
         currentPosition,
         refAllele ?: error("Reference allele is null"),
         samples,
@@ -170,25 +218,27 @@ private fun snp(gvcfReaders: Array<VCFReader>, currentPosition: Position, sample
 
 }
 
+private data class VariantContextInfo(
+    val position: Position,
+    val reference: String,
+    val samples: List<String>,
+    val altAlleles: Set<String>,
+    val genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>
+    val variantsUsed: List<SimpleVariant>
+)
+
 /**
  * Creates a VariantContext for the current position.
  */
-private fun createVariantContext(
-    position: Position,
-    reference: String,
-    samples: List<String>,
-    altAlleles: Set<String>,
-    genotypes: List<Pair<Boolean, List<String>>>, // Pair<phased, alleles>
-    variantsUsed: List<SimpleVariant>
-): VariantContext {
+private fun createVariantContext(info: VariantContextInfo): VariantContext {
 
-    val refAllele = alleleRef(reference)
+    val refAllele = alleleRef(info.reference)
 
     val alleleMap = mutableMapOf<String, Allele>()
-    alleleMap[reference] = refAllele
-    altAlleles.forEach { alleleMap[it] = alleleAlt(it) }
+    alleleMap[info.reference] = refAllele
+    info.altAlleles.forEach { alleleMap[it] = alleleAlt(it) }
 
-    val genotypes = genotypes.mapIndexed { index, (phased, alleles) ->
+    val genotypes = info.genotypes.mapIndexed { index, (phased, alleles) ->
 
         val alleleObjs = alleles
             .map { allele ->
@@ -197,21 +247,11 @@ private fun createVariantContext(
 
                     "REF" -> refAllele
 
-                    else -> {
-                        val result = alleleMap[allele]
-                        if (result == null) {
-                            println("current position: $position")
-                            variantsUsed.forEach { variant ->
-                                println("Variant: $variant")
-                            }
-                            throw IllegalArgumentException("Allele not found: $allele")
-                        }
-                        result
-                    }
+                    else -> alleleMap[allele] ?: throw IllegalArgumentException("Allele not found: $allele")
                 }
             }
 
-        GenotypeBuilder(samples[index], alleleObjs)
+        GenotypeBuilder(info.samples[index], alleleObjs)
             .phased(phased)
             .make()
 
@@ -220,9 +260,9 @@ private fun createVariantContext(
     return VariantContextBuilder()
         .source(".")
         .alleles(alleleMap.values)
-        .chr(position.contig)
-        .start(position.position.toLong())
-        .stop(position.position.toLong())
+        .chr(info.position.contig)
+        .start(info.position.position.toLong())
+        .stop(info.position.position.toLong())
         .genotypes(genotypes)
         .make()
 
@@ -237,32 +277,26 @@ private fun nextPosition(gvcfReaders: Array<VCFReader>, currentPosition: Positio
     val minPosition = sortedVariants.first().variant()!!.startPosition
 
     // If no current position, return the minimum position
-    if ((currentPosition == null) || (minPosition > currentPosition)) return minPosition
+    if (currentPosition == null) return minPosition
 
-    // Get the variant with the next lowest start position
-    // that's greater than the current position.
-    // If there's no such variant, this set to null
-    val nextLowestVariant = sortedVariants.find { it.variant()!!.startPosition > currentPosition }
+    val nextLowestPosition = sortedVariants
+        .find { it.variant()!!.startPosition > currentPosition }?.variant()?.startPosition
 
-    // Get the variant with the lowest end position.
-    // If no nextLowestVariant found, advance that variant,
-    // and recursively call this method.
-    // Second case, if the lowest end position is less than the
-    // next lowest start position, advance that variant,
-    // and recursively call this method.
-    // Otherwise, return the next lowest start position.
-    val lowestEndVariant = sortedVariants.minBy { it.variant()!!.endPosition }
-    return if (nextLowestVariant == null) {
-        lowestEndVariant.advanceVariant()
-        nextPosition(gvcfReaders, currentPosition)
-    } else {
-        if (lowestEndVariant.variant()!!.endPosition < nextLowestVariant.variant()!!.startPosition) {
-            lowestEndVariant.advanceVariant()
-            nextPosition(gvcfReaders, currentPosition)
-        } else {
-            nextLowestVariant.variant()!!.startPosition
-        }
+    val lowestLookAheadStart = sortedVariants
+        .filter { it.lookAhead() != null }
+        .minByOrNull { it.lookAhead()!!.startPosition }
+        ?.lookAhead()?.startPosition
+
+    val result = when {
+        nextLowestPosition == null -> lowestLookAheadStart
+        lowestLookAheadStart == null -> nextLowestPosition
+        else -> minOf(nextLowestPosition, lowestLookAheadStart)
     }
+
+    result?.let {
+        sortedVariants.filter { it.variant()!!.endPosition < result }.forEach { it.advanceVariant() }
+        return result
+    } ?: return null
 
 }
 
