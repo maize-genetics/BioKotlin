@@ -75,7 +75,7 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                             writer.write("$line\n")
                         }
 
-                        val reader = vcfReader(inputFile)
+                        val reader = vcfReader(inputFile, true)
                         for (variant in reader) {
 
                             val refSeq = variant.refAllele
