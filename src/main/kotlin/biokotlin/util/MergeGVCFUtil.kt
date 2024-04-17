@@ -15,7 +15,7 @@ import kotlin.system.measureNanoTime
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
 
-    val variantContextChannel = Channel<Deferred<VariantContextInfo?>>(100)
+    val variantContextChannel = Channel<Deferred<VariantContext?>>(100)
 
     // Get list of input GVCF files from the input directory
     val inputFiles = File(inputDir)
@@ -52,26 +52,41 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
     CoroutineScope(Dispatchers.IO).launch {
 
-        // Initial position is the minimum start position of all GVCF files
-        var currentPosition = nextPosition(gvcfReaders)
-        while (currentPosition != null) {
+        measureNanoTime {
 
-            val variants = gvcfReaders
-                .map { it.variant() }
-                .toTypedArray()
+            var timeNextPosition = 0L
+            // Initial position is the minimum start position of all GVCF files
+            var currentPosition = nextPosition(gvcfReaders)
+            while (currentPosition != null) {
 
-            val thisPosition = currentPosition
+                val variants = gvcfReaders
+                    .map { it.variant() }
+                    .toTypedArray()
 
-            variantContextChannel.send(async {
-                createVariantContext(samples, variants, thisPosition)
-            })
+                val thisPosition = currentPosition
 
-            // Advance the GVCF readers to the next position
-            currentPosition = nextPosition(gvcfReaders, currentPosition)
+                variantContextChannel.send(async {
+                    createVariantContext(samples, variants, thisPosition)
+                })
 
-        }
+                measureNanoTime {
+                    // Advance the GVCF readers to the next position
+                    currentPosition = nextPosition(gvcfReaders, currentPosition)
+                }.let { timeNextPosition += it }
 
-        variantContextChannel.close()
+            }
+
+            println("Time next position: ${timeNextPosition / 1e9} secs.")
+
+            variantContextChannel.close()
+
+        }.let { println("Time sending to channel: ${it / 1e9} secs.") }
+
+        println("Time min position: ${timeMinPosition / 1e9} secs.")
+        println("Time next lowest position: ${timeNextLowestPosition / 1e9} secs.")
+        println("Time lowest look ahead start: ${timeLowestLookAheadStart / 1e9} secs.")
+        println("Time result: ${timeResult / 1e9} secs.")
+        println("Time advance variant: ${timeAdvanceVariant / 1e9} secs.")
 
     }
 
@@ -85,7 +100,7 @@ private fun createVariantContext(
     samples: List<String>,
     variants: Array<SimpleVariant?>,
     currentPosition: Position
-): VariantContextInfo? {
+): VariantContext? {
 
     val variantsAtPosition = variants
         .filterNotNull()
@@ -96,9 +111,9 @@ private fun createVariantContext(
 
     // This is set up to handle SNPs that doesn't overlap with indels
     // But can be expanded to handle other types of variants
-    when {
-        hasSNP && !hasIndel -> return snp(variants, currentPosition, samples)
-        else -> return null
+    return when {
+        hasSNP && !hasIndel -> snp(variants, currentPosition, samples)
+        else -> null
     }
 
 }
@@ -106,7 +121,7 @@ private fun createVariantContext(
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
-    variantContextChannel: Channel<Deferred<VariantContextInfo?>>
+    variantContextChannel: Channel<Deferred<VariantContext?>>
 ) {
 
     // Write the merged VCF file, using the HTSJDK VariantContextWriterBuilder
@@ -123,7 +138,7 @@ private suspend fun writeOutputVCF(
 
             var timeWriting = 0L
             for (deferred in variantContextChannel) {
-                val variantContext = deferred.await()?.let { createVariantContext(it) }
+                val variantContext = deferred.await()
                 measureNanoTime {
                     if (variantContext != null) writer.add(variantContext)
                 }.let { timeWriting += it }
@@ -139,7 +154,7 @@ private suspend fun writeOutputVCF(
  * Creates a VariantContext for the current position, given the variants
  * at that position from the GVCF readers.
  */
-private fun snp(variants: Array<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContextInfo {
+private fun snp(variants: Array<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContext {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
@@ -207,13 +222,15 @@ private fun snp(variants: Array<SimpleVariant?>, currentPosition: Position, samp
             }
         }
 
-    return VariantContextInfo(
-        currentPosition,
-        refAllele ?: error("Reference allele is null"),
-        samples,
-        altAlleles,
-        genotypes,
-        variantsUsed
+    return createVariantContext(
+        VariantContextInfo(
+            currentPosition,
+            refAllele ?: error("Reference allele is null"),
+            samples,
+            altAlleles,
+            genotypes,
+            variantsUsed
+        )
     )
 
 }
@@ -268,33 +285,55 @@ private fun createVariantContext(info: VariantContextInfo): VariantContext {
 
 }
 
+var timeMinPosition = 0L
+var timeNextLowestPosition = 0L
+var timeLowestLookAheadStart = 0L
+var timeResult = 0L
+var timeAdvanceVariant = 0L
 private fun nextPosition(gvcfReaders: Array<VCFReader>, currentPosition: Position? = null): Position? {
 
-    // Sort current variants by start position
-    // Get the minimum start position
-    val sortedVariants = gvcfReaders.filter { it.variant() != null }.sortedBy { it.variant()!!.positionRange }
-    if (sortedVariants.isEmpty()) return null
-    val minPosition = sortedVariants.first().variant()!!.startPosition
+    val minPosition: Position
+    val sortedVariants: List<VCFReader>
+    measureNanoTime {
+        // Sort current variants by start position
+        // Get the minimum start position
+        sortedVariants = gvcfReaders.filter { it.variant() != null }.sortedBy { it.variant()!!.positionRange }
+        if (sortedVariants.isEmpty()) return null
+        minPosition = sortedVariants.first().variant()!!.startPosition
+    }.let { timeMinPosition += it }
 
     // If no current position, return the minimum position
     if (currentPosition == null) return minPosition
 
-    val nextLowestPosition = sortedVariants
-        .find { it.variant()!!.startPosition > currentPosition }?.variant()?.startPosition
+    val nextLowestPosition: Position?
+    measureNanoTime {
+        nextLowestPosition = sortedVariants
+            .find { it.variant()!!.startPosition > currentPosition }?.variant()?.startPosition
+    }.let { timeNextLowestPosition += it }
 
-    val lowestLookAheadStart = sortedVariants
-        .filter { it.lookAhead() != null }
-        .minByOrNull { it.lookAhead()!!.startPosition }
-        ?.lookAhead()?.startPosition
+    val lowestLookAheadStart: Position?
+    measureNanoTime {
+        lowestLookAheadStart = sortedVariants
+            .filter { it.lookAhead() != null }
+            .minByOrNull { it.lookAhead()!!.startPosition }
+            ?.lookAhead()?.startPosition
+    }.let { timeLowestLookAheadStart += it }
 
-    val result = when {
-        nextLowestPosition == null -> lowestLookAheadStart
-        lowestLookAheadStart == null -> nextLowestPosition
-        else -> minOf(nextLowestPosition, lowestLookAheadStart)
-    }
+    val result: Position?
+    measureNanoTime {
+        result = when {
+            nextLowestPosition == null -> lowestLookAheadStart
+            lowestLookAheadStart == null -> nextLowestPosition
+            else -> minOf(nextLowestPosition, lowestLookAheadStart)
+        }
+    }.let { timeResult += it }
 
     result?.let {
-        sortedVariants.filter { it.variant()!!.endPosition < result }.forEach { it.advanceVariant() }
+        measureNanoTime {
+            sortedVariants.filter { it.variant()!!.endPosition < result }.forEach {
+                it.advanceVariant()
+            }
+        }.let { timeAdvanceVariant += it }
         return result
     } ?: return null
 
