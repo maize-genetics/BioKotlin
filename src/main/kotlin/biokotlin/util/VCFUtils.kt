@@ -239,6 +239,9 @@ data class VCFReader(
     private val variantCache = ArrayDeque<SimpleVariant>(variantCacheSize)
 
     init {
+        // Advance twice to preload the currentVariant
+        // and nextVariant. This is so that the first call
+        // to variant() will return the first variant.
         advanceVariant()
         advanceVariant()
     }
@@ -253,6 +256,12 @@ data class VCFReader(
         return currentVariant
     }
 
+    /**
+     * Function to look ahead to the next variant in the VCF file.
+     * This is used to determine which VCFReaders should be
+     * advanced to the next variant when multiple VCFReaders
+     * are being used.
+     */
     internal fun lookAhead(): SimpleVariant? {
         return nextVariant
     }
@@ -272,6 +281,10 @@ data class VCFReader(
         }
     }
 
+    /**
+     * Function to fill the cache with variants.
+     * This is for performance reasons to avoid runBlocking
+     */
     private fun fillCache() {
 
         runBlocking {
