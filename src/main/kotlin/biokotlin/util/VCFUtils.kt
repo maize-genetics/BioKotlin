@@ -196,6 +196,13 @@ data class SimpleVariant(
         return !genotypes[sampleIndex].contains("/")
     }
 
+    /**
+     * Returns whether position is within the range of this variant.
+     */
+    fun contains(position: Position): Boolean {
+        return contig == position.contig && start <= position.position && position.position <= end
+    }
+
 }
 
 // Making Number a string as VCF allows for '.'
