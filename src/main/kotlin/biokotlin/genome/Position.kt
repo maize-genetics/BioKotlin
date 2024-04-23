@@ -102,6 +102,13 @@ data class PositionRange(val contig: String, val start: Int, val end: Int) : Com
         }
     }
 
+    /**
+     * Check if this position range overlaps with another position range.
+     */
+    fun overlapping(other: PositionRange): Boolean {
+        return contig == other.contig && (other.start in start..end || other.end in start..end)
+    }
+
     fun contains(position: Position): Boolean {
         return contig == position.contig && start <= position.position && position.position <= end
     }
