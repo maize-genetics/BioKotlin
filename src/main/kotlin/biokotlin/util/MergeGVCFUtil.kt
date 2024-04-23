@@ -1,6 +1,9 @@
 package biokotlin.util
 
 import biokotlin.genome.Position
+import com.google.common.collect.ImmutableRangeMap
+import com.google.common.collect.Range
+import com.google.common.collect.RangeMap
 import htsjdk.variant.variantcontext.Allele
 import htsjdk.variant.variantcontext.GenotypeBuilder
 import htsjdk.variant.variantcontext.VariantContext
@@ -10,8 +13,11 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.VCFHeader
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import org.apache.logging.log4j.LogManager
 import java.io.File
 import kotlin.system.measureNanoTime
+
+private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtil")
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
 
@@ -50,7 +56,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
     gvcfReaders.sortBy { it.variant()?.samples?.get(0) }
     samples.sort()
 
-    val positionsChannel = Channel<Pair<Position, Array<SimpleVariant?>>>(100)
+    val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant>>>>>(100)
     CoroutineScope(Dispatchers.IO).launch {
         positionsToEvaluate(gvcfReaders, positionsChannel)
     }
@@ -59,21 +65,22 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
         measureNanoTime {
 
-            var timeNextPosition = 0L
             var timeCreateVariantContext = 0L
-            for ((currentPosition, variants) in positionsChannel) {
+            for (deferred in positionsChannel) {
 
-                variantContextChannel.send(async {
-                    val result: VariantContext?
-                    measureNanoTime {
-                        result = createVariantContext(samples, variants, currentPosition)
-                    }.let { timeCreateVariantContext += it }
-                    result
-                })
+                val block = deferred.await()
+                for ((currentPosition, variants) in block) {
+                    variantContextChannel.send(async {
+                        val result: VariantContext?
+                        measureNanoTime {
+                            result = createVariantContext(samples, variants, currentPosition)
+                        }.let { timeCreateVariantContext += it }
+                        result
+                    })
+                }
 
             }
 
-            println("Time next position: ${timeNextPosition / 1e9} secs.")
             println("Time create variant context: ${timeCreateVariantContext / 1e9} secs.")
 
             variantContextChannel.close()
@@ -83,6 +90,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
     }
 
     runBlocking {
+        println("writing output: $outputFile")
         writeOutputVCF(outputFile, samples, variantContextChannel)
     }
 
@@ -95,19 +103,60 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
 private suspend fun positionsToEvaluate(
     readers: Array<VCFReader>,
-    channel: Channel<Pair<Position, Array<SimpleVariant?>>>
-) {
+    channel: Channel<Deferred<List<Pair<Position, List<SimpleVariant>>>>>
+) = withContext(Dispatchers.IO) {
 
-    var currentPosition = nextPosition(readers)
-    while (currentPosition != null) {
+    val stepSize = 1000
 
-        val variants = readers
-            .map { it.variant() }
-            .toTypedArray()
+    var lowestPosition = readers
+        .mapNotNull { it.variant()?.startPosition }
+        .minOrNull()
 
-        channel.send(Pair(currentPosition, variants))
+    while (lowestPosition != null) {
 
-        currentPosition = nextPosition(readers, currentPosition)
+        val currentContig = lowestPosition.contig
+        var currentStart = lowestPosition.position
+
+        var rangeMaps: List<RangeMap<Int, SimpleVariant>>? = null
+        do {
+
+            val jobs = readers.mapIndexed { index, reader ->
+
+                val thisContig = currentContig
+                val thisStart = currentStart
+                val thisReader = reader
+                val thisRangeMap = rangeMaps?.getOrNull(index)
+
+                async {
+                    nextPositions(
+                        thisStart,
+                        Position(thisContig, thisStart + stepSize - 1),
+                        thisRangeMap,
+                        thisReader
+                    )
+                }
+
+            }
+
+            rangeMaps = mutableListOf()
+            val startPositions = mutableSetOf<Position>()
+            jobs.forEach {
+                val result = it.await()
+                rangeMaps.add(result.rangeMap)
+                startPositions.addAll(result.positions)
+            }
+
+            val thisRangeMaps = rangeMaps
+            channel.send(async { processBlock(startPositions, readers.size, thisRangeMaps) })
+
+            currentStart += stepSize
+
+        } while (!readers.all { it.variant() == null } &&
+            readers.mapNotNull { it.variant()?.startPosition }.find { it.contig == currentContig } != null)
+
+        lowestPosition = readers
+            .mapNotNull { it.variant()?.startPosition }
+            .minOrNull()
 
     }
 
@@ -115,18 +164,66 @@ private suspend fun positionsToEvaluate(
 
 }
 
+private fun processBlock(
+    startPositions: Set<Position>,
+    numReaders: Int,
+    rangeMaps: List<RangeMap<Int, SimpleVariant>>
+): List<Pair<Position, List<SimpleVariant>>> {
+
+    return startPositions
+        .sorted()
+        .map { position ->
+            val variants = (0 until numReaders).mapNotNull { index ->
+                rangeMaps[index].get(position.position)
+            }
+            Pair(position, variants)
+        }
+
+}
+
+private data class NextPositionsResult(
+    val rangeMap: RangeMap<Int, SimpleVariant>,
+    val positions: List<Position>
+)
+
+private suspend fun nextPositions(
+    start: Int,
+    end: Position,
+    previousRangeMap: RangeMap<Int, SimpleVariant>? = null,
+    reader: VCFReader
+): NextPositionsResult {
+
+    val builder = ImmutableRangeMap.builder<Int, SimpleVariant>()
+
+    if (previousRangeMap != null) {
+        previousRangeMap.get(start)?.let { variant ->
+            builder.put(Range.closed(variant.start, variant.end), variant)
+        }
+    }
+
+    val positions = mutableListOf<Position>()
+    while (reader.variant() != null && reader.variant()!!.startPosition <= end) {
+        val variant = reader.variant()!!
+        builder.put(Range.closed(variant.start, variant.end), variant)
+        positions.add(variant.startPosition)
+        reader.advanceVariant()
+    }
+
+    return NextPositionsResult(
+        builder.build(),
+        positions
+    )
+
+}
+
 private fun createVariantContext(
     samples: List<String>,
-    variants: Array<SimpleVariant?>,
+    variants: List<SimpleVariant>,
     currentPosition: Position
 ): VariantContext? {
 
-    val variantsAtPosition = variants
-        .filterNotNull()
-        .filter { it.contains(currentPosition) }
-
-    val hasSNP = variantsAtPosition.find { it.isSNP } != null
-    val hasIndel = variantsAtPosition.find { it.isIndel } != null
+    val hasSNP = variants.find { it.isSNP } != null
+    val hasIndel = variants.find { it.isIndel } != null
 
     // This is set up to handle SNPs that doesn't overlap with indels
     // But can be expanded to handle other types of variants
@@ -137,6 +234,7 @@ private fun createVariantContext(
 
 }
 
+var timeWriting = 0L
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
@@ -157,10 +255,14 @@ private suspend fun writeOutputVCF(
 
             for (deferred in variantContextChannel) {
                 val variantContext = deferred.await()
-                if (variantContext != null) writer.add(variantContext)
+                measureNanoTime {
+                    if (variantContext != null) writer.add(variantContext)
+                }.let { timeWriting += it }
             }
 
         }
+
+    println("Time writing: ${timeWriting / 1e9} secs.")
 
 }
 
@@ -168,7 +270,7 @@ private suspend fun writeOutputVCF(
  * Creates a VariantContext for the current position, given the variants
  * at that position from the GVCF readers.
  */
-private fun snp(variants: Array<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContext {
+private fun snp(variants: List<SimpleVariant>, currentPosition: Position, samples: List<String>): VariantContext {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
@@ -303,62 +405,6 @@ var timeToGetMinPosition = 0L
 var timeNextLowestPositon = 0L
 var timeLowestLookAheadStart = 0L
 var timeAdvancePositions = 0L
-private fun nextPosition(gvcfReaders: Array<VCFReader>, currentPosition: Position? = null): Position? {
-
-    // Sort current variants by start position
-    // Get the minimum start position
-    val nextLowestPosition: Position?
-    measureNanoTime {
-        if (currentPosition == null) {
-            return gvcfReaders
-                .mapNotNull { it.variant()?.startPosition }
-                .minOrNull()
-        } else {
-            nextLowestPosition = gvcfReaders
-                .mapNotNull { it.variant()?.startPosition }
-                .filter { it > currentPosition }
-                .minOrNull()
-        }
-    }.let { timeToGetMinPosition += it }
-
-    // Get the lowest variant start position from the
-    // variants next up in the GVCF readers
-    val lowestLookAheadStart: Position?
-    measureNanoTime {
-        lowestLookAheadStart = gvcfReaders
-            .mapNotNull { it.lookAhead()?.startPosition }
-            .minOrNull()
-    }.let { timeLowestLookAheadStart += it }
-
-    // The next position to be evaluated is the minimum
-    // of the previously two calculated positions
-    val result: Position? = when {
-        nextLowestPosition == null -> lowestLookAheadStart
-        lowestLookAheadStart == null -> nextLowestPosition
-        else -> minOf(nextLowestPosition, lowestLookAheadStart)
-    }
-
-    // Advance readers that have a current position range
-    // that ends before the next position to be evaluated.
-    // Return the next position to be evaluated.
-    // Or return null if no next position to be evaluated.
-
-    result?.let {
-
-        measureNanoTime {
-            for (reader in gvcfReaders) {
-                reader.variant()?.let {
-                    if (it.endPosition < result) {
-                        reader.advanceVariant()
-                    }
-                }
-            }
-        }.let { timeAdvancePositions += it }
-        return result
-
-    } ?: return null
-
-}
 
 /**
  * Creates a HTSJDK reference allele.
