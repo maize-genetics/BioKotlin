@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
 import java.io.File
 
@@ -74,9 +75,14 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                         lines.takeWhile { it.startsWith("#") }.forEach { line ->
                             writer.write("$line\n")
                         }
+                    }
+
+                    runBlocking {
 
                         val reader = vcfReader(inputFile, true)
-                        for (variant in reader) {
+                        var variant = reader.variant()
+
+                        while (variant != null) {
 
                             val refSeq = variant.refAllele
                             val start = variant.start
@@ -96,7 +102,7 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                                     var thirdIndex = -1
                                     var fourthIndex = -1
                                     repeat(4) { count ->
-                                        currentIndex = variant.originalText?.indexOf("\t", currentIndex + 1) ?: -1
+                                        currentIndex = variant!!.originalText?.indexOf("\t", currentIndex + 1) ?: -1
                                         when (count) {
                                             2 -> thirdIndex = currentIndex
                                             3 -> fourthIndex = currentIndex
@@ -112,6 +118,9 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                                 logWriter.write("Reference: $refSeqFromGenome\n")
                                 logWriter.write("${variant.originalText}\n")
                             }
+
+                            reader.advanceVariant()
+                            variant = reader.variant()
 
                         }
 
