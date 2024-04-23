@@ -1,5 +1,6 @@
 package biokotlin.util
 
+import io.kotest.common.runBlocking
 import org.junit.jupiter.api.Test
 
 class VCFUtilsTest {
@@ -15,7 +16,9 @@ class VCFUtilsTest {
         lateinit var tenthVariant: SimpleVariant
         lateinit var hundredVariant: SimpleVariant
         lateinit var threeThounsandVariant: SimpleVariant
-        for (simpleVariant in result) {
+        var currentVariant = result.variant()
+        while (currentVariant != null) {
+            val simpleVariant = currentVariant
             numVariants++
             if (numVariants == 10) {
                 tenthVariant = simpleVariant
@@ -48,6 +51,11 @@ class VCFUtilsTest {
                 threeThounsandVariant = simpleVariant
                 assert(hundredVariant < threeThounsandVariant) { "Hundredth variant is not less than three thousandth variant" }
             }
+
+            runBlocking {
+                result.advanceVariant()
+            }
+            currentVariant = result.variant()
         }
 
         assert(numVariants == 5125) { "Number of variants is not 5125: $numVariants" }
@@ -60,8 +68,13 @@ class VCFUtilsTest {
         val filename = "data/test/vcf/mdp_genotype.vcf"
 
         val reader = vcfReader(filename)
-        for (simpleVariant in reader) {
-            // println(simpleVariant)
+        var currentVariant = reader.variant()
+        while (currentVariant != null) {
+            // println(currentVariant)
+            runBlocking {
+                reader.advanceVariant()
+            }
+            currentVariant = reader.variant()
         }
 
     }
@@ -72,8 +85,13 @@ class VCFUtilsTest {
         val filename = "data/test/vcf/testMultipleFilesHaplotypeGraph.vcf"
 
         val reader = vcfReader(filename)
-        for (simpleVariant in reader) {
-            // println(simpleVariant)
+        var currentVariant = reader.variant()
+        while (currentVariant != null) {
+            // println(currentVariant)
+            runBlocking {
+                reader.advanceVariant()
+            }
+            currentVariant = reader.variant()
         }
 
     }
