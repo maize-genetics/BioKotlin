@@ -224,6 +224,7 @@ data class AltHeaderMetaData(
 }
 
 data class VCFReader(
+    val filename: String,
     val altHeaders: Map<String, AltHeaderMetaData>,
     private val variants: Channel<SimpleVariant>
 ) {
@@ -297,7 +298,7 @@ data class VCFReader(
  */
 fun vcfReader(inputFile: String, debug: Boolean = false): VCFReader {
     val (altHeaders, variants) = parseVCFFile(inputFile, debug)
-    return VCFReader(altHeaders, variants)
+    return VCFReader(inputFile, altHeaders, variants)
 }
 
 /**
