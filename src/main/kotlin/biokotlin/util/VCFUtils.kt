@@ -229,7 +229,6 @@ data class VCFReader(
 ) {
 
     private var currentVariant: SimpleVariant? = null
-    private var nextVariant: SimpleVariant? = null
 
     // Cache variants better performance.
     // Don't overfill cache to avoid
@@ -246,7 +245,6 @@ data class VCFReader(
         // done once during construction
         runBlocking {
             advanceVariant()
-            advanceVariant()
         }
     }
 
@@ -261,27 +259,16 @@ data class VCFReader(
     }
 
     /**
-     * Function to look ahead to the next variant in the VCF file.
-     * This is used to determine which VCFReaders should be
-     * advanced to the next variant when multiple VCFReaders
-     * are being used.
-     */
-    internal fun lookAhead(): SimpleVariant? {
-        return nextVariant
-    }
-
-    /**
      * Function to advance to the next variant in the VCF file.
      * Use this in conjunction with variant() to get the next variant.
      */
     suspend fun advanceVariant() {
-        currentVariant = nextVariant
         val tempVariant = variantCache.removeFirstOrNull()
-        if (tempVariant == null) {
+        currentVariant = if (tempVariant == null) {
             fillCache()
-            nextVariant = variantCache.removeFirstOrNull()
+            variantCache.removeFirstOrNull()
         } else {
-            nextVariant = tempVariant
+            tempVariant
         }
     }
 
