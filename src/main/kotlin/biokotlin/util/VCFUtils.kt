@@ -226,13 +226,13 @@ data class AltHeaderMetaData(
 data class VCFReader(
     val altHeaders: Map<String, AltHeaderMetaData>,
     private val variants: Channel<SimpleVariant>
-) : Iterator<SimpleVariant> {
+) {
 
     private var currentVariant: SimpleVariant? = null
     private var nextVariant: SimpleVariant? = null
 
-    // Cache variants to avoid runBlocking for every
-    // advanceVariant call. Don't overfill cache to avoid
+    // Cache variants better performance.
+    // Don't overfill cache to avoid
     // queue from having to resize.
     private val variantCacheSize = 105
     private val variantCacheFillSize = (variantCacheSize * 0.95).toInt()
@@ -242,15 +242,19 @@ data class VCFReader(
         // Advance twice to preload the currentVariant
         // and nextVariant. This is so that the first call
         // to variant() will return the first variant.
-        advanceVariant()
-        advanceVariant()
+        // Use of runBlocking isn't desired, but this is only
+        // done once during construction
+        runBlocking {
+            advanceVariant()
+            advanceVariant()
+        }
     }
 
     /**
      * Function to get the current variant in the VCF file.
      * This doesn't advance to the next variant.
      * Every call to this function will return the same variant until advanceVariant is called.
-     * Returns null if there are no more variants.
+     * Returns null if there are no more variants for this reader.
      */
     fun variant(): SimpleVariant? {
         return currentVariant
@@ -270,7 +274,7 @@ data class VCFReader(
      * Function to advance to the next variant in the VCF file.
      * Use this in conjunction with variant() to get the next variant.
      */
-    fun advanceVariant() {
+    suspend fun advanceVariant() {
         currentVariant = nextVariant
         val tempVariant = variantCache.removeFirstOrNull()
         if (tempVariant == null) {
@@ -285,38 +289,18 @@ data class VCFReader(
      * Function to fill the cache with variants.
      * This is for performance reasons to avoid runBlocking
      */
-    private fun fillCache() {
+    private suspend fun fillCache() {
 
-        runBlocking {
+        do {
+            val result = variants.receiveCatching()
+            val variant = if (result.isSuccess) {
+                result.getOrNull()
+            } else {
+                null
+            }
+            variant?.let { variantCache.add(it) }
+        } while (variant != null && variantCache.size < variantCacheFillSize)
 
-            do {
-                val result = variants.receiveCatching()
-                val variant = if (result.isSuccess) {
-                    result.getOrNull()
-                } else {
-                    null
-                }
-                variant?.let { variantCache.add(it) }
-            } while (variant != null && variantCache.size < variantCacheFillSize)
-
-        }
-
-    }
-
-    /**
-     * Function to check if there are more variants in the VCF file.
-     */
-    override fun hasNext(): Boolean {
-        return currentVariant != null
-    }
-
-    /**
-     * Function to get the next variant in the VCF file.
-     */
-    override fun next(): SimpleVariant {
-        val result = variant()
-        advanceVariant()
-        return result ?: throw NoSuchElementException()
     }
 
 }
