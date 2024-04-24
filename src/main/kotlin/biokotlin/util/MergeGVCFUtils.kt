@@ -94,11 +94,6 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         writeOutputVCF(outputFile, samples, variantContextChannel)
     }
 
-    myLogger.info("Time to get min position: ${timeToGetMinPosition / 1e9} secs.")
-    myLogger.info("Time next lowest position: ${timeNextLowestPositon / 1e9} secs.")
-    myLogger.info("Time lowest look ahead start: ${timeLowestLookAheadStart / 1e9} secs.")
-    myLogger.info("Time advance positions: ${timeAdvancePositions / 1e9} secs.")
-
 }
 
 private suspend fun positionsToEvaluate(
@@ -424,11 +419,6 @@ private fun createVariantContext(info: VariantContextInfo): VariantContext {
         .make()
 
 }
-
-var timeToGetMinPosition = 0L
-var timeNextLowestPositon = 0L
-var timeLowestLookAheadStart = 0L
-var timeAdvancePositions = 0L
 
 /**
  * Creates a HTSJDK reference allele.
