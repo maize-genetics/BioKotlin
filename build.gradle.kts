@@ -97,7 +97,7 @@ dependencies {
     implementation("io.ktor:ktor-client-core:1.6.3")
     implementation("io.ktor:ktor-client-cio:1.6.3")
 
-    implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("com.google.guava:guava:33.1.0-jre")
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
