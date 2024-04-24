@@ -17,7 +17,7 @@ import org.apache.logging.log4j.LogManager
 import java.io.File
 import kotlin.system.measureNanoTime
 
-private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtil")
+private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
 
