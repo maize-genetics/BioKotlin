@@ -81,23 +81,23 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
             }
 
-            println("Time create variant context: ${timeCreateVariantContext / 1e9} secs.")
+            myLogger.info("Time create variant context: ${timeCreateVariantContext / 1e9} secs.")
 
             variantContextChannel.close()
 
-        }.let { println("Time sending to channel: ${it / 1e9} secs.") }
+        }.let { myLogger.info("Time sending to channel: ${it / 1e9} secs.") }
 
     }
 
     runBlocking {
-        println("writing output: $outputFile")
+        myLogger.info("writing output: $outputFile")
         writeOutputVCF(outputFile, samples, variantContextChannel)
     }
 
-    println("Time to get min position: ${timeToGetMinPosition / 1e9} secs.")
-    println("Time next lowest position: ${timeNextLowestPositon / 1e9} secs.")
-    println("Time lowest look ahead start: ${timeLowestLookAheadStart / 1e9} secs.")
-    println("Time advance positions: ${timeAdvancePositions / 1e9} secs.")
+    myLogger.info("Time to get min position: ${timeToGetMinPosition / 1e9} secs.")
+    myLogger.info("Time next lowest position: ${timeNextLowestPositon / 1e9} secs.")
+    myLogger.info("Time lowest look ahead start: ${timeLowestLookAheadStart / 1e9} secs.")
+    myLogger.info("Time advance positions: ${timeAdvancePositions / 1e9} secs.")
 
 }
 
@@ -262,7 +262,7 @@ private suspend fun writeOutputVCF(
 
         }
 
-    println("Time writing: ${timeWriting / 1e9} secs.")
+    myLogger.info("Time writing: ${timeWriting / 1e9} secs.")
 
 }
 
