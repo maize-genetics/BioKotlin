@@ -228,7 +228,7 @@ private fun createVariantContext(
     // This is set up to handle SNPs that doesn't overlap with indels
     // But can be expanded to handle other types of variants
     return when {
-        hasSNP && !hasIndel -> snp(variants, currentPosition, samples)
+        hasSNP && !hasIndel -> createSNP(variants, currentPosition, samples)
         else -> null
     }
 
@@ -270,7 +270,7 @@ private suspend fun writeOutputVCF(
  * Creates a VariantContext for the current position, given the variants
  * at that position from the GVCF readers.
  */
-private fun snp(variants: List<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContext {
+private fun createSNP(variants: List<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContext {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
