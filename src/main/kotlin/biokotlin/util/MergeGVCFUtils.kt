@@ -186,6 +186,12 @@ private data class NextPositionsResult(
     val positions: List<Position>
 )
 
+/**
+ * Get the next block of positions to evaluate.
+ * This returns a range map of positions to variants,
+ * and a list of variant start positions.
+ * This is done for a position range of size stepSize.
+ */
 private suspend fun nextPositions(
     start: Int,
     end: Position,
