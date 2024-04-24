@@ -56,7 +56,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
     gvcfReaders.sortBy { it.variant()?.samples?.get(0) }
     samples.sort()
 
-    val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant>>>>>(100)
+    val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>(100)
     CoroutineScope(Dispatchers.IO).launch {
         positionsToEvaluate(gvcfReaders, positionsChannel)
     }
@@ -103,7 +103,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
 private suspend fun positionsToEvaluate(
     readers: Array<VCFReader>,
-    channel: Channel<Deferred<List<Pair<Position, List<SimpleVariant>>>>>
+    channel: Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>
 ) = withContext(Dispatchers.IO) {
 
     val stepSize = 1000
@@ -168,12 +168,12 @@ private fun processBlock(
     startPositions: Set<Position>,
     numReaders: Int,
     rangeMaps: List<RangeMap<Int, SimpleVariant>>
-): List<Pair<Position, List<SimpleVariant>>> {
+): List<Pair<Position, List<SimpleVariant?>>> {
 
     return startPositions
         .sorted()
         .map { position ->
-            val variants = (0 until numReaders).mapNotNull { index ->
+            val variants = (0 until numReaders).map { index ->
                 rangeMaps[index].get(position.position)
             }
             Pair(position, variants)
@@ -218,12 +218,12 @@ private suspend fun nextPositions(
 
 private fun createVariantContext(
     samples: List<String>,
-    variants: List<SimpleVariant>,
+    variants: List<SimpleVariant?>,
     currentPosition: Position
 ): VariantContext? {
 
-    val hasSNP = variants.find { it.isSNP } != null
-    val hasIndel = variants.find { it.isIndel } != null
+    val hasSNP = variants.filterNotNull().find { it.isSNP } != null
+    val hasIndel = variants.filterNotNull().find { it.isIndel } != null
 
     // This is set up to handle SNPs that doesn't overlap with indels
     // But can be expanded to handle other types of variants
@@ -270,7 +270,7 @@ private suspend fun writeOutputVCF(
  * Creates a VariantContext for the current position, given the variants
  * at that position from the GVCF readers.
  */
-private fun snp(variants: List<SimpleVariant>, currentPosition: Position, samples: List<String>): VariantContext {
+private fun snp(variants: List<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContext {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
