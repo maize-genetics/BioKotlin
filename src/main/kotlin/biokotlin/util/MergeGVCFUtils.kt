@@ -270,71 +270,79 @@ private suspend fun writeOutputVCF(
  * Creates a VariantContext for the current position, given the variants
  * at that position from the GVCF readers.
  */
-private fun createSNP(variants: List<SimpleVariant?>, currentPosition: Position, samples: List<String>): VariantContext {
+private fun createSNP(
+    variants: List<SimpleVariant?>,
+    currentPosition: Position,
+    samples: List<String>
+): VariantContext {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
     val variantsUsed = mutableListOf<SimpleVariant>()
     val genotypes: List<Pair<Boolean, List<String>>> = variants
         .map { variant ->
-            when (variant) {
-                null -> Pair(false, listOf(".")) // No call, since no variant at position for this sample
-                else -> {
-                    if (variant.contains(currentPosition)) {
+            when {
 
-                        val variantRef = when {
+                // No call, since no variant at position for this sample
+                variant == null -> Pair(false, listOf("."))
 
-                            // Get the reference allele from the reference block if present
-                            // Otherwise, reference allele will be determined by the first SNP
-                            variant.isRefBlock -> {
-                                val refIndex = currentPosition.position - variant.start
-                                if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
-                            }
+                // Variant for this sample represents the current position
+                variant.contains(currentPosition) -> {
 
-                            variant.isSNP -> variant.refAllele
+                    val variantRef = when {
 
-                            else -> null
-
+                        // Get the reference allele from the reference block if present
+                        // Otherwise, reference allele will be determined by the first SNP
+                        variant.isRefBlock -> {
+                            val refIndex = currentPosition.position - variant.start
+                            if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
                         }
 
-                        if (refAllele == null) {
-                            refAllele = variantRef
-                        } else if (variantRef == null) {
-                            // Do nothing, wasn't able to get the reference allele from the reference block
-                        } else {
-                            require(refAllele == variantRef) { "Reference alleles are not the same: $refAllele, $variantRef" }
-                        }
+                        variant.isSNP -> variant.refAllele
 
-                        when {
+                        else -> null
 
-                            // If the variant is an SNP, use the variant's alleles
-                            variant.isSNP -> {
-                                variantsUsed.add(variant)
-                                altAlleles.addAll(variant.altAlleles)
-                                Pair(variant.isPhased(0), variant.genotypeStrs(0))
-                            }
-
-                            // If the variant is a reference block, use REF.
-                            // REF will be changed to the actual reference allele when
-                            // creating the VariantContext
-                            variant.isRefBlock -> {
-                                variantsUsed.add(variant)
-                                val ploidy = variant.genotypeStrs(0).size
-                                Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
-                            }
-
-                            // Don't think this will be executed, as positions that have
-                            // indels will not be processed by this method
-                            else -> {
-                                Pair(false, listOf(".")) // No call
-                            }
-
-                        }
-
-                    } else { // Current variant for this sample doesn't represent the current position
-                        Pair(false, listOf(".")) // No call
                     }
+
+                    if (refAllele == null) {
+                        refAllele = variantRef
+                    } else if (variantRef == null) {
+                        // Do nothing, wasn't able to get the reference allele from the reference block
+                    } else {
+                        require(refAllele == variantRef) { "Reference alleles are not the same: $refAllele, $variantRef" }
+                    }
+
+                    when {
+
+                        // If the variant is an SNP, use the variant's alleles
+                        variant.isSNP -> {
+                            variantsUsed.add(variant)
+                            altAlleles.addAll(variant.altAlleles)
+                            Pair(variant.isPhased(0), variant.genotypeStrs(0))
+                        }
+
+                        // If the variant is a reference block, use REF.
+                        // REF will be changed to the actual reference allele when
+                        // creating the VariantContext
+                        variant.isRefBlock -> {
+                            variantsUsed.add(variant)
+                            val ploidy = variant.genotypeStrs(0).size
+                            Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
+                        }
+
+                        // Don't think this will be executed, as positions that have
+                        // indels will not be processed by this method
+                        else -> {
+                            Pair(false, listOf(".")) // No call
+                        }
+
+                    }
+
                 }
+
+                // Current variant for this sample doesn't represent the current position
+                else -> Pair(false, listOf(".")) // No call
+
             }
         }
 
