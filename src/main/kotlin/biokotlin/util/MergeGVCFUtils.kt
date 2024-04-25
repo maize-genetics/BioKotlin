@@ -65,23 +65,16 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
         measureNanoTime {
 
-            var timeCreateVariantContext = 0L
             for (deferred in positionsChannel) {
 
                 val block = deferred.await()
                 for ((currentPosition, variants) in block) {
                     variantContextChannel.send(async {
-                        val result: VariantContext?
-                        measureNanoTime {
-                            result = createVariantContext(samples, variants, currentPosition)
-                        }.let { timeCreateVariantContext += it }
-                        result
+                        createVariantContext(samples, variants, currentPosition)
                     })
                 }
 
             }
-
-            myLogger.info("Time create variant context: ${timeCreateVariantContext / 1e9} secs.")
 
             variantContextChannel.close()
 
