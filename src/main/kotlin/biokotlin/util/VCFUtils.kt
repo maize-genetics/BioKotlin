@@ -88,11 +88,11 @@ data class SimpleVariant(
 
         isSNP = (length == 1) && altAlleles.find { it.length != 1 } == null && isVariant
 
-        isIndel = altAlleles.find { it.length != length } != null
+        isDEL = altAlleles.contains("<DEL>") || altAlleles.find { length > it.length } != null
 
-        isDEL = altAlleles.find { length > it.length } != null
+        isINS = altAlleles.contains("<INS>") || altAlleles.find { length < it.length } != null
 
-        isINS = altAlleles.find { length < it.length } != null
+        isIndel = isDEL || isINS
 
         isSpanningDeletion = altAlleles.find { it == "*" } != null
 
