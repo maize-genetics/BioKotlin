@@ -220,5 +220,37 @@ class KmerSetTest: StringSpec ({
         kmerSet.minHammingDistance(Kmer("TAC")) shouldBe 2
     }
 
+    "subsetMultiSetLongs" {
+
+        val subsetCounts1 = mapOf(
+            Pair(Kmer("CAG"), 1),
+            Pair(Kmer("CTC"), 1),
+            Pair(Kmer("CTG"), 1),
+            Pair(Kmer("GAG"), 1))
+
+
+        val multiSet1Copy = KmerMultiSet(sampleSeq1, 3)
+
+        multiSet1Copy.subset(multiSet2.longSet())
+
+        multiSet1Copy.set().map{it.toString(3)}.sorted() shouldBe listOf("CAG", "CTC", "CTG", "GAG")
+        subsetCounts1.forEach { it.value shouldBe multiSet1Copy.getCountOf(it.key) }
+    }
+
+    "subsetMultiSetKmers" {
+
+        val subsetCounts1 = mapOf(
+            Pair(Kmer("CAG"), 1),
+            Pair(Kmer("CTC"), 1),
+            Pair(Kmer("CTG"), 1),
+            Pair(Kmer("GAG"), 1))
+
+
+        val multiSet1Copy = KmerMultiSet(sampleSeq1, 3)
+        multiSet1Copy.subset(multiSet2.set())
+
+        multiSet1Copy.set().map{it.toString(3)}.sorted() shouldBe listOf("CAG", "CTC", "CTG", "GAG")
+        subsetCounts1.forEach { it.value shouldBe multiSet1Copy.getCountOf(it.key) }
+    }
 
 })

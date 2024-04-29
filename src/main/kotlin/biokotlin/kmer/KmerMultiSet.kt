@@ -64,5 +64,20 @@ class KmerMultiSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: In
             .joinToString(separator)
     }
 
+    /** subsets this MultiSet in-place to include only the Kmers in subsetKmers.
+     * resizeHash trims the map if true - takes longer but size is smaller
+     */
+    fun subset(subsetKmers: Set<Kmer>, resizeHash: Boolean = true) {
+        set().minus(subsetKmers).forEach{map.remove(it.encoding)}
+        if(resizeHash) {map.trim()}
+    }
+
+    /** subsets this MultiSet in-place to include only the kmers indicated by subsetLongs
+     * resizeHash trims the map if true - takes longer but size is smaller
+     */
+    fun subset(subsetLongs: LongSet, resizeHash: Boolean = true) {
+        longSet().toSet().minus(subsetLongs).forEach{ map.remove(it) }
+        if(resizeHash) { map.trim() }
+    }
 
 }
