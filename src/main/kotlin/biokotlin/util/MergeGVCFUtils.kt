@@ -217,12 +217,12 @@ private fun createVariantContext(
 ): VariantContext? {
 
     val hasSNP = variants.filterNotNull().find { it.isSNP } != null
-    val hasIndel = variants.filterNotNull().find { it.isIndel } != null
+    // val hasIndel = variants.filterNotNull().find { it.isIndel } != null
 
     // This is set up to handle SNPs that doesn't overlap with indels
     // But can be expanded to handle other types of variants
     return when {
-        hasSNP && !hasIndel -> createSNP(variants, currentPosition, samples)
+        hasSNP -> createSNP(variants, currentPosition, samples)
         else -> null
     }
 
@@ -272,6 +272,7 @@ private fun createSNP(
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
+    var symbolicAlleles: MutableSet<String> = mutableSetOf()
     val variantsUsed = mutableListOf<SimpleVariant>()
     val genotypes: List<Pair<Boolean, List<String>>> = variants
         .map { variant ->
@@ -294,6 +295,18 @@ private fun createSNP(
                     }
 
                     when {
+
+                        variant.isINS -> {
+                            variantsUsed.add(variant)
+                            symbolicAlleles.add("<INS>")
+                            Pair(variant.isPhased(0), listOf("<INS>"))
+                        }
+
+                        variant.isDEL -> {
+                            variantsUsed.add(variant)
+                            symbolicAlleles.add("<DEL>")
+                            Pair(variant.isPhased(0), listOf("<DEL>"))
+                        }
 
                         // If the variant is an SNP, use the variant's alleles
                         variant.isSNP -> {
@@ -326,6 +339,8 @@ private fun createSNP(
 
             }
         }
+
+    altAlleles.addAll(symbolicAlleles)
 
     return createVariantContext(
         VariantContextInfo(
@@ -389,6 +404,10 @@ private fun createVariantContext(info: VariantContextInfo): VariantContext {
             .map { allele ->
                 when (allele) {
                     "." -> Allele.NO_CALL
+
+                    "<INS>" -> Allele.SV_SIMPLE_INS
+
+                    "<DEL>" -> Allele.SV_SIMPLE_DEL
 
                     "REF" -> refAllele
 
