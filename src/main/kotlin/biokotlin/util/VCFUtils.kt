@@ -88,15 +88,17 @@ data class SimpleVariant(
             .flatMap { sampleIndex -> genotype(sampleIndex) }
             .find { it != 0 } != null
 
-        isSNP = (length == 1) && altAlleles.find { it.length != 1 } == null && isVariant
+        val altAllelesNoSymbolic = altAlleles.filterNot { it.startsWith("<") && it.endsWith(">") }
 
-        isDEL = altAlleles.contains("<DEL>") || altAlleles.find { length > it.length } != null
+        isSNP = (length == 1) && altAllelesNoSymbolic.find { it.length != 1 } == null && isVariant
 
-        isINS = altAlleles.contains("<INS>") || altAlleles.find { length < it.length } != null
+        isDEL = altAlleles.contains("<DEL>") || altAllelesNoSymbolic.find { length > it.length } != null
+
+        isINS = altAlleles.contains("<INS>") || altAllelesNoSymbolic.find { length < it.length } != null
 
         isIndel = isDEL || isINS
 
-        isSpanningDeletion = altAlleles.find { it == "*" } != null
+        isSpanningDeletion = altAllelesNoSymbolic.find { it == "*" } != null
 
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
