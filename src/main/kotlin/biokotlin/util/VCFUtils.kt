@@ -202,6 +202,34 @@ data class SimpleVariant(
         return !genotypes[sampleIndex].contains("/")
     }
 
+    fun isDEL(sample: String): Boolean {
+        return isDEL(samples.indexOf(sample))
+    }
+
+    fun isDEL(sampleIndex: Int): Boolean {
+        val genotypes = genotypeStrs(sampleIndex)
+        if (genotypes.contains("<DEL>")) return true
+        genotypes
+            .filterNot { it.startsWith("<") && it.endsWith(">") }
+            .find { it.length < refAllele.length }
+            ?.let { return true }
+        return false
+    }
+
+    fun isINS(sample: String): Boolean {
+        return isINS(samples.indexOf(sample))
+    }
+
+    fun isINS(sampleIndex: Int): Boolean {
+        val genotypes = genotypeStrs(sampleIndex)
+        if (genotypes.contains("<INS>")) return true
+        genotypes
+            .filterNot { it.startsWith("<") && it.endsWith(">") }
+            .find { it.length > refAllele.length }
+            ?.let { return true }
+        return false
+    }
+
     /**
      * Returns whether position is within the range of this variant.
      */
