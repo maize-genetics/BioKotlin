@@ -25,11 +25,13 @@ data class SimpleVariant(
     val originalText: String? = null // For debugging - parseVCFFile(<filename>, debug = true)
 ) : Comparable<SimpleVariant> {
 
+    val numSamples = samples.size
+
     /**
      * The length is the number of base pairs
      * of the reference allele associated with this.
      * The start and end positions are inclusive.
-     * The reference allele recorded my only be
+     * The reference allele recorded may only be
      * a single base pair, which is the first base pair
      * of the reference sequence.
      */
@@ -159,6 +161,10 @@ data class SimpleVariant(
         if (genotypes[sampleIndex].contains("|"))
             return genotypes[sampleIndex].split("|").map { if (it == ".") -1 else it.toInt() }
         return genotypes[sampleIndex].split("/").map { if (it == ".") -1 else it.toInt() }
+    }
+
+    fun genotypeStrs(sample: String): List<String> {
+        return genotypeStrs(samples.indexOf(sample))
     }
 
     fun genotypeStrs(sampleIndex: Int): List<String> {
