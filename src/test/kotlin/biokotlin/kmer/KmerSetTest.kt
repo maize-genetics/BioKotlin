@@ -228,13 +228,22 @@ class KmerSetTest: StringSpec ({
             Pair(Kmer("CTG"), 1),
             Pair(Kmer("GAG"), 1))
 
-
+        // in place subsetting
         val multiSet1Copy = KmerMultiSet(sampleSeq1, 3)
-
         multiSet1Copy.subset(multiSet2.longSet())
 
         multiSet1Copy.set().map{it.toString(3)}.sorted() shouldBe listOf("CAG", "CTC", "CTG", "GAG")
         subsetCounts1.forEach { it.value shouldBe multiSet1Copy.getCountOf(it.key) }
+
+        // creates a new set
+        val subSet = multiSet1.subset(multiSet2.longSet(), inPlace = false)
+        multiSet1.setSize() shouldBe 16L
+
+        subSet.set().map{it.toString(3)}.sorted() shouldBe listOf("CAG", "CTC", "CTG", "GAG")
+        subsetCounts1.forEach { it.value shouldBe subSet.getCountOf(it.key) }
+
+
+
     }
 
     "subsetMultiSetKmers" {
@@ -251,6 +260,16 @@ class KmerSetTest: StringSpec ({
 
         multiSet1Copy.set().map{it.toString(3)}.sorted() shouldBe listOf("CAG", "CTC", "CTG", "GAG")
         subsetCounts1.forEach { it.value shouldBe multiSet1Copy.getCountOf(it.key) }
+
+
+        // creates a new set
+        val subSet = multiSet1.subset(multiSet2.set(), inPlace = false)
+        multiSet1.setSize() shouldBe 16L
+
+        subSet.set().map{it.toString(3)}.sorted() shouldBe listOf("CAG", "CTC", "CTG", "GAG")
+        subsetCounts1.forEach { it.value shouldBe subSet.getCountOf(it.key) }
+
+
     }
 
 })

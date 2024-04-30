@@ -66,18 +66,34 @@ class KmerMultiSet(kmerSize: Int = 21, bothStrands: Boolean = true, stepSize: In
 
     /** subsets this MultiSet in-place to include only the Kmers in subsetKmers.
      * resizeHash trims the map if true - takes longer but size is smaller
+     * If inPlace is true, modify this object. If false, create and return a new object
      */
-    fun subset(subsetKmers: Set<Kmer>, resizeHash: Boolean = true) {
-        set().minus(subsetKmers).forEach{map.remove(it.encoding)}
-        if(resizeHash) {map.trim()}
+    fun subset(subsetKmers: Set<Kmer>, inPlace: Boolean = true, resizeHash: Boolean = true): KmerMultiSet {
+        if(inPlace) {
+            set().minus(subsetKmers).forEach{map.remove(it.encoding)}
+            if(resizeHash) {map.trim()}
+            return this
+        } else {
+            val newSet = KmerMultiSet(this.kmerSize, this.bothStrands, this.stepSize, this.keepMinOnly)
+            subsetKmers.forEach{ if(map.containsKey(it.encoding)) { newSet.map.put(it.encoding, map.get(it.encoding)) } }
+            return newSet
+        }
     }
 
     /** subsets this MultiSet in-place to include only the kmers indicated by subsetLongs
      * resizeHash trims the map if true - takes longer but size is smaller
+     * If inPlace is true, modify this object. If false, create and return a new object
      */
-    fun subset(subsetLongs: LongSet, resizeHash: Boolean = true) {
-        longSet().toSet().minus(subsetLongs).forEach{ map.remove(it) }
-        if(resizeHash) { map.trim() }
+    fun subset(subsetLongs: LongSet, inPlace: Boolean = true, resizeHash: Boolean = true): KmerMultiSet {
+        if(inPlace) {
+            longSet().toSet().minus(subsetLongs).forEach{ map.remove(it) }
+            if(resizeHash) { map.trim() }
+            return this
+        } else {
+            val newSet = KmerMultiSet(this.kmerSize, this.bothStrands, this.stepSize, this.keepMinOnly)
+            subsetLongs.forEach{ if(map.containsKey(it)) { newSet.map.put(it, map.get(it)) } }
+            return newSet
+        }
     }
 
 }
