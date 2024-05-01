@@ -265,6 +265,8 @@ data class VCFReader(
     private val variants: Channel<SimpleVariant>
 ) {
 
+    val samples: List<String>
+
     private var currentVariant: SimpleVariant? = null
 
     // Cache variants better performance.
@@ -275,13 +277,14 @@ data class VCFReader(
     private val variantCache = ArrayDeque<SimpleVariant>(variantCacheSize)
 
     init {
-        // Advance twice to preload the currentVariant
-        // and nextVariant. This is so that the first call
+        // Advance to preload the currentVariant.
+        // This is so that the first call
         // to variant() will return the first variant.
         // Use of runBlocking isn't desired, but this is only
         // done once during construction
-        runBlocking {
+        samples = runBlocking {
             advanceVariant()
+            variant()?.samples ?: throw IllegalArgumentException("No variants found in VCF file: $filename")
         }
     }
 
