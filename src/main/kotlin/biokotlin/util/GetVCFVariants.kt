@@ -11,7 +11,9 @@ import java.io.File
 
 /**
  * Get the variant lines for the given positions from the VCF files
- * in the input directory.
+ * in the input directory. Input files, VCF Readers, Sample lists,
+ * and variants are kept in the same order. Sorted by the first
+ * sample name in each VCF file.
  *
  * @param vcfDir Full path to input VCF directory
  * @param debug If true, stores the original VCF lines in the SimpleVariant objects
@@ -20,18 +22,20 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
 
     private val myLogger = LogManager.getLogger(GetVCFVariants::class.java)
 
-    private val gvcfReaders: List<VCFReader>
+    private val vcfReaders: List<VCFReader>
 
     val inputFiles: List<String>
 
-    val samples: List<String>
+    // List of lists of samples, one per input VCF file
+    // A GVCF file would only have one sample
+    val samples: List<List<String>>
 
     init {
 
         require(File(vcfDir).isDirectory) { "Input VCF directory does not exist: $vcfDir" }
 
         // Get list of input VCF files from the input directory
-        inputFiles = File(vcfDir)
+        val tempInputFiles = File(vcfDir)
             .walk()
             .filter {
                 it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
@@ -44,21 +48,18 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
             .toList()
             .sorted()
 
-        myLogger.info("inputFiles: $inputFiles")
+        vcfReaders = tempInputFiles
+            .map { vcfReader(it, debug) }
+            .sortedBy { it.samples[0] }
 
-        gvcfReaders = inputFiles.map { vcfReader(it, debug) }
+        inputFiles = vcfReaders.map { it.filename }
 
-        val tempSamples = mutableListOf<String>()
-        gvcfReaders.forEach { reader ->
-            reader.samples.forEach { sample ->
-                if (tempSamples.contains(sample)) {
-                    throw IllegalArgumentException("Duplicate sample: $sample in file: $inputFiles")
-                } else {
-                    tempSamples.add(sample)
-                }
-            }
+        inputFiles.forEachIndexed { index, filename ->
+            myLogger.info("$index inputFile: $filename")
         }
-        samples = tempSamples.sorted()
+
+        samples = vcfReaders
+            .map { it.samples }
 
     }
 
@@ -69,7 +70,7 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
     suspend fun forPosition(position: Position): Map<VCFReader, SimpleVariant?> {
 
         // Advance the readers to the first variant that is within the position range
-        val jobs = gvcfReaders
+        val jobs = vcfReaders
             .map { reader ->
                 CoroutineScope(Dispatchers.IO).launch {
 
@@ -85,7 +86,7 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
         // is within the position range
         jobs.forEach { it.join() }
 
-        return gvcfReaders.associate { reader ->
+        return vcfReaders.associate { reader ->
 
             var variant = reader.variant()
             if (variant != null && variant.contains(position)) {
@@ -104,7 +105,7 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
 
         val stepSize = 1000
 
-        var lowestPosition = gvcfReaders
+        var lowestPosition = vcfReaders
             .mapNotNull { it.variant()?.startPosition }
             .minOrNull()
 
@@ -116,7 +117,7 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
             var rangeMaps: List<RangeMap<Int, SimpleVariant>>? = null
             do {
 
-                val jobs = gvcfReaders.mapIndexed { index, reader ->
+                val jobs = vcfReaders.mapIndexed { index, reader ->
 
                     val thisContig = currentContig
                     val thisStart = currentStart
@@ -143,14 +144,14 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
                 }
 
                 val thisRangeMaps = rangeMaps
-                channel.send(async { processBlock(startPositions, gvcfReaders.size, thisRangeMaps) })
+                channel.send(async { processBlock(startPositions, vcfReaders.size, thisRangeMaps) })
 
                 currentStart += stepSize
 
-            } while (!gvcfReaders.all { it.variant() == null } &&
-                gvcfReaders.mapNotNull { it.variant()?.startPosition }.find { it.contig == currentContig } != null)
+            } while (!vcfReaders.all { it.variant() == null } &&
+                vcfReaders.mapNotNull { it.variant()?.startPosition }.find { it.contig == currentContig } != null)
 
-            lowestPosition = gvcfReaders
+            lowestPosition = vcfReaders
                 .mapNotNull { it.variant()?.startPosition }
                 .minOrNull()
 
