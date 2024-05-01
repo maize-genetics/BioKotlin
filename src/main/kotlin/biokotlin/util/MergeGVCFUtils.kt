@@ -1,9 +1,6 @@
 package biokotlin.util
 
 import biokotlin.genome.Position
-import com.google.common.collect.ImmutableRangeMap
-import com.google.common.collect.Range
-import com.google.common.collect.RangeMap
 import htsjdk.variant.variantcontext.Allele
 import htsjdk.variant.variantcontext.GenotypeBuilder
 import htsjdk.variant.variantcontext.VariantContext
@@ -21,45 +18,17 @@ private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
 
-    val variantContextChannel = Channel<Deferred<VariantContext?>>(100)
-
-    // Get list of input GVCF files from the input directory
-    val inputFiles = File(inputDir)
-        .walk()
-        .filter {
-            it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
-                    it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz"))
-        }
-        .map { it.absolutePath }
-        .toList()
+    val getVCFVariants = GetVCFVariants(inputDir, false)
 
     // List of samples, one per input GVCF file
-    val samples = mutableListOf<String>()
-
-    val gvcfReaders = inputFiles.map { inputFile ->
-        val reader = vcfReader(inputFile)
-        val variant = reader.variant()
-        if (variant == null) {
-            throw IllegalArgumentException("No variant found in file: $inputFile")
-        } else {
-            require(variant.samples.size == 1) { "Number of samples is not 1: file: $inputFile num of samples: ${variant.samples.size}" }
-        }
-        if (samples.contains(variant.samples[0])) {
-            throw IllegalArgumentException("Duplicate sample: ${variant.samples[0]} in file: $inputFile")
-        } else {
-            samples.add(variant.samples[0])
-        }
-        reader
-    }.toTypedArray()
-
-    // sort GVCF readers and samples by sample name
-    gvcfReaders.sortBy { it.variant()?.samples?.get(0) }
-    samples.sort()
+    val samples = getVCFVariants.samples
 
     val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>(100)
     CoroutineScope(Dispatchers.IO).launch {
-        positionsToEvaluate(gvcfReaders, positionsChannel)
+        getVCFVariants.forAll(positionsChannel)
     }
+
+    val variantContextChannel = Channel<Deferred<VariantContext?>>(100)
 
     CoroutineScope(Dispatchers.IO).launch {
 
@@ -86,127 +55,6 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         myLogger.info("writing output: $outputFile")
         writeOutputVCF(outputFile, samples, variantContextChannel)
     }
-
-}
-
-private suspend fun positionsToEvaluate(
-    readers: Array<VCFReader>,
-    channel: Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>
-) = withContext(Dispatchers.IO) {
-
-    val stepSize = 1000
-
-    var lowestPosition = readers
-        .mapNotNull { it.variant()?.startPosition }
-        .minOrNull()
-
-    while (lowestPosition != null) {
-
-        val currentContig = lowestPosition.contig
-        var currentStart = lowestPosition.position
-
-        var rangeMaps: List<RangeMap<Int, SimpleVariant>>? = null
-        do {
-
-            val jobs = readers.mapIndexed { index, reader ->
-
-                val thisContig = currentContig
-                val thisStart = currentStart
-                val thisReader = reader
-                val thisRangeMap = rangeMaps?.getOrNull(index)
-
-                async {
-                    nextPositions(
-                        thisStart,
-                        Position(thisContig, thisStart + stepSize - 1),
-                        thisRangeMap,
-                        thisReader
-                    )
-                }
-
-            }
-
-            rangeMaps = mutableListOf()
-            val startPositions = mutableSetOf<Position>()
-            jobs.forEach {
-                val result = it.await()
-                rangeMaps.add(result.rangeMap)
-                startPositions.addAll(result.positions)
-            }
-
-            val thisRangeMaps = rangeMaps
-            channel.send(async { processBlock(startPositions, readers.size, thisRangeMaps) })
-
-            currentStart += stepSize
-
-        } while (!readers.all { it.variant() == null } &&
-            readers.mapNotNull { it.variant()?.startPosition }.find { it.contig == currentContig } != null)
-
-        lowestPosition = readers
-            .mapNotNull { it.variant()?.startPosition }
-            .minOrNull()
-
-    }
-
-    channel.close()
-
-}
-
-private fun processBlock(
-    startPositions: Set<Position>,
-    numReaders: Int,
-    rangeMaps: List<RangeMap<Int, SimpleVariant>>
-): List<Pair<Position, List<SimpleVariant?>>> {
-
-    return startPositions
-        .sorted()
-        .map { position ->
-            val variants = (0 until numReaders).map { index ->
-                rangeMaps[index].get(position.position)
-            }
-            Pair(position, variants)
-        }
-
-}
-
-private data class NextPositionsResult(
-    val rangeMap: RangeMap<Int, SimpleVariant>,
-    val positions: List<Position>
-)
-
-/**
- * Get the next block of positions to evaluate.
- * This returns a range map of positions to variants,
- * and a list of variant start positions.
- * This is done for a position range of size stepSize.
- */
-private suspend fun nextPositions(
-    start: Int,
-    end: Position,
-    previousRangeMap: RangeMap<Int, SimpleVariant>? = null,
-    reader: VCFReader
-): NextPositionsResult {
-
-    val builder = ImmutableRangeMap.builder<Int, SimpleVariant>()
-
-    if (previousRangeMap != null) {
-        previousRangeMap.get(start)?.let { variant ->
-            builder.put(Range.closed(variant.start, variant.end), variant)
-        }
-    }
-
-    val positions = mutableListOf<Position>()
-    while (reader.variant() != null && reader.variant()!!.startPosition <= end) {
-        val variant = reader.variant()!!
-        builder.put(Range.closed(variant.start, variant.end), variant)
-        positions.add(variant.startPosition)
-        reader.advanceVariant()
-    }
-
-    return NextPositionsResult(
-        builder.build(),
-        positions
-    )
 
 }
 
