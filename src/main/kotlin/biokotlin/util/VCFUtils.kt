@@ -122,7 +122,12 @@ data class SimpleVariant(
     }
 
     override fun toString(): String {
-        return "SimpleVariant(contig='$contig', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAlleles', numSamples=${samples.size})"
+        val samplesStr = if (samples.size < 6) "samples=${samples}, " else ""
+        return "SimpleVariant(contig='$contig', start=$start, end=$end, length=$length, " +
+                "refAllele='$refAllele', altAllele='$altAlleles', numSamples=${samples.size}, " +
+                "${samplesStr}genotypes=${genotypes}, " +
+                "isRefBlock=$isRefBlock, isSNP=$isSNP, isVariant=$isVariant, isIndel=$isIndel, " +
+                "isDEL=$isDEL, isINS=$isINS, isSpanningDeletion=$isSpanningDeletion)"
     }
 
     override fun compareTo(other: SimpleVariant): Int {
