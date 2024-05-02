@@ -209,22 +209,8 @@ private fun createSNP(
  * from the given variant.
  */
 private fun getVariantRef(variant: SimpleVariant, currentPosition: Position): String? {
-
-    return when {
-
-        // Get the reference allele from the reference block if present
-        // Otherwise, reference allele will be determined by the first SNP
-        variant.isRefBlock -> {
-            val refIndex = currentPosition.position - variant.start
-            if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
-        }
-
-        variant.isSNP -> variant.refAllele
-
-        else -> null
-
-    }
-
+    val refIndex = currentPosition.position - variant.start
+    return if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
 }
 
 private data class VariantContextInfo(
