@@ -82,7 +82,6 @@ private fun createVariantContext(
 
 }
 
-var timeWriting = 0L
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
@@ -103,14 +102,10 @@ private suspend fun writeOutputVCF(
 
             for (deferred in variantContextChannel) {
                 val variantContext = deferred.await()
-                measureNanoTime {
-                    if (variantContext != null) writer.add(variantContext)
-                }.let { timeWriting += it }
+                if (variantContext != null) writer.add(variantContext)
             }
 
         }
-
-    myLogger.info("Time writing: ${timeWriting / 1e9} secs.")
 
 }
 
