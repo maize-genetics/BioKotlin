@@ -230,8 +230,9 @@ private fun createVariantContext(info: VariantContextInfo): VariantContext {
     val refAllele = alleleRef(info.reference)
 
     val alleleMap = mutableMapOf<String, Allele>()
-    alleleMap[info.reference] = refAllele
     info.altAlleles.forEach { alleleMap[it] = alleleAlt(it) }
+    // reference added last to overwrite a matching alt allele
+    alleleMap[info.reference] = refAllele
 
     val genotypes = info.genotypes.mapIndexed { index, (phased, alleles) ->
 
