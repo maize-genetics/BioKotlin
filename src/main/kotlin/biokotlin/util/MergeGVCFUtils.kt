@@ -133,6 +133,8 @@ private fun createSNP(
                 // Variant for this sample represents the current position
                 variant.contains(currentPosition) -> {
 
+                    variantsUsed.add(variant)
+
                     val variantRef = getVariantRef(variant, currentPosition)
 
                     if (refAllele == null) {
@@ -146,20 +148,30 @@ private fun createSNP(
                     when {
 
                         variant.isINS -> {
-                            variantsUsed.add(variant)
-                            symbolicAlleles.add("<INS>")
-                            Pair(variant.isPhased(0), listOf("<INS>"))
+                            val alleleIndex = currentPosition.position - variant.start
+                            if (alleleIndex < variant.refAllele.length) {
+                                val alleles = variant.genotypeStrs(0).map { it[alleleIndex].toString() }
+                                altAlleles.addAll(alleles)
+                                Pair(variant.isPhased(0), alleles)
+                            } else {
+                                val ploidy = variant.genotypeStrs(0).size
+                                Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
+                            }
                         }
 
                         variant.isDEL -> {
-                            variantsUsed.add(variant)
-                            symbolicAlleles.add("<DEL>")
-                            Pair(variant.isPhased(0), listOf("<DEL>"))
+                            if (currentPosition == variant.startPosition) {
+                                val alleles = variant.genotypeStrs(0).map { it[0].toString() }
+                                altAlleles.addAll(alleles)
+                                Pair(variant.isPhased(0), alleles)
+                            } else {
+                                symbolicAlleles.add("<DEL>")
+                                Pair(variant.isPhased(0), listOf("<DEL>"))
+                            }
                         }
 
                         // If the variant is an SNP, use the variant's alleles
                         variant.isSNP -> {
-                            variantsUsed.add(variant)
                             altAlleles.addAll(variant.altAlleles)
                             Pair(variant.isPhased(0), variant.genotypeStrs(0))
                         }
@@ -168,7 +180,6 @@ private fun createSNP(
                         // REF will be changed to the actual reference allele when
                         // creating the VariantContext
                         variant.isRefBlock -> {
-                            variantsUsed.add(variant)
                             val ploidy = variant.genotypeStrs(0).size
                             Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
                         }
