@@ -117,7 +117,7 @@ private fun createSNP(
     variants: List<SimpleVariant?>,
     currentPosition: Position,
     samples: List<String>
-): VariantContext {
+): VariantContext? {
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
@@ -236,7 +236,11 @@ private data class VariantContextInfo(
 /**
  * Creates a VariantContext for the current position.
  */
-private fun createVariantContext(info: VariantContextInfo): VariantContext {
+private fun createVariantContext(info: VariantContextInfo): VariantContext? {
+
+    require(info.reference != null) { "Reference allele is null" }
+
+    if (info.reference == "N") return null
 
     val refAllele = alleleRef(info.reference)
 
