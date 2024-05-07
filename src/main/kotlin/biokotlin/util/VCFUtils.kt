@@ -495,3 +495,48 @@ private fun parseRegions(regions: String): List<Pair<Position, Position>> {
         Pair(Position(it[0], positions[0]), Position(it[0], positions[1]))
     }
 }
+
+/**
+ * Function to get all VCF files in a directory.
+ * Includes extensions .g.vcf, .g.vcf.gz, .gvcf, .gvcf.gz, .h.vcf, .h.vcf.gz, .hvcf, .hvcf.gz, .vcf, .vcf.gz
+ */
+fun getAllVCFFiles(vcfDir: String): List<String> {
+
+    require(File(vcfDir).isDirectory) { "Input VCF directory does not exist: $vcfDir" }
+
+    // Get list of input VCF files from the input directory
+    return File(vcfDir)
+        .walk()
+        .filter {
+            it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
+                    it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz") ||
+                    it.name.endsWith(".h.vcf") || it.name.endsWith(".h.vcf.gz") ||
+                    it.name.endsWith(".hvcf") || it.name.endsWith(".hvcf.gz") ||
+                    it.name.endsWith(".vcf") || it.name.endsWith(".vcf.gz"))
+        }
+        .map { it.absolutePath }
+        .toList()
+        .sorted()
+
+}
+
+/**
+ * Function to get all GVCF files in a directory.
+ * Includes extensions .g.vcf, .g.vcf.gz, .gvcf, .gvcf.gz
+ */
+fun getGVCFFiles(gvcfDir: String): List<String> {
+
+    require(File(gvcfDir).isDirectory) { "Input VCF directory does not exist: $gvcfDir" }
+
+    // Get list of input GVCF files from the input directory
+    return File(gvcfDir)
+        .walk()
+        .filter {
+            it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
+                    it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz"))
+        }
+        .map { it.absolutePath }
+        .toList()
+        .sorted()
+
+}
