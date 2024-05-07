@@ -470,24 +470,19 @@ fun parseALTHeader(header: VCFHeader): Map<String, AltHeaderMetaData> {
         .map {
             check(it.value.containsKey("ID")) { "ALT Header does not contain ID" }
             check(it.value.containsKey("Description")) { "ALT Header does not contain Description" }
-            // These are optional header fields, so we check these in the unit test.
-            check(it.value.containsKey("Source")) { "ALT Header does not contain Source" }
-            check(it.value.containsKey("SampleName")) { "ALT Header does not contain SampleName" }
-            check(it.value.containsKey("Regions")) { "ALT Header does not contain Regions" }
-            check(it.value.containsKey("Checksum")) { "ALT Header does not contain Checksum" }
-            check(it.value.containsKey("RefRange")) { "ALT Header does not contain RefRange" }
             it.key to AltHeaderMetaData(
                 it.value["ID"]!!,
                 it.value["Description"]!!,
-                it.value["Source"]!!,
-                SampleGamete(it.value["SampleName"]!!, it.value["Gamete"]?.toInt() ?: 0),
-                parseRegions(it.value["Regions"]!!),
-                it.value["Checksum"]!!,
-                it.value["RefRange"]!!,
+                it.value["Source"] ?: "",
+                SampleGamete(it.value["SampleName"] ?: "", it.value["Gamete"]?.toInt() ?: 0),
+                it.value["Regions"]?.let { regions -> parseRegions(regions) } ?: emptyList(),
+                it.value["Checksum"] ?: "",
+                it.value["RefRange"] ?: "",
                 it.value["RefChecksum"] ?: ""
             )
         }.toList()
         .toMap()
+
 }
 
 /**
