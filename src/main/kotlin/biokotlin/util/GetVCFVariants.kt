@@ -52,6 +52,8 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
             .map { vcfReader(it, debug) }
             .sortedBy { it.samples[0] }
 
+        // Getting new list of input files after sorting
+        // based on the first sample name in each VCF file
         inputFiles = vcfReaders.map { it.filename }
 
         inputFiles.forEachIndexed { index, filename ->
@@ -204,12 +206,15 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
             }
         }
 
+        val contig = end.contig
+
         val positions = mutableListOf<Position>()
-        while (reader.variant() != null && reader.variant()!!.startPosition <= end) {
-            val variant = reader.variant()!!
+        var variant = reader.variant()
+        while (variant != null && variant.contig == contig && variant.start <= end.position) {
             builder.put(Range.closed(variant.start, variant.end), variant)
             positions.add(variant.startPosition)
             reader.advanceVariant()
+            variant = reader.variant()
         }
 
         return NextPositionsResult(
