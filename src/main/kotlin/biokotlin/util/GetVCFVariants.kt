@@ -7,24 +7,23 @@ import com.google.common.collect.RangeMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.apache.logging.log4j.LogManager
-import java.io.File
 
 /**
- * Get the variant lines for the given positions from the VCF files
- * in the input directory. Input files, VCF Readers, Sample lists,
+ * Get the variant lines for the given positions from the VCF files.
+ * Input files, VCF Readers, Sample lists,
  * and variants are kept in the same order. Sorted by the first
  * sample name in each VCF file.
  *
- * @param vcfDir Full path to input VCF directory
+ * @param inputFiles List of VCF files to read
  * @param debug If true, stores the original VCF lines in the SimpleVariant objects
  */
-class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
+class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
     private val myLogger = LogManager.getLogger(GetVCFVariants::class.java)
 
     private val vcfReaders: List<VCFReader>
 
-    val inputFiles: List<String>
+    val orderedInputFiles: List<String>
 
     // List of lists of samples, one per input VCF file
     // A GVCF file would only have one sample
@@ -32,31 +31,15 @@ class GetVCFVariants(vcfDir: String, debug: Boolean = true) {
 
     init {
 
-        require(File(vcfDir).isDirectory) { "Input VCF directory does not exist: $vcfDir" }
-
-        // Get list of input VCF files from the input directory
-        val tempInputFiles = File(vcfDir)
-            .walk()
-            .filter {
-                it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
-                        it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz") ||
-                        it.name.endsWith(".h.vcf") || it.name.endsWith(".h.vcf.gz") ||
-                        it.name.endsWith(".hvcf") || it.name.endsWith(".hvcf.gz") ||
-                        it.name.endsWith(".vcf") || it.name.endsWith(".vcf.gz"))
-            }
-            .map { it.absolutePath }
-            .toList()
-            .sorted()
-
-        vcfReaders = tempInputFiles
+        vcfReaders = inputFiles
             .map { vcfReader(it, debug) }
             .sortedBy { it.samples[0] }
 
         // Getting new list of input files after sorting
         // based on the first sample name in each VCF file
-        inputFiles = vcfReaders.map { it.filename }
+        orderedInputFiles = vcfReaders.map { it.filename }
 
-        inputFiles.forEachIndexed { index, filename ->
+        orderedInputFiles.forEachIndexed { index, filename ->
             myLogger.info("$index inputFile: $filename")
         }
 
