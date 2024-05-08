@@ -3,6 +3,8 @@ package biokotlin.cli
 import biokotlin.genome.Position
 import biokotlin.util.GetVCFVariants
 import biokotlin.util.SimpleVariant
+import biokotlin.util.getAllVCFFiles
+import biokotlin.util.validateVCFs
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -26,8 +28,12 @@ class GetVCFVariantsExample : CliktCommand(help = "Example use of GetVCFVariants
 
     override fun run() {
 
+        val inputFiles = getAllVCFFiles(inputDir)
+
+        validateVCFs(inputFiles)
+
         // Use debug = true to store the original VCF lines in the SimpleVariant objects
-        val getVCFVariants = GetVCFVariants(inputDir, debug = false)
+        val getVCFVariants = GetVCFVariants(inputFiles, debug = false)
 
         // List of lists of samples
         val samples = getVCFVariants.samples
