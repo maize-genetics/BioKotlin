@@ -18,9 +18,13 @@ private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
 
-    val getVCFVariants = GetVCFVariants(inputDir, false)
+    val inputFiles = getGVCFFiles(inputDir)
 
-    val filenames = getVCFVariants.inputFiles
+    require(validateVCFs(inputFiles)) { "Some GVCF files are invalid." }
+
+    val getVCFVariants = GetVCFVariants(inputFiles, false)
+
+    val filenames = getVCFVariants.orderedInputFiles
 
     // List of samples, one per input GVCF file
     val samples = getVCFVariants.samples
@@ -28,6 +32,8 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
             if (samples.size != 1) throw IllegalArgumentException("GVCF file should only have one sample: ${filenames[index]} has $samples")
             samples[0]
         }
+
+    require(samples.size == samples.toSet().size) { "Duplicate sample names found in GVCF files." }
 
     val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>(100)
     CoroutineScope(Dispatchers.IO).launch {
