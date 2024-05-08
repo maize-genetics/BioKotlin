@@ -19,5 +19,10 @@ class Biokotlin : CliktCommand() {
 }
 
 fun main(args: Array<String>) = Biokotlin()
-    .subcommands(MafToGvcfConverter(), ValidateGVCFs(), MergeGVCFs())
+    .subcommands(
+        MafToGvcfConverter(),
+        ValidateGVCFs(),
+        MergeGVCFs(),
+        ValidateVCFs()
+    )
     .main(args)
