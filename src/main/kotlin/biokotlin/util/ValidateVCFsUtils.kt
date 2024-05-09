@@ -1,5 +1,6 @@
 package biokotlin.util
 
+import biokotlin.genome.Position
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.apache.logging.log4j.LogManager
@@ -29,20 +30,34 @@ fun validateVCFs(inputFiles: List<String>): Boolean {
 
 }
 
-private data class VCFSummary(val fullFilename: String, val contigs: List<String>) {
+private data class VCFSummary(
+    val fullFilename: String,
+    val contigs: List<String>,
+    val positionsOutOfOrder: List<Position>
+) {
     val filename: String = File(fullFilename).name
 }
 
 private suspend fun summary(reader: VCFReader): VCFSummary {
 
     val contigs = mutableListOf<String>()
+    val positionsOutOfOrder = mutableListOf<Position>()
     var currentContig: String? = null
+    var currentPosition: Int = 0
     var variant = reader.variant()
     while (variant != null) {
 
         if (currentContig == null || currentContig != variant.contig) {
             currentContig = variant.contig
+            currentPosition = variant.start
             contigs.add(currentContig)
+        }
+
+        if (variant.start < currentPosition) {
+            positionsOutOfOrder.add(variant.startPosition)
+            currentPosition = variant.start
+        } else {
+            currentPosition = variant.start
         }
 
         reader.advanceVariant()
@@ -50,7 +65,7 @@ private suspend fun summary(reader: VCFReader): VCFSummary {
 
     }
 
-    return VCFSummary(reader.filename, contigs)
+    return VCFSummary(reader.filename, contigs, positionsOutOfOrder)
 
 }
 
@@ -85,6 +100,11 @@ private suspend fun compareSummaries(channel: Channel<Deferred<VCFSummary>>): Bo
                     .filter { it.value.size > 1 }
                     .keys
                 myLogger.error("File ${summary.filename} has repeated contigs: $repeatedContigs.")
+                result = false
+            }
+
+            if (summary.positionsOutOfOrder.isNotEmpty()) {
+                myLogger.error("File ${summary.filename} has positions out of order: ${summary.positionsOutOfOrder}.")
                 result = false
             }
 
