@@ -432,7 +432,53 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug
     val chrom = lineSplit[0]
     val start = lineSplit[1].toInt()
     val refAllele = lineSplit[3]
-    val altAlleles = lineSplit[4].split(",").filter { it != "<NON_REF>" }
+
+    val originalGenotypes = lineSplit
+        .drop(9)
+        .map { it.split(":")[0] }
+
+    val genotypeIndices = originalGenotypes
+        .flatMap { genotype ->
+            if (genotype.contains("|"))
+                genotype.split("|").filter { it != "." && it != "0" }.map { it.toInt() }
+            else
+                genotype.split("/").filter { it != "." && it != "0" }.map { it.toInt() }
+        }.toSortedSet()
+
+    val allAltAlleles = lineSplit[4].split(",").map {
+        when (it) {
+            "N" -> "."
+            "*" -> "<DEL>"
+            else -> it
+        }
+    }
+
+    val altAlleles = mutableListOf<String>()
+    var index = 1
+    val newGenotypeIndices = genotypeIndices
+        .associate { genotypeIndex ->
+            val currentAltAllele = try {
+                allAltAlleles[genotypeIndex - 1]
+            } catch (e: IndexOutOfBoundsException) {
+                throw IllegalArgumentException("Genotype index $genotypeIndex doesn't exist in $allAltAlleles")
+            }
+            if (currentAltAllele == ".") {
+                Pair(genotypeIndex.toString(), ".")
+            } else {
+                altAlleles.add(currentAltAllele)
+                Pair(genotypeIndex.toString(), (index++).toString())
+            }
+        }
+
+    val genotypes = originalGenotypes
+        .map { genotypes ->
+            if (genotypes.contains("|")) {
+                genotypes.split("|").joinToString("|") { newGenotypeIndices[it] ?: it }
+            } else {
+                genotypes.split("/").joinToString("/") { newGenotypeIndices[it] ?: it }
+            }
+        }
+
     val infos = lineSplit[7].split(";")
     val endAnno = infos.filter { it.startsWith("END") }
     val end = if (endAnno.size == 1) {
@@ -440,10 +486,6 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug
     } else {
         start + refAllele.length - 1
     }
-
-    val genotypes = lineSplit
-        .drop(9)
-        .map { it.split(":")[0] }
 
     if (debug) {
         return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes, currentLine)
