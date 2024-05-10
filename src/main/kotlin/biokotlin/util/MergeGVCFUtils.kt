@@ -154,15 +154,8 @@ private fun createSNP(
                     when {
 
                         variant.isINS -> {
-                            val alleleIndex = currentPosition.position - variant.start
-                            if (alleleIndex < variant.refAllele.length) {
-                                val alleles = variant.genotypeStrs(0).map { it[alleleIndex].toString() }
-                                altAlleles.addAll(alleles)
-                                Pair(variant.isPhased(0), alleles)
-                            } else {
-                                val ploidy = variant.genotypeStrs(0).size
-                                Pair(variant.isPhased(0), MutableList(ploidy) { "REF" })
-                            }
+                            symbolicAlleles.add("<INS>")
+                            Pair(variant.isPhased(0), listOf("<INS>"))
                         }
 
                         variant.isDEL -> {
