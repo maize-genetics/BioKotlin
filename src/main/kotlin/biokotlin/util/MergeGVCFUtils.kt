@@ -1,6 +1,5 @@
 package biokotlin.util
 
-import biokotlin.genome.Position
 import htsjdk.variant.variantcontext.Allele
 import htsjdk.variant.variantcontext.GenotypeBuilder
 import htsjdk.variant.variantcontext.VariantContext
@@ -8,8 +7,11 @@ import htsjdk.variant.variantcontext.VariantContextBuilder
 import htsjdk.variant.variantcontext.writer.Options
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.VCFHeader
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
 import java.io.File
 import kotlin.system.measureNanoTime
@@ -35,24 +37,23 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
     require(samples.size == samples.toSet().size) { "Duplicate sample names found in GVCF files." }
 
-    val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>(100)
+    val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
     CoroutineScope(Dispatchers.IO).launch {
         getVCFVariants.forAll(positionsChannel)
     }
 
-    val variantContextChannel = Channel<Deferred<VariantContext?>>(100)
+    val variantContextChannel = Channel<VariantContext?>(1000)
 
     CoroutineScope(Dispatchers.IO).launch {
 
         measureNanoTime {
 
-            for (deferred in positionsChannel) {
+            for (block in positionsChannel) {
 
-                val block = deferred.await()
                 for ((currentPosition, variants) in block) {
-                    variantContextChannel.send(async {
+                    variantContextChannel.send(
                         createVariantContext(samples, variants, currentPosition)
-                    })
+                    )
                 }
 
             }
@@ -73,7 +74,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 private fun createVariantContext(
     samples: List<String>,
     variants: List<SimpleVariant?>,
-    currentPosition: Position
+    currentPosition: Int
 ): VariantContext? {
 
     val hasSNP = variants.filterNotNull().find { it.isSNP } != null
@@ -91,7 +92,7 @@ private fun createVariantContext(
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
-    variantContextChannel: Channel<Deferred<VariantContext?>>
+    variantContextChannel: Channel<VariantContext?>
 ) {
 
     // Write the merged VCF file, using the HTSJDK VariantContextWriterBuilder
@@ -106,8 +107,7 @@ private suspend fun writeOutputVCF(
             val header = VCFHeader(createGenericVCFHeaders(samples))
             writer.writeHeader(header)
 
-            for (deferred in variantContextChannel) {
-                val variantContext = deferred.await()
+            for (variantContext in variantContextChannel) {
                 if (variantContext != null) writer.add(variantContext)
             }
 
@@ -121,9 +121,11 @@ private suspend fun writeOutputVCF(
  */
 private fun createSNP(
     variants: List<SimpleVariant?>,
-    currentPosition: Position,
+    currentPosition: Int,
     samples: List<String>
 ): VariantContext? {
+
+    val contig = variants.filterNotNull().first().contig
 
     var refAllele: String? = null
     var altAlleles: MutableSet<String> = mutableSetOf()
@@ -159,7 +161,7 @@ private fun createSNP(
                         }
 
                         variant.isDEL -> {
-                            if (currentPosition == variant.startPosition) {
+                            if (currentPosition == variant.start) {
                                 val alleles = variant.genotypeStrs(0).map { it[0].toString() }
                                 altAlleles.addAll(alleles)
                                 Pair(variant.isPhased(0), alleles)
@@ -203,6 +205,7 @@ private fun createSNP(
 
     return createVariantContext(
         VariantContextInfo(
+            contig,
             currentPosition,
             refAllele ?: error("Reference allele is null"),
             samples,
@@ -218,13 +221,14 @@ private fun createSNP(
  * Get the reference allele for the current position
  * from the given variant.
  */
-private fun getVariantRef(variant: SimpleVariant, currentPosition: Position): String? {
-    val refIndex = currentPosition.position - variant.start
+private fun getVariantRef(variant: SimpleVariant, currentPosition: Int): String? {
+    val refIndex = currentPosition - variant.start
     return if (refIndex < variant.refAllele.length) variant.refAllele[refIndex].toString() else null
 }
 
 private data class VariantContextInfo(
-    val position: Position,
+    val contig: String,
+    val position: Int,
     val reference: String,
     val samples: List<String>,
     val altAlleles: Set<String>,
@@ -274,9 +278,9 @@ private fun createVariantContext(info: VariantContextInfo): VariantContext? {
     return VariantContextBuilder()
         .source(".")
         .alleles(alleleMap.values)
-        .chr(info.position.contig)
-        .start(info.position.position.toLong())
-        .stop(info.position.position.toLong())
+        .chr(info.contig)
+        .start(info.position.toLong())
+        .stop(info.position.toLong())
         .genotypes(genotypes)
         .make()
 
