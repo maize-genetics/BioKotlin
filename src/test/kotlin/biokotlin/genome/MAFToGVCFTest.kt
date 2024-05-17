@@ -102,6 +102,25 @@ class MAFToGVCFTest : StringSpec({
     createTruthNs(truthGVCFFileNs)
 
 
+    "Test Mixed alpha and numeric, differeing lengths" {
+        val chr1 = "1"
+        val chr2 = "2"
+        val chr10 = "10"
+        val chrX = "X"
+        val chrY = "Y"
+        val chrMT = "MT"
+        val chr3 = "chr3"
+        val chr4 = "chr4"
+
+        val chrList = listOf(chr1, chr2, chr10, chrX, chrY, chrMT, chr3, chr4)
+
+        val sortedList = chrList.sortedWith(SeqRangeSort.alphaThenNumberSort)
+        val expectedList = listOf("MT", "X", "Y", "chr3", "chr4", "1", "2", "10")
+
+        println("sortedList: $sortedList")
+        println("expectedList: $expectedList")
+        assert(sortedList == expectedList)
+    }
 
     "Test sorting alpha and numeric" {
         //val sortedRecords = records.sortedWith(compareBy(alphaThenNumberSort){name: MAFRecord -> name.refRecord.chromName.split(".").last()}.thenBy({it.refRecord.start }))
