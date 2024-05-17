@@ -278,13 +278,6 @@ data class VCFReader(
 
     private var currentVariant: SimpleVariant? = null
 
-    // Cache variants better performance.
-    // Don't overfill cache to avoid
-    // queue from having to resize.
-    private val variantCacheSize = 105
-    private val variantCacheFillSize = (variantCacheSize * 0.95).toInt()
-    private val variantCache = ArrayDeque<SimpleVariant>(variantCacheSize)
-
     init {
         // Advance to preload the currentVariant.
         // This is so that the first call
@@ -312,31 +305,7 @@ data class VCFReader(
      * Use this in conjunction with variant() to get the next variant.
      */
     suspend fun advanceVariant() {
-        val tempVariant = variantCache.removeFirstOrNull()
-        currentVariant = if (tempVariant == null) {
-            fillCache()
-            variantCache.removeFirstOrNull()
-        } else {
-            tempVariant
-        }
-    }
-
-    /**
-     * Function to fill the cache with variants.
-     * This is for performance reasons to avoid runBlocking
-     */
-    private suspend fun fillCache() {
-
-        do {
-            val result = variants.receiveCatching()
-            val variant = if (result.isSuccess) {
-                result.getOrNull()
-            } else {
-                null
-            }
-            variant?.let { variantCache.add(it) }
-        } while (variant != null && variantCache.size < variantCacheFillSize)
-
+        currentVariant = variants.receiveCatching().getOrNull()
     }
 
 }
@@ -408,7 +377,7 @@ private fun parseVCFFile(
         Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
-    val channel = Channel<SimpleVariant>(100)
+    val channel = Channel<SimpleVariant>(1000)
     CoroutineScope(Dispatchers.IO).launch {
 
         bufferedReader(filename).useLines { lines ->
