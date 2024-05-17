@@ -244,6 +244,10 @@ data class SimpleVariant(
         return contig == position.contig && start <= position.position && position.position <= end
     }
 
+    fun contains(position: Int): Boolean {
+        return position in start..end
+    }
+
 }
 
 // Making Number a string as VCF allows for '.'
