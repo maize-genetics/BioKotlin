@@ -16,9 +16,10 @@ fun validateVCFs(inputFiles: List<String>): Boolean {
 
     val processingChannel = Channel<Deferred<VCFSummary>>(100)
 
+    val readers = inputFiles.map { vcfReader(it, false) }
+
     CoroutineScope(Dispatchers.IO).launch {
-        inputFiles.forEach { filename ->
-            val reader = vcfReader(filename, false)
+        readers.forEach { reader ->
             processingChannel.send(async { summary(reader) })
         }
         processingChannel.close()
