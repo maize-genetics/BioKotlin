@@ -9,7 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import org.apache.logging.log4j.LogManager
-import kotlin.system.measureNanoTime
 
 /**
  * Get the variant lines for the given positions from the VCF files.
@@ -87,110 +86,81 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
     }
 
-    var lowestPositionTime = 0L
-    var whileLoopTime = 0L
-    var doLoopTime = 0L
-    var settingUpJobsTime = 0L
-    var waitingForJobsTime = 0L
-    var asyncTime = 0L
     suspend fun forAll(channel: Channel<List<Pair<Int, List<SimpleVariant?>>>>) {
 
         val stepSize = 1000
 
-        var lowestPosition: Position? = null
-        measureNanoTime {
-            lowestPosition = vcfReaders
-                .mapNotNull { it.variant()?.startPosition }
-                .minOrNull()
-        }.also { lowestPositionTime += it }
+        var lowestPosition: Position? = vcfReaders
+            .mapNotNull { it.variant()?.startPosition }
+            .minOrNull()
 
-        measureNanoTime {
+        while (lowestPosition != null) {
 
-            while (lowestPosition != null) {
+            val currentContig = lowestPosition!!.contig
+            var currentStart = lowestPosition!!.position
 
-                val currentContig = lowestPosition!!.contig
-                var currentStart = lowestPosition!!.position
+            var rangeMaps: Array<RangeMap<Int, SimpleVariant>?> = Array(vcfReaders.size) { null }
 
-                measureNanoTime {
+            do {
 
-                    var rangeMaps: Array<RangeMap<Int, SimpleVariant>?> = Array(vcfReaders.size) { null }
+                val jobs = Channel<NextPositionsResult>(Channel.UNLIMITED)
 
-                    do {
+                CoroutineScope(Dispatchers.IO).launch {
 
-                        val jobs = Channel<NextPositionsResult>(Channel.UNLIMITED)
-                        measureNanoTime {
+                    vcfReaders.mapIndexed { index, reader ->
 
-                            CoroutineScope(Dispatchers.IO).launch {
+                        val thisContig = currentContig
+                        val thisStart = currentStart
+                        val thisReader = reader
+                        var thisRangeMap: RangeMap<Int, SimpleVariant>? = rangeMaps[index]
 
-                                vcfReaders.mapIndexed { index, reader ->
-
-                                    val thisContig = currentContig
-                                    val thisStart = currentStart
-                                    val thisReader = reader
-                                    var thisRangeMap: RangeMap<Int, SimpleVariant>? = rangeMaps[index]
-
-                                    jobs.send(
-                                        nextPositions(
-                                            thisStart,
-                                            Position(thisContig, thisStart + stepSize - 1),
-                                            thisRangeMap,
-                                            thisReader
-                                        )
-                                    )
-
-                                }
-
-                                jobs.close()
-
-                            }
-                        }.also { settingUpJobsTime += it }
-
-                        rangeMaps = Array(vcfReaders.size) { null }
-                        val startPositions = mutableSetOf<Int>()
-                        measureNanoTime {
-                            var index = 0
-                            for (job in jobs) {
-                                rangeMaps[index++] = job.rangeMap
-                                startPositions.addAll(job.positions)
-                            }
-                        }.also { waitingForJobsTime += it }
-
-                        val thisRangeMaps = rangeMaps
-                        val thisStartPositions = startPositions.toSet()
-                        channel.send(
-                            processBlock(
-                                thisStartPositions,
-                                vcfReaders.size,
-                                thisRangeMaps
+                        jobs.send(
+                            nextPositions(
+                                thisStart,
+                                Position(thisContig, thisStart + stepSize - 1),
+                                thisRangeMap,
+                                thisReader
                             )
                         )
 
-                        currentStart += stepSize
+                    }
 
-                    } while (!vcfReaders.all { it.variant() == null } &&
-                        vcfReaders.mapNotNull { it.variant()?.startPosition }
-                            .find { it.contig == currentContig } != null)
-                }.also { doLoopTime += it }
+                    jobs.close()
 
-                // TODO - Finding lowest based on contig / position
-                measureNanoTime {
-                    lowestPosition = vcfReaders
-                        .mapNotNull { it.variant()?.startPosition }
-                        .minOrNull()
-                }.also { lowestPositionTime += it }
+                }
 
-            }
+                rangeMaps = Array(vcfReaders.size) { null }
+                val startPositions = mutableSetOf<Int>()
+                var index = 0
+                for (job in jobs) {
+                    rangeMaps[index++] = job.rangeMap
+                    startPositions.addAll(job.positions)
+                }
 
-        }.also { whileLoopTime += it }
+                val thisRangeMaps = rangeMaps
+                val thisStartPositions = startPositions.toSet()
+                channel.send(
+                    processBlock(
+                        thisStartPositions,
+                        vcfReaders.size,
+                        thisRangeMaps
+                    )
+                )
+
+                currentStart += stepSize
+
+            } while (!vcfReaders.all { it.variant() == null } &&
+                vcfReaders.mapNotNull { it.variant()?.startPosition }
+                    .find { it.contig == currentContig } != null)
+
+            // TODO - Finding lowest based on contig / position
+            lowestPosition = vcfReaders
+                .mapNotNull { it.variant()?.startPosition }
+                .minOrNull()
+
+        }
 
         channel.close()
-
-        println("lowestPositionTime: ${lowestPositionTime / 1e9} secs")
-        println("whileLoopTime: ${whileLoopTime / 1e9} secs")
-        println("doLoopTime: ${doLoopTime / 1e9} secs")
-        println("settingUpJobsTime: ${settingUpJobsTime / 1e9} secs")
-        println("waitingForJobsTime: ${waitingForJobsTime / 1e9} secs")
-        println("asyncTime: ${asyncTime / 1e9} secs")
 
     }
 
