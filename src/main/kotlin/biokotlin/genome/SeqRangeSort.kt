@@ -99,7 +99,7 @@ fun compareId (first:String?, second:String?, numFirst: Boolean): Int {
                         while (pos2 < len2 && Character.isDigit(ch2)) {
                             currDigits2 = currDigits2 + ch2
                             pos2++
-                            ch2 = bChars.elementAt(pos2)
+                            if (pos2 < len2) ch2 = bChars.elementAt(pos2)
                         }
                         pos2-- // this is incremented at end of while loop
                         compareVal = if (numFirst) 1  else -1
