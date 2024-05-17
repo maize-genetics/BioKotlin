@@ -1,6 +1,5 @@
 package biokotlin.cli
 
-import biokotlin.genome.Position
 import biokotlin.util.GetVCFVariants
 import biokotlin.util.SimpleVariant
 import biokotlin.util.getAllVCFFiles
@@ -38,16 +37,15 @@ class GetVCFVariantsExample : CliktCommand(help = "Example use of GetVCFVariants
         // List of lists of samples
         val samples = getVCFVariants.samples
 
-        val positionsChannel = Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>(100)
+        val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
         CoroutineScope(Dispatchers.IO).launch {
             getVCFVariants.forAll(positionsChannel)
         }
 
         CoroutineScope(Dispatchers.IO).launch {
 
-            for (deferred in positionsChannel) {
+            for (block in positionsChannel) {
 
-                val block = deferred.await()
                 for ((position, variants) in block) {
                     resultChannel.send(async {
                         processPosition(position, variants)
@@ -67,7 +65,7 @@ class GetVCFVariantsExample : CliktCommand(help = "Example use of GetVCFVariants
 
     }
 
-    private fun processPosition(position: Position, variants: List<SimpleVariant?>) {
+    private fun processPosition(position: Int, variants: List<SimpleVariant?>) {
         TODO()
     }
 
