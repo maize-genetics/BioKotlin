@@ -4,9 +4,12 @@ import biokotlin.genome.Position
 import com.google.common.collect.ImmutableRangeMap
 import com.google.common.collect.Range
 import com.google.common.collect.RangeMap
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import org.apache.logging.log4j.LogManager
+import kotlin.system.measureNanoTime
 
 /**
  * Get the variant lines for the given positions from the VCF files.
@@ -84,79 +87,124 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
     }
 
-    suspend fun forAll(
-        channel: Channel<Deferred<List<Pair<Position, List<SimpleVariant?>>>>>
-    ) = withContext(Dispatchers.IO) {
+    var lowestPositionTime = 0L
+    var whileLoopTime = 0L
+    var doLoopTime = 0L
+    var settingUpJobsTime = 0L
+    var waitingForJobsTime = 0L
+    var asyncTime = 0L
+    suspend fun forAll(channel: Channel<List<Pair<Int, List<SimpleVariant?>>>>) {
 
         val stepSize = 1000
 
-        var lowestPosition = vcfReaders
-            .mapNotNull { it.variant()?.startPosition }
-            .minOrNull()
-
-        while (lowestPosition != null) {
-
-            val currentContig = lowestPosition.contig
-            var currentStart = lowestPosition.position
-
-            var rangeMaps: List<RangeMap<Int, SimpleVariant>>? = null
-            do {
-
-                val jobs = vcfReaders.mapIndexed { index, reader ->
-
-                    val thisContig = currentContig
-                    val thisStart = currentStart
-                    val thisReader = reader
-                    val thisRangeMap = rangeMaps?.getOrNull(index)
-
-                    async {
-                        nextPositions(
-                            thisStart,
-                            Position(thisContig, thisStart + stepSize - 1),
-                            thisRangeMap,
-                            thisReader
-                        )
-                    }
-
-                }
-
-                rangeMaps = mutableListOf()
-                val startPositions = mutableSetOf<Position>()
-                jobs.forEach {
-                    val result = it.await()
-                    rangeMaps.add(result.rangeMap)
-                    startPositions.addAll(result.positions)
-                }
-
-                val thisRangeMaps = rangeMaps
-                channel.send(async { processBlock(startPositions, vcfReaders.size, thisRangeMaps) })
-
-                currentStart += stepSize
-
-            } while (!vcfReaders.all { it.variant() == null } &&
-                vcfReaders.mapNotNull { it.variant()?.startPosition }.find { it.contig == currentContig } != null)
-
+        var lowestPosition: Position? = null
+        measureNanoTime {
             lowestPosition = vcfReaders
                 .mapNotNull { it.variant()?.startPosition }
                 .minOrNull()
+        }.also { lowestPositionTime += it }
 
-        }
+        measureNanoTime {
+
+            while (lowestPosition != null) {
+
+                val currentContig = lowestPosition!!.contig
+                var currentStart = lowestPosition!!.position
+
+                measureNanoTime {
+
+                    var rangeMaps: Array<RangeMap<Int, SimpleVariant>?> = Array(vcfReaders.size) { null }
+
+                    do {
+
+                        val jobs = Channel<NextPositionsResult>(Channel.UNLIMITED)
+                        measureNanoTime {
+
+                            CoroutineScope(Dispatchers.IO).launch {
+
+                                vcfReaders.mapIndexed { index, reader ->
+
+                                    val thisContig = currentContig
+                                    val thisStart = currentStart
+                                    val thisReader = reader
+                                    var thisRangeMap: RangeMap<Int, SimpleVariant>? = rangeMaps[index]
+
+                                    jobs.send(
+                                        nextPositions(
+                                            thisStart,
+                                            Position(thisContig, thisStart + stepSize - 1),
+                                            thisRangeMap,
+                                            thisReader
+                                        )
+                                    )
+
+                                }
+
+                                jobs.close()
+
+                            }
+                        }.also { settingUpJobsTime += it }
+
+                        rangeMaps = Array(vcfReaders.size) { null }
+                        val startPositions = mutableSetOf<Int>()
+                        measureNanoTime {
+                            var index = 0
+                            for (job in jobs) {
+                                rangeMaps[index++] = job.rangeMap
+                                startPositions.addAll(job.positions)
+                            }
+                        }.also { waitingForJobsTime += it }
+
+                        val thisRangeMaps = rangeMaps
+                        val thisStartPositions = startPositions.toSet()
+                        channel.send(
+                            processBlock(
+                                thisStartPositions,
+                                vcfReaders.size,
+                                thisRangeMaps
+                            )
+                        )
+
+                        currentStart += stepSize
+
+                    } while (!vcfReaders.all { it.variant() == null } &&
+                        vcfReaders.mapNotNull { it.variant()?.startPosition }
+                            .find { it.contig == currentContig } != null)
+                }.also { doLoopTime += it }
+
+                // TODO - Finding lowest based on contig / position
+                measureNanoTime {
+                    lowestPosition = vcfReaders
+                        .mapNotNull { it.variant()?.startPosition }
+                        .minOrNull()
+                }.also { lowestPositionTime += it }
+
+            }
+
+        }.also { whileLoopTime += it }
 
         channel.close()
+
+        println("lowestPositionTime: ${lowestPositionTime / 1e9} secs")
+        println("whileLoopTime: ${whileLoopTime / 1e9} secs")
+        println("doLoopTime: ${doLoopTime / 1e9} secs")
+        println("settingUpJobsTime: ${settingUpJobsTime / 1e9} secs")
+        println("waitingForJobsTime: ${waitingForJobsTime / 1e9} secs")
+        println("asyncTime: ${asyncTime / 1e9} secs")
 
     }
 
     private fun processBlock(
-        startPositions: Set<Position>,
+        startPositions: Set<Int>,
         numReaders: Int,
-        rangeMaps: List<RangeMap<Int, SimpleVariant>>
-    ): List<Pair<Position, List<SimpleVariant?>>> {
+        rangeMaps: Array<RangeMap<Int, SimpleVariant>?>
+    ): List<Pair<Int, List<SimpleVariant?>>> {
 
         return startPositions
             .sorted()
             .map { position ->
                 val variants = (0 until numReaders).map { index ->
-                    rangeMaps[index].get(position.position)
+                    rangeMaps[index]!!.get(position)
                 }
                 Pair(position, variants)
             }
@@ -165,7 +213,7 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
     private data class NextPositionsResult(
         val rangeMap: RangeMap<Int, SimpleVariant>,
-        val positions: List<Position>
+        val positions: List<Int>
     )
 
     /**
@@ -183,19 +231,17 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
         val builder = ImmutableRangeMap.builder<Int, SimpleVariant>()
 
-        if (previousRangeMap != null) {
-            previousRangeMap.get(start)?.let { variant ->
-                builder.put(Range.closed(variant.start, variant.end), variant)
-            }
+        previousRangeMap?.get(start)?.let { variant ->
+            builder.put(Range.closed(variant.start, variant.end), variant)
         }
 
         val contig = end.contig
 
-        val positions = mutableListOf<Position>()
+        val positions = mutableListOf<Int>()
         var variant = reader.variant()
         while (variant != null && variant.contig == contig && variant.start <= end.position) {
             builder.put(Range.closed(variant.start, variant.end), variant)
-            positions.add(variant.startPosition)
+            positions.add(variant.start)
             reader.advanceVariant()
             variant = reader.variant()
         }
