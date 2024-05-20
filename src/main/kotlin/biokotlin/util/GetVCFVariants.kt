@@ -96,45 +96,29 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
         while (lowestPosition != null) {
 
-            val currentContig = lowestPosition!!.contig
-            var currentStart = lowestPosition!!.position
+            val currentContig = lowestPosition.contig
+            var currentStart = lowestPosition.position
 
             var rangeMaps: Array<RangeMap<Int, SimpleVariant>?> = Array(vcfReaders.size) { null }
 
             do {
 
-                val jobs = Channel<NextPositionsResult>(Channel.UNLIMITED)
+                val nextPositionsResults = vcfReaders.mapIndexed { index, reader ->
 
-                CoroutineScope(Dispatchers.IO).launch {
-
-                    vcfReaders.mapIndexed { index, reader ->
-
-                        val thisContig = currentContig
-                        val thisStart = currentStart
-                        val thisReader = reader
-                        var thisRangeMap: RangeMap<Int, SimpleVariant>? = rangeMaps[index]
-
-                        jobs.send(
-                            nextPositions(
-                                thisStart,
-                                Position(thisContig, thisStart + stepSize - 1),
-                                thisRangeMap,
-                                thisReader
-                            )
-                        )
-
-                    }
-
-                    jobs.close()
+                    nextPositions(
+                        currentStart,
+                        Position(currentContig, currentStart + stepSize - 1),
+                        rangeMaps[index],
+                        reader
+                    )
 
                 }
 
                 rangeMaps = Array(vcfReaders.size) { null }
                 val startPositions = mutableSetOf<Int>()
-                var index = 0
-                for (job in jobs) {
-                    rangeMaps[index++] = job.rangeMap
-                    startPositions.addAll(job.positions)
+                nextPositionsResults.forEachIndexed { index, nextPositionsResult ->
+                    rangeMaps[index] = nextPositionsResult.rangeMap
+                    startPositions.addAll(nextPositionsResult.positions)
                 }
 
                 val thisRangeMaps = rangeMaps
