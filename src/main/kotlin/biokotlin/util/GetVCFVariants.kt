@@ -88,7 +88,7 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
     suspend fun forAll(channel: Channel<List<Pair<Int, List<SimpleVariant?>>>>) {
 
-        val stepSize = 1000
+        val stepSize = 10000
 
         var lowestPosition: Position? = vcfReaders
             .mapNotNull { it.variant()?.startPosition }
