@@ -22,7 +22,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
     val inputFiles = getGVCFFiles(inputDir)
 
-    require(validateVCFs(inputFiles)) { "Some GVCF files are invalid." }
+    require(validateVCFs(inputFiles).valid) { "Some GVCF files are invalid." }
 
     val getVCFVariants = GetVCFVariants(inputFiles, false)
 
@@ -48,17 +48,23 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
 
         measureNanoTime {
 
-            for (block in positionsChannel) {
+            try {
 
-                for ((currentPosition, variants) in block) {
-                    variantContextChannel.send(
-                        createVariantContext(samples, variants, currentPosition)
-                    )
+                for (block in positionsChannel) {
+
+                    for ((currentPosition, variants) in block) {
+                        variantContextChannel.send(
+                            createVariantContext(samples, variants, currentPosition)
+                        )
+                    }
+
                 }
 
+            } catch (e: Exception) {
+                myLogger.error("MergeGVCFUtils: ${e.message}")
+            } finally {
+                variantContextChannel.close()
             }
-
-            variantContextChannel.close()
 
         }.let { myLogger.info("Time sending to channel: ${it / 1e9} secs.") }
 
@@ -150,7 +156,7 @@ private fun createSNP(
                     } else if (variantRef == null) {
                         // Do nothing, wasn't able to get the reference allele from the reference block
                     } else {
-                        require(refAllele == variantRef) { "Reference alleles are not the same: $refAllele, $variantRef" }
+                        require(refAllele == variantRef) { "Reference alleles are not the same: refAllele: $refAllele  variantRef: $variantRef for sample: ${variant.samples[0]} at contig: $contig position: $currentPosition" }
                     }
 
                     when {

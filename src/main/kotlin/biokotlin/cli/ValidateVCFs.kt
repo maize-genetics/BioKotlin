@@ -14,7 +14,7 @@ class ValidateVCFs : CliktCommand(help = "Validate (G)VCFs in a directory.") {
         .required()
 
     override fun run() {
-        if (validateVCFs(inputDir)) {
+        if (validateVCFs(inputDir).valid) {
             myLogger.info("All (G)VCF files in $inputDir are valid.")
         } else {
             myLogger.error("Some (G)VCF files in $inputDir are invalid.")
