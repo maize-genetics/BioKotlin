@@ -156,7 +156,10 @@ private fun createSNP(
                     } else if (variantRef == null) {
                         // Do nothing, wasn't able to get the reference allele from the reference block
                     } else {
-                        require(refAllele == variantRef) { "Reference alleles are not the same: refAllele: $refAllele  variantRef: $variantRef for sample: ${variant.samples[0]} at contig: $contig position: $currentPosition" }
+                        if (refAllele != variantRef) {
+                            myLogger.warn("Skipping contig: $contig position: $currentPosition  Reference alleles are not the same: refAllele: $refAllele  variantRef: $variantRef for sample: ${variant.samples[0]}")
+                        }
+                        return null
                     }
 
                     when {
