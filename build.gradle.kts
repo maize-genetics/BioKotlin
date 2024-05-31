@@ -10,7 +10,7 @@ version = "0.16"
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra("1.9.10")
+    val kotlinVersion by extra("1.9.24")
 
     repositories {
         mavenCentral()
@@ -20,13 +20,13 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         classpath(kotlin("serialization", version = kotlinVersion))
-        classpath("org.jetbrains.dokka:dokka-gradle-plugin:$kotlinVersion")
+        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
     }
 }
 
 
 plugins {
-    val kotlinVersion = "1.9.10"
+    val kotlinVersion = "1.9.24"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
@@ -38,7 +38,7 @@ plugins {
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
     application
-    id("org.jetbrains.dokka") version "1.6.21"
+    id("org.jetbrains.dokka") version "1.9.20"
     `java-library`
     `maven-publish`
     signing
@@ -69,7 +69,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
