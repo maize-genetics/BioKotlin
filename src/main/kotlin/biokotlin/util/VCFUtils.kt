@@ -1,15 +1,15 @@
 package biokotlin.util
 
+import biokotlin.featureTree.toLinkedList
 import biokotlin.genome.Position
 import biokotlin.genome.PositionRange
 import biokotlin.genome.SampleGamete
 import htsjdk.variant.vcf.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.util.*
+import kotlin.system.measureNanoTime
 
 /**
  * Data class to represent a simple VCF variant
@@ -269,12 +269,13 @@ data class AltHeaderMetaData(
 data class VCFReader(
     val filename: String,
     val altHeaders: Map<String, AltHeaderMetaData>,
-    private val variants: Channel<SimpleVariant>
+    val samples: List<String>,
+    private val variants: Channel<Deferred<LinkedList<SimpleVariant>>>
 ) {
 
-    val samples: List<String>
-
     private var currentVariant: SimpleVariant? = null
+
+    private var currentCache: LinkedList<SimpleVariant> = LinkedList()
 
     init {
         // Advance to preload the currentVariant.
@@ -282,9 +283,8 @@ data class VCFReader(
         // to variant() will return the first variant.
         // Use of runBlocking isn't desired, but this is only
         // done once during construction
-        samples = runBlocking {
+        runBlocking {
             advanceVariant()
-            variant()?.samples ?: throw IllegalArgumentException("No variants found in VCF file: $filename")
         }
     }
 
@@ -303,7 +303,11 @@ data class VCFReader(
      * Use this in conjunction with variant() to get the next variant.
      */
     suspend fun advanceVariant() {
-        currentVariant = variants.receiveCatching().getOrNull()
+        if (currentCache.isEmpty()) {
+            val cache = variants.receiveCatching().getOrNull()?.await()
+            currentCache = cache ?: LinkedList()
+        }
+        currentVariant = currentCache.poll()
     }
 
 }
@@ -312,8 +316,8 @@ data class VCFReader(
  * Function to create a VCF reader from a file.
  */
 fun vcfReader(inputFile: String, debug: Boolean = false): VCFReader {
-    val (altHeaders, variants) = parseVCFFile(inputFile, debug)
-    return VCFReader(inputFile, altHeaders, variants)
+    val results = parseVCFFile(inputFile, debug)
+    return VCFReader(inputFile, results.altHeaders, results.samples, results.variants)
 }
 
 /**
@@ -362,32 +366,71 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 
 }
 
+private data class ParseVCFFileResults(
+    val altHeaders: Map<String, AltHeaderMetaData>,
+    val variants: Channel<Deferred<LinkedList<SimpleVariant>>>,
+    val samples: List<String>
+)
+
 /**
  * Function to parse a VCF file into a map of ALT headers and a channel of SimpleVariant objects.
  */
 private fun parseVCFFile(
     filename: String,
     debug: Boolean
-): Pair<Map<String, AltHeaderMetaData>, Channel<SimpleVariant>> {
+): ParseVCFFileResults {
 
     val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
         val metaData = parseALTHeader(reader.fileHeader)
         Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
-    val channel = Channel<SimpleVariant>(1000)
+    val channel = Channel<Deferred<LinkedList<SimpleVariant>>>(3)
+
     CoroutineScope(Dispatchers.IO).launch {
 
-        bufferedReader(filename).useLines { lines ->
-            lines
-                .filter { !it.startsWith("#") }
-                .forEach { channel.send(parseSingleVCFLine(it, samples, debug)) }
-            channel.close()
+        bufferedReader(filename).use { reader ->
+            var line = reader.readLine()
+            while (line != null && line.startsWith("#")) {
+                line = reader.readLine()
+            }
+            var lines = mutableListOf<String>()
+            while (line != null) {
+                lines.add(line)
+                if (lines.size == 10000) {
+                    val tempLines = lines
+                    channel.send(async { parseLines(tempLines, samples, debug) })
+                    lines = mutableListOf()
+                }
+                line = reader.readLine()
+            }
+            if (lines.isNotEmpty()) {
+                val tempLines = lines
+                channel.send(async { parseLines(tempLines, samples, debug) })
+            }
         }
 
-    }
-    return headerMetaData to channel
+        println("Filename: $filename  Time to split VCF lines: ${timeToSplit / 1e9} seconds")
+        println("Filename: $filename  Time to get original genotypes: ${timeOriginalGenotype / 1e9} seconds")
+        println("Filename: $filename  Time to get genotype indices: ${timeGenoytpeIndices / 1e9} seconds")
+        println("Filename: $filename  Time to get all alt alleles: ${timeAllAltAlleles / 1e9} seconds")
+        println("Filename: $filename  Time to get new genotype indices: ${timeNewGenotypeIndices / 1e9} seconds")
+        println("Filename: $filename  Time to get genotypes: ${timeGenotypes / 1e9} seconds")
+        println("Filename: $filename  Time to get start and end: ${timeStartEnd / 1e9} seconds")
+        println("Filename: $filename  Time to create variant: ${timeVariant / 1e9} seconds")
 
+        channel.close()
+
+    }
+
+    return ParseVCFFileResults(headerMetaData, channel, samples)
+
+}
+
+private fun parseLines(lines: List<String>, samples: List<String>, debug: Boolean): LinkedList<SimpleVariant> {
+    return lines
+        .map { line -> parseSingleVCFLine(line, samples, debug) }
+        .toLinkedList()
 }
 
 /**
