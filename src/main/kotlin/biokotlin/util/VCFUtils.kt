@@ -72,11 +72,10 @@ data class SimpleVariant(
      */
     val isINS: Boolean
 
-    val isSpanningDeletion: Boolean
-
     val positionRange by lazy { PositionRange(contig, start, end) }
     val startPosition by lazy { Position(contig, start) }
     val endPosition by lazy { Position(contig, end) }
+
 
     init {
 
@@ -84,21 +83,17 @@ data class SimpleVariant(
             .flatMap { sampleIndex -> genotype(sampleIndex) }
             .find { it != 0 } == null
 
-        isVariant = (samples.indices)
-            .flatMap { sampleIndex -> genotype(sampleIndex) }
-            .find { it != 0 } != null
+        isVariant = !isRefBlock
 
         val altAllelesNoSymbolic = altAlleles.filterNot { it.startsWith("<") && it.endsWith(">") }
 
-        isSNP = (length == 1) && altAllelesNoSymbolic.find { it.length != 1 } == null && isVariant
+        isSNP = (length == 1) && altAllelesNoSymbolic.all { it.length == 1 } && isVariant
 
-        isDEL = altAlleles.contains("<DEL>") || altAllelesNoSymbolic.find { length > it.length } != null
+        isDEL = altAlleles.contains("<DEL>") || altAllelesNoSymbolic.any { length > it.length }
 
-        isINS = altAlleles.contains("<INS>") || altAllelesNoSymbolic.find { length < it.length } != null
+        isINS = altAlleles.contains("<INS>") || altAllelesNoSymbolic.any { length < it.length }
 
         isIndel = isDEL || isINS
-
-        isSpanningDeletion = altAllelesNoSymbolic.find { it == "*" } != null
 
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
@@ -107,12 +102,15 @@ data class SimpleVariant(
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
         require(altAlleles.size == altAlleles.distinct().size) { "ALT alleles must be unique. Found duplicates: $altAlleles" }
         require(samples.size == genotypes.size) { "Number of samples and genotypes do not match. Samples: ${samples.size} Genotypes: ${genotypes.size}" }
+
         genotypes
             .forEach {
-                require(it.matches(Regex("[0-9.]+(/[0-9.]+|\\|[0-9.]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
+                //require(it.matches(Regex("[0-9.]+(/[0-9.]+|\\|[0-9.]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
                 require(!(it.contains("/") && it.contains("|"))) { "Genotype $it is not in the correct format. Can't contain / and |" }
             }
+
         val numAlleles = altAlleles.size + 1
+
         (samples.indices).forEach { sampleIndex ->
             genotype(sampleIndex).forEach { alleleIndex ->
                 require(alleleIndex < numAlleles) { "Allele $alleleIndex should be less than the number of alleles: $numAlleles (number of alt alleles + 1 reference allele)" }
@@ -127,7 +125,7 @@ data class SimpleVariant(
                 "refAllele='$refAllele', altAllele='$altAlleles', numSamples=${samples.size}, " +
                 "${samplesStr}genotypes=${genotypes}, " +
                 "isRefBlock=$isRefBlock, isSNP=$isSNP, isVariant=$isVariant, isIndel=$isIndel, " +
-                "isDEL=$isDEL, isINS=$isINS, isSpanningDeletion=$isSpanningDeletion)"
+                "isDEL=$isDEL, isINS=$isINS)"
     }
 
     override fun compareTo(other: SimpleVariant): Int {
