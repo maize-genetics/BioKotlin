@@ -7,11 +7,8 @@ import htsjdk.variant.variantcontext.VariantContextBuilder
 import htsjdk.variant.variantcontext.writer.Options
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.VCFHeader
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
 import java.io.File
 import kotlin.system.measureNanoTime
@@ -42,7 +39,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         getVCFVariants.forAll(positionsChannel)
     }
 
-    val variantContextChannel = Channel<VariantContext?>(1000)
+    val variantContextChannel = Channel<Deferred<List<VariantContext>>>(100)
 
     CoroutineScope(Dispatchers.IO).launch {
 
@@ -51,13 +48,7 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
             try {
 
                 for (block in positionsChannel) {
-
-                    for ((currentPosition, variants) in block) {
-                        variantContextChannel.send(
-                            createVariantContext(samples, variants, currentPosition)
-                        )
-                    }
-
+                    variantContextChannel.send(async { createVariantContexts(block, samples) })
                 }
 
             } catch (e: Exception) {
@@ -75,6 +66,15 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
         writeOutputVCF(outputFile, samples, variantContextChannel)
     }
 
+}
+
+private fun createVariantContexts(
+    block: List<Pair<Int, List<SimpleVariant?>>>,
+    samples: List<String>
+): List<VariantContext> {
+    return block.mapNotNull { (currentPosition, variants) ->
+        createVariantContext(samples, variants, currentPosition)
+    }
 }
 
 private fun createVariantContext(
@@ -98,7 +98,7 @@ private fun createVariantContext(
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
-    variantContextChannel: Channel<VariantContext?>
+    variantContextChannel: Channel<Deferred<List<VariantContext>>>
 ) {
 
     // Write the merged VCF file, using the HTSJDK VariantContextWriterBuilder
@@ -113,8 +113,9 @@ private suspend fun writeOutputVCF(
             val header = VCFHeader(createGenericVCFHeaders(samples))
             writer.writeHeader(header)
 
-            for (variantContext in variantContextChannel) {
-                if (variantContext != null) writer.add(variantContext)
+            for (deferred in variantContextChannel) {
+                val variantContexts = deferred.await()
+                variantContexts.forEach { variantContext -> writer.add(variantContext) }
             }
 
         }
