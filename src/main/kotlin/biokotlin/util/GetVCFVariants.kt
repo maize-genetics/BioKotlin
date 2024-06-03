@@ -4,10 +4,8 @@ import biokotlin.genome.Position
 import com.google.common.collect.ImmutableRangeMap
 import com.google.common.collect.Range
 import com.google.common.collect.RangeMap
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import org.apache.logging.log4j.LogManager
 
 /**
@@ -86,7 +84,7 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
     }
 
-    suspend fun forAll(channel: Channel<List<Pair<Int, List<SimpleVariant?>>>>) {
+    suspend fun forAll(channel: Channel<List<Pair<Int, List<SimpleVariant?>>>>) = withContext(Dispatchers.IO) {
 
         val stepSize = 10000
 
@@ -103,20 +101,23 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
 
             do {
 
-                val nextPositionsResults = vcfReaders.mapIndexed { index, reader ->
-
-                    nextPositions(
-                        currentStart,
-                        Position(currentContig, currentStart + stepSize - 1),
-                        rangeMaps[index],
-                        reader
-                    )
-
+                val nextPositions = vcfReaders.mapIndexed { index, reader ->
+                    val thisStart = currentStart
+                    val thisRangeMap = rangeMaps[index]
+                    async {
+                        nextPositions(
+                            thisStart,
+                            Position(currentContig, thisStart + stepSize - 1),
+                            thisRangeMap,
+                            reader
+                        )
+                    }
                 }
 
                 rangeMaps = Array(vcfReaders.size) { null }
                 val startPositions = mutableSetOf<Int>()
-                nextPositionsResults.forEachIndexed { index, nextPositionsResult ->
+                for ((index, deferred) in nextPositions.withIndex()) {
+                    val nextPositionsResult = deferred.await()
                     rangeMaps[index] = nextPositionsResult.rangeMap
                     startPositions.addAll(nextPositionsResult.positions)
                 }
