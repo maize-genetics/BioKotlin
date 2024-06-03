@@ -1,11 +1,14 @@
 package biokotlin.util
 
 import biokotlin.genome.Position
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
 import java.io.File
 import java.util.*
+import kotlin.system.measureNanoTime
 
 private val myLogger = LogManager.getLogger("biokotlin.util.ValidateVCFsUtils")
 
@@ -20,20 +23,24 @@ fun validateVCFs(inputDir: String): ValidateVCFResults {
 
 fun validateVCFs(inputFiles: List<String>): ValidateVCFResults {
 
-    val processingChannel = Channel<Deferred<VCFSummary>>(100)
+    myLogger.info("ValidateVCFResults: Validating VCF files: $inputFiles")
 
-    val readers = inputFiles.map { vcfReader(it, false) }
+    var result: ValidateVCFResults? = null
 
-    CoroutineScope(Dispatchers.IO).launch {
-        readers.forEach { reader ->
-            processingChannel.send(async { summary(reader) })
+    measureNanoTime {
+        runBlocking {
+            val jobs = inputFiles.map { filename ->
+                async(Dispatchers.IO) { parseVCFFile(filename) }
+            }
+
+            val summaries = jobs.awaitAll()
+            result = compareSummaries(summaries)
         }
-        processingChannel.close()
+    }.also {
+        myLogger.info("ValidateVCFResults: Time to validate VCFs: ${it / 1e9} secs")
     }
 
-    return runBlocking {
-        compareSummaries(processingChannel)
-    }
+    return result ?: throw IllegalStateException("Result should not be null")
 
 }
 
@@ -45,47 +52,65 @@ private data class VCFSummary(
     val filename: String = File(fullFilename).name
 }
 
-private suspend fun summary(reader: VCFReader): VCFSummary {
+private fun parseVCFFile(filename: String): VCFSummary {
 
     val contigs = mutableListOf<String>()
     val positionsOutOfOrder = mutableListOf<Position>()
     var currentContig: String? = null
     var currentPosition = 0
-    var variant = reader.variant()
-    while (variant != null) {
 
-        if (currentContig == null || currentContig != variant.contig) {
-            currentContig = variant.contig
-            currentPosition = variant.end
-            contigs.add(currentContig)
-        } else {
+    bufferedReader(filename).use { reader ->
+        var line = reader.readLine()
+        while (line != null && line.startsWith("#")) {
+            line = reader.readLine()
+        }
+        while (line != null) {
+            val info = parseLine(line)
 
-            if (variant.start <= currentPosition) {
-                positionsOutOfOrder.add(variant.startPosition)
-                currentPosition = variant.end
+            if (currentContig == null || currentContig != info.contig) {
+                currentContig = info.contig
+                currentPosition = info.end
+                contigs.add(currentContig!!)
             } else {
-                currentPosition = variant.end
+
+                if (info.start <= currentPosition) {
+                    positionsOutOfOrder.add(Position(info.contig, info.start))
+                }
+                currentPosition = info.end
+
             }
 
+            line = reader.readLine()
         }
-
-        reader.advanceVariant()
-        variant = reader.variant()
-
     }
 
-    return VCFSummary(reader.filename, contigs, positionsOutOfOrder)
+    return VCFSummary(filename, contigs, positionsOutOfOrder)
 
 }
 
-private suspend fun compareSummaries(channel: Channel<Deferred<VCFSummary>>): ValidateVCFResults {
+private data class VariantInfo(val contig: String, val start: Int, val end: Int)
 
-    val summaries = mutableListOf<VCFSummary>()
+private fun parseLine(line: String): VariantInfo {
 
-    for (deferred in channel) {
-        val summary = deferred.await()
-        summaries.add(summary)
+    val lineSplit = line.split('\t')
+
+    val chrom = lineSplit[0]
+    val start = lineSplit[1].toInt()
+    val refAllele = lineSplit[3]
+
+    val infos = lineSplit[7].split(';')
+    val endAnno = infos.filter { it.startsWith("END") }
+    val end = if (endAnno.size == 1) {
+        endAnno.first().split('=')[1].toInt()
+    } else {
+        start + refAllele.length - 1
     }
+
+    return VariantInfo(chrom, start, end)
+
+}
+
+private fun compareSummaries(summaries: List<VCFSummary>): ValidateVCFResults {
 
     var result = true
 
