@@ -27,40 +27,42 @@ class GetVCFVariantsExample : CliktCommand(help = "Example use of GetVCFVariants
 
     override fun run() {
 
-        val inputFiles = getAllVCFFiles(inputDir)
+        runBlocking {
 
-        validateVCFs(inputFiles)
+            val inputFiles = getAllVCFFiles(inputDir)
 
-        // Use debug = true to store the original VCF lines in the SimpleVariant objects
-        val getVCFVariants = GetVCFVariants(inputFiles, debug = false)
+            validateVCFs(inputFiles)
 
-        // List of lists of samples
-        val samples = getVCFVariants.samples
+            // Use debug = true to store the original VCF lines in the SimpleVariant objects
+            val getVCFVariants = GetVCFVariants(inputFiles, debug = false)
 
-        val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
-        CoroutineScope(Dispatchers.IO).launch {
-            getVCFVariants.forAll(positionsChannel)
-        }
+            // List of lists of samples
+            val samples = getVCFVariants.samples
 
-        CoroutineScope(Dispatchers.IO).launch {
+            val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
+            CoroutineScope(Dispatchers.IO).launch {
+                getVCFVariants.forAll(positionsChannel)
+            }
 
-            for (block in positionsChannel) {
+            CoroutineScope(Dispatchers.IO).launch {
 
-                for ((position, variants) in block) {
-                    resultChannel.send(async {
-                        processPosition(position, variants)
-                    })
+                for (block in positionsChannel) {
+
+                    for ((position, variants) in block) {
+                        resultChannel.send(async {
+                            processPosition(position, variants)
+                        })
+                    }
+
                 }
+
+                resultChannel.close()
 
             }
 
-            resultChannel.close()
-
-        }
-
-        runBlocking {
             // Aggregate results from resultChannel
             aggregateResults()
+
         }
 
     }
