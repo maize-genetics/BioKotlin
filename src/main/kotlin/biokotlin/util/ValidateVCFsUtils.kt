@@ -4,7 +4,7 @@ import biokotlin.genome.Position
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import java.io.File
 import java.util.*
@@ -17,30 +17,28 @@ data class ValidateVCFResults(
     val mergedContigs: List<String>
 )
 
-fun validateVCFs(inputDir: String): ValidateVCFResults {
+suspend fun validateVCFs(inputDir: String): ValidateVCFResults {
     return validateVCFs(getAllVCFFiles(inputDir))
 }
 
-fun validateVCFs(inputFiles: List<String>): ValidateVCFResults {
+suspend fun validateVCFs(inputFiles: List<String>): ValidateVCFResults = withContext(Dispatchers.IO) {
 
     myLogger.info("ValidateVCFResults: Validating VCF files: $inputFiles")
 
     var result: ValidateVCFResults? = null
 
     measureNanoTime {
-        runBlocking {
-            val jobs = inputFiles.map { filename ->
-                async(Dispatchers.IO) { parseVCFFile(filename) }
-            }
-
-            val summaries = jobs.awaitAll()
-            result = compareSummaries(summaries)
+        val jobs = inputFiles.map { filename ->
+            async(Dispatchers.IO) { parseVCFFile(filename) }
         }
+
+        val summaries = jobs.awaitAll()
+        result = compareSummaries(summaries)
     }.also {
         myLogger.info("ValidateVCFResults: Time to validate VCFs: ${it / 1e9} secs")
     }
 
-    return result ?: throw IllegalStateException("Result should not be null")
+    result ?: throw IllegalStateException("Result should not be null")
 
 }
 
@@ -60,53 +58,46 @@ private fun parseVCFFile(filename: String): VCFSummary {
     var currentPosition = 0
 
     bufferedReader(filename).use { reader ->
+
         var line = reader.readLine()
         while (line != null && line.startsWith("#")) {
             line = reader.readLine()
         }
-        while (line != null) {
-            val info = parseLine(line)
 
-            if (currentContig == null || currentContig != info.contig) {
-                currentContig = info.contig
-                currentPosition = info.end
+        while (line != null) {
+
+            val lineSplit = line.split('\t', limit = 9)
+
+            val contig = lineSplit[0]
+            val start = lineSplit[1].toInt()
+            val refAllele = lineSplit[3]
+
+            val infos = lineSplit[7]
+            val end = if ("END=" in infos) {
+                infos.substringAfter("END=").substringBefore(";").toInt()
+            } else {
+                start + refAllele.length - 1
+            }
+
+            if (currentContig == null || currentContig != contig) {
+                currentContig = contig
+                currentPosition = end
                 contigs.add(currentContig!!)
             } else {
 
-                if (info.start <= currentPosition) {
-                    positionsOutOfOrder.add(Position(info.contig, info.start))
+                if (start <= currentPosition) {
+                    positionsOutOfOrder.add(Position(contig, start))
                 }
-                currentPosition = info.end
+                currentPosition = end
 
             }
 
             line = reader.readLine()
+
         }
     }
 
     return VCFSummary(filename, contigs, positionsOutOfOrder)
-
-}
-
-private data class VariantInfo(val contig: String, val start: Int, val end: Int)
-
-private fun parseLine(line: String): VariantInfo {
-
-    val lineSplit = line.split('\t')
-
-    val chrom = lineSplit[0]
-    val start = lineSplit[1].toInt()
-    val refAllele = lineSplit[3]
-
-    val infos = lineSplit[7].split(';')
-    val endAnno = infos.filter { it.startsWith("END") }
-    val end = if (endAnno.size == 1) {
-        endAnno.first().split('=')[1].toInt()
-    } else {
-        start + refAllele.length - 1
-    }
-
-    return VariantInfo(chrom, start, end)
 
 }
 
