@@ -139,7 +139,6 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
                 vcfReaders.mapNotNull { it.variant()?.startPosition }
                     .find { it.contig == currentContig } != null)
 
-            // TODO - Finding lowest based on contig / position
             lowestPosition = vcfReaders
                 .mapNotNull { it.variant()?.startPosition }
                 .minOrNull()
