@@ -11,39 +11,39 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.apache.logging.log4j.LogManager
 import java.io.File
-import kotlin.system.measureNanoTime
 
 private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
 fun mergeGVCFs(inputDir: String, outputFile: String) {
 
-    val inputFiles = getGVCFFiles(inputDir)
+    runBlocking {
 
-    require(validateVCFs(inputFiles).valid) { "Some GVCF files are invalid." }
+        val inputFiles = getGVCFFiles(inputDir)
 
-    val getVCFVariants = GetVCFVariants(inputFiles, false)
+        require(validateVCFs(inputFiles).valid) { "Some GVCF files are invalid." }
 
-    val filenames = getVCFVariants.orderedInputFiles
+        val getVCFVariants = GetVCFVariants(inputFiles, false)
 
-    // List of samples, one per input GVCF file
-    val samples = getVCFVariants.samples
-        .mapIndexed { index, samples ->
-            if (samples.size != 1) throw IllegalArgumentException("GVCF file should only have one sample: ${filenames[index]} has $samples")
-            samples[0]
+        val filenames = getVCFVariants.orderedInputFiles
+
+        // List of samples, one per input GVCF file
+        val samples = getVCFVariants.samples
+            .mapIndexed { index, samples ->
+                if (samples.size != 1) throw IllegalArgumentException("GVCF file should only have one sample: ${filenames[index]} has $samples")
+                samples[0]
+            }
+
+        require(samples.size == samples.toSet().size) { "Duplicate sample names found in GVCF files." }
+
+        val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
+
+        launch(Dispatchers.IO) {
+            getVCFVariants.forAll(positionsChannel)
         }
 
-    require(samples.size == samples.toSet().size) { "Duplicate sample names found in GVCF files." }
+        val variantContextChannel = Channel<Deferred<List<VariantContext>>>(100)
 
-    val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
-    CoroutineScope(Dispatchers.IO).launch {
-        getVCFVariants.forAll(positionsChannel)
-    }
-
-    val variantContextChannel = Channel<Deferred<List<VariantContext>>>(100)
-
-    CoroutineScope(Dispatchers.IO).launch {
-
-        measureNanoTime {
+        launch(Dispatchers.IO) {
 
             try {
 
@@ -57,13 +57,11 @@ fun mergeGVCFs(inputDir: String, outputFile: String) {
                 variantContextChannel.close()
             }
 
-        }.let { myLogger.info("Time sending to channel: ${it / 1e9} secs.") }
+        }
 
-    }
-
-    runBlocking {
         myLogger.info("writing output: $outputFile")
         writeOutputVCF(outputFile, samples, variantContextChannel)
+
     }
 
 }
@@ -83,8 +81,8 @@ private fun createVariantContext(
     currentPosition: Int
 ): VariantContext? {
 
-    val hasSNP = variants.filterNotNull().find { it.isSNP } != null
-    // val hasIndel = variants.filterNotNull().find { it.isIndel } != null
+    val hasSNP = variants.filterNotNull().any { it.isSNP }
+    // val hasIndel = variants.filterNotNull().any { it.isIndel }
 
     // This is set up to handle SNPs that doesn't overlap with indels
     // But can be expanded to handle other types of variants
@@ -152,15 +150,19 @@ private fun createSNP(
 
                     val variantRef = getVariantRef(variant, currentPosition)
 
-                    if (refAllele == null) {
-                        refAllele = variantRef
-                    } else if (variantRef == null) {
-                        // Do nothing, wasn't able to get the reference allele from the reference block
-                    } else {
-                        if (refAllele != variantRef) {
-                            myLogger.warn("Skipping contig: $contig position: $currentPosition  Reference alleles are not the same: refAllele: $refAllele  variantRef: $variantRef for sample: ${variant.samples[0]}")
+                    when {
+                        refAllele == null -> {
+                            refAllele = variantRef
                         }
-                        return null
+
+                        variantRef == null -> {
+                            // Do nothing, wasn't able to get the reference allele from the reference block
+                        }
+
+                        refAllele != variantRef -> {
+                            myLogger.warn("Skipping contig: $contig position: $currentPosition  Reference alleles are not the same: refAllele: $refAllele  variantRef: $variantRef for sample: ${variant.samples[0]}")
+                            return null
+                        }
                     }
 
                     when {
