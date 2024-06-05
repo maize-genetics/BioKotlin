@@ -9,7 +9,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.File
 import java.util.*
-import kotlin.system.measureNanoTime
 
 /**
  * Data class to represent a simple VCF variant
@@ -85,13 +84,15 @@ data class SimpleVariant(
 
         isVariant = !isRefBlock
 
-        val altAllelesNoSymbolic = altAlleles.filterNot { it.startsWith("<") && it.endsWith(">") }
+        val altAllelesNoSymbolic = altAlleles.filterNot { it.startsWith('<') && it.endsWith('>') }
 
-        isSNP = (length == 1) && altAllelesNoSymbolic.all { it.length == 1 } && isVariant
+        val altAllelesSymbolic = altAlleles.filter { it.startsWith('<') && it.endsWith('>') }
 
-        isDEL = altAlleles.contains("<DEL>") || altAllelesNoSymbolic.any { length > it.length }
+        isSNP = isVariant && (length == 1) && altAllelesNoSymbolic.all { it.length == 1 }
 
-        isINS = altAlleles.contains("<INS>") || altAllelesNoSymbolic.any { length < it.length }
+        isDEL = altAllelesSymbolic.contains("<DEL>") || altAllelesNoSymbolic.any { length > it.length }
+
+        isINS = altAllelesSymbolic.contains("<INS>") || altAllelesNoSymbolic.any { length < it.length }
 
         isIndel = isDEL || isINS
 
@@ -102,12 +103,6 @@ data class SimpleVariant(
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
         require(altAlleles.size == altAlleles.distinct().size) { "ALT alleles must be unique. Found duplicates: $altAlleles" }
         require(samples.size == genotypes.size) { "Number of samples and genotypes do not match. Samples: ${samples.size} Genotypes: ${genotypes.size}" }
-
-        genotypes
-            .forEach {
-                //require(it.matches(Regex("[0-9.]+(/[0-9.]+|\\|[0-9.]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
-                require(!(it.contains("/") && it.contains("|"))) { "Genotype $it is not in the correct format. Can't contain / and |" }
-            }
 
         val numAlleles = altAlleles.size + 1
 
@@ -164,8 +159,8 @@ data class SimpleVariant(
      */
     fun genotype(sampleIndex: Int): List<Int> {
         if (genotypes[sampleIndex].contains("|"))
-            return genotypes[sampleIndex].split("|").map { if (it == ".") -1 else it.toInt() }
-        return genotypes[sampleIndex].split("/").map { if (it == ".") -1 else it.toInt() }
+            return genotypes[sampleIndex].split('|').map { if (it == ".") -1 else it.toInt() }
+        return genotypes[sampleIndex].split('/').map { if (it == ".") -1 else it.toInt() }
     }
 
     fun genotypeStrs(sample: String): List<String> {
@@ -270,12 +265,16 @@ data class VCFReader(
     val filename: String,
     val altHeaders: Map<String, AltHeaderMetaData>,
     val samples: List<String>,
-    private val variants: Channel<Deferred<LinkedList<SimpleVariant>>>
+    private val variants: Channel<Deferred<LinkedList<SimpleVariant>>>,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
 
     private var currentVariant: SimpleVariant? = null
 
     private var currentCache: LinkedList<SimpleVariant> = LinkedList()
+
+    private val initializationComplete = CompletableDeferred<Unit>()
+    private var isInitialized = false
 
     init {
         // Advance to preload the currentVariant.
@@ -283,8 +282,10 @@ data class VCFReader(
         // to variant() will return the first variant.
         // Use of runBlocking isn't desired, but this is only
         // done once during construction
-        runBlocking {
+        scope.launch {
             advanceVariant()
+            initializationComplete.complete(Unit)
+            isInitialized = true
         }
     }
 
@@ -294,7 +295,10 @@ data class VCFReader(
      * Every call to this function will return the same variant until advanceVariant is called.
      * Returns null if there are no more variants for this reader.
      */
-    fun variant(): SimpleVariant? {
+    suspend fun variant(): SimpleVariant? {
+        if (!isInitialized) {
+            initializationComplete.await()
+        }
         return currentVariant
     }
 
@@ -385,7 +389,7 @@ private fun parseVCFFile(
         Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
-    val channel = Channel<Deferred<LinkedList<SimpleVariant>>>(3)
+    val channel = Channel<Deferred<LinkedList<SimpleVariant>>>(5)
 
     CoroutineScope(Dispatchers.IO).launch {
 
@@ -397,7 +401,7 @@ private fun parseVCFFile(
             var lines = mutableListOf<String>()
             while (line != null) {
                 lines.add(line)
-                if (lines.size == 10000) {
+                if (lines.size == 1000) {
                     val tempLines = lines
                     channel.send(async { parseLines(tempLines, samples, debug) })
                     lines = mutableListOf()
@@ -409,15 +413,6 @@ private fun parseVCFFile(
                 channel.send(async { parseLines(tempLines, samples, debug) })
             }
         }
-
-        println("Filename: $filename  Time to split VCF lines: ${timeToSplit / 1e9} seconds")
-        println("Filename: $filename  Time to get original genotypes: ${timeOriginalGenotype / 1e9} seconds")
-        println("Filename: $filename  Time to get genotype indices: ${timeGenoytpeIndices / 1e9} seconds")
-        println("Filename: $filename  Time to get all alt alleles: ${timeAllAltAlleles / 1e9} seconds")
-        println("Filename: $filename  Time to get new genotype indices: ${timeNewGenotypeIndices / 1e9} seconds")
-        println("Filename: $filename  Time to get genotypes: ${timeGenotypes / 1e9} seconds")
-        println("Filename: $filename  Time to get start and end: ${timeStartEnd / 1e9} seconds")
-        println("Filename: $filename  Time to create variant: ${timeVariant / 1e9} seconds")
 
         channel.close()
 
@@ -439,7 +434,7 @@ private fun parseLines(lines: List<String>, samples: List<String>, debug: Boolea
  */
 private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug: Boolean): SimpleVariant {
 
-    val lineSplit = currentLine.split("\t")
+    val lineSplit = currentLine.split('\t')
 
     require(lineSplit.size == samples.size + 9) { "Number of columns should be ${samples.size + 9}. But found: ${lineSplit.size}" }
 
@@ -449,17 +444,25 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug
 
     val originalGenotypes = lineSplit
         .drop(9)
-        .map { it.split(":")[0] }
+        .map { it.split(':')[0] }
 
-    val genotypeIndices = originalGenotypes
-        .flatMap { genotype ->
-            if (genotype.contains("|"))
-                genotype.split("|").filter { it != "." && it != "0" }.map { it.toInt() }
-            else
-                genotype.split("/").filter { it != "." && it != "0" }.map { it.toInt() }
-        }.toSortedSet()
+    var phaseChar = "/"
+    val originalGenotypesSplit = originalGenotypes
+        .map { genotype ->
+            if (genotype.contains('|')) {
+                phaseChar = "|"
+                genotype.split('|')
+            } else
+                genotype.split('/')
+        }
 
-    val allAltAlleles = lineSplit[4].split(",").map {
+    val genotypeIndices = originalGenotypesSplit
+        .flatten()
+        .filter { it != "." && it != "0" }
+        .map { it.toInt() }
+        .toSortedSet()
+
+    val allAltAlleles = lineSplit[4].split(',').map {
         when (it) {
             "N" -> "."
             "*" -> "<DEL>"
@@ -468,8 +471,9 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug
     }
 
     val altAlleles = mutableListOf<String>()
+    val newGenotypeIndices: Map<String, String>
     var index = 1
-    val newGenotypeIndices = genotypeIndices
+    newGenotypeIndices = genotypeIndices
         .associate { genotypeIndex ->
             val currentAltAllele = try {
                 allAltAlleles[genotypeIndex - 1]
@@ -484,28 +488,22 @@ private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug
             }
         }
 
-    val genotypes = originalGenotypes
+    val genotypes = originalGenotypesSplit
         .map { genotypes ->
-            if (genotypes.contains("|")) {
-                genotypes.split("|").joinToString("|") { newGenotypeIndices[it] ?: it }
-            } else {
-                genotypes.split("/").joinToString("/") { newGenotypeIndices[it] ?: it }
-            }
+            genotypes.joinToString(phaseChar) { newGenotypeIndices[it] ?: it }
         }
 
-    val infos = lineSplit[7].split(";")
-    val endAnno = infos.filter { it.startsWith("END") }
-    val end = if (endAnno.size == 1) {
-        endAnno.first().split("=")[1].toInt()
+    val infos = lineSplit[7].split(';')
+    val endAnno = infos.find { it.startsWith("END") }
+    val end = (if (endAnno != null) endAnno.split('=')[1].toInt() else start + refAllele.length - 1)
+
+    val variant = if (debug) {
+        SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes, currentLine)
     } else {
-        start + refAllele.length - 1
+        SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
     }
 
-    if (debug) {
-        return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes, currentLine)
-    } else {
-        return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
-    }
+    return variant
 
 }
 
@@ -545,8 +543,8 @@ fun parseALTHeader(header: VCFHeader): Map<String, AltHeaderMetaData> {
  * Function to parse the regions from the ALT header.
  */
 private fun parseRegions(regions: String): List<Pair<Position, Position>> {
-    return regions.split(",").map { it.split(":") }.map {
-        val positions = it[1].split("-").map { position -> position.toInt() }
+    return regions.split(',').map { it.split(':') }.map {
+        val positions = it[1].split('-').map { position -> position.toInt() }
         check(positions.size == 2) { "Region $it is not in the correct format.  It needs to be in the form: chr:stPos-endPos." }
         Pair(Position(it[0], positions[0]), Position(it[0], positions[1]))
     }
