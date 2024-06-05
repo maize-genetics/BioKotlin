@@ -393,25 +393,15 @@ private fun parseVCFFile(
 
     CoroutineScope(Dispatchers.IO).launch {
 
-        bufferedReader(filename).use { reader ->
-            var line = reader.readLine()
-            while (line != null && line.startsWith("#")) {
-                line = reader.readLine()
-            }
-            var lines = mutableListOf<String>()
-            while (line != null) {
-                lines.add(line)
-                if (lines.size == 1000) {
-                    val tempLines = lines
-                    channel.send(async { parseLines(tempLines, samples, debug) })
-                    lines = mutableListOf()
+        bufferedReader(filename).useLines { lines ->
+
+            lines
+                .dropWhile { it.startsWith("#") }
+                .chunked(10000)
+                .forEach { chunk ->
+                    channel.send(async { parseLines(chunk, samples, debug) })
                 }
-                line = reader.readLine()
-            }
-            if (lines.isNotEmpty()) {
-                val tempLines = lines
-                channel.send(async { parseLines(tempLines, samples, debug) })
-            }
+
         }
 
         channel.close()
