@@ -104,12 +104,13 @@ class GetVCFVariants(inputFiles: List<String>, debug: Boolean = false) {
                 val nextPositions = vcfReaders.mapIndexed { index, reader ->
                     val thisStart = currentStart
                     val thisRangeMap = rangeMaps[index]
+                    val thisReader = reader
                     async {
                         nextPositions(
                             thisStart,
                             Position(currentContig, thisStart + stepSize - 1),
                             thisRangeMap,
-                            reader
+                            thisReader
                         )
                     }
                 }
