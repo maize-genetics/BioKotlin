@@ -3,7 +3,7 @@ package biokotlin.cli
 import biokotlin.genome.fastaToNucSeq
 import biokotlin.util.bufferedReader
 import biokotlin.util.bufferedWriter
-import biokotlin.util.parseVCFFile
+import biokotlin.util.vcfReader
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -75,51 +75,52 @@ class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
                         lines.takeWhile { it.startsWith("#") }.forEach { line ->
                             writer.write("$line\n")
                         }
+                    }
 
-                        val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
+                    runBlocking {
 
-                        runBlocking {
+                        val reader = vcfReader(inputFile, true)
+                        var variant = reader.variant()
 
-                            // Iterate through each variant in the GVCF file
-                            // The work creating the deferred list is done in the parseVCFFile function
-                            // and is multithreaded
-                            for (deferred in deferredVariants) {
-                                val variant = deferred.await()
-                                val refSeq = variant.refAllele
-                                val start = variant.start
-                                val refSeqLength = refSeq.length
-                                val refSeqFromGenome =
-                                    refSeqGenome[variant.contig]?.get(start - 1 until start + refSeqLength - 1)?.seq()
+                        while (variant != null) {
 
-                                // If the reference sequence from the genome is the same as the reference sequence
-                                // in the variant, write to the output GVCF file
-                                // Otherwise, write to the log file
-                                if (refSeqFromGenome == refSeq) {
-                                    writer.write("${variant.originalText}\n")
-                                } else {
-                                    if (correct) {
+                            val refSeq = variant.refAllele
+                            val start = variant.start
+                            val refSeqLength = refSeq.length
+                            val refSeqFromGenome =
+                                refSeqGenome[variant.contig]?.get(start - 1 until start + refSeqLength - 1)?.seq()
 
-                                        var currentIndex = -1
-                                        var thirdIndex = -1
-                                        var fourthIndex = -1
-                                        repeat(4) { count ->
-                                            currentIndex = variant.originalText?.indexOf("\t", currentIndex + 1) ?: -1
-                                            when (count) {
-                                                2 -> thirdIndex = currentIndex
-                                                3 -> fourthIndex = currentIndex
-                                            }
+                            // If the reference sequence from the genome is the same as the reference sequence
+                            // in the variant, write to the output GVCF file
+                            // Otherwise, write to the log file
+                            if (refSeqFromGenome == refSeq) {
+                                writer.write("${variant.originalText}\n")
+                            } else {
+                                if (correct) {
+
+                                    var currentIndex = -1
+                                    var thirdIndex = -1
+                                    var fourthIndex = -1
+                                    repeat(4) { count ->
+                                        currentIndex = variant!!.originalText?.indexOf("\t", currentIndex + 1) ?: -1
+                                        when (count) {
+                                            2 -> thirdIndex = currentIndex
+                                            3 -> fourthIndex = currentIndex
                                         }
-
-                                        writer.write(variant.originalText?.substring(0, thirdIndex + 1) ?: "")
-                                        writer.write(refSeqFromGenome)
-                                        writer.write(variant.originalText?.substring(fourthIndex) ?: "")
-                                        writer.write("\n")
-
                                     }
-                                    logWriter.write("Reference: $refSeqFromGenome\n")
-                                    logWriter.write("${variant.originalText}\n")
+
+                                    writer.write(variant.originalText?.substring(0, thirdIndex + 1) ?: "")
+                                    writer.write(refSeqFromGenome)
+                                    writer.write(variant.originalText?.substring(fourthIndex) ?: "")
+                                    writer.write("\n")
+
                                 }
+                                logWriter.write("Reference: $refSeqFromGenome\n")
+                                logWriter.write("${variant.originalText}\n")
                             }
+
+                            reader.advanceVariant()
+                            variant = reader.variant()
 
                         }
 

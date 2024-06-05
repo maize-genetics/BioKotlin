@@ -27,6 +27,22 @@ data class Position(val contig: String, val position: Int) : Comparable<Position
         return "$contig:$position"
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Position
+
+        if (contig != other.contig) return false
+        return position == other.position
+    }
+
+    override fun hashCode(): Int {
+        var result = contig.hashCode()
+        result = 31 * result + position
+        return result
+    }
+
 }
 
 data class PositionRange(val contig: String, val start: Int, val end: Int) : Comparable<PositionRange> {
@@ -86,12 +102,38 @@ data class PositionRange(val contig: String, val start: Int, val end: Int) : Com
         }
     }
 
+    /**
+     * Check if this position range overlaps with another position range.
+     */
+    fun overlapping(other: PositionRange): Boolean {
+        return contig == other.contig && (other.start in start..end || other.end in start..end)
+    }
+
     fun contains(position: Position): Boolean {
         return contig == position.contig && start <= position.position && position.position <= end
     }
 
+
     override fun toString(): String {
         return "${contig}:${start}-${end}"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PositionRange
+
+        if (contig != other.contig) return false
+        if (start != other.start) return false
+        return end == other.end
+    }
+
+    override fun hashCode(): Int {
+        var result = contig.hashCode()
+        result = 31 * result + start
+        result = 31 * result + end
+        return result
     }
 
 }

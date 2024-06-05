@@ -1,5 +1,6 @@
 package biokotlin.util
 
+import biokotlin.featureTree.toLinkedList
 import biokotlin.genome.Position
 import biokotlin.genome.PositionRange
 import biokotlin.genome.SampleGamete
@@ -7,6 +8,7 @@ import htsjdk.variant.vcf.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.File
+import java.util.*
 
 /**
  * Data class to represent a simple VCF variant
@@ -22,11 +24,13 @@ data class SimpleVariant(
     val originalText: String? = null // For debugging - parseVCFFile(<filename>, debug = true)
 ) : Comparable<SimpleVariant> {
 
+    val numSamples = samples.size
+
     /**
      * The length is the number of base pairs
      * of the reference allele associated with this.
      * The start and end positions are inclusive.
-     * The reference allele recorded my only be
+     * The reference allele recorded may only be
      * a single base pair, which is the first base pair
      * of the reference sequence.
      */
@@ -71,23 +75,26 @@ data class SimpleVariant(
     val startPosition by lazy { Position(contig, start) }
     val endPosition by lazy { Position(contig, end) }
 
+
     init {
 
         isRefBlock = (samples.indices)
             .flatMap { sampleIndex -> genotype(sampleIndex) }
             .find { it != 0 } == null
 
-        isVariant = (samples.indices)
-            .flatMap { sampleIndex -> genotype(sampleIndex) }
-            .find { it != 0 } != null
+        isVariant = !isRefBlock
 
-        isSNP = (length == 1) && altAlleles.find { it.length != 1 } == null && isVariant
+        val altAllelesNoSymbolic = altAlleles.filterNot { it.startsWith('<') && it.endsWith('>') }
 
-        isIndel = altAlleles.find { it.length != length } != null
+        val altAllelesSymbolic = altAlleles.filter { it.startsWith('<') && it.endsWith('>') }
 
-        isDEL = altAlleles.find { length > it.length } != null
+        isSNP = isVariant && (length == 1) && altAllelesNoSymbolic.all { it.length == 1 }
 
-        isINS = altAlleles.find { length < it.length } != null
+        isDEL = altAllelesSymbolic.contains("<DEL>") || altAllelesNoSymbolic.any { length > it.length }
+
+        isINS = altAllelesSymbolic.contains("<INS>") || altAllelesNoSymbolic.any { length < it.length }
+
+        isIndel = isDEL || isINS
 
         require(start >= 1) { "Start position must be greater than or equal to 1. Start: $start" }
         require(end >= 1) { "End position must be greater than or equal to 1. End: $end" }
@@ -96,12 +103,9 @@ data class SimpleVariant(
         require(!altAlleles.contains(refAllele)) { "ALT alleles cannot contain the reference allele. Reference: $refAllele altAlleles: $altAlleles" }
         require(altAlleles.size == altAlleles.distinct().size) { "ALT alleles must be unique. Found duplicates: $altAlleles" }
         require(samples.size == genotypes.size) { "Number of samples and genotypes do not match. Samples: ${samples.size} Genotypes: ${genotypes.size}" }
-        genotypes
-            .forEach {
-                require(it.matches(Regex("[0-9.]+(/[0-9.]+|\\|[0-9.]+)*"))) { "Genotype $it is not in the correct format. It should be in the form: 0/1 or 0|1" }
-                require(!(it.contains("/") && it.contains("|"))) { "Genotype $it is not in the correct format. Can't contain / and |" }
-            }
+
         val numAlleles = altAlleles.size + 1
+
         (samples.indices).forEach { sampleIndex ->
             genotype(sampleIndex).forEach { alleleIndex ->
                 require(alleleIndex < numAlleles) { "Allele $alleleIndex should be less than the number of alleles: $numAlleles (number of alt alleles + 1 reference allele)" }
@@ -111,7 +115,12 @@ data class SimpleVariant(
     }
 
     override fun toString(): String {
-        return "SimpleVariant(contig='$contig', start=$start, end=$end, refAllele='$refAllele', altAllele='$altAlleles', numSamples=${samples.size})"
+        val samplesStr = if (samples.size < 6) "samples=${samples}, " else ""
+        return "SimpleVariant(contig='$contig', start=$start, end=$end, length=$length, " +
+                "refAllele='$refAllele', altAllele='$altAlleles', numSamples=${samples.size}, " +
+                "${samplesStr}genotypes=${genotypes}, " +
+                "isRefBlock=$isRefBlock, isSNP=$isSNP, isVariant=$isVariant, isIndel=$isIndel, " +
+                "isDEL=$isDEL, isINS=$isINS)"
     }
 
     override fun compareTo(other: SimpleVariant): Int {
@@ -150,8 +159,12 @@ data class SimpleVariant(
      */
     fun genotype(sampleIndex: Int): List<Int> {
         if (genotypes[sampleIndex].contains("|"))
-            return genotypes[sampleIndex].split("|").map { if (it == ".") -1 else it.toInt() }
-        return genotypes[sampleIndex].split("/").map { if (it == ".") -1 else it.toInt() }
+            return genotypes[sampleIndex].split('|').map { if (it == ".") -1 else it.toInt() }
+        return genotypes[sampleIndex].split('/').map { if (it == ".") -1 else it.toInt() }
+    }
+
+    fun genotypeStrs(sample: String): List<String> {
+        return genotypeStrs(samples.indexOf(sample))
     }
 
     fun genotypeStrs(sampleIndex: Int): List<String> {
@@ -189,6 +202,45 @@ data class SimpleVariant(
         return !genotypes[sampleIndex].contains("/")
     }
 
+    fun isDEL(sample: String): Boolean {
+        return isDEL(samples.indexOf(sample))
+    }
+
+    fun isDEL(sampleIndex: Int): Boolean {
+        val genotypes = genotypeStrs(sampleIndex)
+        if (genotypes.contains("<DEL>")) return true
+        genotypes
+            .filterNot { it.startsWith("<") && it.endsWith(">") }
+            .find { it.length < refAllele.length }
+            ?.let { return true }
+        return false
+    }
+
+    fun isINS(sample: String): Boolean {
+        return isINS(samples.indexOf(sample))
+    }
+
+    fun isINS(sampleIndex: Int): Boolean {
+        val genotypes = genotypeStrs(sampleIndex)
+        if (genotypes.contains("<INS>")) return true
+        genotypes
+            .filterNot { it.startsWith("<") && it.endsWith(">") }
+            .find { it.length > refAllele.length }
+            ?.let { return true }
+        return false
+    }
+
+    /**
+     * Returns whether position is within the range of this variant.
+     */
+    fun contains(position: Position): Boolean {
+        return contig == position.contig && start <= position.position && position.position <= end
+    }
+
+    fun contains(position: Int): Boolean {
+        return position in start..end
+    }
+
 }
 
 // Making Number a string as VCF allows for '.'
@@ -210,35 +262,56 @@ data class AltHeaderMetaData(
 }
 
 data class VCFReader(
+    val filename: String,
     val altHeaders: Map<String, AltHeaderMetaData>,
-    private val deferredVariants: Channel<Deferred<SimpleVariant>>
+    val samples: List<String>,
+    private val variants: Channel<Deferred<LinkedList<SimpleVariant>>>,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
 
-    private var deferredVariant: Deferred<SimpleVariant>? = null
+    private var currentVariant: SimpleVariant? = null
+
+    private var currentCache: LinkedList<SimpleVariant> = LinkedList()
+
+    private val initializationComplete = CompletableDeferred<Unit>()
+    private var isInitialized = false
 
     init {
-        advanceVariant()
+        // Advance to preload the currentVariant.
+        // This is so that the first call
+        // to variant() will return the first variant.
+        // Use of runBlocking isn't desired, but this is only
+        // done once during construction
+        scope.launch {
+            advanceVariant()
+            initializationComplete.complete(Unit)
+            isInitialized = true
+        }
     }
 
     /**
      * Function to get the current variant in the VCF file.
+     * This doesn't advance to the next variant.
+     * Every call to this function will return the same variant until advanceVariant is called.
+     * Returns null if there are no more variants for this reader.
      */
-    fun variant(): SimpleVariant? {
-        return runBlocking { deferredVariant?.await() }
+    suspend fun variant(): SimpleVariant? {
+        if (!isInitialized) {
+            initializationComplete.await()
+        }
+        return currentVariant
     }
 
     /**
      * Function to advance to the next variant in the VCF file.
+     * Use this in conjunction with variant() to get the next variant.
      */
-    fun advanceVariant() {
-        runBlocking {
-            val result = deferredVariants.receiveCatching()
-            deferredVariant = if (result.isSuccess) {
-                result.getOrNull()
-            } else {
-                null
-            }
+    suspend fun advanceVariant() {
+        if (currentCache.isEmpty()) {
+            val cache = variants.receiveCatching().getOrNull()?.await()
+            currentCache = cache ?: LinkedList()
         }
+        currentVariant = currentCache.poll()
     }
 
 }
@@ -246,9 +319,9 @@ data class VCFReader(
 /**
  * Function to create a VCF reader from a file.
  */
-fun vcfReader(inputFile: String): VCFReader {
-    val (altHeaders, deferredVariants) = parseVCFFile(inputFile, true)
-    return VCFReader(altHeaders, deferredVariants)
+fun vcfReader(inputFile: String, debug: Boolean = false): VCFReader {
+    val results = parseVCFFile(inputFile, debug)
+    return VCFReader(inputFile, results.altHeaders, results.samples, results.variants)
 }
 
 /**
@@ -297,32 +370,52 @@ fun createGenericVCFHeaders(taxaNames: List<String>): VCFHeader {
 
 }
 
+private data class ParseVCFFileResults(
+    val altHeaders: Map<String, AltHeaderMetaData>,
+    val variants: Channel<Deferred<LinkedList<SimpleVariant>>>,
+    val samples: List<String>
+)
+
 /**
  * Function to parse a VCF file into a map of ALT headers and a channel of SimpleVariant objects.
  */
-fun parseVCFFile(
+private fun parseVCFFile(
     filename: String,
-    debug: Boolean = false
-): Pair<Map<String, AltHeaderMetaData>, Channel<Deferred<SimpleVariant>>> {
+    debug: Boolean
+): ParseVCFFileResults {
 
     val (headerMetaData, samples) = VCFFileReader(File(filename), false).use { reader ->
         val metaData = parseALTHeader(reader.fileHeader)
         Pair(metaData, reader.header.sampleNamesInOrder.toList())
     }
 
-    val channel = Channel<Deferred<SimpleVariant>>(100)
+    val channel = Channel<Deferred<LinkedList<SimpleVariant>>>(5)
+
     CoroutineScope(Dispatchers.IO).launch {
 
         bufferedReader(filename).useLines { lines ->
+
             lines
-                .filter { !it.startsWith("#") }
-                .forEach { channel.send(async { parseSingleVCFLine(it, samples, debug) }) }
-            channel.close()
+                .dropWhile { it.startsWith("#") }
+                .chunked(10000)
+                .forEach { chunk ->
+                    channel.send(async { parseLines(chunk, samples, debug) })
+                }
+
         }
 
-    }
-    return headerMetaData to channel
+        channel.close()
 
+    }
+
+    return ParseVCFFileResults(headerMetaData, channel, samples)
+
+}
+
+private fun parseLines(lines: List<String>, samples: List<String>, debug: Boolean): LinkedList<SimpleVariant> {
+    return lines
+        .map { line -> parseSingleVCFLine(line, samples, debug) }
+        .toLinkedList()
 }
 
 /**
@@ -331,31 +424,76 @@ fun parseVCFFile(
  */
 private fun parseSingleVCFLine(currentLine: String, samples: List<String>, debug: Boolean): SimpleVariant {
 
-    val lineSplit = currentLine.split("\t")
+    val lineSplit = currentLine.split('\t')
 
     require(lineSplit.size == samples.size + 9) { "Number of columns should be ${samples.size + 9}. But found: ${lineSplit.size}" }
 
     val chrom = lineSplit[0]
     val start = lineSplit[1].toInt()
     val refAllele = lineSplit[3]
-    val altAlleles = lineSplit[4].split(",").filter { it != "<NON_REF>" }
-    val infos = lineSplit[7].split(";")
-    val endAnno = infos.filter { it.startsWith("END") }
-    val end = if (endAnno.size == 1) {
-        endAnno.first().split("=")[1].toInt()
-    } else {
-        start + refAllele.length - 1
-    }
 
-    val genotypes = lineSplit
+    val originalGenotypes = lineSplit
         .drop(9)
-        .map { it.split(":")[0] }
+        .map { it.split(':')[0] }
 
-    if (debug) {
-        return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes, currentLine)
-    } else {
-        return SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
+    var phaseChar = "/"
+    val originalGenotypesSplit = originalGenotypes
+        .map { genotype ->
+            if (genotype.contains('|')) {
+                phaseChar = "|"
+                genotype.split('|')
+            } else
+                genotype.split('/')
+        }
+
+    val genotypeIndices = originalGenotypesSplit
+        .flatten()
+        .filter { it != "." && it != "0" }
+        .map { it.toInt() }
+        .toSortedSet()
+
+    val allAltAlleles = lineSplit[4].split(',').map {
+        when (it) {
+            "N" -> "."
+            "*" -> "<DEL>"
+            else -> it
+        }
     }
+
+    val altAlleles = mutableListOf<String>()
+    val newGenotypeIndices: Map<String, String>
+    var index = 1
+    newGenotypeIndices = genotypeIndices
+        .associate { genotypeIndex ->
+            val currentAltAllele = try {
+                allAltAlleles[genotypeIndex - 1]
+            } catch (e: IndexOutOfBoundsException) {
+                throw IllegalArgumentException("Genotype index $genotypeIndex doesn't exist in $allAltAlleles")
+            }
+            if (currentAltAllele == ".") {
+                Pair(genotypeIndex.toString(), ".")
+            } else {
+                altAlleles.add(currentAltAllele)
+                Pair(genotypeIndex.toString(), (index++).toString())
+            }
+        }
+
+    val genotypes = originalGenotypesSplit
+        .map { genotypes ->
+            genotypes.joinToString(phaseChar) { newGenotypeIndices[it] ?: it }
+        }
+
+    val infos = lineSplit[7].split(';')
+    val endAnno = infos.find { it.startsWith("END") }
+    val end = (if (endAnno != null) endAnno.split('=')[1].toInt() else start + refAllele.length - 1)
+
+    val variant = if (debug) {
+        SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes, currentLine)
+    } else {
+        SimpleVariant(chrom, start, end, refAllele, altAlleles, samples, genotypes)
+    }
+
+    return variant
 
 }
 
@@ -376,33 +514,73 @@ fun parseALTHeader(header: VCFHeader): Map<String, AltHeaderMetaData> {
         .map {
             check(it.value.containsKey("ID")) { "ALT Header does not contain ID" }
             check(it.value.containsKey("Description")) { "ALT Header does not contain Description" }
-            // These are optional header fields, so we check these in the unit test.
-            check(it.value.containsKey("Source")) { "ALT Header does not contain Source" }
-            check(it.value.containsKey("SampleName")) { "ALT Header does not contain SampleName" }
-            check(it.value.containsKey("Regions")) { "ALT Header does not contain Regions" }
-            check(it.value.containsKey("Checksum")) { "ALT Header does not contain Checksum" }
-            check(it.value.containsKey("RefRange")) { "ALT Header does not contain RefRange" }
             it.key to AltHeaderMetaData(
                 it.value["ID"]!!,
                 it.value["Description"]!!,
-                it.value["Source"]!!,
-                SampleGamete(it.value["SampleName"]!!, it.value["Gamete"]?.toInt() ?: 0),
-                parseRegions(it.value["Regions"]!!),
-                it.value["Checksum"]!!,
-                it.value["RefRange"]!!,
+                it.value["Source"] ?: "",
+                SampleGamete(it.value["SampleName"] ?: "", it.value["Gamete"]?.toInt() ?: 0),
+                it.value["Regions"]?.let { regions -> parseRegions(regions) } ?: emptyList(),
+                it.value["Checksum"] ?: "",
+                it.value["RefRange"] ?: "",
                 it.value["RefChecksum"] ?: ""
             )
         }.toList()
         .toMap()
+
 }
 
 /**
  * Function to parse the regions from the ALT header.
  */
 private fun parseRegions(regions: String): List<Pair<Position, Position>> {
-    return regions.split(",").map { it.split(":") }.map {
-        val positions = it[1].split("-").map { position -> position.toInt() }
+    return regions.split(',').map { it.split(':') }.map {
+        val positions = it[1].split('-').map { position -> position.toInt() }
         check(positions.size == 2) { "Region $it is not in the correct format.  It needs to be in the form: chr:stPos-endPos." }
         Pair(Position(it[0], positions[0]), Position(it[0], positions[1]))
     }
+}
+
+/**
+ * Function to get all VCF files in a directory.
+ * Includes extensions .g.vcf, .g.vcf.gz, .gvcf, .gvcf.gz, .h.vcf, .h.vcf.gz, .hvcf, .hvcf.gz, .vcf, .vcf.gz
+ */
+fun getAllVCFFiles(vcfDir: String): List<String> {
+
+    require(File(vcfDir).isDirectory) { "Input VCF directory does not exist: $vcfDir" }
+
+    // Get list of input VCF files from the input directory
+    return File(vcfDir)
+        .walk()
+        .filter {
+            it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
+                    it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz") ||
+                    it.name.endsWith(".h.vcf") || it.name.endsWith(".h.vcf.gz") ||
+                    it.name.endsWith(".hvcf") || it.name.endsWith(".hvcf.gz") ||
+                    it.name.endsWith(".vcf") || it.name.endsWith(".vcf.gz"))
+        }
+        .map { it.absolutePath }
+        .toList()
+        .sorted()
+
+}
+
+/**
+ * Function to get all GVCF files in a directory.
+ * Includes extensions .g.vcf, .g.vcf.gz, .gvcf, .gvcf.gz
+ */
+fun getGVCFFiles(gvcfDir: String): List<String> {
+
+    require(File(gvcfDir).isDirectory) { "Input VCF directory does not exist: $gvcfDir" }
+
+    // Get list of input GVCF files from the input directory
+    return File(gvcfDir)
+        .walk()
+        .filter {
+            it.isFile && (it.name.endsWith(".g.vcf") || it.name.endsWith(".g.vcf.gz") ||
+                    it.name.endsWith(".gvcf") || it.name.endsWith(".gvcf.gz"))
+        }
+        .map { it.absolutePath }
+        .toList()
+        .sorted()
+
 }

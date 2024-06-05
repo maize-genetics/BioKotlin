@@ -1,6 +1,6 @@
 package biokotlin.util
 
-import kotlinx.coroutines.runBlocking
+import io.kotest.common.runBlocking
 import org.junit.jupiter.api.Test
 
 class VCFUtilsTest {
@@ -10,16 +10,17 @@ class VCFUtilsTest {
 
         val filename = "data/test/gvcf/LineA.g.vcf"
 
-        val result = parseVCFFile(filename)
-        val simpleVariants = result.second
-
-        var numVariants = 0
         runBlocking {
+
+            val result = vcfReader(filename)
+
+            var numVariants = 0
             lateinit var tenthVariant: SimpleVariant
             lateinit var hundredVariant: SimpleVariant
             lateinit var threeThounsandVariant: SimpleVariant
-            for (variant in simpleVariants) {
-                val simpleVariant = variant.await()
+            var currentVariant = result.variant()
+            while (currentVariant != null) {
+                val simpleVariant = currentVariant
                 numVariants++
                 if (numVariants == 10) {
                     tenthVariant = simpleVariant
@@ -52,10 +53,14 @@ class VCFUtilsTest {
                     threeThounsandVariant = simpleVariant
                     assert(hundredVariant < threeThounsandVariant) { "Hundredth variant is not less than three thousandth variant" }
                 }
-            }
-        }
 
-        assert(numVariants == 5125) { "Number of variants is not 5125: $numVariants" }
+                result.advanceVariant()
+                currentVariant = result.variant()
+            }
+
+            assert(numVariants == 5125) { "Number of variants is not 5125: $numVariants" }
+
+        }
 
     }
 
@@ -64,14 +69,16 @@ class VCFUtilsTest {
 
         val filename = "data/test/vcf/mdp_genotype.vcf"
 
-        val result = parseVCFFile(filename)
-        val simpleVariants = result.second
+        runBlocking {
 
-        return runBlocking {
-            for (variant in simpleVariants) {
-                variant.await()
-                // println(variant.await())
+            val reader = vcfReader(filename)
+            var currentVariant = reader.variant()
+            while (currentVariant != null) {
+                // println(currentVariant)
+                reader.advanceVariant()
+                currentVariant = reader.variant()
             }
+
         }
 
     }
@@ -81,14 +88,16 @@ class VCFUtilsTest {
 
         val filename = "data/test/vcf/testMultipleFilesHaplotypeGraph.vcf"
 
-        val result = parseVCFFile(filename)
-        val simpleVariants = result.second
+        runBlocking {
 
-        return runBlocking {
-            for (variant in simpleVariants) {
-                variant.await()
-                // println(variant.await())
+            val reader = vcfReader(filename)
+            var currentVariant = reader.variant()
+            while (currentVariant != null) {
+                // println(currentVariant)
+                reader.advanceVariant()
+                currentVariant = reader.variant()
             }
+
         }
 
     }
