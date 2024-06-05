@@ -4,6 +4,8 @@ import biokotlin.genome.Position
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import java.io.File
@@ -23,13 +25,19 @@ suspend fun validateVCFs(inputDir: String): ValidateVCFResults {
 
 suspend fun validateVCFs(inputFiles: List<String>): ValidateVCFResults = withContext(Dispatchers.IO) {
 
+    val semaphore = Semaphore(20)
+
     myLogger.info("ValidateVCFResults: Validating VCF files: $inputFiles")
 
     var result: ValidateVCFResults? = null
 
     measureNanoTime {
         val jobs = inputFiles.map { filename ->
-            async(Dispatchers.IO) { parseVCFFile(filename) }
+            async(Dispatchers.IO) {
+                semaphore.withPermit {
+                    parseVCFFile(filename)
+                }
+            }
         }
 
         val summaries = jobs.awaitAll()
@@ -57,44 +65,40 @@ private fun parseVCFFile(filename: String): VCFSummary {
     var currentContig: String? = null
     var currentPosition = 0
 
-    bufferedReader(filename).use { reader ->
+    bufferedReader(filename).useLines { lines ->
 
-        var line = reader.readLine()
-        while (line != null && line.startsWith("#")) {
-            line = reader.readLine()
-        }
+        lines
+            .dropWhile { it.startsWith("#") }
+            .forEach { line ->
 
-        while (line != null) {
+                val lineSplit = line.split('\t', limit = 9)
 
-            val lineSplit = line.split('\t', limit = 9)
+                val contig = lineSplit[0]
+                val start = lineSplit[1].toInt()
+                val refAllele = lineSplit[3]
 
-            val contig = lineSplit[0]
-            val start = lineSplit[1].toInt()
-            val refAllele = lineSplit[3]
-
-            val infos = lineSplit[7]
-            val end = if ("END=" in infos) {
-                infos.substringAfter("END=").substringBefore(";").toInt()
-            } else {
-                start + refAllele.length - 1
-            }
-
-            if (currentContig == null || currentContig != contig) {
-                currentContig = contig
-                currentPosition = end
-                contigs.add(currentContig!!)
-            } else {
-
-                if (start <= currentPosition) {
-                    positionsOutOfOrder.add(Position(contig, start))
+                val infos = lineSplit[7]
+                val end = if ("END=" in infos) {
+                    infos.substringAfter("END=").substringBefore(";").toInt()
+                } else {
+                    start + refAllele.length - 1
                 }
-                currentPosition = end
+
+                if (currentContig == null || currentContig != contig) {
+                    currentContig = contig
+                    currentPosition = end
+                    contigs.add(currentContig!!)
+                } else {
+
+                    if (start <= currentPosition) {
+                        positionsOutOfOrder.add(Position(contig, start))
+                    }
+                    currentPosition = end
+
+                }
 
             }
 
-            line = reader.readLine()
-
-        }
     }
 
     return VCFSummary(filename, contigs, positionsOutOfOrder)
