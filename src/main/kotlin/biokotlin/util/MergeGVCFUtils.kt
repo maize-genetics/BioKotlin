@@ -169,7 +169,7 @@ private fun createSNP(
 
                         variant.isIndel -> {
 
-                            val temp = variant.genotypeStrs(0)
+                            val genotypeList = variant.genotypeStrs(0)
                                 .map { genotype ->
                                     when {
 
@@ -199,7 +199,7 @@ private fun createSNP(
 
                                 }
 
-                            Pair(variant.isPhased(0), temp)
+                            Pair(variant.isPhased(0), genotypeList)
 
                         }
 
