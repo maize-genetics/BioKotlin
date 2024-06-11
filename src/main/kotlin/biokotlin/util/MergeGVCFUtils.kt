@@ -173,11 +173,15 @@ private fun createSNP(
                                 .map { genotype ->
                                     when {
 
+                                        // If genotype is an insertion, use <INS>
                                         genotype == "<INS>" || genotype.length > variant.length -> {
                                             symbolicAlleles.add("<INS>")
                                             "<INS>"
                                         }
 
+                                        // If genotype is a deletion, use <DEL> unless
+                                        // the deletion is at the current position
+                                        // then use the first base of the alt allele (reference allele)
                                         genotype == "<DEL>" || genotype.length < variant.length -> {
                                             if (currentPosition == variant.start) {
                                                 genotype[0].toString()
@@ -187,10 +191,12 @@ private fun createSNP(
                                             }
                                         }
 
+                                        // If genotype is only one base, use that base
                                         genotype.length == 1 -> {
                                             genotype
                                         }
 
+                                        // If genotype is more than one base, use '.' (no call)
                                         else -> {
                                             "."
                                         }
