@@ -167,20 +167,40 @@ private fun createSNP(
 
                     when {
 
-                        variant.isINS -> {
-                            symbolicAlleles.add("<INS>")
-                            Pair(variant.isPhased(0), listOf("<INS>"))
-                        }
+                        variant.isIndel -> {
 
-                        variant.isDEL -> {
-                            if (currentPosition == variant.start) {
-                                val alleles = variant.genotypeStrs(0).map { it[0].toString() }
-                                altAlleles.addAll(alleles)
-                                Pair(variant.isPhased(0), alleles)
-                            } else {
-                                symbolicAlleles.add("<DEL>")
-                                Pair(variant.isPhased(0), listOf("<DEL>"))
-                            }
+                            val temp = variant.genotypeStrs(0)
+                                .map { genotype ->
+                                    when {
+
+                                        genotype == "<INS>" || genotype.length > variant.length -> {
+                                            symbolicAlleles.add("<INS>")
+                                            "<INS>"
+                                        }
+
+                                        genotype == "<DEL>" || genotype.length < variant.length -> {
+                                            if (currentPosition == variant.start) {
+                                                genotype[0].toString()
+                                            } else {
+                                                symbolicAlleles.add("<DEL>")
+                                                "<DEL>"
+                                            }
+                                        }
+
+                                        genotype.length == 1 -> {
+                                            genotype
+                                        }
+
+                                        else -> {
+                                            "."
+                                        }
+
+                                    }
+
+                                }
+
+                            Pair(variant.isPhased(0), temp)
+
                         }
 
                         // If the variant is an SNP, use the variant's alleles
