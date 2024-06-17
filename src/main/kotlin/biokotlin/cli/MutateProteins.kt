@@ -148,6 +148,9 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
+    // determine if index is in any of the ranges
+    private fun inRanges(index: Int, ranges: Collection<BedfileRecord>): Boolean {
+        return ranges.any { it.contains(index) }
     }
 
     private fun deletionMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
