@@ -57,11 +57,15 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         .int()
         .default(10)
 
+    val mutatedIndicesBedfile by option(help = "Full path to bedfile to output mutated indices")
+
     override fun run() {
 
         val ranges = readBedfile()
 
         val reader = FastaIO(inputFasta, SeqType.protein)
+
+        val mutatedIndicesWriter = if (mutatedIndicesBedfile != null) bufferedWriter(mutatedIndicesBedfile!!) else null
 
         bufferedWriter(outputFasta).use { writer ->
 
@@ -76,12 +80,14 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
                 val mutatedSeq = when (typeMutation) {
                     TypeMutation.DELETION -> deletionMutation(record, ranges)
-                    TypeMutation.POINT_MUTATION -> pointMutation(record, ranges)
+                    TypeMutation.POINT_MUTATION -> pointMutation(record, ranges, mutatedIndicesWriter)
                 }
 
                 writeSeq(writer, id, mutatedSeq)
 
             }
+
+            mutatedIndicesWriter?.close()
 
             if (count != ids.size) {
                 myLogger.warn("Duplicate IDs found")
@@ -90,31 +96,27 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         }
 
     }
-
     private fun writeSeq(writer: BufferedWriter, id: String, mutatedSeq: String) {
         writer.write(">${id}\n")
         mutatedSeq
             .chunked(60)
             .forEach { line ->
                 writer.write(line)
-                writer.newLine()
-            }
+                writer.newLine()            }
     }
 
     // zero based inclusive / inclusive
     data class BedfileRecord(val contig: String, val start: Int, val end: Int) {
         fun contains(index: Int): Boolean {
             return index in start..end
-        }
-    }
+        }    }
 
     private fun readBedfile(): Multimap<String, BedfileRecord> {
 
         val result: Multimap<String, BedfileRecord> = HashMultimap.create()
 
         bufferedReader(bedfile).useLines { lines ->
-            lines.forEach { line ->
-                val splitLine = line.split("\t")
+            lines.forEach { line ->                val splitLine = line.split("\t")
                 val contig = splitLine[0]
                 // bedfile is zero based inclusive / exclusive
                 // convert to zero based inclusive / inclusive
@@ -185,26 +187,31 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     }
 
     // point mutation
-    private fun pointMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
+    private fun pointMutation(
+        record: ProteinSeqRecord,
+        ranges: Multimap<String, BedfileRecord>,
+        mutatedIndicesWriter: BufferedWriter? = null
+    ): String {
 
         val origSeq = record.seq()
         val seqLength = origSeq.length
 
-        val rangesForRecord = ranges.get(record.id)
+        val contig = record.id
+        val rangesForRecord = ranges.get(contig)
 
         val mergedRanges = validateMergeRanges(seqLength, rangesForRecord)
 
-        require(rangesValid) { "Ranges are not valid" }
+        // println("number of merged ranges: ${mergedRanges.size}")
 
         val possibleMutateIndices = if (putMutationsInRanges) {
-            origSeq.indices.filter { index -> inRanges(index, rangesForRecord) }
+            origSeq.indices.filter { index -> inRanges(index, mergedRanges) }
         } else {
-            origSeq.indices.filter { index -> !inRanges(index, rangesForRecord) }
+            origSeq.indices.filter { index -> !inRanges(index, mergedRanges) }
         }.toMutableList()
 
         val mutatedIndices = mutableSetOf<Int>()
         var numMutated = 0
-        while (numMutations < numMutated && possibleMutateIndices.isNotEmpty()) {
+        while (numMutated < numMutations && possibleMutateIndices.isNotEmpty()) {
             val currentIndex = possibleMutateIndices.random()
             possibleMutateIndices.remove(currentIndex)
             mutatedIndices.add(currentIndex)
@@ -215,8 +222,9 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
         val random = Random(1234)
 
-        mutatedIndices.forEach { index ->
+        mutatedIndices.sorted().forEach { index ->
             result[index] = proteinLetters[random.nextInt(numProteinLetters)]
+            mutatedIndicesWriter?.write("$contig\t$index\t${index + 1}\n")
         }
 
         return result.toString()
