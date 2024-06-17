@@ -174,20 +174,24 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
         val rangesForRecord = ranges.get(record.id)
 
-        validateRanges(seqLength, rangesForRecord)
+        val rangesValid = validateRanges(seqLength, rangesForRecord)
+
+        require(rangesValid) { "Ranges are not valid" }
 
         val possibleMutateIndices = if (putMutationsInRanges) {
             origSeq.indices.filter { index -> inRanges(index, rangesForRecord) }
         } else {
             origSeq.indices.filter { index -> !inRanges(index, rangesForRecord) }
-        }
-
-        require(numMutations < possibleMutateIndices.size) { "Number of mutations must be less than possible sites" }
+        }.toMutableList()
 
         val mutatedIndices = mutableSetOf<Int>()
-        do {
-            mutatedIndices.add(possibleMutateIndices.random())
-        } while (mutatedIndices.size < numMutations)
+        var numMutated = 0
+        while (numMutations < numMutated && possibleMutateIndices.isNotEmpty()) {
+            val currentIndex = possibleMutateIndices.random()
+            possibleMutateIndices.remove(currentIndex)
+            mutatedIndices.add(currentIndex)
+            numMutated++
+        }
 
         val result = StringBuilder(origSeq)
 
