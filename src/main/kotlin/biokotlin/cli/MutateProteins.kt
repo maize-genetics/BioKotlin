@@ -26,11 +26,11 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         DELETION, POINT_MUTATION
     }
 
-    val proteinLetters = arrayOf(
+    private val proteinLetters = arrayOf(
         'R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W'
     )
 
-    val numProteinLetters = proteinLetters.size
+    private val numProteinLetters = proteinLetters.size
 
     val inputFasta by option(help = "Full path to input fasta file")
         .required()
