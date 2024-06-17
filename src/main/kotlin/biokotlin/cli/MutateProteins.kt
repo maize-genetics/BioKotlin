@@ -45,7 +45,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         .enum<TypeMutation>()
         .default(TypeMutation.POINT_MUTATION)
 
-    val inProtein by option(help = "Input protein sequence")
+    val putMutationsInRanges by option(help = "Put mutations in ranges defined by bedfile")
         .boolean()
         .default(true)
 
@@ -166,25 +166,32 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
+    // point mutation
     private fun pointMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
 
         val origSeq = record.seq()
         val seqLength = origSeq.length
 
-        require(numMutations < seqLength) { "Number of mutations must be less than the length of the sequence" }
+        val rangesForRecord = ranges.get(record.id)
 
-        val ranges = ranges.get(record.id)
+        validateRanges(seqLength, rangesForRecord)
 
-        validateRanges(seqLength, ranges)
+        val possibleMutateIndices = if (putMutationsInRanges) {
+            origSeq.indices.filter { index -> inRanges(index, rangesForRecord) }
+        } else {
+            origSeq.indices.filter { index -> !inRanges(index, rangesForRecord) }
+        }
 
-        val random = Random(1234)
+        require(numMutations < possibleMutateIndices.size) { "Number of mutations must be less than possible sites" }
 
         val mutatedIndices = mutableSetOf<Int>()
         do {
-            mutatedIndices.add(random.nextInt(numMutations))
+            mutatedIndices.add(possibleMutateIndices.random())
         } while (mutatedIndices.size < numMutations)
 
         val result = StringBuilder(origSeq)
+
+        val random = Random(1234)
 
         mutatedIndices.forEach { index ->
             result[index] = proteinLetters[random.nextInt(numProteinLetters)]
