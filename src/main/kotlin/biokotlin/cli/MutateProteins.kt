@@ -102,7 +102,11 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     }
 
     // zero based inclusive / inclusive
-    data class BedfileRecord(val contig: String, val start: Int, val end: Int)
+    data class BedfileRecord(val contig: String, val start: Int, val end: Int) {
+        fun contains(index: Int): Boolean {
+            return index in start..end
+        }
+    }
 
     private fun readBedfile(): Multimap<String, BedfileRecord> {
 
