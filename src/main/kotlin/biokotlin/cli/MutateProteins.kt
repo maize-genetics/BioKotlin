@@ -128,23 +128,41 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
-    private fun validateRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Boolean {
+    // Validate ranges and merge overlapping ranges
+    private fun validateMergeRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Collection<BedfileRecord> {
+
+        var contig: String? = null
 
         ranges
             .forEach { range ->
+                if (contig == null) {
+                    contig = range.contig
+                } else {
+                    require(contig == range.contig) { "All ranges must have the same contig" }
+                }
                 require(range.start >= 0) { "Start position must be greater than or equal to 0" }
                 require(range.end >= range.start) { "End position must be greater than or equal to start position" }
                 require(range.end < seqLength) { "End position must be less than the length of the sequence" }
             }
 
-        val overlap = ranges
+        val result = mutableListOf<BedfileRecord>()
+
+        ranges
             .sortedBy { it.start }
-            .windowed(2)
-            .all { (first, second) -> first.end < second.start }
+            .forEach { range ->
+                if (result.isEmpty()) {
+                    result.add(range)
+                } else {
+                    val last = result.last()
+                    if (last.end >= range.start) {
+                        result[result.size - 1] = BedfileRecord(last.contig, last.start, range.end)
+                    } else {
+                        result.add(range)
+                    }
+                }
+            }
 
-        require(overlap) { "Ranges must not overlap" }
-
-        return true
+        return result
 
     }
 
@@ -160,7 +178,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
         val rangesForRecord = ranges.get(record.id)
 
-        validateRanges(seqLength, rangesForRecord)
+        val mergedRanges = validateMergeRanges(seqLength, rangesForRecord)
 
         TODO()
 
@@ -174,7 +192,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
         val rangesForRecord = ranges.get(record.id)
 
-        val rangesValid = validateRanges(seqLength, rangesForRecord)
+        val mergedRanges = validateMergeRanges(seqLength, rangesForRecord)
 
         require(rangesValid) { "Ranges are not valid" }
 
