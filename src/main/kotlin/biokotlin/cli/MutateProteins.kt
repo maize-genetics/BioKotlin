@@ -158,9 +158,9 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         val origSeq = record.seq()
         val seqLength = origSeq.length
 
-        val ranges = ranges.get(record.id)
+        val rangesForRecord = ranges.get(record.id)
 
-        validateRanges(seqLength, ranges)
+        validateRanges(seqLength, rangesForRecord)
 
         TODO()
 
