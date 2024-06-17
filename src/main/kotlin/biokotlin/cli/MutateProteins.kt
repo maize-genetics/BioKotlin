@@ -129,13 +129,25 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     }
 
     private fun validateRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Boolean {
+
         ranges
             .forEach { range ->
                 require(range.start >= 0) { "Start position must be greater than or equal to 0" }
                 require(range.end >= range.start) { "End position must be greater than or equal to start position" }
                 require(range.end < seqLength) { "End position must be less than the length of the sequence" }
             }
+
+        val overlap = ranges
+            .sortedBy { it.start }
+            .windowed(2)
+            .all { (first, second) -> first.end < second.start }
+
+        require(overlap) { "Ranges must not overlap" }
+
         return true
+
+    }
+
     }
 
     private fun deletionMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
