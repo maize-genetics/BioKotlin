@@ -96,27 +96,31 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         }
 
     }
+
     private fun writeSeq(writer: BufferedWriter, id: String, mutatedSeq: String) {
         writer.write(">${id}\n")
         mutatedSeq
             .chunked(60)
             .forEach { line ->
                 writer.write(line)
-                writer.newLine()            }
+                writer.newLine()
+            }
     }
 
     // zero based inclusive / inclusive
     data class BedfileRecord(val contig: String, val start: Int, val end: Int) {
         fun contains(index: Int): Boolean {
             return index in start..end
-        }    }
+        }
+    }
 
     private fun readBedfile(): Multimap<String, BedfileRecord> {
 
         val result: Multimap<String, BedfileRecord> = HashMultimap.create()
 
         bufferedReader(bedfile).useLines { lines ->
-            lines.forEach { line ->                val splitLine = line.split("\t")
+            lines.forEach { line ->
+                val splitLine = line.split("\t")
                 val contig = splitLine[0]
                 // bedfile is zero based inclusive / exclusive
                 // convert to zero based inclusive / inclusive
@@ -171,6 +175,25 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     // determine if index is in any of the ranges
     private fun inRanges(index: Int, ranges: Collection<BedfileRecord>): Boolean {
         return ranges.any { it.contains(index) }
+    }
+
+    // All ranges should have the same contig
+    // Ranges should not overlap
+    private fun inverseRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Collection<BedfileRecord> {
+        val result = mutableListOf<BedfileRecord>()
+        var start = 0
+        ranges
+            .sortedBy { it.start }
+            .forEach { range ->
+                if (range.start > start) {
+                    result.add(BedfileRecord(range.contig, start, range.start - 1))
+                }
+                start = range.end + 1
+            }
+        if (start < seqLength) {
+            result.add(BedfileRecord(ranges.first().contig, start, seqLength - 1))
+        }
+        return result
     }
 
     private fun deletionMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
