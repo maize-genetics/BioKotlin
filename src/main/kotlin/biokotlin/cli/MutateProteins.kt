@@ -246,7 +246,12 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         val random = Random(1234)
 
         mutatedIndices.sorted().forEach { index ->
-            result[index] = proteinLetters[random.nextInt(numProteinLetters)]
+            val origBase = result[index]
+            var mutatedBase = proteinLetters[random.nextInt(numProteinLetters)]
+            while (origBase == mutatedBase) {
+                mutatedBase = proteinLetters[random.nextInt(numProteinLetters)]
+            }
+            result[index] = mutatedBase
             mutatedIndicesWriter?.write("$contig\t$index\t${index + 1}\n")
         }
 
