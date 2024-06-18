@@ -109,17 +109,22 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     // zero based inclusive / inclusive
     data class BedfileRecord(val contig: String, val start: Int, val end: Int) {
+
         fun contains(index: Int): Boolean {
             return index in start..end
         }
+
+        fun length(): Int {
+            return end - start + 1
+        }
+
     }
 
     private fun readBedfile(): Multimap<String, BedfileRecord> {
 
         val result: Multimap<String, BedfileRecord> = HashMultimap.create()
 
-        bufferedReader(bedfile).useLines { lines ->
-            lines.forEach { line ->
+        bufferedReader(bedfile).useLines { lines ->            lines.forEach { line ->
                 val splitLine = line.split("\t")
                 val contig = splitLine[0]
                 // bedfile is zero based inclusive / exclusive
