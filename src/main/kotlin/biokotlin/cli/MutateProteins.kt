@@ -179,21 +179,33 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     // All ranges should have the same contig
     // Ranges should not overlap
-    private fun inverseRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Collection<BedfileRecord> {
+    private fun inverseRanges(
+        contig: String,
+        seqLength: Int,
+        ranges: Collection<BedfileRecord>
+    ): Collection<BedfileRecord> {
+
+        if (ranges.isEmpty()) {
+            return listOf(BedfileRecord(contig, 0, seqLength - 1))
+        }
+
         val result = mutableListOf<BedfileRecord>()
+
         var start = 0
         ranges
             .sortedBy { it.start }
             .forEach { range ->
                 if (range.start > start) {
-                    result.add(BedfileRecord(range.contig, start, range.start - 1))
+                    result.add(BedfileRecord(contig, start, range.start - 1))
                 }
                 start = range.end + 1
             }
         if (start < seqLength) {
-            result.add(BedfileRecord(ranges.first().contig, start, seqLength - 1))
+            result.add(BedfileRecord(contig, start, seqLength - 1))
         }
+
         return result
+
     }
 
     private fun deletionMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
@@ -233,7 +245,6 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         } else {
             origSeq.indices.filter { index -> !inRanges(index, mergedRanges) }
         }.toMutableList()
-
         val mutatedIndices = mutableSetOf<Int>()
         var numMutated = 0
         while (numMutated < numMutations && possibleMutateIndices.isNotEmpty()) {
