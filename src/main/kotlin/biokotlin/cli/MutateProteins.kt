@@ -124,7 +124,8 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
         val result: Multimap<String, BedfileRecord> = HashMultimap.create()
 
-        bufferedReader(bedfile).useLines { lines ->            lines.forEach { line ->
+        bufferedReader(bedfile).useLines { lines ->
+            lines.forEach { line ->
                 val splitLine = line.split("\t")
                 val contig = splitLine[0]
                 // bedfile is zero based inclusive / exclusive
@@ -140,7 +141,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     }
 
     // Validate ranges and merge overlapping ranges
-    private fun validateMergeRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Collection<BedfileRecord> {
+    private fun validateAndMergeRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Collection<BedfileRecord> {
 
         var contig: String? = null
 
@@ -231,7 +232,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
      * It changes upto numMutations bases. It puts the mutations in or out
      * the ranges defined by the bedfile depending on the setting of putMutationsInRanges.
      */
-    private fun pointMutation(
+    private fun pointMutations(
         record: ProteinSeqRecord,
         ranges: Multimap<String, BedfileRecord>,
         mutatedIndicesWriter: BufferedWriter? = null
@@ -243,13 +244,14 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         val contig = record.id
         val rangesForRecord = ranges.get(contig)
 
-        val mergedRanges = validateMergeRanges(seqLength, rangesForRecord)
+        val mergedRanges = validateAndMergeRanges(seqLength, rangesForRecord)
 
         val possibleMutateIndices = if (putMutationsInRanges) {
             origSeq.indices.filter { index -> inRanges(index, mergedRanges) }
         } else {
             origSeq.indices.filter { index -> !inRanges(index, mergedRanges) }
         }.toMutableList()
+
         val mutatedIndices = mutableSetOf<Int>()
         var numMutated = 0
         while (numMutated < numMutations && possibleMutateIndices.isNotEmpty()) {
@@ -272,6 +274,8 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
             result[index] = mutatedBase
             mutatedIndicesWriter?.write("$contig\t$index\t${index + 1}\n")
         }
+
+        myLogger.info("pointMutations: contig: $contig numMutationsRequested: $numMutations numMutations: $numMutated mutatedIndices: $mutatedIndices")
 
         return result.toString()
 
