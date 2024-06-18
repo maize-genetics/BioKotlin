@@ -209,7 +209,11 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
-    // point mutation
+    /**
+     * This changes random bases in the sequence to other random bases.
+     * It changes upto numMutations bases. It puts the mutations in or out
+     * the ranges defined by the bedfile depending on the setting of putMutationsInRanges.
+     */
     private fun pointMutation(
         record: ProteinSeqRecord,
         ranges: Multimap<String, BedfileRecord>,
@@ -223,8 +227,6 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         val rangesForRecord = ranges.get(contig)
 
         val mergedRanges = validateMergeRanges(seqLength, rangesForRecord)
-
-        // println("number of merged ranges: ${mergedRanges.size}")
 
         val possibleMutateIndices = if (putMutationsInRanges) {
             origSeq.indices.filter { index -> inRanges(index, mergedRanges) }
