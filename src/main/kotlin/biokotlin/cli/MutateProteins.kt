@@ -79,8 +79,8 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
                 count++
 
                 val mutatedSeq = when (typeMutation) {
-                    TypeMutation.DELETION -> deletionMutation(record, ranges)
-                    TypeMutation.POINT_MUTATION -> pointMutation(record, ranges, mutatedIndicesWriter)
+                    TypeMutation.DELETION -> deletionMutation(record, ranges, mutatedIndicesWriter)
+                    TypeMutation.POINT_MUTATION -> pointMutations(record, ranges, mutatedIndicesWriter)
                 }
 
                 writeSeq(writer, id, mutatedSeq)
@@ -214,16 +214,42 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
-    private fun deletionMutation(record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>): String {
+    private fun deletionMutation(
+        record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>,
+        mutatedIndicesWriter: BufferedWriter? = null
+    ): String {
 
         val origSeq = record.seq()
         val seqLength = origSeq.length
 
-        val rangesForRecord = ranges.get(record.id)
+        val contig = record.id
+        val rangesForRecord = ranges.get(contig)
 
-        val mergedRanges = validateMergeRanges(seqLength, rangesForRecord)
+        val mergedRanges = validateAndMergeRanges(seqLength, rangesForRecord)
 
-        TODO()
+        val possibleMutationRanges =
+            if (putMutationsInRanges) mergedRanges else inverseRanges(contig, seqLength, mergedRanges)
+
+        // get possible ranges to mutate
+        // that are long enough to delete specified
+        // length. Then randomly select one of these ranges
+        val rangeToMutate = possibleMutationRanges
+            .filter { range -> range.length() >= length }
+            .randomOrNull()
+
+        val result = StringBuilder(origSeq)
+
+        if (rangeToMutate != null) {
+            // get random start index of place to delete
+            // within rangeToMutate
+            val start = Random(4321).nextInt(rangeToMutate.start, rangeToMutate.end - length + 2)
+
+            // delete length bases
+            result.delete(start, start + length)
+            mutatedIndicesWriter?.write("$contig\t$start\t${start + length}\n")
+        }
+
+        return result.toString()
 
     }
 
