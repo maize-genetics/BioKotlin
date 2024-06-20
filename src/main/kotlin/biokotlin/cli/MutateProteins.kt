@@ -97,6 +97,9 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
+    /**
+     * Write sequence to writer. The sequence is written in fasta format.
+     */
     private fun writeSeq(writer: BufferedWriter, id: String, mutatedSeq: String) {
         writer.write(">${id}\n")
         mutatedSeq
@@ -108,7 +111,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     }
 
     // zero based inclusive / inclusive
-    data class BedfileRecord(val contig: String, val start: Int, val end: Int) {
+    private data class BedfileRecord(val contig: String, val start: Int, val end: Int) {
 
         fun contains(index: Int): Boolean {
             return index in start..end
@@ -120,6 +123,10 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
+    /**
+     * Read bedfile into a multimap. The key is the contig
+     * and the value is a list of BedfileRecord.
+     */
     private fun readBedfile(): Multimap<String, BedfileRecord> {
 
         val result: Multimap<String, BedfileRecord> = HashMultimap.create()
@@ -140,7 +147,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
-    // Validate ranges and merge overlapping ranges
+    // Validate ranges and merges overlapping ranges
     private fun validateAndMergeRanges(seqLength: Int, ranges: Collection<BedfileRecord>): Collection<BedfileRecord> {
 
         var contig: String? = null
@@ -214,6 +221,11 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     }
 
+    /**
+     * This deletes bases (number specified by parameter length) from each sequence.
+     * It deletes length bases. It makes the deletion in or out of
+     * the ranges defined by the bedfile depending on the setting of putMutationsInRanges.
+     */
     private fun deletionMutation(
         record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>,
         mutatedIndicesWriter: BufferedWriter? = null
@@ -254,8 +266,8 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     }
 
     /**
-     * This changes random bases in the sequence to other random bases.
-     * It changes upto numMutations bases. It puts the mutations in or out
+     * This changes random bases in the sequence to another random value.
+     * It changes upto numMutations bases. It puts the mutations in or out of
      * the ranges defined by the bedfile depending on the setting of putMutationsInRanges.
      */
     private fun pointMutations(
