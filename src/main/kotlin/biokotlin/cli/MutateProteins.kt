@@ -23,7 +23,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
     private val myLogger = LogManager.getLogger(MutateProteins::class.java)
 
     enum class TypeMutation {
-        DELETION, POINT_MUTATION
+        DELETION, POINT_MUTATION, INSERTION
     }
 
     private val proteinLetters = arrayOf(
@@ -81,6 +81,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
                 val mutatedSeq = when (typeMutation) {
                     TypeMutation.DELETION -> deletionMutation(record, ranges, mutatedIndicesWriter)
                     TypeMutation.POINT_MUTATION -> pointMutations(record, ranges, mutatedIndicesWriter)
+                    TypeMutation.INSERTION -> insertionMutation(record, ranges, mutatedIndicesWriter)
                 }
 
                 writeSeq(writer, id, mutatedSeq)
@@ -258,6 +259,46 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
             // delete length bases
             result.delete(start, start + length)
+            mutatedIndicesWriter?.write("$contig\t$start\t${start + length}\n")
+        }
+
+        return result.toString()
+
+    }
+
+    private fun insertionMutation(
+        record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>,
+        mutatedIndicesWriter: BufferedWriter? = null
+    ): String {
+
+        val origSeq = record.seq()
+        val seqLength = origSeq.length
+
+        val contig = record.id
+        val rangesForRecord = ranges.get(contig)
+
+        val mergedRanges = validateAndMergeRanges(seqLength, rangesForRecord)
+
+        val possibleMutationRanges =
+            if (putMutationsInRanges) mergedRanges else inverseRanges(contig, seqLength, mergedRanges)
+
+        // get possible ranges to mutate
+        // Then randomly select one of these ranges
+        val rangeToMutate = possibleMutationRanges
+            .randomOrNull()
+
+        val result = StringBuilder(origSeq)
+
+        if (rangeToMutate != null) {
+            // get random start index of place to insert
+            // within rangeToMutate
+            val start = Random(4321).nextInt(rangeToMutate.start, rangeToMutate.end + 1)
+
+            (0 until length).forEach { _ ->
+                val base = proteinLetters.random()
+                result.insert(start, base)
+            }
+
             mutatedIndicesWriter?.write("$contig\t$start\t${start + length}\n")
         }
 
