@@ -79,9 +79,9 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
                 count++
 
                 val mutatedSeq = when (typeMutation) {
-                    TypeMutation.DELETION -> deletionMutation(record, ranges, mutatedIndicesWriter)
+                    TypeMutation.DELETION -> deletionMutation(record, ranges)
                     TypeMutation.POINT_MUTATION -> pointMutations(record, ranges, mutatedIndicesWriter)
-                    TypeMutation.INSERTION -> insertionMutation(record, ranges, mutatedIndicesWriter)
+                    TypeMutation.INSERTION -> insertionMutation(record, ranges)
                 }
 
                 writeSeq(writer, id, mutatedSeq)
@@ -224,12 +224,11 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     /**
      * This deletes bases (number specified by parameter length) from each sequence.
-     * It deletes length bases. It makes the deletion in or out of
+     * The bases are continuous. It makes the deletion in or out of
      * the ranges defined by the bedfile depending on the setting of putMutationsInRanges.
      */
     private fun deletionMutation(
-        record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>,
-        mutatedIndicesWriter: BufferedWriter? = null
+        record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>
     ): String {
 
         val origSeq = record.seq()
@@ -259,16 +258,19 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
             // delete length bases
             result.delete(start, start + length)
-            mutatedIndicesWriter?.write("$contig\t$start\t${start + length}\n")
         }
 
         return result.toString()
 
     }
 
+    /**
+     * This inserts bases (number specified by parameter length) into each sequence.
+     * The bases are continuous. It makes the insertion in or out of
+     * the ranges defined by the bedfile depending on the setting of putMutationsInRanges.
+     */
     private fun insertionMutation(
-        record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>,
-        mutatedIndicesWriter: BufferedWriter? = null
+        record: ProteinSeqRecord, ranges: Multimap<String, BedfileRecord>
     ): String {
 
         val origSeq = record.seq()
@@ -298,8 +300,6 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
                 val base = proteinLetters.random()
                 result.insert(start, base)
             }
-
-            mutatedIndicesWriter?.write("$contig\t$start\t${start + length}\n")
         }
 
         return result.toString()
