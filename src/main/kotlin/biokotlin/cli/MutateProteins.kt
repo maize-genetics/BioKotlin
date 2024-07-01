@@ -59,6 +59,10 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     val mutatedIndicesBedfile by option(help = "Full path to bedfile to output mutated indices")
 
+    val randomSeed by option(help = "Random seed")
+        .int()
+        .default(1234)
+
     override fun run() {
 
         val ranges = readBedfile()
@@ -254,7 +258,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         if (rangeToMutate != null) {
             // get random start index of place to delete
             // within rangeToMutate
-            val start = Random(4321).nextInt(rangeToMutate.start, rangeToMutate.end - length + 2)
+            val start = Random(randomSeed).nextInt(rangeToMutate.start, rangeToMutate.end - length + 2)
 
             // delete length bases
             result.delete(start, start + length)
@@ -294,7 +298,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         if (rangeToMutate != null) {
             // get random start index of place to insert
             // within rangeToMutate
-            val start = Random(4321).nextInt(rangeToMutate.start, rangeToMutate.end + 1)
+            val start = Random(randomSeed).nextInt(rangeToMutate.start, rangeToMutate.end + 1)
 
             (0 until length).forEach { _ ->
                 val base = proteinLetters.random()
@@ -342,7 +346,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
         val result = StringBuilder(origSeq)
 
-        val random = Random(1234)
+        val random = Random(randomSeed)
 
         mutatedIndices.sorted().forEach { index ->
             val origBase = result[index]
