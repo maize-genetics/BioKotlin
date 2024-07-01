@@ -18,6 +18,12 @@ import org.apache.logging.log4j.LogManager
 import java.io.BufferedWriter
 import kotlin.random.Random
 
+/**
+ * This command randomly mutates the protein sequences in a fasta file.
+ * The mutations can be deletions, point mutations, or insertions.
+ * The output is written to a new fasta file.
+ * The mutations can be put in or out of ranges defined by a bedfile.
+ */
 class MutateProteins : CliktCommand(help = "Mutate Proteins") {
 
     private val myLogger = LogManager.getLogger(MutateProteins::class.java)
