@@ -264,6 +264,9 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         if (rangeToMutate != null) {
             // get random start index of place to delete
             // within rangeToMutate
+            // The +1 adds one to the end to make it inclusive for the
+            // mutation range. And another +1 because nextInt() has exclusive
+            // end position
             val start = Random(randomSeed).nextInt(rangeToMutate.start, rangeToMutate.end - length + 2)
 
             // delete length bases
