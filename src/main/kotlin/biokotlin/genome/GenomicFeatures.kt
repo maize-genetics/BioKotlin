@@ -3,9 +3,12 @@ package biokotlin.genome
 
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seqIO.NucSeqIO
-import org.jetbrains.kotlinx.dataframe.*
+import biokotlin.util.bufferedReader
+import org.jetbrains.kotlinx.dataframe.ColumnsContainer
+import org.jetbrains.kotlinx.dataframe.DataColumn
+import org.jetbrains.kotlinx.dataframe.DataFrame
+import org.jetbrains.kotlinx.dataframe.DataRow
 import org.jetbrains.kotlinx.dataframe.api.*
-import java.io.File
 
 /**
  * The GenomicFeatures class processes data from a GFF formatted file.
@@ -97,7 +100,7 @@ class GenomicFeatures(val gffFile:String, val refFasta:String? = null) {
 
         var totalCount = 0
         var batchCount = 0
-        val gffLines =  File(gffFile).bufferedReader().readLines()
+        val gffLines =  bufferedReader(gffFile).readLines()
         println("readGffToLists: number of file lines read: ${gffLines.size}")
         for (line in gffLines) {
             totalCount++

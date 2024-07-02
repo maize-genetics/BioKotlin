@@ -1,5 +1,6 @@
 package biokotlin.kmer
 
+import biokotlin.util.bufferedReader
 import it.unimi.dsi.fastutil.BigArrays
 import net.jpountz.lz4.LZ4FrameInputStream
 import net.jpountz.lz4.LZ4FrameOutputStream
@@ -28,7 +29,7 @@ class KmerIO(filename: String, isCompressed: Boolean = true): Iterator<Pair<Kmer
         reader = if (isCompressed) {
             BufferedReader(InputStreamReader(LZ4FrameInputStream(FileInputStream(File(filename)))))
         } else {
-            File(filename).bufferedReader()
+            bufferedReader(filename)
         }
 
         /*
