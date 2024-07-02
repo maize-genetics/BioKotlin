@@ -275,7 +275,7 @@ class MAFToGVCF {
      * This is because Anchorwave did not find an alignment for these in-between regions.
      * We could try to put in some coords but it gets very tricky to do so due to inversions.
      */
-    private fun fillInMissingVariantBlocks(tempVariantInfos: MutableList<AssemblyVariantInfo>, refGenomeSequence: Map<String,NucSeq>, fillWithRef : Boolean = true) : MutableList<AssemblyVariantInfo> {
+     fun fillInMissingVariantBlocks(tempVariantInfos: MutableList<AssemblyVariantInfo>, refGenomeSequence: Map<String,NucSeq>, fillWithRef : Boolean = true) : MutableList<AssemblyVariantInfo> {
         //Checks whether reference positions are contiguous with no missing positions.
         // If there are any gaps in coverage it inserts a reference block.
         // This is necessary because combining GVCFs requires that they fully cover the reference genome.
@@ -403,7 +403,7 @@ class MAFToGVCF {
     }
 
 
-    private fun buildMissingRegion(chrom: String, startPos: Int, endPos: Int, refAlleles : String,
+     fun buildMissingRegion(chrom: String, startPos: Int, endPos: Int, refAlleles : String,
                                    assemblyChrom: String, assemblyStart: Int, assemblyEnd : Int, assemblyStrand: String) : AssemblyVariantInfo {
         return AssemblyVariantInfo(chrom, startPos, endPos, ".",refAlleles, ".", true, missingDepth, assemblyChrom, assemblyStart, assemblyEnd, assemblyStrand)
     }
@@ -782,7 +782,7 @@ class MAFToGVCF {
     /**
      * Function to convert a multi-bp substitution into a series of SNPs.  This allows the GVCF to pass a vcf-validator.
      */
-    private fun processIdenticalLengthStrings(
+     fun processIdenticalLengthStrings(
         refString: String,
         altString: String,
         startPos: Int,
@@ -980,7 +980,7 @@ class MAFToGVCF {
      * Function to build a reference block AssemblyVariantInfo
      * NucSeq is 0-based, so subtract 1 from the boundaries when grabbing the sequence allele
      */
-    private fun buildRefBlockVariantInfo(
+    fun buildRefBlockVariantInfo(
         refSequence: Map<String, NucSeq>,
         chrom: String,
         currentRefBlockBoundaries: Pair<Int, Int>,
@@ -1001,7 +1001,7 @@ class MAFToGVCF {
      * This is mainly used to fill in missing basepairs between MAF entries.
      * NucSeq is 0-based, so subtract 1 from the boundary value when grabbing sequence allele
      */
-    private fun buildRefBlockVariantInfoZeroDepth(
+    fun buildRefBlockVariantInfoZeroDepth(
         refSequence: Map<String, NucSeq>,
         chrom: String,
         currentRefBlockBoundaries: Pair<Int, Int>,
@@ -1032,7 +1032,7 @@ class MAFToGVCF {
      * Method to resize the previous Reference block Variant Info.  We only need to delete 1 bp off the end of the Blocks.
      * We need to do this otherwise we will cover base pairs surrounding the indels.
      */
-    private fun resizeRefBlockVariantInfo(variantInfo: AssemblyVariantInfo): AssemblyVariantInfo {
+     fun resizeRefBlockVariantInfo(variantInfo: AssemblyVariantInfo): AssemblyVariantInfo {
         check(variantInfo.asmStrand=="-" || variantInfo.asmStrand=="+") {"ASM Strand is not + or -"}
         val asmStart = variantInfo.asmStart
         val asmEnd = if(variantInfo.asmStrand == "-") variantInfo.asmEnd+1 else variantInfo.asmEnd-1
@@ -1057,7 +1057,7 @@ class MAFToGVCF {
     /**
      * Method to build SNP AssemblyVariantInfos
      */
-    private fun buildSNP(
+     fun buildSNP(
         chrom: String,
         position: Int,
         refAllele: Char,
@@ -1075,7 +1075,7 @@ class MAFToGVCF {
     /**
      * Method to build an indel AssemblyVariantInfos.
      */
-    private fun buildIndel(
+     fun buildIndel(
         chrom: String,
         position: Int,
         refAlleles: String,
