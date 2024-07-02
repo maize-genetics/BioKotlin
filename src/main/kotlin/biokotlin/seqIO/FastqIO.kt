@@ -3,11 +3,11 @@ package biokotlin.seqIO
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.Seq
 import biokotlin.seq.SeqRecord
+import biokotlin.util.bufferedReader
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.BufferedReader
-import java.io.File
 
 /**
 [FastqIO] implements a [SequenceIterator] for a FASTQ file at path [filename]
@@ -100,7 +100,7 @@ class FastqIO(val filename: String) : SequenceIterator {
                 String, String>>) {
 
             try {
-                File(filename).bufferedReader().use { reader ->
+                bufferedReader(filename).use { reader ->
                     var line = reader.readLine()
                     var lineNumber = 1
                     while (line != null) {

@@ -6,7 +6,6 @@ import com.google.common.collect.RangeMap
 import com.google.common.collect.Sets
 import com.google.common.collect.TreeRangeMap
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.BufferedReader
@@ -87,8 +86,8 @@ fun mergeWiggleFiles(file1:String, file2:String, contig:String,  outputFile:Stri
     // Take 2 wiggle files - must be the same length.  Merge the values from the 2
     // into a new file.
 
-    val file1Lines = File(file1).bufferedReader().readLines()
-    val file2Lines = File(file2).bufferedReader().readLines()
+    val file1Lines = bufferedReader(file1).readLines()
+    val file2Lines = bufferedReader(file2).readLines()
 
     check(file1Lines.size == file2Lines.size) {"mergeWiggleFiles: ERROR, ${file1} size ${file1Lines.size} does not match ${file2} size ${file2Lines.size}"}
 

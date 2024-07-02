@@ -9,14 +9,13 @@ import biokotlin.seq.NucSeq
 import biokotlin.seq.NucSeqRecord
 import biokotlin.seq.ProteinSeq
 import biokotlin.seq.SeqRecord
+import biokotlin.util.bufferedReader
 import com.google.common.collect.*
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
-import kotlin.Comparator
-import kotlin.collections.HashMap
 
 /**
  * This class defines  Biokotlin ranges as well as functions that may be run against
@@ -860,8 +859,7 @@ fun findNegativePeaks(positive: NucSeq, rangeList: List<SRange>, pairingFunc: (N
 fun fastaToNucSeq (fasta: String): Map<String, NucSeq> {
     val chromNucSeqMap  = HashMap<String,NucSeq>()
     try {
-        val file = File(fasta)
-        file.bufferedReader().use { br ->
+        bufferedReader(fasta).use { br ->
             var currChrom: String = "-1"
             var currSeq = ByteArrayOutputStream()
             var line = br.readLine()
