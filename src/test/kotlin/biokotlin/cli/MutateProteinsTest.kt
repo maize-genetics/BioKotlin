@@ -5,7 +5,7 @@ import biokotlin.util.setupDebugLogging
 import com.github.ajalt.clikt.testing.test
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -69,7 +69,7 @@ class MutateProteinsTest {
 
         myLogger.info("testPointMutation: result output: ${result.output}")
 
-        Assertions.assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
+        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
         var checksum1 = getChecksum(expectedPointMutationFasta)
         var checksum2 = getChecksum(testPointMutationFasta)
@@ -77,7 +77,7 @@ class MutateProteinsTest {
         myLogger.info("expected checksum1: $checksum1")
         myLogger.info("actual checksum2: $checksum2")
 
-        Assertions.assertEquals(checksum1, checksum2, "testPointMutation checksums do not match")
+        assertEquals(checksum1, checksum2, "testPointMutation checksums do not match")
 
     }
 
@@ -97,7 +97,7 @@ class MutateProteinsTest {
 
         myLogger.info("testDeleteMutation: result output: ${result.output}")
 
-        Assertions.assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
+        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
         var checksum1 = getChecksum(expectedDeleteMutationFasta)
         var checksum2 = getChecksum(testDeleteMutationFasta)
@@ -105,7 +105,7 @@ class MutateProteinsTest {
         myLogger.info("expected checksum1: $checksum1")
         myLogger.info("actual checksum2: $checksum2")
 
-        Assertions.assertEquals(checksum1, checksum2, "testDeleteMutation checksums do not match")
+        assertEquals(checksum1, checksum2, "testDeleteMutation checksums do not match")
 
     }
 
@@ -125,7 +125,7 @@ class MutateProteinsTest {
 
         myLogger.info("testInsertMutation: result output: ${result.output}")
 
-        Assertions.assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
+        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
         var checksum1 = getChecksum(expectedInsertMutationFasta)
         var checksum2 = getChecksum(testInsertMutationFasta)
@@ -133,7 +133,45 @@ class MutateProteinsTest {
         myLogger.info("expected checksum1: $checksum1")
         myLogger.info("actual checksum2: $checksum2")
 
-        Assertions.assertEquals(checksum1, checksum2, "testInsertMutation checksums do not match")
+        assertEquals(checksum1, checksum2, "testInsertMutation checksums do not match")
+
+    }
+
+    @Test
+    fun testCliktParams() {
+
+        val resultMissingInput = MutateProteins().test(
+            "--output-fasta $testInsertMutationFasta --bedfile $inputBedfile"
+        )
+        assertEquals(resultMissingInput.statusCode, 1)
+        assertEquals(
+            "Usage: mutate-proteins [<options>]\n" +
+                    "\n" +
+                    "Error: missing option --input-fasta\n",
+            resultMissingInput.output
+        )
+
+        val resultMissingOutput = MutateProteins().test(
+            "--input-fasta $inputFasta --bedfile $inputBedfile"
+        )
+        assertEquals(resultMissingOutput.statusCode, 1)
+        assertEquals(
+            "Usage: mutate-proteins [<options>]\n" +
+                    "\n" +
+                    "Error: missing option --output-fasta\n",
+            resultMissingOutput.output
+        )
+
+        val resultMissingBedfile = MutateProteins().test(
+            "--input-fasta $inputFasta --output-fasta $testInsertMutationFasta"
+        )
+        assertEquals(resultMissingBedfile.statusCode, 1)
+        assertEquals(
+            "Usage: mutate-proteins [<options>]\n" +
+                    "\n" +
+                    "Error: missing option --bedfile\n",
+            resultMissingBedfile.output
+        )
 
     }
 
