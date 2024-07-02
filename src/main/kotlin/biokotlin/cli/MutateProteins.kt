@@ -311,10 +311,10 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         if (rangeToMutate != null) {
             // get random start index of place to insert
             // within rangeToMutate
-            val start = Random(randomSeed).nextInt(rangeToMutate.start, rangeToMutate.end + 1)
+            val start = random.nextInt(rangeToMutate.start, rangeToMutate.end + 1)
 
             (0 until length).forEach { _ ->
-                val base = proteinLetters.random()
+                val base = proteinLetters.random(random)
                 result.insert(start, base)
             }
         }
