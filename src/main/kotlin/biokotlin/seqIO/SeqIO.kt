@@ -6,7 +6,28 @@ import java.io.File
 
 
 enum class SeqFormat(val suffixes: List<String>) {
-    fasta(listOf("fa", "fasta", "fa.gz", "fasta.gz")),
+    // https://en.wikipedia.org/wiki/FASTA_format
+    // .fasta, .fas, .fa, .fna, .ffn, .faa, .mpfa, .frn
+    fasta(
+        listOf(
+            "fa",
+            "fasta",
+            "fa.gz",
+            "fasta.gz",
+            "fas",
+            "fas.gz",
+            "fna",
+            "fna.gz",
+            "ffn",
+            "ffn.gz",
+            "faa",
+            "faa.gz",
+            "mpfa",
+            "mpfa.gz",
+            "frn",
+            "frn.gz"
+        )
+    ),
     fastq(listOf("fq", "fastq", "fq.gz", "fastq.gz"))
 }
 
