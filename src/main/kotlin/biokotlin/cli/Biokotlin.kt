@@ -23,6 +23,7 @@ fun main(args: Array<String>) = Biokotlin()
         MafToGvcfConverter(),
         ValidateGVCFs(),
         MergeGVCFs(),
-        ValidateVCFs()
+        ValidateVCFs(),
+        MutateProteins()
     )
     .main(args)
