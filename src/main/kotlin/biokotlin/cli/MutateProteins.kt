@@ -252,12 +252,14 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         val possibleMutationRanges =
             if (putMutationsInRanges) mergedRanges else inverseRanges(contig, seqLength, mergedRanges)
 
+        val random = Random(randomSeed)
+
         // get possible ranges to mutate
         // that are long enough to delete specified
         // length. Then randomly select one of these ranges
         val rangeToMutate = possibleMutationRanges
             .filter { range -> range.length() >= length }
-            .randomOrNull()
+            .randomOrNull(random)
 
         val result = StringBuilder(origSeq)
 
@@ -267,7 +269,7 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
             // The +1 adds one to the end to make it inclusive for the
             // mutation range. And another +1 because nextInt() has exclusive
             // end position
-            val start = Random(randomSeed).nextInt(rangeToMutate.start, rangeToMutate.end - length + 2)
+            val start = random.nextInt(rangeToMutate.start, rangeToMutate.end - length + 2)
 
             // delete length bases
             result.delete(start, start + length)
@@ -297,10 +299,12 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
         val possibleMutationRanges =
             if (putMutationsInRanges) mergedRanges else inverseRanges(contig, seqLength, mergedRanges)
 
+        val random = Random(randomSeed)
+
         // get possible ranges to mutate
         // Then randomly select one of these ranges
         val rangeToMutate = possibleMutationRanges
-            .randomOrNull()
+            .randomOrNull(random)
 
         val result = StringBuilder(origSeq)
 
@@ -344,18 +348,18 @@ class MutateProteins : CliktCommand(help = "Mutate Proteins") {
             origSeq.indices.filter { index -> !inRanges(index, mergedRanges) }
         }.toMutableList()
 
+        val random = Random(randomSeed)
+
         val mutatedIndices = mutableSetOf<Int>()
         var numMutated = 0
         while (numMutated < numMutations && possibleMutateIndices.isNotEmpty()) {
-            val currentIndex = possibleMutateIndices.random()
+            val currentIndex = possibleMutateIndices.random(random)
             possibleMutateIndices.remove(currentIndex)
             mutatedIndices.add(currentIndex)
             numMutated++
         }
 
         val result = StringBuilder(origSeq)
-
-        val random = Random(randomSeed)
 
         mutatedIndices.sorted().forEach { index ->
             val origBase = result[index]
