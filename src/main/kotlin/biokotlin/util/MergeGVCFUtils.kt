@@ -184,7 +184,13 @@ private fun createSNP(
                                         // then use the first base of the alt allele (reference allele)
                                         genotype == "<DEL>" || genotype.length < variant.length -> {
                                             if (currentPosition == variant.start) {
-                                                genotype[0].toString()
+                                                val paddedBase = genotype[0].toString()
+                                                if (paddedBase == refAllele) {
+                                                    paddedBase
+                                                } else {
+                                                    symbolicAlleles.add("<DEL>")
+                                                    "<DEL>"
+                                                }
                                             } else {
                                                 symbolicAlleles.add("<DEL>")
                                                 "<DEL>"
@@ -303,7 +309,8 @@ private fun createVariantContext(info: VariantContextInfo): VariantContext? {
 
                     "REF" -> refAllele
 
-                    else -> alleleMap[allele] ?: throw IllegalArgumentException("Allele not found: $allele")
+                    else -> alleleMap[allele]
+                        ?: throw IllegalArgumentException("Allele not found: $allele at contig: ${info.contig} position: ${info.position} sample: ${info.samples[index]} alleleMap: $alleleMap")
                 }
             }
 
