@@ -188,8 +188,8 @@ private fun createSNP(
                                                 if (paddedBase == refAllele) {
                                                     paddedBase
                                                 } else {
-                                                    myLogger.warn("Skipping contig: $contig position: $currentPosition  Padded base: $paddedBase in deletion doesn't match refAllele: $refAllele for sample: ${variant.samples[0]}")
-                                                    return null
+                                                    symbolicAlleles.add("<DEL>")
+                                                    "<DEL>"
                                                 }
                                             } else {
                                                 symbolicAlleles.add("<DEL>")
