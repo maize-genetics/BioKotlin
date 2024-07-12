@@ -191,8 +191,13 @@ fun writeFasta(input: Collection<SeqRecord>, filename: String) {
 
     bufferedWriter(newFilename).use { outputFile ->
         for (record in input) {
+            val seq = when (record) {
+                is NucSeqRecord -> record.sequence.toString()
+                is ProteinSeqRecord -> record.sequence.toString()
+                else -> throw IllegalStateException("writeFasta trying to output something other than Nuc or Protein Seq.")
+            }
             outputFile.write(">${record.id}\n")
-            outputFile.write((record as NucSeqRecord).sequence.toString())
+            outputFile.write(seq)
             outputFile.newLine()
         }
     }
