@@ -21,8 +21,10 @@ class MAFToGVCFTest : StringSpec({
     val diploidRefFile = "${testingDir}/CML103DiploidTest.fa"
     val mafFile = "${testingDir}/B97.maf"
     val mafFileInverted = "${testingDir}/B97_inverted.maf"
+    val mafFileInvertedLegacy = "${testingDir}/B97_inverted_Legacy.maf"
     val diploidMafFile = "${testingDir}/B97diploid.maf"
     val mafFileNs = "${testingDir}/mafWithNs.maf"
+    val mafFileNsLegacy = "${testingDir}/mafWithNs_Legacy.maf"
 
     val truthGVCFFile = "${testingDir}/B97_truth.gvcf"
     val truthGVCFFileInverted = "${testingDir}/B97_truth_inverted.gvcf"
@@ -84,6 +86,7 @@ class MAFToGVCFTest : StringSpec({
     createTruthGVCFFile(truthGVCFFile)
 
     createInvertedMAFFile(mafFileInverted)
+    createInvertedMAFFileLegacy(mafFileInvertedLegacy)
     createTruthInversionGVCFFile(truthGVCFFileInverted)
 
     // Create the known overlapping GVCF truth file for 1st diploid
@@ -99,6 +102,7 @@ class MAFToGVCFTest : StringSpec({
     // Create ref, maf, and truth GVCF for Ns testing
     createRefWithN(refNFile)
     createNsMAFFile(mafFileNs)
+    createNsMAFFileLegacy(mafFileNsLegacy)
     createTruthNs(truthGVCFFileNs)
 
 
@@ -313,8 +317,8 @@ class MAFToGVCFTest : StringSpec({
         }
     }
 
-    "TestInversion" {
-        MAFToGVCF().createGVCFfromMAF(mafFileInverted,refFile,outputFileInverted,sampleName,fillGaps=false,compressAndIndex=false)
+    "TestInversionLegacy" {
+        MAFToGVCF().createGVCFfromMAF(mafFileInvertedLegacy,refFile,outputFileInverted,sampleName,fillGaps=false,compressAndIndex=false, anchorwaveLegacy = true)
 
         val truthVariantIterator = VCFFileReader(File(truthGVCFFileInverted),false).iterator()
         val truthVariants = mutableListOf<VariantContext>()
@@ -625,6 +629,51 @@ class MAFToGVCFTest : StringSpec({
         }
     }
 
+    "testMAFsWithNsLegacy" {
+        MAFToGVCF().createGVCFfromMAF(mafFileNsLegacy,refNFile,outputFileNs,sampleName,fillGaps=false,compressAndIndex=false, anchorwaveLegacy = true)
+
+        val truthVariantIterator = VCFFileReader(File(truthGVCFFileNs),false).iterator()
+        val truthVariants = mutableListOf<VariantContext>()
+        while(truthVariantIterator.hasNext()) {
+            truthVariants.add(truthVariantIterator.next())
+        }
+        val truthMap = truthVariants.associateBy { Position(it.contig, it.start) }
+
+        val outputVariantIterator = VCFFileReader(File(outputFileNs), false).iterator()
+        val outputVariants = mutableListOf<VariantContext>()
+        while(outputVariantIterator.hasNext()) {
+            outputVariants.add(outputVariantIterator.next())
+        }
+
+        //mafBlocks.size shouldBe 4
+        outputVariants.size shouldBe truthVariants.size
+
+        for(variant in outputVariants) {
+            if(!truthMap.containsKey(Position(variant.contig, variant.start))) {
+                fail("No matching variant found: ${variant.contig}:${variant.start}")
+            }
+            val matchingTruth = truthMap[Position(variant.contig, variant.start)]!!
+
+            //Check END
+            variant.end shouldBe matchingTruth.end
+            //Check alleles
+            variant.alleles.toTypedArray() contentEquals matchingTruth.alleles.toTypedArray() shouldBe true
+            //Check GT
+            (matchingTruth.getGenotype(0).genotypeString == variant.getGenotype(0).genotypeString) shouldBe true
+            //Check AD
+            (matchingTruth.getGenotype(0).ad contentEquals variant.getGenotype(0).ad) shouldBe true
+            //Check ASM Contig
+            (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
+            //Check ASM Start
+            (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
+            //Check ASM END
+            (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
+            //Check ASM Strand
+            (matchingTruth.getAttribute("ASM_Strand") == variant.getAttribute("ASM_Strand")) shouldBe true
+
+        }
+    }
+
     "testMAFsWithNs" {
         MAFToGVCF().createGVCFfromMAF(mafFileNs,refNFile,outputFileNs,sampleName,fillGaps=false,compressAndIndex=false)
 
@@ -661,6 +710,7 @@ class MAFToGVCFTest : StringSpec({
             //Check ASM Contig
             (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
             //Check ASM Start
+            println("ASM_Start: ${matchingTruth.getAttribute("ASM_Start")} == ${variant.getAttribute("ASM_Start")}")
             (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
             //Check ASM END
             (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
@@ -794,6 +844,30 @@ fun createMAFFileWithEIQlines(outputFile: String) {
 
             output.write("a\tscore=6636.0\n")
             output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t97794583\t45\t - 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+
+            // we need a chr10 in here to test sorting the maf records
+            output.write("a\tscore=6636.0\n")
+            output.write("s\tchr10\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
+            output.write("s\tchr6\t53310097\t45\t + 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
+
+        }
+    }
+
+    fun createInvertedMAFFileLegacy(outputFile: String) {
+        File(outputFile).bufferedWriter().use {output ->
+            output.write("##maf version=1 scoring=Tba.v8\n\n")
+
+            output.write("a\tscore=23262.0\n")
+            output.write("s\tchr7\t12\t38\t+\t158545518\tAAA-GGGAATGTTAACCAAATGA---ATTGTCTCTTACGGTG\n")
+            output.write("s\tchr4\t81344243\t40\t+\t187371129\t-AA-GGGGATGCTAAGCCAATGAGTTGTTGTCTCTCAATGTG\n\n")
+
+            output.write("a\tscore=5062.0\n")
+            output.write("s\tchr7\t450\t6\t+\t158545518\tTAAAGAT---GGGT\n")
+            output.write("s\tchr4\t81444246\t6\t+\t 187371129\tTAAGGATCCC---T\n\n")
+
+            output.write("a\tscore=6636.0\n")
+            output.write("s\tchr1\t0\t40\t+\t 158545518\t-----GCAGCTGAAAACAGTCAATCTTACACACTTGGGGCCTACT\n")
             output.write("s\tchr6\t53310097\t45\t - 151104725\tAAAAAGACAGCTGAAAATATCAATCTTACACACTTGGGGCCTACT\n\n")
 
             // we need a chr10 in here to test sorting the maf records
@@ -850,28 +924,46 @@ fun createMAFFileWithEIQlines(outputFile: String) {
         }
     }
 
-/**
- * Function to create a MAF file used for testing. This covers alignments with lots of Ns
- *
- */
-fun createNsMAFFile(outputFile: String) {
-    File(outputFile).bufferedWriter().use {output ->
-        output.write("##maf version 1\n\n")
+    /**
+     * Function to create a MAF file used for testing. This covers alignments with lots of Ns
+     *
+     */
+    fun createNsMAFFile(outputFile: String) {
+        File(outputFile).bufferedWriter().use {output ->
+            output.write("##maf version 1\n\n")
 
-        output.write("a\tscore=12\n")
-        output.write("s\tChr01\t0\t129\t+\t129\tTGTCGACTCAGCTC---CACACTCG---ACTCCNCTACGCATCACNCNNNCCTACTCTACACACTCCACCACACA--CTCTCGT----CGTACGTGCG---CGTAGAG--CGA--GATCGACTACCC--ATCAG--GGCTCAGCTG------AGC------TCG\n")
-        output.write("s\tChr01\t0\t156\t+\t184\tTGTCNNNTCACNNNGTACTCCACACGAANNNTCNCTNCGCATCACNCNNNNNNACTCTAC--NNNN----ACACAAANNNTCNNATAACGTACGTANNNNNGGTAGAGTTNNNNNGATCG--NNNNNNNATCAANNNNNNGAGCTGTCNNNNAGNNNNNATTCG\n\n")
+            output.write("a\tscore=12\n")
+            output.write("s\tChr01\t0\t129\t+\t129\tTGTCGACTCAGCTC---CACACTCG---ACTCCNCTACGCATCACNCNNNCCTACTCTACACACTCCACCACACA--CTCTCGT----CGTACGTGCG---CGTAGAG--CGA--GATCGACTACCC--ATCAG--GGCTCAGCTG------AGC------TCG\n")
+            output.write("s\tChr01\t0\t156\t+\t184\tTGTCNNNTCACNNNGTACTCCACACGAANNNTCNCTNCGCATCACNCNNNNNNACTCTAC--NNNN----ACACAAANNNTCNNATAACGTACGTANNNNNGGTAGAGTTNNNNNGATCG--NNNNNNNATCAANNNNNNGAGCTGTCNNNNAGNNNNNATTCG\n\n")
 
-        output.write("a\tscore=12\n")
-        output.write("s\tChr02\t2\t20\t+\t113\tNNNGCTAGCTAGCTCA-------GCGC\n")
-        output.write("s\tChr02\t10\t25\t+\t160\tNNNNN--GCTAGCTNNNNNNTATGCGC\n\n")
+            output.write("a\tscore=12\n")
+            output.write("s\tChr02\t2\t20\t+\t113\tNNNGCTAGCTAGCTCA-------GCGC\n")
+            output.write("s\tChr02\t10\t25\t+\t160\tNNNNN--GCTAGCTNNNNNNTATGCGC\n\n")
 
-        output.write("a\tscore=12\n")
-        output.write("s\tChr02\t22\t66\t+\t113\tACACCTGTGTGCAGCTGCTTACGGGGCGCGCCCCATCTCGCGGGGCTCATGCGAACCNNNCGCATG\n")
-        output.write("s\tChr02\t100\t58\t-\t160\tACA--NNNNTGCAAC--NNNNGGNNNNGNNNN--TTCTCGCGGNNNN--NNNNGNCCNNNCNNNNN\n\n")
+            output.write("a\tscore=12\n")
+            output.write("s\tChr02\t22\t66\t+\t113\tACACCTGTGTGCAGCTGCTTACGGGGCGCGCCCCATCTCGCGGGGCTCATGCGAACCNNNCGCATG\n")
+            output.write("s\tChr02\t2\t58\t-\t160\tACA--NNNNTGCAAC--NNNNGGNNNNGNNNN--TTCTCGCGGNNNN--NNNNGNCCNNNCNNNNN\n\n")
 
+        }
     }
-}
+    fun createNsMAFFileLegacy(outputFile: String) {
+        File(outputFile).bufferedWriter().use {output ->
+            output.write("##maf version 1\n\n")
+
+            output.write("a\tscore=12\n")
+            output.write("s\tChr01\t0\t129\t+\t129\tTGTCGACTCAGCTC---CACACTCG---ACTCCNCTACGCATCACNCNNNCCTACTCTACACACTCCACCACACA--CTCTCGT----CGTACGTGCG---CGTAGAG--CGA--GATCGACTACCC--ATCAG--GGCTCAGCTG------AGC------TCG\n")
+            output.write("s\tChr01\t0\t156\t+\t184\tTGTCNNNTCACNNNGTACTCCACACGAANNNTCNCTNCGCATCACNCNNNNNNACTCTAC--NNNN----ACACAAANNNTCNNATAACGTACGTANNNNNGGTAGAGTTNNNNNGATCG--NNNNNNNATCAANNNNNNGAGCTGTCNNNNAGNNNNNATTCG\n\n")
+
+            output.write("a\tscore=12\n")
+            output.write("s\tChr02\t2\t20\t+\t113\tNNNGCTAGCTAGCTCA-------GCGC\n")
+            output.write("s\tChr02\t10\t25\t+\t160\tNNNNN--GCTAGCTNNNNNNTATGCGC\n\n")
+
+            output.write("a\tscore=12\n")
+            output.write("s\tChr02\t22\t66\t+\t113\tACACCTGTGTGCAGCTGCTTACGGGGCGCGCCCCATCTCGCGGGGCTCATGCGAACCNNNCGCATG\n")
+            output.write("s\tChr02\t100\t58\t-\t160\tACA--NNNNTGCAAC--NNNNGGNNNNGNNNN--TTCTCGCGGNNNN--NNNNGNCCNNNCNNNNN\n\n")
+
+        }
+    }
 
     /**
      * Simple function to create a simple MAF file used for testing.  This covers most of the edge cases we have run into.

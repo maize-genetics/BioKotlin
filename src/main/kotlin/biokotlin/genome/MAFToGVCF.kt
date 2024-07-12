@@ -97,11 +97,12 @@ class MAFToGVCF {
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
         compressAndIndex: Boolean = true, // if bgzip and bcftools are not on the system path, this will fail
         delAsSymbolic: Boolean = false, // if true, replace deletion records with symbolic alleles
-        maxDeletionSize: Int = 0 // if delAsSymbolic is true, replace deletions longer than this size with symbolic alleles
+        maxDeletionSize: Int = 0, // if delAsSymbolic is true, replace deletions longer than this size with symbolic alleles
+        anchorwaveLegacy : Boolean = false
     ) {
 
         val refSeqs = fastaToNucSeq(referenceFile)
-        val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType, delAsSymbolic, maxDeletionSize)
+        val variantsMap = getVariantContextsfromMAF(mafFile, refSeqs, sampleName, fillGaps, twoGvcfs,outJustGT,outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy)
         check(variantsMap.size == 1 || variantsMap.size == 2) {
             "Expected either 1 or 2 variant maps but there are ${variantsMap.size}"
         }
@@ -146,7 +147,8 @@ class MAFToGVCF {
         outJustGT: Boolean = false,
         outputType: OUTPUT_TYPE = OUTPUT_TYPE.gvcf,
         delAsSymbolic: Boolean = false,
-        maxDeletionSize: Int = 0
+        maxDeletionSize: Int = 0,
+        anchorwaveLegacy: Boolean = false
     ): Map<String, List<VariantContext>> {
 
         val mafRecords = loadMAFRecords(mafFile)
@@ -155,20 +157,20 @@ class MAFToGVCF {
 
             if (splitGenomes.size == 1) {
                 println("getVariantContextsfromMAF:twoGvcfs is true but only 1 genome in the MAF file. Processing the single genome")
-                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic, maxDeletionSize))
+                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
             } else {
                 splitGenomes.mapIndexed { index, mafrecs ->
                     //append _1 and _2 to the sampleName for the split genomes
 
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize))
+                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
                 }.toMap()
             }
 
         } else {
             println("getVariantContextsfromMAF: Processing a single genome")
-            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize))
+            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
         }
 
     }
@@ -242,12 +244,13 @@ class MAFToGVCF {
         outJustGT: Boolean,
         outputType: OUTPUT_TYPE,
         delAsSymbolic: Boolean,
-        maxDeletionSize: Int
+        maxDeletionSize: Int,
+        anchorwaveLegacy: Boolean = false
     ): List<VariantContext> {
         var variantInfos = mutableListOf<AssemblyVariantInfo>()
 
         for (record in mafRecords) {
-            variantInfos.addAll(buildTempVariants(refGenomeSequence, record))
+            variantInfos.addAll(buildTempVariants(refGenomeSequence, record, anchorwaveLegacy))
         }
 
         if (fillGaps && outputType == OUTPUT_TYPE.vcf ){
@@ -410,7 +413,7 @@ class MAFToGVCF {
     /**
      * Function to build the AssemblyVariantInfos found in the given Maf record.
      */
-    fun buildTempVariants(refSequence: Map<String, NucSeq>, mafRecord: MAFRecord): List<AssemblyVariantInfo> {
+    fun buildTempVariants(refSequence: Map<String, NucSeq>, mafRecord: MAFRecord, anchorwaveLegacy: Boolean = false): List<AssemblyVariantInfo> {
         //Build a list of VariantInfos for each alignment state
         val chrom = mafRecord.refRecord.chromName
 
@@ -425,7 +428,14 @@ class MAFToGVCF {
         check(asmStrand =="-" || asmStrand == "+") {"ASM Strand is not - or +."}
         var currentRefBp =
             mafRecord.refRecord.start   //position in ref sequence. That is, alignment bp minus dashes for REF line
-        var currentASMBp = if(asmStrand == "-") {mafRecord.altRecord.start + mafRecord.altRecord.size -1  }
+
+        //Here we need to check to see if we are on the negative strand and if we are using a file from the old anchorwave version.
+        //If negative and using the old anchorwave, the actual assembly start position is the start from the file plus the size of the alt seq minus one
+        //If just negative, the actual assembly start needs to be resolved as MAF has the reported start coming from the end of the chrom.
+        //To compute take the contig size, subtract the reported start and add 1.
+        //If the same file was run between both versions of anchorwave these ifs will create the same correct Assembly start position
+        var currentASMBp = if(asmStrand == "-" && anchorwaveLegacy) {mafRecord.altRecord.start + mafRecord.altRecord.size -1  }
+        else if (asmStrand == "-") {mafRecord.altRecord.chrSize - mafRecord.altRecord.start + 1}
         else {mafRecord.altRecord.start}//position in the alt sequence.  That is alignment bp minus dashes for ASM line
 
         val asmChrom = mafRecord.altRecord.chromName

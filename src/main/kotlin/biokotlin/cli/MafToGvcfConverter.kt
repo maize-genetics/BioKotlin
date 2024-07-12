@@ -82,6 +82,9 @@ class MafToGvcfConverter : CliktCommand(help = "Create a GVCF file from a MAF fi
         .int()
         .default(0)
 
+    val anchorwaveLegacy by option(help = "Defaults to false.  Enable this option if the MAF was created prior to Anchorwave version 1.2.3.  Otherwise the ")
+        .flag(default = false)
+
     override fun run() {
         println("LCJ begin run: fillGaps = $fillGaps, twoGvcfs = $twoGvcfs, outJustGT = $outJustGT, compressAndIndex = $compressAndIndex, delAsSymbolic = $delAsSymbolic,  outputType = $outputType")
         val outputType = try {
@@ -104,7 +107,8 @@ class MafToGvcfConverter : CliktCommand(help = "Create a GVCF file from a MAF fi
             outputType,
             compressAndIndex,
             delAsSymbolic,
-            maxDeletionSize
+            maxDeletionSize,
+            anchorwaveLegacy
         )
 
     }
