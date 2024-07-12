@@ -177,3 +177,7 @@ fun writeFasta(input: SequenceIterator, filename: String) {
     }
 
 }
+
+fun writeFasta(input: Collection<SeqRecord>, filename: String) {
+    TODO("need to implement")
+}
