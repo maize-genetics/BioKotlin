@@ -710,7 +710,6 @@ class MAFToGVCFTest : StringSpec({
             //Check ASM Contig
             (matchingTruth.getAttribute("ASM_Chr") == variant.getAttribute("ASM_Chr")) shouldBe true
             //Check ASM Start
-            println("ASM_Start: ${matchingTruth.getAttribute("ASM_Start")} == ${variant.getAttribute("ASM_Start")}")
             (matchingTruth.getAttribute("ASM_Start") == variant.getAttribute("ASM_Start")) shouldBe true
             //Check ASM END
             (matchingTruth.getAttribute("ASM_End") == variant.getAttribute("ASM_End")) shouldBe true
