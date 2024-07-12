@@ -82,7 +82,7 @@ class MafToGvcfConverter : CliktCommand(help = "Create a GVCF file from a MAF fi
         .int()
         .default(0)
 
-    val anchorwaveLegacy by option(help = "Defaults to false.  Enable this option if the MAF was created prior to Anchorwave version 1.2.3.  Otherwise the ")
+    val anchorwaveLegacy by option(help = "Defaults to false.  Enable this option if the MAF was created prior to Anchorwave version 1.2.3.  Otherwise the ASM coordinates will not be correct. ")
         .flag(default = false)
 
     override fun run() {
