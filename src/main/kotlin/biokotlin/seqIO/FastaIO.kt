@@ -2,6 +2,7 @@ package biokotlin.seqIO
 
 import biokotlin.seq.*
 import biokotlin.util.bufferedReader
+import biokotlin.util.bufferedWriter
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -179,5 +180,20 @@ fun writeFasta(input: SequenceIterator, filename: String) {
 }
 
 fun writeFasta(input: Collection<SeqRecord>, filename: String) {
-    TODO("need to implement")
+    val extension = File(filename).extension
+    val newFilename = if (extension.equals("fa", false) || extension.equals("fasta", false)) {
+        filename
+    } else {
+        "$filename.fa"
+    }
+
+    println("FastaIO: writeFasta: writing file $newFilename")
+
+    bufferedWriter(newFilename).use { outputFile ->
+        for (record in input) {
+            outputFile.write(">${record.id}\n")
+            outputFile.write((record as NucSeqRecord).sequence.toString())
+            outputFile.newLine()
+        }
+    }
 }

@@ -1,8 +1,12 @@
 package biokotlin.seqIO
 
+import biokotlin.seq.NucSeq
+import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.SeqRecord
 import biokotlin.util.bufferedReader
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import java.io.File
 
 class FastaIOTest : StringSpec({
 
@@ -65,6 +69,24 @@ class FastaIOTest : StringSpec({
 
     }
 
+    "writeFasta" {
+        val records = listOf(
+            NucSeqRecord(NucSeq("ACTG"), "id1"),
+            NucSeqRecord(NucSeq("TGCA"), "id2"),
+            NucSeqRecord(NucSeq("GATTACA"), "id3"),
+        )
+        val filename = "testOutput.fasta"
+        val expectedOutput = """
+            >id1
+            ACTG
+            >id2
+            TGCA
+            >id3
+            GATTACA
+        """.trimIndent()
+        testWriteFasta(records, filename, expectedOutput)
+    }
+
 })
 
 fun readTitleAndSeq(filename: String): Pair<String, String> {
@@ -118,4 +140,16 @@ fun simpleCheck(filename: String, format: SeqFormat = SeqFormat.fasta, type: Seq
     assert(record.description == titleSeq.first) { "record description: ${record.description} should be ${titleSeq.first} in file: $filename" }
     assert(record.seq() == titleSeq.second) { "record seq: ${record.seq()} should be ${titleSeq.second} in file: $filename" }
 
+}
+
+fun testWriteFasta(input: Collection<SeqRecord>, filename: String, expectedOutput: String) {
+    writeFasta(input, filename)
+
+    val outputFile = File(filename)
+    val actualOutput = outputFile.readText().trim()
+
+    outputFile.exists() shouldBe true
+    actualOutput shouldBe expectedOutput
+
+    outputFile.delete()
 }
