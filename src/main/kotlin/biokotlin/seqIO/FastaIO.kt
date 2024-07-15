@@ -197,8 +197,12 @@ fun writeFasta(input: Collection<SeqRecord>, filename: String) {
                 else -> throw IllegalStateException("writeFasta trying to output something other than Nuc or Protein Seq.")
             }
             outputFile.write(">${record.id}\n")
-            outputFile.write(seq)
-            outputFile.newLine()
+            seq
+                .chunked(60)
+                .forEach { chunk ->
+                    outputFile.write(chunk)
+                    outputFile.newLine()
+                }
         }
     }
 }
