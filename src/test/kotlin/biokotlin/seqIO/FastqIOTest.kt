@@ -1,7 +1,13 @@
 package biokotlin.seqIO
 
+import biokotlin.seq.*
+import com.google.common.collect.ImmutableMap
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.startWith
+import java.io.File
 
 class FastqIOTest : StringSpec({
 
@@ -61,4 +67,73 @@ class FastqIOTest : StringSpec({
 
     }
 
+    "writeFastq" {
+        val testFile = File("src/test/kotlin/biokotlin/testData/writeFastqTest.fastq")
+        val outputFileName = "writeFastqOutput.fastq"
+        val fastqEntries = mutableListOf<SeqRecord>()
+
+        testFile.useLines { lines ->
+            val iterator = lines.iterator()
+            while (iterator.hasNext()) {
+                // A FASTQ entry consists of four lines
+                val header = if (iterator.hasNext()) iterator.next() else ""
+                val sequence = if (iterator.hasNext()) iterator.next() else ""
+                if (iterator.hasNext()) iterator.next() // for plus line
+                val quality = if (iterator.hasNext()) iterator.next() else ""
+
+                val annotations = mapOf("" to "") // nothing in annotations that is needed
+                val annotationsImmutableMapBuilder = ImmutableMap.builder<String, String>()
+                annotationsImmutableMapBuilder.putAll(annotations)
+                val immutableAnnotations = annotationsImmutableMapBuilder.build()
+                val letterAnnotations = mapOf("quality" to quality.toCharArray().map { it.toString() }.toTypedArray()) // quality (string) to array
+                val letterAnnotationsImmutableMapBuilder = ImmutableMap.builder<String, Array<out Any>>()
+                letterAnnotationsImmutableMapBuilder.putAll(letterAnnotations)
+                val immutableLetterAnnotations = letterAnnotationsImmutableMapBuilder.build()
+
+                val fastqEntry = NucSeqRecord(NucSeq(sequence), header, "", "", immutableAnnotations, immutableLetterAnnotations)
+                fastqEntries.add(fastqEntry)
+            }
+        }
+
+        val expectedOutput = testFile.readText().trim()
+
+        testWriteFastq(fastqEntries, outputFileName, expectedOutput)
+    }
+
+    "writeFastq invalid input (fasta file)" {
+        val outputFileName = "writeFastqOutput.fastq"
+        val proteinSeqEntries = mutableListOf<SeqRecord>()
+
+        val annotations = mapOf("" to "")
+        val annotationsImmutableMapBuilder = ImmutableMap.builder<String, String>()
+        annotationsImmutableMapBuilder.putAll(annotations)
+        val immutableAnnotations = annotationsImmutableMapBuilder.build()
+        val letterAnnotations = mapOf("" to emptyArray<String>())
+        val letterAnnotationsImmutableMapBuilder = ImmutableMap.builder<String, Array<out Any>>()
+        letterAnnotationsImmutableMapBuilder.putAll(letterAnnotations)
+        val immutableLetterAnnotations = letterAnnotationsImmutableMapBuilder.build()
+
+        val proteinSeqRecord = ProteinSeqRecord(ProteinSeq(""), "", "", "", immutableAnnotations, immutableLetterAnnotations)
+        proteinSeqEntries.add(proteinSeqRecord)
+
+        val exception = shouldThrow<IllegalStateException> {
+            writeFastq(proteinSeqEntries, outputFileName)
+        }
+        exception.message should startWith("writeFastq trying to output")
+    }
+
 })
+
+fun testWriteFastq(input: Collection<SeqRecord>, filename: String, expectedOutput: String) {
+    writeFastq(input, filename)
+
+    val outputFile = File(filename)
+    val actualOutput = outputFile.readText().trim()
+
+    outputFile.exists() shouldBe true
+    println("Actual output: ${actualOutput}")
+    println("Expected output: ${expectedOutput}")
+    actualOutput shouldBe expectedOutput
+
+    outputFile.delete()
+}
