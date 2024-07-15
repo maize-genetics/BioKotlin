@@ -1,13 +1,16 @@
 package biokotlin.seqIO
 
 import biokotlin.seq.NucSeqRecord
+import biokotlin.seq.ProteinSeqRecord
 import biokotlin.seq.Seq
 import biokotlin.seq.SeqRecord
 import biokotlin.util.bufferedReader
+import biokotlin.util.bufferedWriter
 import com.google.common.collect.ImmutableMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.io.BufferedReader
+import java.io.File
 
 /**
 [FastqIO] implements a [SequenceIterator] for a FASTQ file at path [filename]
@@ -132,5 +135,29 @@ $filename  Error: ${e.message}""")
         }
 
     }
+}
 
+fun writeFastq(input: Collection<SeqRecord>, filename: String) {
+    val extension = File(filename).extension
+    val newFilename = if (extension.equals("fq", false) || extension.equals("fastq", false)) {
+        filename
+    } else {
+        "$filename.fq"
+    }
+
+    println("FastqIO: writeFastq: writing file $newFilename")
+
+    bufferedWriter(newFilename).use { outputFile ->
+        for (record in input) {
+            val seq = when (record) {
+                is NucSeqRecord -> record.sequence.toString()
+                else -> throw IllegalStateException("writeFastq trying to output something other than Nuc Seq.")
+            }
+            outputFile.write("${record.id}\n")
+            outputFile.write("${seq}\n")
+            outputFile.write("+\n")
+            outputFile.write(record.letterAnnotations["quality"]?.joinToString("")?:"")
+            outputFile.newLine()
+        }
+    }
 }
