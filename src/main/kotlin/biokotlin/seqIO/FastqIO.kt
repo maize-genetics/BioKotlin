@@ -156,6 +156,7 @@ fun writeFastq(input: Collection<SeqRecord>, filename: String) {
             outputFile.write("${record.id}\n")
             outputFile.write("${seq}\n")
             outputFile.write("+\n")
+            require (record.letterAnnotations["quality"]?.size != 0) { "Letter annotations cannot be empty" }
             outputFile.write(record.letterAnnotations["quality"]?.joinToString("")?:"")
             outputFile.newLine()
         }
