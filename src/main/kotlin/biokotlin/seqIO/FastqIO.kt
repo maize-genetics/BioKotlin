@@ -153,7 +153,7 @@ fun writeFastq(input: Collection<SeqRecord>, filename: String) {
                 is NucSeqRecord -> record.sequence.toString()
                 else -> throw IllegalStateException("writeFastq trying to output something other than Nuc Seq.")
             }
-            outputFile.write("${record.id}\n")
+            outputFile.write("@${record.id}\n") // adding @ to record because when using FastqIO iterator removes @ from original header
             outputFile.write("${seq}\n")
             outputFile.write("+\n")
             require (record.letterAnnotations["quality"]?.size != 0) { "Letter annotations cannot be empty" }

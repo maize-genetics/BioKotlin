@@ -90,7 +90,7 @@ class FastqIOTest : StringSpec({
                 letterAnnotationsImmutableMapBuilder.putAll(letterAnnotations)
                 val immutableLetterAnnotations = letterAnnotationsImmutableMapBuilder.build()
 
-                val fastqEntry = NucSeqRecord(NucSeq(sequence), header, "", "", immutableAnnotations, immutableLetterAnnotations)
+                val fastqEntry = NucSeqRecord(NucSeq(sequence), header.substring(1), "", "", immutableAnnotations, immutableLetterAnnotations) // doing header.substring(1) becuase FastqIO iterator removes @ symbol
                 fastqEntries.add(fastqEntry)
             }
         }
