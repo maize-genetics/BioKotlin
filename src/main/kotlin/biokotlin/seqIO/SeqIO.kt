@@ -61,6 +61,7 @@ private fun seqIterator(format: SeqFormat, type: SeqType, filename: String): Seq
 fun reader(filename: String, format: SeqFormat? = null, type: SeqType = SeqType.nucleotide): SequenceIterator {
 
     assert(filename.isNotEmpty())
+    require(File(filename).exists()) { "File not found: $filename"}
 
     val formatToUse = if (format != null) {
         format
