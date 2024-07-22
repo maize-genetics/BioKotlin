@@ -4,6 +4,7 @@ import biokotlin.seq.*
 import biokotlin.util.bufferedReader
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.assertThrows
 import java.io.File
 
 class FastaIOTest : StringSpec({
@@ -18,6 +19,14 @@ class FastaIOTest : StringSpec({
             "B73V4_ctg58" to 196,
             "B73V4_ctg43" to 161
     )
+    "Verify file exists" {
+        // this test verifies that when given a non-existing file, the exception is propagated
+        // and the test does not hang
+        val badFile = "/Users/lcj34/debug/biokotlin/nonExisting.fa"
+        assertThrows<IllegalArgumentException>{
+            NucSeqIO(badFile)
+        }
+    }
 
     "iterateFile" {
 
