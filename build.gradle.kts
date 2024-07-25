@@ -65,8 +65,6 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     implementation("org.apache.logging.log4j:log4j-api:2.23.1")
 
-    implementation("com.github.ajalt.clikt:clikt:4.2.2")
-
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
@@ -75,7 +73,6 @@ dependencies {
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("com.github.holgerbrandl:krangl:0.18")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
-
 
     // Biology possible dependencies
     // Support fasta, bam, sam, vcf, bcf support
@@ -201,7 +198,14 @@ fun tutorialInjector() {
         //Matches <a href=". until >
         val text = file.readText()
         val fixedLinks = linkFinder.replace(text) { a ->
-            a.value.replace(Regex("\".*\"")) { "\"../${parseLink(it.value.drop(1).dropLast(1), packageList)}\" target=\"_blank\"" }
+            a.value.replace(Regex("\".*\"")) {
+                "\"../${
+                    parseLink(
+                        it.value.drop(1).dropLast(1),
+                        packageList
+                    )
+                }\" target=\"_blank\""
+            }
         }
 
         file.writeText(fixedLinks)
@@ -335,7 +339,8 @@ fun recursivelyInjectImages(file: File, depth: Int) {
                 if (it.value.contains("alt")) {
                     correctedSource
                 } else {
-                    val alt = File("${rootProject.projectDir}/documentation_resources/images/${src.substringBefore(".")}.txt").readText()
+                    val alt =
+                        File("${rootProject.projectDir}/documentation_resources/images/${src.substringBefore(".")}.txt").readText()
                     correctedSource.replace(">", "alt=\"$alt\">")
                 }
             }
