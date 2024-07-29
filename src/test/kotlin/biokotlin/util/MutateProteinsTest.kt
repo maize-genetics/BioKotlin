@@ -58,13 +58,7 @@ class MutateProteinsTest {
         // --bedfile Zm-B73-V5_pfam_scan_coreRepTranscriptB73_random1K.bed
         // --type-mutation POINT_MUTATION --put-mutations-in-ranges true --num-mutations 3
 
-        // val result = MutateProteins().test(
-        //     "--input-fasta $inputFasta --output-fasta $testPointMutationFasta " +
-        //             "--bedfile $inputBedfile --type-mutation POINT_MUTATION " +
-        //             "--put-mutations-in-ranges true --num-mutations 3"
-        // )
-
-        mutateProteins(
+        MutateProteinsUtils.mutateProteins(
             inputFasta,
             null,
             testPointMutationFasta,
@@ -94,13 +88,7 @@ class MutateProteinsTest {
         // --bedfile Zm-B73-V5_pfam_scan_coreRepTranscriptB73_random1K.bed
         // --type-mutation DELETION --put-mutations-in-ranges false --length 3
 
-        // val result = MutateProteins().test(
-        //     "--input-fasta $inputFasta --output-fasta $testDeleteMutationFasta " +
-        //             "--bedfile $inputBedfile --type-mutation DELETION " +
-        //              "--put-mutations-in-ranges false --length 3"
-        // )
-
-        mutateProteins(
+        MutateProteinsUtils.mutateProteins(
             inputFasta,
             null,
             testDeleteMutationFasta,
@@ -130,13 +118,7 @@ class MutateProteinsTest {
         // --bedfile Zm-B73-V5_pfam_scan_coreRepTranscriptB73_random1K.bed
         // --type-mutation INSERTION --put-mutations-in-ranges true --length 10
 
-        // val result = MutateProteins().test(
-        //     "--input-fasta $inputFasta --output-fasta $testInsertMutationFasta " +
-        //             "--bedfile $inputBedfile --type-mutation INSERTION " +
-        //             "--put-mutations-in-ranges true --length 10"
-        // )
-
-        mutateProteins(
+        MutateProteinsUtils.mutateProteins(
             inputFasta,
             null,
             testInsertMutationFasta,

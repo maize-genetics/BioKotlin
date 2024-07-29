@@ -48,11 +48,7 @@ class MergeGVCFsTest {
         // --input-dir /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_input/
         // --output-file /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_output.vcf
 
-        // val result = MergeGVCFs().test(
-        //     "--input-dir $gvcfInputDir --output-file $testMergedOutputFile"
-        // )
-
-        mergeGVCFs(gvcfInputDir, testMergedOutputFile)
+        MergeGVCFUtils.mergeGVCFs(gvcfInputDir, testMergedOutputFile)
 
         var checksum1 = getChecksum(expectedMergedOutputFile)
         var checksum2 = getChecksum(testMergedOutputFile)
@@ -71,11 +67,7 @@ class MergeGVCFsTest {
         // --input-dir /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_input/
         // --output-file /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_output.vcf
 
-        // val result = MergeGVCFs().test(
-        //     "--input-dir $gvcfDiploidInputDir --output-file $testMergedDiploidOutputFile"
-        // )
-
-        mergeGVCFs(gvcfDiploidInputDir, testMergedDiploidOutputFile)
+        MergeGVCFUtils.mergeGVCFs(gvcfDiploidInputDir, testMergedDiploidOutputFile)
 
         var checksum1 = getChecksum(expectedMergedDiploidOutputFile)
         var checksum2 = getChecksum(testMergedDiploidOutputFile)

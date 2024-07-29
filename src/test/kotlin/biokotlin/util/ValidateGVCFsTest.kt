@@ -51,11 +51,7 @@ class ValidateGVCFsTest {
         // --output-dir /Users/tmc46/projects/scan_gvcf_wei-yun/output
         // --reference-file /Users/tmc46/projects/scan_gvcf_wei-yun/Zh-RIMHU001-REFERENCE-PanAnd-1.0.fa --correct
 
-        // val result = ValidateGVCFs().test(
-        //     "--input-dir $gvcfInputDir --output-dir $testOutputGVCFDir --reference-file $refFasta --correct"
-        // )
-
-        validateGVCFs(gvcfInputDir, testOutputGVCFDir, refFasta, true)
+        ValidateGVCFsUtils.validateGVCFs(gvcfInputDir, testOutputGVCFDir, refFasta, true)
 
         var checksum1 = getChecksum(lineAGvcf)
         var checksum2 = getChecksum(testLineAGvcfOutput)
