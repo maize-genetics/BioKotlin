@@ -1,8 +1,5 @@
-package biokotlin.cli
+package biokotlin.util
 
-import biokotlin.util.getChecksum
-import biokotlin.util.setupDebugLogging
-import com.github.ajalt.clikt.testing.test
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -61,15 +58,17 @@ class MutateProteinsTest {
         // --bedfile Zm-B73-V5_pfam_scan_coreRepTranscriptB73_random1K.bed
         // --type-mutation POINT_MUTATION --put-mutations-in-ranges true --num-mutations 3
 
-        val result = MutateProteins().test(
-            "--input-fasta $inputFasta --output-fasta $testPointMutationFasta " +
-                    "--bedfile $inputBedfile --type-mutation POINT_MUTATION " +
-                    "--put-mutations-in-ranges true --num-mutations 3"
+        MutateProteinsUtils.mutateProteins(
+            inputFasta,
+            null,
+            testPointMutationFasta,
+            inputBedfile,
+            TypeMutation.POINT_MUTATION,
+            5,
+            3,
+            true,
+            1234
         )
-
-        myLogger.info("testPointMutation: result output: ${result.output}")
-
-        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
         var checksum1 = getChecksum(expectedPointMutationFasta)
         var checksum2 = getChecksum(testPointMutationFasta)
@@ -89,15 +88,17 @@ class MutateProteinsTest {
         // --bedfile Zm-B73-V5_pfam_scan_coreRepTranscriptB73_random1K.bed
         // --type-mutation DELETION --put-mutations-in-ranges false --length 3
 
-        val result = MutateProteins().test(
-            "--input-fasta $inputFasta --output-fasta $testDeleteMutationFasta " +
-                    "--bedfile $inputBedfile --type-mutation DELETION " +
-                    "--put-mutations-in-ranges false --length 3"
+        MutateProteinsUtils.mutateProteins(
+            inputFasta,
+            null,
+            testDeleteMutationFasta,
+            inputBedfile,
+            TypeMutation.DELETION,
+            3,
+            3,
+            false,
+            1234
         )
-
-        myLogger.info("testDeleteMutation: result output: ${result.output}")
-
-        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
         var checksum1 = getChecksum(expectedDeleteMutationFasta)
         var checksum2 = getChecksum(testDeleteMutationFasta)
@@ -117,15 +118,17 @@ class MutateProteinsTest {
         // --bedfile Zm-B73-V5_pfam_scan_coreRepTranscriptB73_random1K.bed
         // --type-mutation INSERTION --put-mutations-in-ranges true --length 10
 
-        val result = MutateProteins().test(
-            "--input-fasta $inputFasta --output-fasta $testInsertMutationFasta " +
-                    "--bedfile $inputBedfile --type-mutation INSERTION " +
-                    "--put-mutations-in-ranges true --length 10"
+        MutateProteinsUtils.mutateProteins(
+            inputFasta,
+            null,
+            testInsertMutationFasta,
+            inputBedfile,
+            TypeMutation.INSERTION,
+            10,
+            3,
+            true,
+            1234
         )
-
-        myLogger.info("testInsertMutation: result output: ${result.output}")
-
-        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
 
         var checksum1 = getChecksum(expectedInsertMutationFasta)
         var checksum2 = getChecksum(testInsertMutationFasta)
@@ -134,44 +137,6 @@ class MutateProteinsTest {
         myLogger.info("actual checksum2: $checksum2")
 
         assertEquals(checksum1, checksum2, "testInsertMutation checksums do not match")
-
-    }
-
-    @Test
-    fun testCliktParams() {
-
-        val resultMissingInput = MutateProteins().test(
-            "--output-fasta $testInsertMutationFasta --bedfile $inputBedfile"
-        )
-        assertEquals(resultMissingInput.statusCode, 1)
-        assertEquals(
-            "Usage: mutate-proteins [<options>]\n" +
-                    "\n" +
-                    "Error: missing option --input-fasta\n",
-            resultMissingInput.output
-        )
-
-        val resultMissingOutput = MutateProteins().test(
-            "--input-fasta $inputFasta --bedfile $inputBedfile"
-        )
-        assertEquals(resultMissingOutput.statusCode, 1)
-        assertEquals(
-            "Usage: mutate-proteins [<options>]\n" +
-                    "\n" +
-                    "Error: missing option --output-fasta\n",
-            resultMissingOutput.output
-        )
-
-        val resultMissingBedfile = MutateProteins().test(
-            "--input-fasta $inputFasta --output-fasta $testInsertMutationFasta"
-        )
-        assertEquals(resultMissingBedfile.statusCode, 1)
-        assertEquals(
-            "Usage: mutate-proteins [<options>]\n" +
-                    "\n" +
-                    "Error: missing option --bedfile\n",
-            resultMissingBedfile.output
-        )
 
     }
 

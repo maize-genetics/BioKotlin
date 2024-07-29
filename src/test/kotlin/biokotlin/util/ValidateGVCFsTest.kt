@@ -1,8 +1,5 @@
-package biokotlin.cli
+package biokotlin.util
 
-import biokotlin.util.getChecksum
-import biokotlin.util.setupDebugLogging
-import com.github.ajalt.clikt.testing.test
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -54,13 +51,7 @@ class ValidateGVCFsTest {
         // --output-dir /Users/tmc46/projects/scan_gvcf_wei-yun/output
         // --reference-file /Users/tmc46/projects/scan_gvcf_wei-yun/Zh-RIMHU001-REFERENCE-PanAnd-1.0.fa --correct
 
-        val result = ValidateGVCFs().test(
-            "--input-dir ${gvcfInputDir} --output-dir ${testOutputGVCFDir} --reference-file ${refFasta} --correct"
-        )
-
-        myLogger.info("testValidateGVCFs: result output: ${result.output}")
-
-        assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
+        ValidateGVCFsUtils.validateGVCFs(gvcfInputDir, testOutputGVCFDir, refFasta, true)
 
         var checksum1 = getChecksum(lineAGvcf)
         var checksum2 = getChecksum(testLineAGvcfOutput)

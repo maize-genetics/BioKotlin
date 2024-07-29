@@ -1,8 +1,5 @@
-package biokotlin.cli
+package biokotlin.util
 
-import biokotlin.util.getChecksum
-import biokotlin.util.setupDebugLogging
-import com.github.ajalt.clikt.testing.test
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
@@ -51,13 +48,7 @@ class MergeGVCFsTest {
         // --input-dir /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_input/
         // --output-file /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_output.vcf
 
-        val result = MergeGVCFs().test(
-            "--input-dir $gvcfInputDir --output-file $testMergedOutputFile"
-        )
-
-        myLogger.info("testMergeGVCFs: result output: ${result.output}")
-
-        Assertions.assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
+        MergeGVCFUtils.mergeGVCFs(gvcfInputDir, testMergedOutputFile)
 
         var checksum1 = getChecksum(expectedMergedOutputFile)
         var checksum2 = getChecksum(testMergedOutputFile)
@@ -76,13 +67,7 @@ class MergeGVCFsTest {
         // --input-dir /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_input/
         // --output-file /Users/tmc46/git/biokotlin/data/test/merge_gvcfs_output.vcf
 
-        val result = MergeGVCFs().test(
-            "--input-dir $gvcfDiploidInputDir --output-file $testMergedDiploidOutputFile"
-        )
-
-        myLogger.info("testMergeGVCFwithINS: result output: ${result.output}")
-
-        Assertions.assertEquals(result.statusCode, 0, "status code not 0: ${result.statusCode}")
+        MergeGVCFUtils.mergeGVCFs(gvcfDiploidInputDir, testMergedDiploidOutputFile)
 
         var checksum1 = getChecksum(expectedMergedDiploidOutputFile)
         var checksum2 = getChecksum(testMergedDiploidOutputFile)

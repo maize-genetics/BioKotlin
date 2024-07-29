@@ -1,38 +1,15 @@
-package biokotlin.cli
+package biokotlin.util
 
 import biokotlin.genome.fastaToNucSeq
-import biokotlin.util.bufferedReader
-import biokotlin.util.bufferedWriter
-import biokotlin.util.vcfReader
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
 import java.io.File
 
-class ValidateGVCFs : CliktCommand(help = "Validate GVCF files") {
+private val myLogger = LogManager.getLogger("biokotlin.util.ValidateGVCFsUtils")
 
-    private val myLogger = LogManager.getLogger(ValidateGVCFs::class.java)
+object ValidateGVCFsUtils {
 
-    val inputDir by option(help = "Full path to input GVCF file directory")
-        .required()
-
-    val outputDir by option(help = "Full path to output GVCF file directory")
-        .required()
-
-    val referenceFile by option(help = "Full path to reference fasta file")
-        .required()
-
-    val correct by option(
-        help = "If true, fix incorrect reference sequences in the output GVCF file. " +
-                "If false, filter out incorrect reference sequences in the output GVCF file" +
-                "Default is false."
-    )
-        .flag(default = false)
-
-    override fun run() {
+    fun validateGVCFs(inputDir: String, outputDir: String, referenceFile: String, correct: Boolean = false) {
 
         // Checks to ensure that the input and output directories and reference file exist
         require(File(inputDir).isDirectory) { "Input GVCF directory does not exist: $inputDir" }
