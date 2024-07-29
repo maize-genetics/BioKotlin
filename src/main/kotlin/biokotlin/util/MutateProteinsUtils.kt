@@ -28,57 +28,67 @@ val proteinLetters = arrayOf(
 
 val numProteinLetters = proteinLetters.size
 
-fun mutateProteins(
-    inputFasta: String,
-    mutatedIndicesBedfile: String?,
-    outputFasta: String,
-    bedfile: String,
-    typeMutation: TypeMutation,
-    length: Int,
-    numMutations: Int,
-    putMutationsInRanges: Boolean,
-    randomSeed: Int
-) {
+object MutateProteinsUtils {
 
-    val ranges = readBedfile(bedfile)
+    fun mutateProteins(
+        inputFasta: String,
+        mutatedIndicesBedfile: String?,
+        outputFasta: String,
+        bedfile: String,
+        typeMutation: TypeMutation,
+        length: Int,
+        numMutations: Int,
+        putMutationsInRanges: Boolean,
+        randomSeed: Int
+    ) {
 
-    val reader = FastaIO(inputFasta, SeqType.protein)
+        val ranges = readBedfile(bedfile)
 
-    val mutatedIndicesWriter = if (mutatedIndicesBedfile != null) bufferedWriter(mutatedIndicesBedfile) else null
+        val reader = FastaIO(inputFasta, SeqType.protein)
 
-    bufferedWriter(outputFasta).use { writer ->
+        val mutatedIndicesWriter = if (mutatedIndicesBedfile != null) bufferedWriter(mutatedIndicesBedfile) else null
 
-        val ids = mutableSetOf<String>()
-        var count = 0
-        while (reader.hasNext()) {
+        bufferedWriter(outputFasta).use { writer ->
 
-            val record = reader.next() as ProteinSeqRecord
-            val id = record.id
-            ids.add(id)
-            count++
+            val ids = mutableSetOf<String>()
+            var count = 0
+            while (reader.hasNext()) {
 
-            val mutatedSeq = when (typeMutation) {
-                TypeMutation.DELETION -> deletionMutation(putMutationsInRanges, length, randomSeed, record, ranges)
-                TypeMutation.POINT_MUTATION -> pointMutations(
-                    putMutationsInRanges,
-                    numMutations,
-                    randomSeed,
-                    record,
-                    ranges,
-                    mutatedIndicesWriter
-                )
+                val record = reader.next() as ProteinSeqRecord
+                val id = record.id
+                ids.add(id)
+                count++
 
-                TypeMutation.INSERTION -> insertionMutation(putMutationsInRanges, length, randomSeed, record, ranges)
+                val mutatedSeq = when (typeMutation) {
+                    TypeMutation.DELETION -> deletionMutation(putMutationsInRanges, length, randomSeed, record, ranges)
+                    TypeMutation.POINT_MUTATION -> pointMutations(
+                        putMutationsInRanges,
+                        numMutations,
+                        randomSeed,
+                        record,
+                        ranges,
+                        mutatedIndicesWriter
+                    )
+
+                    TypeMutation.INSERTION -> insertionMutation(
+                        putMutationsInRanges,
+                        length,
+                        randomSeed,
+                        record,
+                        ranges
+                    )
+                }
+
+                writeSeq(writer, id, mutatedSeq)
+
             }
 
-            writeSeq(writer, id, mutatedSeq)
+            mutatedIndicesWriter?.close()
 
-        }
+            if (count != ids.size) {
+                myLogger.warn("Duplicate IDs found")
+            }
 
-        mutatedIndicesWriter?.close()
-
-        if (count != ids.size) {
-            myLogger.warn("Duplicate IDs found")
         }
 
     }

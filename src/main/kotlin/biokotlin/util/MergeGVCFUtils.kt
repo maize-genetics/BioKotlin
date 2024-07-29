@@ -14,53 +14,57 @@ import java.io.File
 
 private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
-fun mergeGVCFs(inputDir: String, outputFile: String) {
+object MergeGVCFUtils {
 
-    runBlocking {
+    fun mergeGVCFs(inputDir: String, outputFile: String) {
 
-        val inputFiles = getGVCFFiles(inputDir)
+        runBlocking {
 
-        require(validateVCFs(inputFiles).valid) { "Some GVCF files are invalid." }
+            val inputFiles = getGVCFFiles(inputDir)
 
-        val getVCFVariants = GetVCFVariants(inputFiles, false)
+            require(validateVCFs(inputFiles).valid) { "Some GVCF files are invalid." }
 
-        val filenames = getVCFVariants.orderedInputFiles
+            val getVCFVariants = GetVCFVariants(inputFiles, false)
 
-        // List of samples, one per input GVCF file
-        val samples = getVCFVariants.samples
-            .mapIndexed { index, samples ->
-                if (samples.size != 1) throw IllegalArgumentException("GVCF file should only have one sample: ${filenames[index]} has $samples")
-                samples[0]
-            }
+            val filenames = getVCFVariants.orderedInputFiles
 
-        require(samples.size == samples.toSet().size) { "Duplicate sample names found in GVCF files." }
-
-        val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
-
-        launch(Dispatchers.IO) {
-            getVCFVariants.forAll(positionsChannel)
-        }
-
-        val variantContextChannel = Channel<Deferred<List<VariantContext>>>(100)
-
-        launch(Dispatchers.IO) {
-
-            try {
-
-                for (block in positionsChannel) {
-                    variantContextChannel.send(async { createVariantContexts(block, samples) })
+            // List of samples, one per input GVCF file
+            val samples = getVCFVariants.samples
+                .mapIndexed { index, samples ->
+                    if (samples.size != 1) throw IllegalArgumentException("GVCF file should only have one sample: ${filenames[index]} has $samples")
+                    samples[0]
                 }
 
-            } catch (e: Exception) {
-                myLogger.error("MergeGVCFUtils: ${e.message}")
-            } finally {
-                variantContextChannel.close()
+            require(samples.size == samples.toSet().size) { "Duplicate sample names found in GVCF files." }
+
+            val positionsChannel = Channel<List<Pair<Int, List<SimpleVariant?>>>>(100)
+
+            launch(Dispatchers.IO) {
+                getVCFVariants.forAll(positionsChannel)
             }
 
-        }
+            val variantContextChannel = Channel<Deferred<List<VariantContext>>>(100)
 
-        myLogger.info("writing output: $outputFile")
-        writeOutputVCF(outputFile, samples, variantContextChannel)
+            launch(Dispatchers.IO) {
+
+                try {
+
+                    for (block in positionsChannel) {
+                        variantContextChannel.send(async { createVariantContexts(block, samples) })
+                    }
+
+                } catch (e: Exception) {
+                    myLogger.error("MergeGVCFUtils: ${e.message}")
+                } finally {
+                    variantContextChannel.close()
+                }
+
+            }
+
+            myLogger.info("writing output: $outputFile")
+            writeOutputVCF(outputFile, samples, variantContextChannel)
+
+        }
 
     }
 
