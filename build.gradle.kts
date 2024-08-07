@@ -180,9 +180,8 @@ fun tutorialInjector() {
         if (notebook.name.endsWith(".ipynb")) {
             tutorials.mkdirs()
             try {
-                val home: String = System.getProperty("user.home")
                 ProcessBuilder(
-                    "$home/miniconda3/bin/jupyter",
+                    "jupyter",
                     "nbconvert",
                     notebook.absolutePath,
                     "--stdout",
