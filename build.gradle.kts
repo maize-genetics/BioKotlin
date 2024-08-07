@@ -467,10 +467,7 @@ tasks.javadoc {
 
 nexusPublishing {
     repositories {
-        sonatype {
-            username = property("ossrhUsername") as String?
-            password = property("ossrhPassword") as String?
-        }
+        sonatype()
     }
 }
 
