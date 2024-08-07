@@ -7,7 +7,7 @@ on:
       - '*.*'
 
 jobs:
-  
+
   maven-publish:
 
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
           miniconda-version: "latest"
 
       - name: Install Jupyter for Tutorials to be Injected
-        run: conda install -c anaconda jupyter
+        run: conda install -y -c anaconda jupyter
 
       - name: Verify Jupyter Installation
         run: jupyter --version
