@@ -42,6 +42,7 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
 }
 apply {
     plugin("kotlinx-serialization")
@@ -389,22 +390,6 @@ publishing {
                 }
             }
 
-            repositories {
-                maven {
-                    val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                    val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-                    url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
-                    credentials {
-                        try {
-                            username = property("ossrhUsername") as String?
-                            password = property("ossrhPassword") as String?
-                        } catch (e: Exception) {
-                            println("Unable to get username and password for nexus maven central release.")
-                        }
-                    }
-                }
-            }
-
             pom {
                 name.set("BioKotlin")
                 description.set("BioKotlin aims to be a high-performance bioinformatics library that brings the power and speed of compiled programming languages to scripting and big data environments.")
@@ -459,9 +444,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:git://bitbucket.org:bucklerlab/biokotlin.git")
-                    developerConnection.set("scm:git:ssh://bitbucket.org:bucklerlab/biokotlin.git")
-                    url.set("https://bitbucket.org/bucklerlab/biokotlin/src")
+                    connection.set("scm:git:git://github.com/maize-genetics/BioKotlin.git")        
+                    developerConnection.set("scm:git:ssh://github.com/maize-genetics/BioKotlin.git")   
+                    url.set("https://github.com/maize-genetics/BioKotlin")
                 }
             }
         }
@@ -477,6 +462,15 @@ tasks.javadoc {
     dependsOn("dokkaJavadoc")
     if (JavaVersion.current().isJava9Compatible) {
         (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            username = property("ossrhUsername") as String?
+            password = property("ossrhPassword") as String?
+        }
     }
 }
 
