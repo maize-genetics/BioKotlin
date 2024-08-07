@@ -1,10 +1,20 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.ByteArrayOutputStream
 
 // Note Kotlin version needs to be updated in both the buildscript and plugins.
 // Dependencies will follow the buildscript
 
+fun getVersionName(): String {
+    val stdout = ByteArrayOutputStream()
+    exec {
+        commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
 group = "org.biokotlin"
-version = "0.19"
+version = getVersionName()
 
 /*
 This build script is need to use the early access
