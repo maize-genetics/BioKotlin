@@ -444,8 +444,8 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:git://github.com/maize-genetics/BioKotlin.git")        
-                    developerConnection.set("scm:git:ssh://github.com/maize-genetics/BioKotlin.git")   
+                    connection.set("scm:git:git://github.com/maize-genetics/BioKotlin.git")
+                    developerConnection.set("scm:git:ssh://github.com/maize-genetics/BioKotlin.git")
                     url.set("https://github.com/maize-genetics/BioKotlin")
                 }
             }
