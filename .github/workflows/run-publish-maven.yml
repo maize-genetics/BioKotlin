@@ -22,7 +22,7 @@ jobs:
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: base
+          auto-activate-base: true
           auto-update-conda: true
           miniconda-version: "latest"
 
