@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 
 // Note Kotlin version needs to be updated in both the buildscript and plugins.
 // Dependencies will follow the buildscript
@@ -199,6 +201,9 @@ fun tutorialInjector() {
 
         }
     }
+
+    Files.walk(Paths.get("."))
+        .forEach { println(it) }
 
     val packageList = File("build/dokka/html/biokotlin/package-list").readText()
 
