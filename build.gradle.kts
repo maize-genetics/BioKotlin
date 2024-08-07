@@ -192,8 +192,9 @@ fun tutorialInjector() {
                     .redirectOutput(File("build/dokka/html/tutorials/${notebook.name.substringBefore(".")}.html"))
                     .start()
                     .waitFor()
-            } catch (_: java.io.IOException) {
+            } catch (e: java.io.IOException) {
                 println("Warning: Jupyter must be installed through conda for tutorials to be injected.")
+                e.printStackTrace()
                 return
             }
 
