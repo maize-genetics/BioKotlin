@@ -2,6 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.io.path.isRegularFile
+import kotlin.jvm.optionals.getOrNull
 
 // Note Kotlin version needs to be updated in both the buildscript and plugins.
 // Dependencies will follow the buildscript
@@ -202,10 +204,14 @@ fun tutorialInjector() {
         }
     }
 
-    Files.walk(Paths.get("."))
-        .forEach { println(it) }
+    val optionalPackageList = Files.walk(Paths.get("./build/dokka/"))
+        .filter { it.isRegularFile() }
+        .filter { it.toString().endsWith("package-list") }
+        .findFirst()
 
-    val packageList = File("build/dokka/html/biokotlin/package-list").readText()
+    val packageList = optionalPackageList.getOrNull()?.let {
+        it.toFile().readText()
+    } ?: ""
 
     //Replaces shorthand links with accurate ones and inserts links into code
     val linkFinder = Regex("<a href=\"\\..*?>")
