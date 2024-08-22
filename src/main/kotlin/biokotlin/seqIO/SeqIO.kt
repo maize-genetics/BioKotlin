@@ -67,10 +67,8 @@ fun reader(filename: String, format: SeqFormat? = null, type: SeqType = SeqType.
         format
     } else {
 
-        val extension = File(filename).extension
-
         val guessFormat = SeqFormat.values().find {
-            it.suffixes.contains(extension)
+            it.suffixes.any { suffix -> filename.endsWith(suffix) }
         }
 
         guessFormat ?: throw IllegalArgumentException("Unknown file type: $filename")

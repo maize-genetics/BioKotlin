@@ -132,7 +132,7 @@ of a transcript, you must know that it is a transcript.
 
 Parsing a GFF file to a tree requires only a single line:
 ```kotlin
-val genome = Genome.fromGFF("pathname.gff")
+val genome = Genome.fromFile("pathname.gff")
 ```
 
 GFFs that do not adhere to the structure will crash. Those that contain feature types that are not currently
