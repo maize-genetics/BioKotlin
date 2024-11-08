@@ -1,10 +1,13 @@
 package biokotlin.util
 
+import biokotlin.genome.PositionRange
+import biokotlin.util.BedUtils.readBedfile
 import htsjdk.variant.variantcontext.Allele
 import htsjdk.variant.variantcontext.GenotypeBuilder
 import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.variantcontext.VariantContextBuilder
 import htsjdk.variant.variantcontext.writer.Options
+import htsjdk.variant.variantcontext.writer.VariantContextWriter
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.VCFHeader
 import kotlinx.coroutines.*
@@ -16,7 +19,7 @@ private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
 object MergeGVCFUtils {
 
-    fun mergeGVCFs(inputDir: String, outputFile: String) {
+    fun mergeGVCFs(inputDir: String, outputFile: String, bedfile: String? = null) {
 
         runBlocking {
 
@@ -61,8 +64,14 @@ object MergeGVCFUtils {
 
             }
 
-            myLogger.info("writing output: $outputFile")
-            writeOutputVCF(outputFile, samples, variantContextChannel)
+            val theBedfile = bedfile?.trim()
+            if (theBedfile.isNullOrEmpty()) {
+                myLogger.info("Writing output: $outputFile")
+                writeOutputVCF(outputFile, samples, variantContextChannel)
+            } else {
+                myLogger.info("Writing output files with base name: $outputFile and bedfile: $bedfile")
+                writeOutputVCF(outputFile, theBedfile, samples, variantContextChannel)
+            }
 
         }
 
@@ -121,6 +130,30 @@ private suspend fun writeOutputVCF(
             }
 
         }
+
+}
+
+private suspend fun writeOutputVCF(
+    outputFile: String,
+    bedfile: String,
+    samples: List<String>,
+    variantContextChannel: Channel<Deferred<List<VariantContext>>>
+) {
+
+    val ranges = readBedfile(bedfile)
+
+    val header = VCFHeader(createGenericVCFHeaders(samples))
+
+    var writePositionRange: PositionRange? = null
+    var writer: VariantContextWriter? = null
+    for (deferred in variantContextChannel) {
+
+        val variantContexts = deferred.await()
+        variantContexts.forEach { variantContext ->
+            TODO()
+        }
+
+    }
 
 }
 
