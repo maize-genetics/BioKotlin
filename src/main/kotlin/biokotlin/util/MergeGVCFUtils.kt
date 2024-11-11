@@ -150,7 +150,33 @@ private suspend fun writeOutputVCF(
 
         val variantContexts = deferred.await()
         variantContexts.forEach { variantContext ->
-            TODO()
+
+            val currentPositionRange = PositionRange(variantContext.contig, variantContext.start, variantContext.end)
+
+            // If the current position range doesn't overlap with the current write position range
+            // then close the current writer and open a new one
+            if (writePositionRange == null || !writePositionRange!!.overlapping(currentPositionRange)) {
+
+                // Close the previous writer
+                writer?.close()
+                writer = null
+
+                writePositionRange = ranges.find { it.overlapping(currentPositionRange) }
+                writePositionRange?.let {
+                    val filename = "${outputFile}-${writePositionRange!!.toString().replace(':', '_')}.vcf"
+                    writer = VariantContextWriterBuilder()
+                        .unsetOption(Options.INDEX_ON_THE_FLY)
+                        .setOutputFile(File(filename))
+                        .setOutputFileType(VariantContextWriterBuilder.OutputType.VCF)
+                        .setOption(Options.ALLOW_MISSING_FIELDS_IN_HEADER)
+                        .build()
+                    writer?.writeHeader(header)
+                }
+
+            }
+
+            writer?.add(variantContext)
+
         }
 
     }
