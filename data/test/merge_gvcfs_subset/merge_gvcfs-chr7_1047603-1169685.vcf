@@ -1,0 +1,32 @@
+##fileformat=VCFv4.2
+##FORMAT=<ID=AD,Number=3,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth (only filtered reads used for calling)">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=PL,Number=3,Type=Integer,Description="Normalized, Phred-scaled likelihoods for genotypes as defined in the VCF specification">
+##INFO=<ID=AF,Number=3,Type=Integer,Description="Allele Frequency">
+##INFO=<ID=ASM_Chr,Number=1,Type=String,Description="Assembly chromosome">
+##INFO=<ID=ASM_End,Number=1,Type=Integer,Description="Assembly end position">
+##INFO=<ID=ASM_Start,Number=1,Type=Integer,Description="Assembly start position">
+##INFO=<ID=ASM_Strand,Number=1,Type=String,Description="Assembly strand">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=END,Number=1,Type=Integer,Description="Stop position of the interval">
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Sample1	Sample2	Sample3
+chr7	1047637	.	C	T,<INS>	.	.	.	GT	1	2	1
+chr7	1153180	.	T	G,<INS>	.	.	.	GT	2	1	0
+chr7	1153182	.	T	C,<INS>	.	.	.	GT	0	1	2
+chr7	1153183	.	A	C,<INS>	.	.	.	GT	0	2	1
+chr7	1153292	.	A	T,<INS>	.	.	.	GT	1	1	2
+chr7	1153343	.	T	G,<INS>	.	.	.	GT	2	2	1
+chr7	1153353	.	T	A,<INS>	.	.	.	GT	2	2	1
+chr7	1153393	.	G	T,<INS>	.	.	.	GT	2	1	2
+chr7	1154153	.	G	T,<INS>	.	.	.	GT	2	2	1
+chr7	1154345	.	T	G,<INS>	.	.	.	GT	1	1	2
+chr7	1157847	.	T	C,<INS>	.	.	.	GT	1	1	2
+chr7	1159061	.	G	A,<INS>	.	.	.	GT	2	1	1
+chr7	1159063	.	G	T,<INS>	.	.	.	GT	1	2	2
+chr7	1159274	.	T	A,<INS>	.	.	.	GT	0	1	2
+chr7	1159330	.	C	A,<INS>	.	.	.	GT	2	1	1
+chr7	1160237	.	T	G,<INS>	.	.	.	GT	1	2	2
+chr7	1169685	.	G	A,<INS>	.	.	.	GT	1	0	2
