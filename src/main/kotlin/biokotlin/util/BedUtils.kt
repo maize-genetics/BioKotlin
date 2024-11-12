@@ -6,6 +6,11 @@ import java.util.*
 
 object BedUtils {
 
+    /**
+     * Read a bed file and return a sorted set of PositionRange objects.
+     * Bed files are zero-based, inclusive / exclusive.
+     * PositionRange objects are one-based, inclusive / inclusive.
+     */
     fun readBedfile(bedFileName: String): SortedSet<PositionRange> {
 
         require(File(bedFileName).exists()) { "File $bedFileName does not exist." }

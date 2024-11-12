@@ -106,6 +106,9 @@ private fun createVariantContext(
 
 }
 
+/**
+ * Writes the merged VCF file. This is used when a bedfile is not provided.
+ */
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
@@ -133,6 +136,10 @@ private suspend fun writeOutputVCF(
 
 }
 
+/**
+ * Writes the merged VCF files. This is used when a bedfile is provided.
+ * The bedfile is used to create one VCF file per range in the bedfile.
+ */
 private suspend fun writeOutputVCF(
     outputFile: String,
     bedfile: String,
@@ -161,6 +168,9 @@ private suspend fun writeOutputVCF(
                 writer?.close()
                 writer = null
 
+                // Find the range in the bedfile that overlaps with the current position range
+                // and create a new writer for that range. If no range is found, then don't create
+                // a writer.
                 writePositionRange = ranges.find { it.overlapping(currentPositionRange) }
                 writePositionRange?.let {
                     val filename = "${outputFile}-${writePositionRange!!.toString().replace(':', '_')}.vcf"
