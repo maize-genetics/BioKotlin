@@ -17,6 +17,12 @@ import java.io.File
 
 private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
+/**
+ * Merges GVCF files into a single VCF file.
+ * The GVCF files should have only one sample each.
+ * If a bedfile is provided, then the output VCF file is split into multiple files
+ * based on the ranges in the bedfile.
+ */
 object MergeGVCFUtils {
 
     fun mergeGVCFs(inputDir: String, outputFile: String, bedfile: String? = null) {
