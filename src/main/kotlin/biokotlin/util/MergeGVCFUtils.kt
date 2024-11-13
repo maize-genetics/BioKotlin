@@ -1,10 +1,13 @@
 package biokotlin.util
 
+import biokotlin.genome.PositionRange
+import biokotlin.util.BedUtils.readBedfile
 import htsjdk.variant.variantcontext.Allele
 import htsjdk.variant.variantcontext.GenotypeBuilder
 import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.variantcontext.VariantContextBuilder
 import htsjdk.variant.variantcontext.writer.Options
+import htsjdk.variant.variantcontext.writer.VariantContextWriter
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder
 import htsjdk.variant.vcf.VCFHeader
 import kotlinx.coroutines.*
@@ -14,9 +17,15 @@ import java.io.File
 
 private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 
+/**
+ * Merges GVCF files into a single VCF file.
+ * The GVCF files should have only one sample each.
+ * If a bedfile is provided, then the output VCF file is split into multiple files
+ * based on the ranges in the bedfile.
+ */
 object MergeGVCFUtils {
 
-    fun mergeGVCFs(inputDir: String, outputFile: String) {
+    fun mergeGVCFs(inputDir: String, outputFile: String, bedfile: String? = null) {
 
         runBlocking {
 
@@ -61,8 +70,14 @@ object MergeGVCFUtils {
 
             }
 
-            myLogger.info("writing output: $outputFile")
-            writeOutputVCF(outputFile, samples, variantContextChannel)
+            val theBedfile = bedfile?.trim()
+            if (theBedfile.isNullOrEmpty()) {
+                myLogger.info("Writing output: $outputFile")
+                writeOutputVCF(outputFile, samples, variantContextChannel)
+            } else {
+                myLogger.info("Writing output files with base name: $outputFile and bedfile: $bedfile")
+                writeOutputVCF(outputFile, theBedfile, samples, variantContextChannel)
+            }
 
         }
 
@@ -97,6 +112,9 @@ private fun createVariantContext(
 
 }
 
+/**
+ * Writes the merged VCF file. This is used when a bedfile is not provided.
+ */
 private suspend fun writeOutputVCF(
     outputFile: String,
     samples: List<String>,
@@ -121,6 +139,63 @@ private suspend fun writeOutputVCF(
             }
 
         }
+
+}
+
+/**
+ * Writes the merged VCF files. This is used when a bedfile is provided.
+ * The bedfile is used to create one VCF file per range in the bedfile.
+ */
+private suspend fun writeOutputVCF(
+    outputFile: String,
+    bedfile: String,
+    samples: List<String>,
+    variantContextChannel: Channel<Deferred<List<VariantContext>>>
+) {
+
+    val ranges = readBedfile(bedfile)
+
+    val header = VCFHeader(createGenericVCFHeaders(samples))
+
+    var writePositionRange: PositionRange? = null
+    var writer: VariantContextWriter? = null
+    for (deferred in variantContextChannel) {
+
+        val variantContexts = deferred.await()
+        variantContexts.forEach { variantContext ->
+
+            val currentPositionRange = PositionRange(variantContext.contig, variantContext.start, variantContext.end)
+
+            // If the current position range doesn't overlap with the current write position range
+            // then close the current writer and open a new one
+            if (writePositionRange == null || !writePositionRange!!.overlapping(currentPositionRange)) {
+
+                // Close the previous writer
+                writer?.close()
+                writer = null
+
+                // Find the range in the bedfile that overlaps with the current position range
+                // and create a new writer for that range. If no range is found, then don't create
+                // a writer.
+                writePositionRange = ranges.find { it.overlapping(currentPositionRange) }
+                writePositionRange?.let {
+                    val filename = "${outputFile}-${writePositionRange!!.toString().replace(':', '_')}.vcf"
+                    writer = VariantContextWriterBuilder()
+                        .unsetOption(Options.INDEX_ON_THE_FLY)
+                        .setOutputFile(File(filename))
+                        .setOutputFileType(VariantContextWriterBuilder.OutputType.VCF)
+                        .setOption(Options.ALLOW_MISSING_FIELDS_IN_HEADER)
+                        .build()
+                    writer?.writeHeader(header)
+                }
+
+            }
+
+            writer?.add(variantContext)
+
+        }
+
+    }
 
 }
 
