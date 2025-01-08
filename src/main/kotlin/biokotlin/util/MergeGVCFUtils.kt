@@ -197,6 +197,8 @@ private suspend fun writeOutputVCF(
 
     }
 
+    writer?.close()
+
 }
 
 /**
