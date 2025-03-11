@@ -158,20 +158,20 @@ class MAFToGVCF {
 
             if (splitGenomes.size == 1) {
                 println("getVariantContextsfromMAF:twoGvcfs is true but only 1 genome in the MAF file. Processing the single genome")
-                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
+                mapOf(sampleName to buildVariantsForAllAlignments(mafRecords, refSeqs, fillGaps, outputType, anchorwaveLegacy))
             } else {
-                splitGenomes.mapIndexed { index, mafrecs ->
+                splitGenomes.mapIndexed { index, splitMafRecords ->
                     //append _1 and _2 to the sampleName for the split genomes
 
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
+                    Pair(genomeName, buildVariantsForAllAlignments(splitMafRecords, refSeqs, fillGaps, outputType, anchorwaveLegacy))
                 }.toMap()
             }
 
         } else {
             println("getVariantContextsfromMAF: Processing a single genome")
-            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
+            mapOf(sampleName to buildVariantsForAllAlignments(mafRecords, refSeqs, fillGaps, outputType, anchorwaveLegacy))
         }
 
     }
@@ -238,14 +238,10 @@ class MAFToGVCF {
      * Function to build the variants for all the alignments.
      */
     fun buildVariantsForAllAlignments(
-        sampleName: String,
         mafRecords: List<MAFRecord>,
         refGenomeSequence: Map<String, NucSeq>,
         fillGaps: Boolean,
-        outJustGT: Boolean,
         outputType: OUTPUT_TYPE,
-        delAsSymbolic: Boolean,
-        maxDeletionSize: Int,
         anchorwaveLegacy: Boolean = false
     ): List<AssemblyVariantInfo> {
         var variantInfos = mutableListOf<AssemblyVariantInfo>()
