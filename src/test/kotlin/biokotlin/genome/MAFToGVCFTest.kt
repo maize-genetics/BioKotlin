@@ -619,6 +619,24 @@ class MAFToGVCFTest : StringSpec({
 
         }
     }
+    
+    "TestSort" {
+        val chr1 = "1"
+        val chr2 = "2"
+        val chr10 = "10"
+
+        val asmInfos = listOf(AssemblyVariantInfo(chr1,10,20,"0","A","T",true, intArrayOf(10,20), "chr1", 10, 20, "+"),
+            AssemblyVariantInfo(chr2,10,20,"0","A","T",true, intArrayOf(10,20), "chr2", 10, 20, "+"),
+            AssemblyVariantInfo(chr10,10,20,"0","A","T",true, intArrayOf(10,20), "chr10", 10, 20, "+"),
+            AssemblyVariantInfo(chr2,30,40,"0","A","T",true, intArrayOf(10,20), "chr2", 10, 20, "+"),
+            AssemblyVariantInfo(chr1,1,9,"0","A","T",true, intArrayOf(10,20), "chr1", 10, 20, "+"),
+            )
+
+        val expectedInfos = listOf(Pair(chr1,1), Pair(chr1,10), Pair(chr2,10), Pair(chr2,30), Pair(chr10,10))
+
+        val sorted = asmInfos.sortedBy { Position(it.chr,it.startPos) }
+        sorted.map { Pair(it.chr,it.startPos) } shouldBe expectedInfos
+    }
 
 })
 
