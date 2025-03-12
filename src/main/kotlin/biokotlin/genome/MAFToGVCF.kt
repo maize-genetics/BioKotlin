@@ -114,9 +114,9 @@ class MAFToGVCF {
             val sampleName = variantsMap.keys.first()
 
             // sort the variants by contig and position.
-            val variants = variantsMap.values.first().sortedWith(VariantContextComparator(contigList))
+            val variants = variantsMap.values.first().sortedBy { Position(it.chr,it.startPos) }
 
-            exportVariantContext(sampleName, variants, gvcfOutput, refSeqs)
+            exportVariantContext(sampleName, variants, gvcfOutput, refSeqs, outJustGT, delAsSymbolic, maxDeletionSize)
             if (compressAndIndex) {
                 // compress and index the file with bgzip and tabix.
                 compressAndIndexFile(gvcfOutput)
@@ -124,8 +124,9 @@ class MAFToGVCF {
         } else if (variantsMap.size == 2) {
             val outputNames = twoOutputFiles(gvcfOutput)
             variantsMap.entries.forEachIndexed { index, (name, variants) ->
-                val sortedVariants = variants.sortedWith(VariantContextComparator(contigList))
-                val outputFile = exportVariantContext(name, sortedVariants, outputNames[index], refSeqs)
+                val sortedVariants = variants.sortedBy { Position(it.chr,it.startPos) }
+
+                val outputFile = exportVariantContext(name, sortedVariants, outputNames[index], refSeqs, outJustGT, delAsSymbolic, maxDeletionSize)
                 if (compressAndIndex) {
                     compressAndIndexFile(outputNames[index])
                 }
@@ -149,7 +150,7 @@ class MAFToGVCF {
         delAsSymbolic: Boolean = false,
         maxDeletionSize: Int = 0,
         anchorwaveLegacy: Boolean = false
-    ): Map<String, List<VariantContext>> {
+    ): Map<String, List<AssemblyVariantInfo>> {
 
         val mafRecords = loadMAFRecords(mafFile)
         return if (twoGvcfs) {
@@ -157,20 +158,20 @@ class MAFToGVCF {
 
             if (splitGenomes.size == 1) {
                 println("getVariantContextsfromMAF:twoGvcfs is true but only 1 genome in the MAF file. Processing the single genome")
-                mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps,outJustGT,outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
+                mapOf(sampleName to buildVariantsForAllAlignments(mafRecords, refSeqs, fillGaps, outputType, anchorwaveLegacy))
             } else {
-                splitGenomes.mapIndexed { index, mafrecs ->
+                splitGenomes.mapIndexed { index, splitMafRecords ->
                     //append _1 and _2 to the sampleName for the split genomes
 
                     val genomeName = "${sampleName}_${index + 1}"
                     println("MAFToGVCF:getVariantContextsfromMAF: Splitting ${sampleName} into ${genomeName}")
-                    Pair(genomeName, buildVariantsForAllAlignments(genomeName, mafrecs, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
+                    Pair(genomeName, buildVariantsForAllAlignments(splitMafRecords, refSeqs, fillGaps, outputType, anchorwaveLegacy))
                 }.toMap()
             }
 
         } else {
             println("getVariantContextsfromMAF: Processing a single genome")
-            mapOf(sampleName to buildVariantsForAllAlignments(sampleName, mafRecords, refSeqs, fillGaps, outJustGT, outputType, delAsSymbolic, maxDeletionSize, anchorwaveLegacy))
+            mapOf(sampleName to buildVariantsForAllAlignments(mafRecords, refSeqs, fillGaps, outputType, anchorwaveLegacy))
         }
 
     }
@@ -237,16 +238,12 @@ class MAFToGVCF {
      * Function to build the variants for all the alignments.
      */
     fun buildVariantsForAllAlignments(
-        sampleName: String,
         mafRecords: List<MAFRecord>,
         refGenomeSequence: Map<String, NucSeq>,
         fillGaps: Boolean,
-        outJustGT: Boolean,
         outputType: OUTPUT_TYPE,
-        delAsSymbolic: Boolean,
-        maxDeletionSize: Int,
         anchorwaveLegacy: Boolean = false
-    ): List<VariantContext> {
+    ): List<AssemblyVariantInfo> {
         var variantInfos = mutableListOf<AssemblyVariantInfo>()
 
         for (record in mafRecords) {
@@ -263,7 +260,7 @@ class MAFToGVCF {
             variantInfos = fillInMissingVariantBlocks(variantInfos, refGenomeSequence, true)
         }
 
-        return createVariantContextsFromInfo(sampleName, variantInfos, outJustGT, delAsSymbolic, maxDeletionSize)
+        return variantInfos
     }
 
     fun removeRefBlocks(variantInfos: MutableList<AssemblyVariantInfo>) : MutableList<AssemblyVariantInfo> {
@@ -1117,9 +1114,12 @@ class MAFToGVCF {
      */
     fun exportVariantContext(
         sampleName: String,
-        variantContexts: List<VariantContext>,
+        variantContexts: List<AssemblyVariantInfo>,
         outputFileName: String,
-        refGenomeSequence: Map<String, NucSeq>
+        refGenomeSequence: Map<String, NucSeq>,
+        outputJustGT: Boolean,
+        delAsSymbolic: Boolean,
+        maxDeletionSize: Int
     ) {
         val writer = VariantContextWriterBuilder()
             .unsetOption(Options.INDEX_ON_THE_FLY)
@@ -1132,7 +1132,7 @@ class MAFToGVCF {
         addSequenceDictionary(header, refGenomeSequence)
         writer.writeHeader(header)
         for (variant in variantContexts) {
-            writer.add(variant)
+            writer.add(convertVariantInfoToContext(sampleName, variant, outputJustGT, delAsSymbolic, maxDeletionSize))
         }
 
         writer.close()
