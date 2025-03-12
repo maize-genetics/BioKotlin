@@ -1,7 +1,6 @@
 package biokotlin.featureTree
 
 import biokotlin.util.bufferedReader
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
