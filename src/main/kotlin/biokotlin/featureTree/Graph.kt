@@ -866,13 +866,17 @@ internal class Graph private constructor(
 
             bufferedReader(file).useLines { lines ->
                 var lineCounter = 0
+                var commentCounter = 0
                 for (line in lines) {
+                    
                     lineCounter++
                     if (line.isEmpty() || line.isBlank()) continue //skip blank lines
                     // PLANNED: comment support
                     if (line.startsWith("#")) {
-                        // This has been known to print over 4000 lines of comments in a single file, which is not useful.
-                        // logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
+                        commentCounter++
+                        if (commentCounter == 1) {
+                            println("Comments not yet supported. Comment at line $lineCounter discarded: $line")
+                        }
                         continue
                     }
 
@@ -1021,13 +1025,16 @@ internal class Graph private constructor(
             modifySchema?.invoke(graph.schema)
             bufferedReader(file).useLines { lines ->
                 var lineCounter = 0
+                var commentCounter = 0
                 for (line in lines) {
                     lineCounter++
                     if (line.isEmpty() || line.isBlank()) continue //skip blank lines
                     // PLANNED: comment support
                     if (line.startsWith("#")) {
-                        // This has been known to print over 4000 lines of comments in a single file, which is not useful.
-                        // logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
+                        commentCounter++
+                        if (commentCounter == 1) {
+                            println("Comments not yet supported. Comment at line $lineCounter discarded: $line")
+                        }
                         continue
                     }
 
