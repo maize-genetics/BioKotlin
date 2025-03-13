@@ -114,7 +114,6 @@ dependencies {
     implementation("org.jgrapht:jgrapht-core:1.5.1")
 
 
-    implementation("io.github.oshai:kotlin-logging-jvm:5.0.0")
     implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.6")
     implementation("it.unimi.dsi:fastutil:8.5.12")
     implementation("org.lz4:lz4-java:1.8.0")

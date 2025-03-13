@@ -5,7 +5,6 @@ import com.google.common.collect.Range
 import com.google.common.collect.RangeMap
 import com.google.common.collect.Sets
 import com.google.common.collect.TreeRangeMap
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 import java.io.BufferedReader
@@ -29,7 +28,6 @@ import java.util.stream.Collectors
 // Data class to be used when creating a dataFrame for chrom percent coverage statistics
 // This may be used if can get Kotlin DataFrame vs Krangl DataFrame to work.
 data class ChromStats(val contig: String, val numRegionBPs: Int, val percentCov: Double, val percentId: Double)
-private val logger = KotlinLogging.logger {}
 fun createWiggleFilesFromCoverageIdentity(coverage:IntArray, identity:IntArray, contig:String, outputDir:String) {
 
     // There will be 2 wiggle files created: 1 for identity and 1 for coverage

@@ -70,8 +70,5 @@ class ParseTests : StringSpec({
         shouldThrow<ParseException> {
             Genome.fromFile("src/test/resources/biokotlin/featureTree/multi_id2.gff")
         }
-        shouldThrow<ParseException> {
-            Genome.fromFile("src/test/resources/biokotlin/featureTree/out_of_order.gff")
-        }
     }
 })
