@@ -837,6 +837,17 @@ internal class Graph private constructor(
     fun containsName(name: String): Boolean = byName.contains(name)
 
     companion object {
+
+        fun parseException(
+            lineNumber: Int,
+            line: String,
+            textCorrector: ((String) -> String)?,
+            file: String,
+            helpText: String
+        ): ParseException {
+            return ParseException(lineNumber, line, textCorrector, file, helpText)
+        }
+
         /**
          * Returns a graph representation of the file.
          * @see [Genome.fromFile]
@@ -867,44 +878,94 @@ internal class Graph private constructor(
 
                     val corrected = textCorrecter?.invoke(line) ?: line
 
-                    fun parseException(helpText: String): ParseException {
-                        return ParseException(lineCounter, line, textCorrecter, file, helpText)
-                    }
-
                     val split = corrected.split("\t")
 
-                    if (split.size != 9) throw parseException("Should contain 9 tab-delineated columns. ${corrected}")
+                    if (split.size != 9) throw parseException(
+                        lineCounter,
+                        line,
+                        textCorrecter,
+                        file,
+                        "Should contain 9 tab-delineated columns. $corrected"
+                    )
 
                     val seqid = split[0]
                     val source = split[1]
                     val type = split[2]
                     val start = split[3].toIntOrNull()
-                        ?: throw parseException("Cannot parse start ${split[3]} into an integer.")
+                        ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse start ${split[3]} into an integer."
+                        )
                     val end = split[4].toIntOrNull()
-                        ?: throw parseException("Cannot parse start ${split[4]} into an integer.")
+                        ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse start ${split[4]} into an integer."
+                        )
                     val score = split[5].toDoubleOrNull()
                     val strand =
-                        Strand.fromString(split[6]) ?: throw parseException("Cannot parse ${split[6]} into a strand.")
+                        Strand.fromString(split[6]) ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse ${split[6]} into a strand."
+                        )
                     val phase =
-                        Phase.fromString(split[7]) ?: throw parseException("Cannot parse ${split[7]} into a phase.")
+                        Phase.fromString(split[7]) ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse ${split[7]} into a phase."
+                        )
                     if (!split[8].trimEnd(';').split(';').map { it.split('=').first() }.allUnique()) {
-                        throw parseException("Cannot have multiple instances of the same tag")
+                        throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot have multiple instances of the same tag"
+                        )
                     }
                     val attributes = split[8].trimEnd(';').split(';').associate {
                         val tagValue = it.split('=')
                         if (tagValue.size != 2)
-                            throw parseException("All distinct attributes must be separated by a ; character.")
+                            throw parseException(
+                                lineCounter,
+                                line,
+                                textCorrecter,
+                                file,
+                                "All distinct attributes must be separated by a ; character."
+                            )
                         val values = tagValue[1].split(',')
                         tagValue[0] to values
                     }
 
-                    if ((attributes["ID"]?.size ?: 0) > 1) throw parseException("Cannot have multiple IDs.")
+                    if ((attributes["ID"]?.size ?: 0) > 1) throw parseException(
+                        lineCounter,
+                        line,
+                        textCorrecter,
+                        file,
+                        "Cannot have multiple IDs."
+                    )
                     val id = attributes["ID"]?.get(0)
 
                     val parentIDs = attributes["Parent"]
                     val parents = parentIDs?.map {
                         graph.byID(it)
-                            ?: throw parseException("Contains Parent attribute $it, which is not the ID of a previous line.")
+                            ?: throw parseException(
+                                lineCounter,
+                                line,
+                                textCorrecter,
+                                file,
+                                "Contains Parent attribute $it, which is not the ID of a previous line."
+                            )
                     } ?: listOf(graph.root)
                     val resolvedParents = if (parentResolver == null || parents.size <= 1) {
                         parents
@@ -913,7 +974,13 @@ internal class Graph private constructor(
                     }
 
                     if (resolvedParents.size > 1 && !multipleParentage)
-                        throw parseException("Must enable multipleParentage to have features with multiple parents")
+                        throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Must enable multipleParentage to have features with multiple parents"
+                        )
 
                     if (id == null) {
                         graph.DataNode(
@@ -966,38 +1033,82 @@ internal class Graph private constructor(
 
                     val corrected = textCorrecter?.invoke(line) ?: line
 
-                    fun parseException(helpText: String): ParseException {
-                        return ParseException(lineCounter, line, textCorrecter, file, helpText)
-                    }
-
                     val split = corrected.split("\t")
 
-                    if (split.size != 9) throw parseException("Should contain 9 tab-delineated columns. $corrected")
+                    if (split.size != 9) throw parseException(
+                        lineCounter,
+                        line,
+                        textCorrecter,
+                        file,
+                        "Should contain 9 tab-delineated columns. $corrected"
+                    )
 
                     val seqid = split[0]
                     val source = split[1]
                     val type = split[2]
                     val start = split[3].toIntOrNull()
-                        ?: throw parseException("Cannot parse start ${split[3]} into an integer.")
+                        ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse start ${split[3]} into an integer."
+                        )
                     val end = split[4].toIntOrNull()
-                        ?: throw parseException("Cannot parse start ${split[4]} into an integer.")
+                        ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse start ${split[4]} into an integer."
+                        )
                     val score = split[5].toDoubleOrNull()
                     val strand =
-                        Strand.fromString(split[6]) ?: throw parseException("Cannot parse ${split[6]} into a strand.")
+                        Strand.fromString(split[6]) ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse ${split[6]} into a strand."
+                        )
                     val phase =
-                        Phase.fromString(split[7]) ?: throw parseException("Cannot parse ${split[7]} into a phase.")
+                        Phase.fromString(split[7]) ?: throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot parse ${split[7]} into a phase."
+                        )
                     if (!split[8].trimEnd(';').split(';').map { it.split('=').first() }.allUnique()) {
-                        throw parseException("Cannot have multiple instances of the same tag")
+                        throw parseException(
+                            lineCounter,
+                            line,
+                            textCorrecter,
+                            file,
+                            "Cannot have multiple instances of the same tag"
+                        )
                     }
                     val attributes = split[8].trimEnd(';').split(';').associate {
                         val tagValue = it.split('=')
                         if (tagValue.size != 2)
-                            throw parseException("All distinct attributes must be separated by a ; character.")
+                            throw parseException(
+                                lineCounter,
+                                line,
+                                textCorrecter,
+                                file,
+                                "All distinct attributes must be separated by a ; character."
+                            )
                         val values = tagValue[1].split(',')
                         tagValue[0] to values
                     }
 
-                    if ((attributes["ID"]?.size ?: 0) > 1) throw parseException("Cannot have multiple IDs.")
+                    if ((attributes["ID"]?.size ?: 0) > 1) throw parseException(
+                        lineCounter,
+                        line,
+                        textCorrecter,
+                        file,
+                        "Cannot have multiple IDs."
+                    )
                     val id = attributes["ID"]?.get(0)
                     if (id != null) {
                         val existing = graph.byID(id)
@@ -1005,7 +1116,13 @@ internal class Graph private constructor(
                             val compatible =
                                 existing.seqid == seqid || existing.source == source || existing.type == type ||
                                         existing.score == score || existing.strand == strand
-                            if (!compatible) throw parseException("Shares ID \"$id\" with $existing but they are not compatible.")
+                            if (!compatible) throw parseException(
+                                lineCounter,
+                                line,
+                                textCorrecter,
+                                file,
+                                "Shares ID \"$id\" with $existing but they are not compatible."
+                            )
                             existing.addDiscontinuity(start..end, phase)
                             continue
                         }
