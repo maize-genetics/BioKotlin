@@ -4,7 +4,6 @@ import biokotlin.util.bufferedReader
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
-import java.io.FileReader
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -350,6 +349,14 @@ internal class Graph private constructor(
             }
             incrementTopo()
 
+            assert { invariants() }
+        }
+
+        fun addParents(newParents: List<Node>) {
+            val parentsNotAdded = newParents.filter { it !in parents }
+            parents.addAll(parentsNotAdded)
+            parentsNotAdded.forEach { it.children.addLast(this) }
+            incrementTopo()
             assert { invariants() }
         }
 
@@ -844,8 +851,8 @@ internal class Graph private constructor(
         ): Graph {
             // PLANNED: concurrent reading of ### directive
 
-            val graph = Graph(multipleParentage)
-            modifySchema?.invoke(graph.schema)
+            val graph = getGraph(file, textCorrecter, multipleParentage, modifySchema)
+
             bufferedReader(file).useLines { lines ->
                 var lineCounter = 0
                 for (line in lines) {
@@ -854,7 +861,7 @@ internal class Graph private constructor(
                     // PLANNED: comment support
                     if (line.startsWith("#")) {
                         // This has been known to print over 4000 lines of comments in a single file, which is not useful.
-                        //logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
+                        // logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
                         continue
                     }
 
@@ -880,7 +887,106 @@ internal class Graph private constructor(
                         Strand.fromString(split[6]) ?: throw parseException("Cannot parse ${split[6]} into a strand.")
                     val phase =
                         Phase.fromString(split[7]) ?: throw parseException("Cannot parse ${split[7]} into a phase.")
-                    if (!split[8].trimEnd(';').split(';').map { it.split('=').first() }.allUnique() ) {
+                    if (!split[8].trimEnd(';').split(';').map { it.split('=').first() }.allUnique()) {
+                        throw parseException("Cannot have multiple instances of the same tag")
+                    }
+                    val attributes = split[8].trimEnd(';').split(';').associate {
+                        val tagValue = it.split('=')
+                        if (tagValue.size != 2)
+                            throw parseException("All distinct attributes must be separated by a ; character.")
+                        val values = tagValue[1].split(',')
+                        tagValue[0] to values
+                    }
+
+                    if ((attributes["ID"]?.size ?: 0) > 1) throw parseException("Cannot have multiple IDs.")
+                    val id = attributes["ID"]?.get(0)
+
+                    val parentIDs = attributes["Parent"]
+                    val parents = parentIDs?.map {
+                        graph.byID(it)
+                            ?: throw parseException("Contains Parent attribute $it, which is not the ID of a previous line.")
+                    } ?: listOf(graph.root)
+                    val resolvedParents = if (parentResolver == null || parents.size <= 1) {
+                        parents
+                    } else {
+                        listOf(parents[parentResolver(corrected, parents.map { IFeature(it as DataNode) })])
+                    }
+
+                    if (resolvedParents.size > 1 && !multipleParentage)
+                        throw parseException("Must enable multipleParentage to have features with multiple parents")
+
+                    if (id == null) {
+                        graph.DataNode(
+                            resolvedParents.toMutableList(), LinkedList(), Data(
+                                seqid,
+                                source,
+                                type,
+                                mutableListOf(start..end),
+                                score,
+                                strand,
+                                mutableListOf(phase),
+                                attributes.toMutableMap()
+                            )
+                        )
+                    } else { // nodes with an ID where created in the first pass
+                        val node = graph.byID(id)!!
+                        node.addParents(resolvedParents)
+                    }
+
+                }
+            }
+            return graph
+        }
+
+        /**
+         * First pass through GFF file to get nodes.
+         */
+        private fun getGraph(
+            file: String,
+            textCorrecter: ((String) -> String)?, // PLANNED: robust convenience function framework
+            // parentResolver: ParentResolver?,
+            multipleParentage: Boolean,
+            modifySchema: (TypeSchema.() -> Unit)?
+        ): Graph {
+            // PLANNED: concurrent reading of ### directive
+
+            val graph = Graph(multipleParentage)
+            modifySchema?.invoke(graph.schema)
+            bufferedReader(file).useLines { lines ->
+                var lineCounter = 0
+                for (line in lines) {
+                    lineCounter++
+                    if (line.isEmpty() || line.isBlank()) continue //skip blank lines
+                    // PLANNED: comment support
+                    if (line.startsWith("#")) {
+                        // This has been known to print over 4000 lines of comments in a single file, which is not useful.
+                        // logger.info { "Comments not yet supported. Comment at line $lineCounter discarded: $line" }
+                        continue
+                    }
+
+                    val corrected = textCorrecter?.invoke(line) ?: line
+
+                    fun parseException(helpText: String): ParseException {
+                        return ParseException(lineCounter, line, textCorrecter, file, helpText)
+                    }
+
+                    val split = corrected.split("\t")
+
+                    if (split.size != 9) throw parseException("Should contain 9 tab-delineated columns. $corrected")
+
+                    val seqid = split[0]
+                    val source = split[1]
+                    val type = split[2]
+                    val start = split[3].toIntOrNull()
+                        ?: throw parseException("Cannot parse start ${split[3]} into an integer.")
+                    val end = split[4].toIntOrNull()
+                        ?: throw parseException("Cannot parse start ${split[4]} into an integer.")
+                    val score = split[5].toDoubleOrNull()
+                    val strand =
+                        Strand.fromString(split[6]) ?: throw parseException("Cannot parse ${split[6]} into a strand.")
+                    val phase =
+                        Phase.fromString(split[7]) ?: throw parseException("Cannot parse ${split[7]} into a phase.")
+                    if (!split[8].trimEnd(';').split(';').map { it.split('=').first() }.allUnique()) {
                         throw parseException("Cannot have multiple instances of the same tag")
                     }
                     val attributes = split[8].trimEnd(';').split(';').associate {
@@ -903,24 +1009,12 @@ internal class Graph private constructor(
                             existing.addDiscontinuity(start..end, phase)
                             continue
                         }
-                    }
-
-                    val parentIDs = attributes["Parent"]
-                    val parents = parentIDs?.map {
-                        graph.byID(it)
-                            ?: throw parseException("Contains Parent attribute $it, which is not the ID of a previous line.")
-                    } ?: listOf(graph.root)
-                    val resolvedParents = if (parentResolver == null || parents.size <= 1) {
-                        parents
                     } else {
-                        listOf(parents[parentResolver(corrected, parents.map { IFeature(it as DataNode) })])
+                        continue
                     }
-
-                    if (resolvedParents.size > 1 && !multipleParentage)
-                        throw parseException("Must enable multipleParentage to have features with multiple parents")
 
                     graph.DataNode(
-                        resolvedParents.toMutableList(), LinkedList(), Data(
+                        mutableListOf(), LinkedList(), Data(
                             seqid,
                             source,
                             type,
@@ -933,9 +1027,9 @@ internal class Graph private constructor(
                     )
                 }
             }
+
             return graph
         }
+
     }
 }
-
-private val logger = KotlinLogging.logger {}
