@@ -25,11 +25,11 @@ private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
  */
 object MergeGVCFUtils {
 
-    fun mergeGVCFs(inputDir: String, outputFile: String, bedfile: String? = null) {
-        mergeGVCFs(getGVCFFiles(inputDir), outputFile, bedfile)
+    fun mergeGVCFs(inputDir: String, outputFile: String, bedFile: String? = null) {
+        mergeGVCFs(getGVCFFiles(inputDir), outputFile, bedFile)
     }
 
-    fun mergeGVCFs(inputFiles: List<String>, outputFile: String, bedfile: String? = null) {
+    fun mergeGVCFs(inputFiles: List<String>, outputFile: String, bedFile: String? = null) {
 
         runBlocking {
 
@@ -72,12 +72,12 @@ object MergeGVCFUtils {
 
             }
 
-            val theBedfile = bedfile?.trim()
+            val theBedfile = bedFile?.trim()
             if (theBedfile.isNullOrEmpty()) {
                 myLogger.info("Writing output: $outputFile")
                 writeOutputVCF(outputFile, samples, variantContextChannel)
             } else {
-                myLogger.info("Writing output files with base name: $outputFile and bedfile: $bedfile")
+                myLogger.info("Writing output files with base name: $outputFile and bedfile: $bedFile")
                 writeOutputVCF(outputFile, theBedfile, samples, variantContextChannel)
             }
 
