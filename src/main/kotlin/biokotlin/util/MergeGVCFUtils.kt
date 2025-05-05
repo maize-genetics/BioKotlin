@@ -26,10 +26,12 @@ private val myLogger = LogManager.getLogger("biokotlin.util.MergeGVCFUtils")
 object MergeGVCFUtils {
 
     fun mergeGVCFs(inputDir: String, outputFile: String, bedfile: String? = null) {
+        mergeGVCFs(getGVCFFiles(inputDir), outputFile, bedfile)
+    }
+
+    fun mergeGVCFs(inputFiles: List<String>, outputFile: String, bedfile: String? = null) {
 
         runBlocking {
-
-            val inputFiles = getGVCFFiles(inputDir)
 
             require(validateVCFs(inputFiles).valid) { "Some GVCF files are invalid." }
 
