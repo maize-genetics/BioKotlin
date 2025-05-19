@@ -71,11 +71,13 @@ repositories {
     maven("https://jitpack.io")
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
-    maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    // maven("https://oss.sonatype.org/content/repositories/snapshots/")
 }
 
 dependencies {
     val kotlinVersion = rootProject.extra["kotlinVersion"]
+
+    implementation("org.sonatype.central:central-publishing-maven-plugin:0.7.0")
 
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     implementation("org.apache.logging.log4j:log4j-api:2.23.1")
