@@ -86,7 +86,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
-    implementation("com.github.holgerbrandl:krangl:0.18")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
 
     // Biology possible dependencies
@@ -106,12 +105,9 @@ dependencies {
 
     implementation("org.graalvm.sdk:graal-sdk:21.2.0")
     implementation("org.apache.commons:commons-csv:1.8")
-    implementation("io.ktor:ktor-client-core:1.6.3")
-    implementation("io.ktor:ktor-client-cio:1.6.3")
 
     implementation("com.google.guava:guava:33.1.0-jre")
     implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
-    implementation("org.jgrapht:jgrapht-core:1.5.1")
 
 
     implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.6")

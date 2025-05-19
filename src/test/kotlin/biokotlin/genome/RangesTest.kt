@@ -2,13 +2,10 @@
 
 package biokotlin.genome
 
-//import biokotlin.genome.SeqRangeSort.Companion.createComparator
 import biokotlin.seq.*
-import biokotlin.seqIO.NucSeqIO
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import krangl.*
 import org.jetbrains.kotlinx.dataframe.api.print
 import org.jetbrains.kotlinx.dataframe.api.rows
 import java.util.*
