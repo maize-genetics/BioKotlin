@@ -54,7 +54,7 @@ plugins {
     application
     id("org.jetbrains.dokka") version "1.9.20"
     `java-library`
-    // `maven-publish`
+    `maven-publish`
     signing
     id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
 }
@@ -72,6 +72,7 @@ repositories {
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
     // maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
 }
 
 dependencies {
