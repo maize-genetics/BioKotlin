@@ -489,8 +489,8 @@ nexusPublishing {
     repositories {
         sonatype {
             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            stagingProfileId.set("6471a423-9418-45ce-bbbc-589ab8af7786")
+            //snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            //stagingProfileId.set("6471a423-9418-45ce-bbbc-589ab8af7786")
         }
     }
 }
