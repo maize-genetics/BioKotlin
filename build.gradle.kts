@@ -72,13 +72,14 @@ repositories {
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
     // maven("https://oss.sonatype.org/content/repositories/snapshots/")
-    maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+    // maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+    // maven("https://s01.oss.sonatype.org/service/local/")
 }
 
 dependencies {
     val kotlinVersion = rootProject.extra["kotlinVersion"]
 
-    implementation("org.sonatype.central:central-publishing-maven-plugin:0.7.0")
+    // implementation("org.sonatype.central:central-publishing-maven-plugin:0.7.0")
 
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     implementation("org.apache.logging.log4j:log4j-api:2.23.1")
@@ -486,7 +487,11 @@ tasks.javadoc {
 
 nexusPublishing {
     repositories {
-        sonatype()
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            stagingProfileId.set("6471a423-9418-45ce-bbbc-589ab8af7786")
+        }
     }
 }
 
