@@ -14,8 +14,8 @@ fun getVersionName(): String {
         commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
         standardOutput = stdout
     }
-    val versionStr = stdout.toString().trim()
-    val parts = versionStr.removePrefix("v").removePrefix("V").split('.')
+    val versionStr = stdout.toString().trim().removePrefix("v").removePrefix("V")
+    val parts = versionStr.split('.')
     val normalizedStr = when (parts.size) {
         0 -> throw IllegalArgumentException("Version string is empty")
         1 -> "${parts[0]}.0.0"
