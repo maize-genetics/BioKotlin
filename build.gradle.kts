@@ -5,9 +5,9 @@ import java.nio.file.Paths
 import kotlin.io.path.isRegularFile
 import kotlin.jvm.optionals.getOrNull
 
-// Note Kotlin version needs to be updated in both the buildscript and plugins.
-// Dependencies will follow the buildscript
-
+// This is used to get the version from the git tag
+// The version is expected to be in the format X.Y.Z
+// JReleaser will use this version to create the release
 fun getVersionName(): String {
     val stdout = ByteArrayOutputStream()
     exec {
@@ -84,8 +84,6 @@ repositories {
 dependencies {
     val kotlinVersion = rootProject.extra["kotlinVersion"]
 
-    // implementation("org.sonatype.central:central-publishing-maven-plugin:0.7.0")
-
     implementation("org.apache.logging.log4j:log4j-core:2.23.1")
     implementation("org.apache.logging.log4j:log4j-api:2.23.1")
 
@@ -130,11 +128,11 @@ dependencies {
         testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
     }
 
-    //consider adding Kotlintest
 }
-//This is used for code generation for DataFrame Schema, however, it does not work
-//https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
-//kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
+
+// This is used for code generation for DataFrame Schema, however, it does not work
+// https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
+// kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
     withJavadocJar()
