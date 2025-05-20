@@ -517,6 +517,11 @@ tasks.jreleaserFullRelease {
     mustRunAfter(dokkaJar)
 }
 
+tasks.jreleaserConfig {
+    dependsOn(dokkaJar)
+    mustRunAfter(dokkaJar)
+}
+
 tasks.publish {
     dependsOn(dokkaJar)
     mustRunAfter(dokkaJar)
