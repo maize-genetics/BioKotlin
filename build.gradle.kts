@@ -15,7 +15,7 @@ fun getVersionName(): String {
         standardOutput = stdout
     }
     val versionStr = stdout.toString().trim()
-    val parts = versionStr.split('.')
+    val parts = versionStr.removePrefix("v").removePrefix("V").split('.')
     val normalizedStr = when (parts.size) {
         0 -> throw IllegalArgumentException("Version string is empty")
         1 -> "${parts[0]}.0.0"
