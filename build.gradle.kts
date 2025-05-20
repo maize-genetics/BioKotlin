@@ -38,7 +38,6 @@ buildscript {
     }
 }
 
-
 plugins {
     val kotlinVersion = "1.9.24"
     java
@@ -56,13 +55,14 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+    id("org.jreleaser") version "1.18.0"
 }
+
 apply {
     plugin("kotlinx-serialization")
     plugin("org.jetbrains.dokka")
+    plugin("org.jreleaser")
 }
-
 
 repositories {
     mavenCentral()
@@ -71,9 +71,6 @@ repositories {
     maven("https://jitpack.io")
     maven("https://dl.bintray.com/kotlin/kotlin-eap")
     maven("https://kotlin.bintray.com/kotlinx")
-    // maven("https://oss.sonatype.org/content/repositories/snapshots/")
-    // maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-    // maven("https://s01.oss.sonatype.org/service/local/")
 }
 
 dependencies {
@@ -132,6 +129,7 @@ dependencies {
 //kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
+    withJavadocJar()
     withSourcesJar()
 }
 
@@ -485,12 +483,18 @@ tasks.javadoc {
     }
 }
 
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            //snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            //stagingProfileId.set("6471a423-9418-45ce-bbbc-589ab8af7786")
+jreleaser {
+    signing {
+        setActive("ALWAYS")
+        armored.set(true)
+    }
+    deploy {
+        maven {
+            // Portal Publisher API via Central Publishing Portal
+            mavenCentral {
+                setActive("ALWAYS")
+                uri("https://central.sonatype.com/api/v1/publisher")
+            }
         }
     }
 }

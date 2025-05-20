@@ -41,9 +41,11 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Publish to Maven Central Repository
-        run: conda run ./gradlew clean publishToSonatype closeAndReleaseSonatypeStagingRepository --no-daemon
+        run: conda run ./gradlew jreleaserConfig ; ./gradlew clean ; ./gradlew publish ; ./gradlew jreleaserFullRelease
         env:
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.OSSRH_USERNAME }}
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.OSSRH_PASSWORD }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSWORD }}
