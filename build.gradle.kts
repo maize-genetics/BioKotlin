@@ -14,7 +14,15 @@ fun getVersionName(): String {
         commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
         standardOutput = stdout
     }
-    return stdout.toString().trim()
+    val versionStr = stdout.toString().trim()
+    val parts = versionStr.split('.')
+    val normalizedStr = when (parts.size) {
+        0 -> throw IllegalArgumentException("Version string is empty")
+        1 -> "${parts[0]}.0.0"
+        2 -> "${parts[0]}.${parts[1]}.0"
+        else -> versionStr
+    }
+    return normalizedStr
 }
 
 group = "org.biokotlin"
