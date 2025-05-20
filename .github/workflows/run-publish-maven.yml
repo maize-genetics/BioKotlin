@@ -42,7 +42,7 @@ jobs:
 
       - name: Publish to Maven Central Repository
         run: |
-          conda run -- bash -lc '
+          conda run bash -lc '
             ./gradlew jreleaserConfig
             ./gradlew clean
             ./gradlew publish
