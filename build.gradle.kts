@@ -416,6 +416,7 @@ publishing {
 
             pom {
                 name.set("BioKotlin")
+                artifactId = "biokotlin"
                 description.set("BioKotlin aims to be a high-performance bioinformatics library that brings the power and speed of compiled programming languages to scripting and big data environments.")
                 url.set("http://www.biokotlin.org/")
                 licenses {
