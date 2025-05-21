@@ -1,4 +1,3 @@
-import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -490,25 +489,6 @@ signing {
     sign(publishing.publications["maven"])
 }
 
-//tasks.javadoc {
-//    dependsOn("dokkaJavadoc")
-//    if (JavaVersion.current().isJava9Compatible) {
-//        (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
-//    }
-//}
-
-//val dokkaJavadoc by tasks.getting(org.jetbrains.dokka.gradle.DokkaTask::class) {
-//    // Use the "dokkaJavadoc" Dokka task
-//    outputDirectory.set(layout.buildDirectory.dir("dokka/javadoc"))
-//    dokkaSourceSets.configureEach {
-//        includes.from("src/main/kotlin/biokotlin/packages.md")
-//    }
-//    doLast {
-//        tutorialInjector()
-//        imageInjector()
-//    }
-//}
-
 jreleaser {
     signing {
         setActive("ALWAYS")
@@ -524,26 +504,3 @@ jreleaser {
         }
     }
 }
-
-//tasks.jreleaserFullRelease {
-//    dependsOn(dokkaJar)
-//    mustRunAfter(dokkaJar)
-//}
-//
-//tasks.jreleaserConfig {
-//    dependsOn(dokkaJar)
-//    mustRunAfter(dokkaJar)
-//}
-
-//tasks.publish {
-    //dependsOn(dokkaJar)
-    //mustRunAfter(dokkaJar)
-//}
-
-//tasks.withType<PublishToMavenRepository>().configureEach {
-//    dependsOn(tasks.named("dokkaJar"), tasks.named("sourcesJar"))
-//}
-//
-//tasks.named("generateMetadataFileForMavenPublication") {
-//    dependsOn(tasks.named("dokkaJar"))
-//}
