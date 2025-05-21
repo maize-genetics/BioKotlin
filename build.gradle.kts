@@ -504,3 +504,7 @@ jreleaser {
         }
     }
 }
+
+tasks.named("publish") {
+    dependsOn("javadocJar", "sourcesJar")
+}
