@@ -405,8 +405,6 @@ publishing {
 
             from(components["java"])
             artifact(dokkaJar)
-            artifact(tasks.named("sourcesJar"))
-
 
             versionMapping {
                 usage("java-api") {
