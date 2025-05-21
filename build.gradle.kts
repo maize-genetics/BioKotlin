@@ -1,3 +1,4 @@
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -404,6 +405,8 @@ publishing {
 
             from(components["java"])
             artifact(dokkaJar)
+            artifact(tasks.named("sourcesJar"))
+
 
             versionMapping {
                 usage("java-api") {
@@ -522,7 +525,19 @@ tasks.jreleaserConfig {
     mustRunAfter(dokkaJar)
 }
 
-tasks.publish {
-    dependsOn(dokkaJar)
-    mustRunAfter(dokkaJar)
+//tasks.publish {
+//    dependsOn(dokkaJar)
+//    mustRunAfter(dokkaJar)
+//}
+
+tasks.named("publish") {
+    dependsOn("dokkaJar", "sourcesJar")
+}
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(tasks.named("dokkaJar"), tasks.named("sourcesJar"))
+}
+
+tasks.named("generateMetadataFileForMavenPublication") {
+    dependsOn(tasks.named("dokkaJar"))
 }
