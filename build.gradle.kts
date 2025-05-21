@@ -523,19 +523,15 @@ tasks.jreleaserConfig {
     mustRunAfter(dokkaJar)
 }
 
-//tasks.publish {
-//    dependsOn(dokkaJar)
-//    mustRunAfter(dokkaJar)
+tasks.publish {
+    dependsOn(dokkaJar)
+    mustRunAfter(dokkaJar)
+}
+
+//tasks.withType<PublishToMavenRepository>().configureEach {
+//    dependsOn(tasks.named("dokkaJar"), tasks.named("sourcesJar"))
 //}
-
-tasks.named("publish") {
-    dependsOn("dokkaJar", "sourcesJar")
-}
-
-tasks.withType<PublishToMavenRepository>().configureEach {
-    dependsOn(tasks.named("dokkaJar"), tasks.named("sourcesJar"))
-}
-
-tasks.named("generateMetadataFileForMavenPublication") {
-    dependsOn(tasks.named("dokkaJar"))
-}
+//
+//tasks.named("generateMetadataFileForMavenPublication") {
+//    dependsOn(tasks.named("dokkaJar"))
+//}
