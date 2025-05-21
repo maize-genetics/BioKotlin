@@ -506,5 +506,5 @@ jreleaser {
 }
 
 tasks.named("publish") {
-    dependsOn("javadocJar", "sourcesJar")
+    dependsOn("dokkaJar", "sourcesJar")
 }
