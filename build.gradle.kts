@@ -518,6 +518,18 @@ jreleaser {
                 uri("https://central.sonatype.com/api/v1/publisher")
             }
         }
+        distributions {
+            maven {
+                mavenCentral {
+                    active.set(Active.ALWAYS)
+                    //setActive("ALWAYS")
+                    uri("https://central.sonatype.com/api/v1/publisher")
+                }
+                active.set(Active.ALWAYS)
+                //setActive("ALWAYS")
+                uri("https://central.sonatype.com/api/v1/publisher")
+            }
+        }
         maven {
             active.set(Active.ALWAYS)
             //setActive("ALWAYS")
