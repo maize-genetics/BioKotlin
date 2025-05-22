@@ -500,8 +500,7 @@ jreleaser {
     deploy {
         release {
             github {
-                // disables creating or updating a GitHub Release
-                enabled = false
+                skipRelease = true
             }
         }
         maven {
