@@ -535,9 +535,12 @@ jreleaser {
             //setActive("ALWAYS")
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
-                active.set(Active.ALWAYS)
-                //setActive("ALWAYS")
-                uri("https://central.sonatype.com/api/v1/publisher")
+                create("sonatype") {
+                    active.set(Active.ALWAYS)
+                    //setActive("ALWAYS")
+                    uri("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository("build/staging-deploy")
+                }
             }
         }
     }
