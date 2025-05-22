@@ -499,6 +499,10 @@ jreleaser {
         active.set(Active.ALWAYS)
         //setActive("ALWAYS")
         armored.set(true)
+        setMode("MEMORY")
+        secretKey.set(System.getenv("GPG_SIGNING_KEY"))
+        publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
+        passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
     }
     deploy {
         active.set(Active.ALWAYS)
