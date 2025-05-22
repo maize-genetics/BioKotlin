@@ -31,8 +31,8 @@ version = getVersionName()
 /*
 This build script is need to use the early access
  */
-//buildscript {
-//    val kotlinVersion by extra("1.9.24")
+buildscript {
+    val kotlinVersion by extra("1.9.24")
 //
 //    repositories {
 //        mavenCentral()
@@ -44,7 +44,7 @@ This build script is need to use the early access
 //        classpath(kotlin("serialization", version = kotlinVersion))
 //        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
 //    }
-//}
+}
 
 plugins {
     val kotlinVersion = "1.9.24"
