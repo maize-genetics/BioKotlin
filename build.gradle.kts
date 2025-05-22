@@ -501,6 +501,7 @@ jreleaser {
         release {
             github {
                 skipRelease = true
+                skipTag = true
             }
         }
         maven {
@@ -508,13 +509,6 @@ jreleaser {
             mavenCentral {
                 setActive("ALWAYS")
                 uri("https://central.sonatype.com/api/v1/publisher")
-                application {
-                    setActive("ALWAYS")
-                    uri("https://central.sonatype.com/api/v1/publisher")
-                    repositories {
-                        mavenCentral()
-                    }
-                }
             }
         }
     }
