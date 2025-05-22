@@ -502,9 +502,9 @@ jreleaser {
 //        secretKey.set(System.getenv("GPG_SIGNING_KEY"))
 //        publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
 //        passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
-        passphrase = "__USE_ENVIRONMENT_VARIABLE__"
-        publicKey = "__USE_ENVIRONMENT_VARIABLE__"
-        secretKey = "__USE_ENVIRONMENT_VARIABLE__"
+//        passphrase = "__USE_ENVIRONMENT_VARIABLE__"
+//        publicKey = "__USE_ENVIRONMENT_VARIABLE__"
+//        secretKey = "__USE_ENVIRONMENT_VARIABLE__"
     }
     deploy {
         active.set(Active.ALWAYS)
@@ -545,9 +545,9 @@ jreleaser {
                     active.set(Active.ALWAYS)
                     armored.set(true)
                     setMode("MEMORY")
-                    passphrase = "__USE_ENVIRONMENT_VARIABLE__"
-                    publicKey = "__USE_ENVIRONMENT_VARIABLE__"
-                    secretKey = "__USE_ENVIRONMENT_VARIABLE__"
+//                    passphrase = "__USE_ENVIRONMENT_VARIABLE__"
+//                    publicKey = "__USE_ENVIRONMENT_VARIABLE__"
+//                    secretKey = "__USE_ENVIRONMENT_VARIABLE__"
                 }
                 create("sonatype") {
                     active.set(Active.ALWAYS)
