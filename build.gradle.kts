@@ -31,20 +31,20 @@ version = getVersionName()
 /*
 This build script is need to use the early access
  */
-buildscript {
-    val kotlinVersion by extra("1.9.24")
-
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
-
-    dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        classpath(kotlin("serialization", version = kotlinVersion))
-        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
-    }
-}
+//buildscript {
+//    val kotlinVersion by extra("1.9.24")
+//
+//    repositories {
+//        mavenCentral()
+//        gradlePluginPortal()
+//    }
+//
+//    dependencies {
+//        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+//        classpath(kotlin("serialization", version = kotlinVersion))
+//        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
+//    }
+//}
 
 plugins {
     val kotlinVersion = "1.9.24"
@@ -66,11 +66,11 @@ plugins {
     id("org.jreleaser") version "1.18.0"
 }
 
-apply {
-    plugin("kotlinx-serialization")
-    plugin("org.jetbrains.dokka")
-    plugin("org.jreleaser")
-}
+//apply {
+//    plugin("kotlinx-serialization")
+//    plugin("org.jetbrains.dokka")
+//    plugin("org.jreleaser")
+//}
 
 repositories {
     mavenCentral()
