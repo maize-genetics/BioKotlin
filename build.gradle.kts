@@ -26,7 +26,8 @@ fun getVersionName(): String {
 }
 
 group = "org.biokotlin"
-version = getVersionName()
+//version = getVersionName()
+version = "0.28.0"
 
 /*
 This build script is need to use the early access
