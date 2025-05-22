@@ -500,6 +500,7 @@ jreleaser {
         armored.set(true)
     }
     deploy {
+        active.set(Active.ALWAYS)
         release {
             github {
                 skipRelease = true
