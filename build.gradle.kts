@@ -498,6 +498,12 @@ jreleaser {
         armored.set(true)
     }
     deploy {
+        release {
+            github {
+                // disables creating or updating a GitHub Release
+                enabled = false
+            }
+        }
         maven {
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
