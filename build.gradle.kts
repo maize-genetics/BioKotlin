@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.utils.API
 import org.jreleaser.model.Active
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -507,15 +508,23 @@ jreleaser {
                 skipTag = true
             }
             maven {
-                setActive("ALWAYS")
+                mavenCentral {
+                    active.set(Active.ALWAYS)
+                    //setActive("ALWAYS")
+                    uri("https://central.sonatype.com/api/v1/publisher")
+                }
+                active.set(Active.ALWAYS)
+                //setActive("ALWAYS")
                 uri("https://central.sonatype.com/api/v1/publisher")
             }
         }
         maven {
-            setActive("ALWAYS")
+            active.set(Active.ALWAYS)
+            //setActive("ALWAYS")
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
-                setActive("ALWAYS")
+                active.set(Active.ALWAYS)
+                //setActive("ALWAYS")
                 uri("https://central.sonatype.com/api/v1/publisher")
             }
         }
