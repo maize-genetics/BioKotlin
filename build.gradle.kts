@@ -496,6 +496,10 @@ jreleaser {
     signing {
         setActive("ALWAYS")
         armored.set(true)
+        artifacts {
+            add("maven") {
+            }
+        }
     }
     deploy {
         release {
