@@ -499,10 +499,10 @@ jreleaser {
         active.set(Active.ALWAYS)
         //setActive("ALWAYS")
         armored.set(true)
-        setMode("MEMORY")
-        secretKey.set(System.getenv("GPG_SIGNING_KEY"))
-        publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
-        passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
+//        setMode("MEMORY")
+//        secretKey.set(System.getenv("GPG_SIGNING_KEY"))
+//        publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
+//        passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
     }
     deploy {
         active.set(Active.ALWAYS)
@@ -539,6 +539,14 @@ jreleaser {
             //setActive("ALWAYS")
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
+                signing {
+                    active.set(Active.ALWAYS)
+                    armored.set(true)
+                    setMode("MEMORY")
+                    secretKey.set(System.getenv("GPG_SIGNING_KEY"))
+                    publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
+                    passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
+                }
                 create("sonatype") {
                     active.set(Active.ALWAYS)
                     //setActive("ALWAYS")
