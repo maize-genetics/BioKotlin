@@ -541,14 +541,14 @@ jreleaser {
             //setActive("ALWAYS")
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
-//                signing {
-//                    active.set(Active.ALWAYS)
-//                    armored.set(true)
-//                    setMode("MEMORY")
-//                    secretKey.set(System.getenv("GPG_SIGNING_KEY"))
-//                    publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
-//                    passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
-//                }
+                signing {
+                    active.set(Active.ALWAYS)
+                    armored.set(true)
+                    setMode("MEMORY")
+                    passphrase = "__USE_ENVIRONMENT_VARIABLE__"
+                    publicKey = "__USE_ENVIRONMENT_VARIABLE__"
+                    secretKey = "__USE_ENVIRONMENT_VARIABLE__"
+                }
                 create("sonatype") {
                     active.set(Active.ALWAYS)
                     //setActive("ALWAYS")
