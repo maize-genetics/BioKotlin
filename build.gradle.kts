@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jreleaser.model.Active
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -138,7 +139,7 @@ dependencies {
 // kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
-    // withJavadocJar()
+    withJavadocJar()
     withSourcesJar()
 }
 
@@ -494,7 +495,8 @@ signing {
 
 jreleaser {
     signing {
-        setActive("ALWAYS")
+        active.set(Active.ALWAYS)
+        //setActive("ALWAYS")
         armored.set(true)
     }
     deploy {
