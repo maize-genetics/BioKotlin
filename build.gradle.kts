@@ -139,7 +139,7 @@ dependencies {
 // kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
-    withJavadocJar()
+    // withJavadocJar()
     withSourcesJar()
 }
 
