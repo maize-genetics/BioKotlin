@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.utils.API
 import org.jreleaser.model.Active
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -499,10 +498,13 @@ jreleaser {
         active.set(Active.ALWAYS)
         //setActive("ALWAYS")
         armored.set(true)
-//        setMode("MEMORY")
+        setMode("MEMORY")
 //        secretKey.set(System.getenv("GPG_SIGNING_KEY"))
 //        publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
 //        passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
+        passphrase = "__USE_ENVIRONMENT_VARIABLE__"
+        publicKey = "__USE_ENVIRONMENT_VARIABLE__"
+        secretKey = "__USE_ENVIRONMENT_VARIABLE__"
     }
     deploy {
         active.set(Active.ALWAYS)
@@ -539,14 +541,14 @@ jreleaser {
             //setActive("ALWAYS")
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
-                signing {
-                    active.set(Active.ALWAYS)
-                    armored.set(true)
-                    setMode("MEMORY")
-                    secretKey.set(System.getenv("GPG_SIGNING_KEY"))
-                    publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
-                    passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
-                }
+//                signing {
+//                    active.set(Active.ALWAYS)
+//                    armored.set(true)
+//                    setMode("MEMORY")
+//                    secretKey.set(System.getenv("GPG_SIGNING_KEY"))
+//                    publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
+//                    passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
+//                }
                 create("sonatype") {
                     active.set(Active.ALWAYS)
                     //setActive("ALWAYS")
