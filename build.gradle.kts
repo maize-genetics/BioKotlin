@@ -512,6 +512,7 @@ jreleaser {
             }
         }
         maven {
+            setActive("ALWAYS")
             // Portal Publisher API via Central Publishing Portal
             mavenCentral {
                 setActive("ALWAYS")
