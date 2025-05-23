@@ -61,8 +61,6 @@ repositories {
     gradlePluginPortal()
     maven("https://maven.imagej.net/content/groups/public/")
     maven("https://jitpack.io")
-    //maven("https://dl.bintray.com/kotlin/kotlin-eap")
-    //maven("https://kotlin.bintray.com/kotlinx")
     maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/eap")
     maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlinx")
 
