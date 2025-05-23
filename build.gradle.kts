@@ -34,17 +34,6 @@ This build script is need to use the early access
  */
 buildscript {
     val kotlinVersion by extra("1.9.24")
-//
-//    repositories {
-//        mavenCentral()
-//        gradlePluginPortal()
-//    }
-//
-//    dependencies {
-//        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-//        classpath(kotlin("serialization", version = kotlinVersion))
-//        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
-//    }
 }
 
 plugins {
@@ -66,12 +55,6 @@ plugins {
     signing
     id("org.jreleaser") version "1.18.0"
 }
-
-//apply {
-//    plugin("kotlinx-serialization")
-//    plugin("org.jetbrains.dokka")
-//    plugin("org.jreleaser")
-//}
 
 repositories {
     mavenCentral()
@@ -496,63 +479,27 @@ signing {
 jreleaser {
     signing {
         active.set(Active.ALWAYS)
-        //setActive("ALWAYS")
         armored.set(true)
         setMode("MEMORY")
-//        secretKey.set(System.getenv("GPG_SIGNING_KEY"))
-//        publicKey.set(System.getenv("GPG_PUBLIC_KEY"))
-//        passphrase.set(System.getenv("GPG_SIGNING_PASSWORD"))
-//        passphrase = "__USE_ENVIRONMENT_VARIABLE__"
-//        publicKey = "__USE_ENVIRONMENT_VARIABLE__"
-//        secretKey = "__USE_ENVIRONMENT_VARIABLE__"
     }
     deploy {
         active.set(Active.ALWAYS)
-//        release {
-//            github {
-//                skipRelease = true
-//                skipTag = true
-//            }
-//            maven {
-//                mavenCentral {
-//                    active.set(Active.ALWAYS)
-//                    //setActive("ALWAYS")
-//                    uri("https://central.sonatype.com/api/v1/publisher")
-//                }
-//                active.set(Active.ALWAYS)
-//                //setActive("ALWAYS")
-//                uri("https://central.sonatype.com/api/v1/publisher")
-//            }
-//        }
-//        distributions {
-//            maven {
-//                mavenCentral {
-//                    active.set(Active.ALWAYS)
-//                    //setActive("ALWAYS")
-//                    uri("https://central.sonatype.com/api/v1/publisher")
-//                }
-//                active.set(Active.ALWAYS)
-//                //setActive("ALWAYS")
-//                uri("https://central.sonatype.com/api/v1/publisher")
-//            }
-//        }
+        release {
+            github {
+                skipRelease = true
+                skipTag = true
+            }
+        }
         maven {
             active.set(Active.ALWAYS)
-            //setActive("ALWAYS")
-            // Portal Publisher API via Central Publishing Portal
             mavenCentral {
                 signing {
                     active.set(Active.ALWAYS)
                     armored.set(true)
                     setMode("MEMORY")
-//                    passphrase = "__USE_ENVIRONMENT_VARIABLE__"
-//                    publicKey = "__USE_ENVIRONMENT_VARIABLE__"
-//                    secretKey = "__USE_ENVIRONMENT_VARIABLE__"
                 }
                 create("sonatype") {
                     active.set(Active.ALWAYS)
-                    //setActive("ALWAYS")
-                    //uri("https://central.sonatype.com/api/v1/publisher")
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
                 }
