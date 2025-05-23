@@ -1,20 +1,29 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jreleaser.model.Active
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.isRegularFile
 import kotlin.jvm.optionals.getOrNull
 
-// Note Kotlin version needs to be updated in both the buildscript and plugins.
-// Dependencies will follow the buildscript
-
+// This is used to get the version from the git tag
+// The version is expected to be in the format X.Y.Z
+// JReleaser will use this version to create the release
 fun getVersionName(): String {
     val stdout = ByteArrayOutputStream()
     exec {
         commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
         standardOutput = stdout
     }
-    return stdout.toString().trim()
+    val versionStr = stdout.toString().trim().removePrefix("v").removePrefix("V")
+    val parts = versionStr.split('.')
+    val normalizedStr = when (parts.size) {
+        0 -> throw IllegalArgumentException("Version string is empty")
+        1 -> "${parts[0]}.0.0"
+        2 -> "${parts[0]}.${parts[1]}.0"
+        else -> versionStr
+    }
+    return normalizedStr
 }
 
 group = "org.biokotlin"
@@ -25,19 +34,7 @@ This build script is need to use the early access
  */
 buildscript {
     val kotlinVersion by extra("1.9.24")
-
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
-
-    dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        classpath(kotlin("serialization", version = kotlinVersion))
-        classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.9.20")
-    }
 }
-
 
 plugins {
     val kotlinVersion = "1.9.24"
@@ -56,22 +53,17 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+    id("org.jreleaser") version "1.18.0"
 }
-apply {
-    plugin("kotlinx-serialization")
-    plugin("org.jetbrains.dokka")
-}
-
 
 repositories {
     mavenCentral()
     gradlePluginPortal()
     maven("https://maven.imagej.net/content/groups/public/")
     maven("https://jitpack.io")
-    maven("https://dl.bintray.com/kotlin/kotlin-eap")
-    maven("https://kotlin.bintray.com/kotlinx")
-    maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/eap")
+    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlinx")
+
 }
 
 dependencies {
@@ -121,13 +113,14 @@ dependencies {
         testImplementation("io.kotest:kotest-$it-jvm:$kotestVersion")
     }
 
-    //consider adding Kotlintest
 }
-//This is used for code generation for DataFrame Schema, however, it does not work
-//https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
-//kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
+
+// This is used for code generation for DataFrame Schema, however, it does not work
+// https://github.com/Kotlin/dataframe/tree/eb9ec4fb90f906f6a98e69b9c5a0369009d34bbb/plugins/gradle/codegen
+// kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
+    // withJavadocJar()
     withSourcesJar()
 }
 
@@ -408,6 +401,7 @@ publishing {
 
             pom {
                 name.set("BioKotlin")
+                artifactId = "biokotlin"
                 description.set("BioKotlin aims to be a high-performance bioinformatics library that brings the power and speed of compiled programming languages to scripting and big data environments.")
                 url.set("http://www.biokotlin.org/")
                 licenses {
@@ -467,6 +461,12 @@ publishing {
             }
         }
     }
+
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+        }
+    }
 }
 
 signing {
@@ -474,20 +474,38 @@ signing {
     sign(publishing.publications["maven"])
 }
 
-tasks.javadoc {
-    dependsOn("dokkaJavadoc")
-    if (JavaVersion.current().isJava9Compatible) {
-        (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
+jreleaser {
+    signing {
+        active.set(Active.ALWAYS)
+        armored.set(true)
+        setMode("MEMORY")
+    }
+    deploy {
+        active.set(Active.ALWAYS)
+        release {
+            github {
+                skipRelease = true
+                skipTag = true
+            }
+        }
+        maven {
+            active.set(Active.ALWAYS)
+            mavenCentral {
+                signing {
+                    active.set(Active.ALWAYS)
+                    armored.set(true)
+                    setMode("MEMORY")
+                }
+                create("sonatype") {
+                    active.set(Active.ALWAYS)
+                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository("build/staging-deploy")
+                }
+            }
+        }
     }
 }
 
-nexusPublishing {
-    repositories {
-        sonatype()
-    }
-}
-
-tasks.publish {
-    dependsOn(dokkaJar)
-    mustRunAfter(dokkaJar)
+tasks.named("publish") {
+    dependsOn("dokkaJar", "sourcesJar")
 }
