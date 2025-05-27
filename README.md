@@ -13,12 +13,11 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
  
  You can follow our current progress at our [GitHub Page](https://github.com/maize-genetics/BioKotlin) 
  
-### What is this repository for? ###
+### BioKotlin Links ###
 
-* This is the main repository for BioKotlin development
-* You can find the 
-[Source Code](https://github.com/maize-genetics/BioKotlin)
-here
+* Main website for [BioKotlin](https://www.biokotlin.org)
+* [Source Code](https://github.com/maize-genetics/BioKotlin) on GitHub
+* [Documentation (API)](https://javadoc.io/doc/org.biokotlin/biokotlin/latest/index.html)
 
 ### How do I get set up? ###
  
