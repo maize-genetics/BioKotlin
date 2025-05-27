@@ -27,7 +27,7 @@ fun getVersionName(): String {
     }
 
     return normalizedStr
-    
+
 }
 
 group = "org.biokotlin"
@@ -356,7 +356,7 @@ fun recursivelyInjectImages(file: File, depth: Int) {
     }
 }
 
-val dokkaJar by tasks.creating(Jar::class) {
+val dokkaJar by tasks.registering(Jar::class) {
     dependsOn(dokkaHtml)
     mustRunAfter(dokkaHtml)
     group = JavaBasePlugin.DOCUMENTATION_GROUP
