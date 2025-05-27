@@ -11,13 +11,13 @@ BioJava, [TASSEL](https://www.maizegenetics.net/tassel) for GWAS and Genome Wide
 pangenome representation.  Additionally, since we have mimicked the beautiful API of [BioPython](https://biopython.org), 
 we expect fast and efficient interoperability with BioPython through GraalVM.
  
- You can follow our current progress at our [Issues Page](https://bitbucket.org/bucklerlab/biokotlin/issues) 
+ You can follow our current progress at our [GitHub Page](https://github.com/maize-genetics/BioKotlin) 
  
 ### What is this repository for? ###
 
 * This is the main repository for BioKotlin development
 * You can find the 
-[Source Code](https://bitbucket.org/bucklerlab/biokotlin/src/master)
+[Source Code](https://github.com/maize-genetics/BioKotlin)
 here
 
 ### How do I get set up? ###
@@ -41,6 +41,6 @@ here
 
 ### Who do I talk to? ###
 
-* Edward Buckler - esb33@cornell.edu
-* Zack Miller - zrm22@cornell.edu
+* [Discussion Page](https://github.com/maize-genetics/BioKotlin/discussions)
+* [Issues Page](https://github.com/maize-genetics/BioKotlin/issues)
 
