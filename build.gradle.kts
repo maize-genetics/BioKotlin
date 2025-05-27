@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jreleaser.model.Active
 import java.io.ByteArrayOutputStream
@@ -33,11 +34,15 @@ version = getVersionName()
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra("1.9.24")
+    val kotlinVersion by extra("2.1.21")
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 plugins {
-    val kotlinVersion = "1.9.24"
+    val kotlinVersion = "2.1.21"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
@@ -49,7 +54,7 @@ plugins {
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
     application
-    id("org.jetbrains.dokka") version "1.9.20"
+    id("org.jetbrains.dokka") version "2.0.0"
     `java-library`
     `maven-publish`
     signing
@@ -74,8 +79,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
@@ -99,10 +104,7 @@ dependencies {
     implementation("org.apache.commons:commons-csv:1.8")
 
     implementation("com.google.guava:guava:33.1.0-jre")
-    implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
 
-
-    implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.6")
     implementation("it.unimi.dsi:fastutil:8.5.12")
     implementation("org.lz4:lz4-java:1.8.0")
 
@@ -125,7 +127,7 @@ java {
 }
 
 tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "17"
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
 }
 
 tasks {
@@ -197,9 +199,7 @@ fun tutorialInjector() {
         .filter { it.toString().endsWith("package-list") }
         .findFirst()
 
-    val packageList = optionalPackageList.getOrNull()?.let {
-        it.toFile().readText()
-    } ?: ""
+    val packageList = optionalPackageList.getOrNull()?.toFile()?.readText() ?: ""
 
     //Replaces shorthand links with accurate ones and inserts links into code
     val linkFinder = Regex("<a href=\"\\..*?>")
