@@ -96,11 +96,6 @@ dependencies {
     // https://kotlinlang.org/docs/reference/evolution/compatibility-modes.html
     // implementation("net.maizegenetics:tassel:5.2.60")
 
-    // Wide range of sequence tools in Java - API is dated
-    // implementation("org.biojava:biojava:5.3.0")
-    // implementation("org.biojava:biojava-genome:5.3.0")
-
-    implementation("org.graalvm.sdk:graal-sdk:21.2.0")
     implementation("org.apache.commons:commons-csv:1.8")
 
     implementation("com.google.guava:guava:33.1.0-jre")
@@ -122,7 +117,6 @@ dependencies {
 // kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
-    // withJavadocJar()
     withSourcesJar()
 }
 
