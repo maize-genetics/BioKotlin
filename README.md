@@ -1,26 +1,24 @@
 # README #
 
-BioKotlin is in the early stages of development, but we expect to support nucleotide and 
+BioKotlin supports nucleotide and 
 protein sequence manipulation, fast sequence IO, alignment, motif, pathway support.  
 
 BioKotlin leverages the performance and type safety of the JVM languages with ease of Python like scripting.
-Because the Kotlin language is compiled on the fly it can be thousands of times faster for
+Because the Kotlin language is compiled, it can be thousands of times faster for
 certain applications than scripting languages.  Because it uses the JVM, we expect high interoperability with
 [GATK](https://gatk.broadinstitute.org/hc/en-us), SamTools [HTSJDK](https://samtools.github.io/htsjdk/), 
 BioJava, [TASSEL](https://www.maizegenetics.net/tassel) for GWAS and Genome Wide Prediction, and the PHG - the 
 pangenome representation.  Additionally, since we have mimicked the beautiful API of [BioPython](https://biopython.org), 
 we expect fast and efficient interoperability with BioPython through GraalVM.
  
- We expect to have extensive cross language support with the use of GraalVM's support of JVM, Python, and R (FastR). 
- 
- You can follow our current progress at our [Trello Board](https://bitbucket.org/bucklerlab/biokotlin/addon/trello/trello-board) 
+ You can follow our current progress at our [Issues Page](https://bitbucket.org/bucklerlab/biokotlin/issues) 
  
 ### What is this repository for? ###
 
 * This is the main repository for BioKotlin development
-* We follow a Git-Flow branching structure
-* Since we are in early development, most of the code is in the 
-[develop](https://bitbucket.org/bucklerlab/biokotlin/branch/develop) and associated branches
+* You can find the 
+[Source Code](https://bitbucket.org/bucklerlab/biokotlin/src/master)
+here
 
 ### How do I get set up? ###
  
@@ -32,8 +30,6 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
     * JupyterLab with Kotlin
 
 * Dependencies
-* 
-
 * How to run tests
 * Deployment instructions
 
@@ -46,9 +42,5 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
 ### Who do I talk to? ###
 
 * Edward Buckler - esb33@cornell.edu
-* Terry Casstevens - tmc46@cornell.edu
-
-### ToDo ###
-1. Making the 
-8. Interop between languages using GraalVM
+* Zack Miller - zrm22@cornell.edu
 
