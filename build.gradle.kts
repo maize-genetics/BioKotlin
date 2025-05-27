@@ -1,7 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jreleaser.model.Active
-import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.isRegularFile
@@ -11,12 +10,14 @@ import kotlin.jvm.optionals.getOrNull
 // The version is expected to be in the format X.Y.Z
 // JReleaser will use this version to create the release
 fun getVersionName(): String {
-    val stdout = ByteArrayOutputStream()
-    exec {
-        commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
-        standardOutput = stdout
-    }
-    val versionStr = stdout.toString().trim().removePrefix("v").removePrefix("V")
+
+    val process = ProcessBuilder("git", "describe", "--tags", "--abbrev=0")
+        .redirectErrorStream(true)
+        .start()
+    val versionStr = process.inputStream.bufferedReader().readText().trim()
+        .removePrefix("v")
+        .removePrefix("V")
+
     val parts = versionStr.split('.')
     val normalizedStr = when (parts.size) {
         0 -> throw IllegalArgumentException("Version string is empty")
@@ -24,7 +25,9 @@ fun getVersionName(): String {
         2 -> "${parts[0]}.${parts[1]}.0"
         else -> versionStr
     }
+
     return normalizedStr
+    
 }
 
 group = "org.biokotlin"
