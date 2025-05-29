@@ -497,6 +497,10 @@ jreleaser {
                     active.set(Active.ALWAYS)
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
+                    sign = true
+                    checksums = true
+                    sourceJar = true
+                    javadocJar = true
                 }
             }
         }
