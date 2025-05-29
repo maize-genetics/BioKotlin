@@ -19,18 +19,22 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
 * [Source Code](https://github.com/maize-genetics/BioKotlin) on GitHub
 * [Documentation (API)](https://javadoc.io/doc/org.biokotlin/biokotlin/latest/index.html)
 
-### How do I get set up? ###
+### How to Use ###
  
-* Configuration for a User
-    * JupyterLab with Kotlin
+* JupyterLab with Kotlin
+  * Install the Kotlin kernel for JupyterLab
+  * Add the following to your JupyterLab configuration file:
+  * %use biokotlin
     
-* Configuration for a Power User (or Developer)
-    * IntelliJ with Kotlin support  
-    * JupyterLab with Kotlin
+* Kotlin Script
+    * Add the following to your Kotlin script (.main.kts) file:
+    * @file:DependsOn("org.biokotlin:biokotlin:1.0.0")
 
-* Dependencies
-* How to run tests
-* Deployment instructions
+* Maven Central
+    * https://mvnrepository.com/artifact/org.biokotlin/biokotlin
+
+* Installable Tar File from Biokotlin Tools
+    * Download the latest tar file from (https://github.com/maize-genetics/biokotlin-tools/releases)
 
 ### Contribution guidelines ###
 
