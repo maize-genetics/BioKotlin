@@ -57,7 +57,7 @@ plugins {
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
     application
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "1.9.20"
     `java-library`
     `maven-publish`
     signing
