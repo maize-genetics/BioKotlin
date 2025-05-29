@@ -459,6 +459,13 @@ publishing {
         }
     }
 
+    signing {
+        val signingKey: String? = System.getenv("JRELEASER_GPG_SECRET_KEY")
+        val signingPass: String? = System.getenv("JRELEASER_GPG_PASSPHRASE")
+        useInMemoryPgpKeys(signingKey, signingPass)
+        sign(publishing.publications["mavenJava"])
+    }
+
     repositories {
         maven {
             url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
@@ -497,10 +504,7 @@ jreleaser {
                     active.set(Active.ALWAYS)
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
-                    sign = true
-                    checksums = true
-                    sourceJar = true
-                    javadocJar = true
+                    sign = false
                 }
             }
         }
