@@ -35,12 +35,6 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
 * Installable Tar File from Biokotlin Tools
     * Download the latest tar file from (https://github.com/maize-genetics/biokotlin-tools/releases)
 
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
 ### Who do I talk to? ###
 
 * [Discussion Page](https://github.com/maize-genetics/BioKotlin/discussions)
