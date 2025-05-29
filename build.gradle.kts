@@ -463,7 +463,7 @@ publishing {
         val signingKey: String? = System.getenv("JRELEASER_GPG_SECRET_KEY")
         val signingPass: String? = System.getenv("JRELEASER_GPG_PASSPHRASE")
         useInMemoryPgpKeys(signingKey, signingPass)
-        sign(publishing.publications["mavenJava"])
+        sign(publishing.publications["maven"])
     }
 
     repositories {
