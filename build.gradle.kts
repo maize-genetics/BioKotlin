@@ -1,6 +1,6 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jreleaser.model.Active
-import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.isRegularFile
@@ -10,12 +10,14 @@ import kotlin.jvm.optionals.getOrNull
 // The version is expected to be in the format X.Y.Z
 // JReleaser will use this version to create the release
 fun getVersionName(): String {
-    val stdout = ByteArrayOutputStream()
-    exec {
-        commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
-        standardOutput = stdout
-    }
-    val versionStr = stdout.toString().trim().removePrefix("v").removePrefix("V")
+
+    val process = ProcessBuilder("git", "describe", "--tags", "--abbrev=0")
+        .redirectErrorStream(true)
+        .start()
+    val versionStr = process.inputStream.bufferedReader().readText().trim()
+        .removePrefix("v")
+        .removePrefix("V")
+
     val parts = versionStr.split('.')
     val normalizedStr = when (parts.size) {
         0 -> throw IllegalArgumentException("Version string is empty")
@@ -23,7 +25,9 @@ fun getVersionName(): String {
         2 -> "${parts[0]}.${parts[1]}.0"
         else -> versionStr
     }
+
     return normalizedStr
+
 }
 
 group = "org.biokotlin"
@@ -33,11 +37,15 @@ version = getVersionName()
 This build script is need to use the early access
  */
 buildscript {
-    val kotlinVersion by extra("1.9.24")
+    val kotlinVersion by extra("2.1.21")
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 plugins {
-    val kotlinVersion = "1.9.24"
+    val kotlinVersion = "2.1.21"
     java
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
@@ -49,7 +57,7 @@ plugins {
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
     application
-    id("org.jetbrains.dokka") version "1.9.20"
+    id("org.jetbrains.dokka") version "2.0.0"
     `java-library`
     `maven-publish`
     signing
@@ -74,8 +82,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime:${kotlinVersion}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     implementation("org.nield:kotlin-statistics:1.2.1")
     implementation("org.jetbrains.kotlinx:dataframe:0.8.0-rc-7")
@@ -91,18 +99,10 @@ dependencies {
     // https://kotlinlang.org/docs/reference/evolution/compatibility-modes.html
     // implementation("net.maizegenetics:tassel:5.2.60")
 
-    // Wide range of sequence tools in Java - API is dated
-    // implementation("org.biojava:biojava:5.3.0")
-    // implementation("org.biojava:biojava-genome:5.3.0")
-
-    implementation("org.graalvm.sdk:graal-sdk:21.2.0")
     implementation("org.apache.commons:commons-csv:1.8")
 
     implementation("com.google.guava:guava:33.1.0-jre")
-    implementation("org.apache.tinkerpop:gremlin-core:3.5.1")
 
-
-    implementation(group = "ch.qos.logback", name = "logback-classic", version = "1.2.6")
     implementation("it.unimi.dsi:fastutil:8.5.12")
     implementation("org.lz4:lz4-java:1.8.0")
 
@@ -120,12 +120,11 @@ dependencies {
 // kotlin.sourceSets.getByName("main").kotlin.srcDir("build/generated/ksp/main/kotlin/")
 
 java {
-    // withJavadocJar()
     withSourcesJar()
 }
 
 tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "17"
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
 }
 
 tasks {
@@ -197,9 +196,7 @@ fun tutorialInjector() {
         .filter { it.toString().endsWith("package-list") }
         .findFirst()
 
-    val packageList = optionalPackageList.getOrNull()?.let {
-        it.toFile().readText()
-    } ?: ""
+    val packageList = optionalPackageList.getOrNull()?.toFile()?.readText() ?: ""
 
     //Replaces shorthand links with accurate ones and inserts links into code
     val linkFinder = Regex("<a href=\"\\..*?>")
@@ -359,7 +356,7 @@ fun recursivelyInjectImages(file: File, depth: Int) {
     }
 }
 
-val dokkaJar by tasks.creating(Jar::class) {
+val dokkaJar by tasks.registering(Jar::class) {
     dependsOn(dokkaHtml)
     mustRunAfter(dokkaHtml)
     group = JavaBasePlugin.DOCUMENTATION_GROUP
