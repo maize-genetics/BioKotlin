@@ -57,7 +57,7 @@ plugins {
     //id("org.jetbrains.kotlinx.dataframe") version "1.0-SNAPSHOT"
 
     application
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "1.9.20"
     `java-library`
     `maven-publish`
     signing
@@ -459,6 +459,13 @@ publishing {
         }
     }
 
+    signing {
+        val signingKey: String? = System.getenv("JRELEASER_GPG_SECRET_KEY")
+        val signingPass: String? = System.getenv("JRELEASER_GPG_PASSPHRASE")
+        useInMemoryPgpKeys(signingKey, signingPass)
+        sign(publishing.publications["maven"])
+    }
+
     repositories {
         maven {
             url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
@@ -497,6 +504,7 @@ jreleaser {
                     active.set(Active.ALWAYS)
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
+                    sign = false
                 }
             }
         }
