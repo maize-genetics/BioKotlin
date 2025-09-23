@@ -647,7 +647,6 @@ fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, samp
                 } else {
                     writer.write("\n>$chrom\n")
                 }
-                println(chrom)
 
                 // ordering issue
                 check(chrom !in seenChroms) { "Chromosomes are not contiguous!" }
