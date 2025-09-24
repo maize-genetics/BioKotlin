@@ -4,6 +4,9 @@ import biokotlin.featureTree.toLinkedList
 import biokotlin.genome.Position
 import biokotlin.genome.PositionRange
 import biokotlin.genome.SampleGamete
+import biokotlin.seq.NucSeqRecord
+import biokotlin.seqIO.FastaIO
+import biokotlin.seqIO.SeqType
 import htsjdk.variant.vcf.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -583,4 +586,161 @@ fun getGVCFFiles(gvcfDir: String): List<String> {
         .toList()
         .sorted()
 
+}
+
+/** Function to convert a genotype in a GVCF file to a fasta sequence.
+ * All records must use non-symbloic alleles (except <NON_REF>), and duplicated positions are not allowed.
+ * Supports multisample VCFs.
+ * Parameters:
+ *  gvcfFile: path to the GVCF file to use. The script accepts VCF file format, but GVCFs should be used to ensure that
+ *      all variants are accounted for
+ *  refFasta: path to the reference FASTA file
+ *  outFile: path to the output FASTA file
+ *  sampleName: optional, the sample name to use in a multisample VCF. Defaults to the first sample listed
+ *  missingAsRef: optional, default true. If true, treat missing positions as reference blocks. If false, omit missing positions.
+ *  alleleIdx: optional. In a diploid or polyploid, the index of the allele to use. Defaults to 0.
+ */
+fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, sampleName: String? = null,
+                       missingAsRef: Boolean = true, alleleIdx: Int = 0){
+
+    // stream directly to output to save on RAM
+    File(outFile).bufferedWriter().use{writer ->
+
+        // read  files
+        val reader = VCFFileReader(File(gvcfFile), false)
+        val iterator = reader.iterator()
+
+        val lineWrapper = FastaLineWrapper()
+
+        val fasta = FastaIO(refFasta, SeqType.nucleotide).readAll() as Map<String, NucSeqRecord>
+
+        // if sampleName was not specified, use the first sample
+        val sampleNames = reader.header.genotypeSamples
+        val name = sampleName ?: sampleNames[0]
+
+        var previousRecordEnd = 0
+        var previousRecordStart = -1
+        var previousChrom = "null"
+        var fastaSeq = "" // contigs should be continuous, so use this to save string conversion time each record
+
+        val seenChroms: MutableList<String> = mutableListOf()
+
+        // process each VCF record in sequence
+        for (record in iterator) {
+            val chrom = record.contig
+
+            // case: new contig encountered
+            if(previousChrom != chrom) {
+
+                // fill in the last ref block if it wasn't explicitly recorded
+                if(missingAsRef && previousChrom != "null") {
+                    if(previousRecordEnd < fasta[previousChrom]!!.size()) {
+                        val seq0 = fastaSeq.substring(previousRecordEnd, fasta[previousChrom]!!.size())
+                        writer.write(lineWrapper.wrapLine(seq0))
+                    }
+
+                }
+
+                // write fasta info line
+                if(previousChrom == "null") {
+                    writer.write(">$chrom\n")
+                } else {
+                    writer.write("\n>$chrom\n")
+                }
+
+                // ordering issue
+                check(chrom !in seenChroms) { "Chromosomes are not contiguous!" }
+
+                seenChroms.add(chrom)
+                lineWrapper.reset()
+
+                previousChrom = chrom
+                previousRecordEnd = 0
+                previousRecordStart = -1
+                fastaSeq = fasta[chrom]!!.seq()
+            }
+
+            check(previousRecordStart < record.start) { "Record positions must be strictly increasing! ${record.start} $previousRecordStart"}
+
+            // if there is a gap between the previous record and the current, treat according to missingAsRef flag
+            if(previousRecordEnd < (record.start - 1) && missingAsRef) {
+                val seq0 = fastaSeq.substring(previousRecordEnd, record.start-1)
+                writer.write(lineWrapper.wrapLine(seq0))
+            }
+
+            // get the specific variant to write
+            val genotype = record.getGenotype(name)
+            val allele = genotype.getAllele(alleleIdx)
+
+            // write the variant
+            val seq = if(allele.isReference){
+                fastaSeq.substring(record.start-1, record.end)
+            } else {
+                check(!allele.isSymbolic) { "GVCF may not use symbolic alleles, except for <NON_REF>"}
+                allele.baseString
+            }
+            writer.write(lineWrapper.wrapLine(seq))
+
+            previousRecordEnd = record.end
+            previousRecordStart = record.start
+        }
+
+        // fill in the last ref block if it wasn't explicitly recorded
+        if(missingAsRef && previousChrom != "null") {
+            if (previousRecordEnd < fasta[previousChrom]!!.size()) {
+                val seq0 = fastaSeq.substring(previousRecordEnd, fasta[previousChrom]!!.size())
+                writer.write(lineWrapper.wrapLine(seq0))
+            }
+        }
+
+        reader.close()
+    }
+
+}
+
+
+/**
+ * Simple class to place newline characters at fixed intervals while writing to output
+ */
+class FastaLineWrapper(val wrapSize: Int = 60){
+    var counter = 0
+
+    /**
+     * Resets the character counter
+     */
+    fun reset() {
+        counter = 0
+    }
+
+    /**
+     * Takes an input string and places newline characters at fixed intervals.
+     * This adds with previous strings, so that a single line will never exceed wrapSize.
+     * Returns the string with added newline characters.
+     */
+    fun wrapLine(inLine: String): String {
+        val leftToNewLine = wrapSize - counter
+
+        if(inLine.length < leftToNewLine) {
+
+            counter += inLine.length
+            return inLine
+        } else if(inLine.length == leftToNewLine) {
+            counter = 0
+
+            return "$inLine\n"
+        } else { // string must be split over multiple lines
+            val firstLine = inLine.substring(0, leftToNewLine)
+
+            val lineChunks = inLine.substring(leftToNewLine).chunked(wrapSize)
+
+            if (lineChunks.last().length == wrapSize) {
+                counter = 0
+
+                return "$firstLine\n${lineChunks.joinToString("\n")}\n"
+            } else {
+                counter = lineChunks.last().length
+                return "$firstLine\n${lineChunks.joinToString("\n")}"
+            }
+        }
+    }
 }
