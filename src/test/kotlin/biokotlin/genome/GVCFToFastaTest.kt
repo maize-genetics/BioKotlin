@@ -24,6 +24,7 @@ class GVCFToFastaTest: StringSpec({
 
     val lineAFastaFile = "data/test/fasta/LineA.fa"
     val lineAWithNFastaFile = "data/test/fasta/LineA_Ns.fa"
+    val lineAWithoutMissingFastaFile = "data/test/fasta/LineA_omit_missing.fa"
 
     //Make the dir first
     File(testingDir).mkdirs()
@@ -74,6 +75,19 @@ class GVCFToFastaTest: StringSpec({
         convertGVCFToFasta(singleGVCFFile, refFastaFile, outFile, missingGenotypeAs = MissingType.asN, missingRecordsAs = MissingType.asN)
 
         val truth = FastaIO(lineAWithNFastaFile, SeqType.nucleotide).readAll()
+        val generated = FastaIO(outFile, SeqType.nucleotide).readAll()
+
+        for(key in truth.keys + generated.keys) {
+            assert(truth.keys.contains(key) && generated.keys.contains(key))
+            assert((truth[key] as NucSeqRecord).sequence == (generated[key] as NucSeqRecord).sequence)
+        }
+    }
+
+    "test omit missing" {
+        val outFile = "$testingDir/LineA_omit_missing_generated.fa"
+        convertGVCFToFasta(singleGVCFFile, refFastaFile, outFile, missingGenotypeAs = MissingType.asNone, missingRecordsAs = MissingType.asNone)
+
+        val truth = FastaIO(lineAWithoutMissingFastaFile, SeqType.nucleotide).readAll()
         val generated = FastaIO(outFile, SeqType.nucleotide).readAll()
 
         for(key in truth.keys + generated.keys) {
