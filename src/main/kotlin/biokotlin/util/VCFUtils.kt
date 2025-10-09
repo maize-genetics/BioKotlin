@@ -588,6 +588,8 @@ fun getGVCFFiles(gvcfDir: String): List<String> {
 
 }
 
+enum class MissingType {asN, asRef, asNone}
+
 /** Function to convert a genotype in a GVCF file to a fasta sequence.
  * All records must use non-symbloic alleles (except <NON_REF>), and duplicated positions are not allowed.
  * Supports multisample VCFs.
@@ -597,11 +599,17 @@ fun getGVCFFiles(gvcfDir: String): List<String> {
  *  refFasta: path to the reference FASTA file
  *  outFile: path to the output FASTA file
  *  sampleName: optional, the sample name to use in a multisample VCF. Defaults to the first sample listed
- *  missingAsRef: optional, default true. If true, treat missing positions as reference blocks. If false, omit missing positions.
+ *  missingRecordAs: optional, default asRef. Behavior for positions that lack a GVCF record (variant site or ref block).
+ *      Option asRef treats missing positions like reference blocks. Option asN fills the region with N's. Option
+ *      asNone omits the region entirely.
+ *  missingGenotypeAs: optional, default asN. Behavior for records with a missing or no-call genotype (.). Option asRef
+ *      treats missing genotypes as reference alleles. Option asN fills missing genotypes with N. The number of N's is
+ *      equal to the length of the record on the reference. Option asNone omits the position entirely.
  *  alleleIdx: optional. In a diploid or polyploid, the index of the allele to use. Defaults to 0.
  */
 fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, sampleName: String? = null,
-                       missingAsRef: Boolean = true, alleleIdx: Int = 0){
+                       missingRecordsAs: MissingType = MissingType.asRef, missingGenotypeAs: MissingType = MissingType.asN,
+                       alleleIdx: Int = 0){
 
     // stream directly to output to save on RAM
     File(outFile).bufferedWriter().use{writer ->
@@ -633,12 +641,16 @@ fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, samp
             if(previousChrom != chrom) {
 
                 // fill in the last ref block if it wasn't explicitly recorded
-                if(missingAsRef && previousChrom != "null") {
-                    if(previousRecordEnd < fasta[previousChrom]!!.size()) {
-                        val seq0 = fastaSeq.substring(previousRecordEnd, fasta[previousChrom]!!.size())
-                        writer.write(lineWrapper.wrapLine(seq0))
+                if(previousChrom != "null") {
+                    if (previousRecordEnd < fasta[previousChrom]!!.size()) {
+                        if (missingRecordsAs == MissingType.asN) {
+                            val seq0 = "N".repeat(fasta[previousChrom]!!.size()-previousRecordEnd)
+                            writer.write(lineWrapper.wrapLine(seq0))
+                        } else if (missingRecordsAs == MissingType.asRef) {
+                            val seq0 = fastaSeq.substring(previousRecordEnd, fasta[previousChrom]!!.size())
+                            writer.write(lineWrapper.wrapLine(seq0))
+                        }
                     }
-
                 }
 
                 // write fasta info line
@@ -663,9 +675,14 @@ fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, samp
             check(previousRecordStart < record.start) { "Record positions must be strictly increasing! ${record.start} $previousRecordStart"}
 
             // if there is a gap between the previous record and the current, treat according to missingAsRef flag
-            if(previousRecordEnd < (record.start - 1) && missingAsRef) {
-                val seq0 = fastaSeq.substring(previousRecordEnd, record.start-1)
-                writer.write(lineWrapper.wrapLine(seq0))
+            if (previousRecordEnd < (record.start - 1)) {
+                if (missingRecordsAs == MissingType.asN) {
+                    val seq0 = "N".repeat(record.start - previousRecordEnd - 1)
+                    writer.write(lineWrapper.wrapLine(seq0))
+                } else if (missingRecordsAs == MissingType.asRef) {
+                    val seq0 = fastaSeq.substring(previousRecordEnd, record.start-1)
+                    writer.write(lineWrapper.wrapLine(seq0))
+                }
             }
 
             // get the specific variant to write
@@ -677,7 +694,17 @@ fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, samp
                 fastaSeq.substring(record.start-1, record.end)
             } else {
                 check(!allele.isSymbolic) { "GVCF may not use symbolic alleles, except for <NON_REF>"}
-                allele.baseString
+                if(allele.isNoCall) {
+                    if(missingGenotypeAs == MissingType.asN) {
+                        "N".repeat(record.lengthOnReference)
+                    } else if (missingGenotypeAs == MissingType.asRef) {
+                        fastaSeq.substring(record.start-1, record.end)
+                    } else {
+                        ""
+                    }
+                } else {
+                    allele.baseString
+                }
             }
             writer.write(lineWrapper.wrapLine(seq))
 
@@ -686,10 +713,15 @@ fun convertGVCFToFasta(gvcfFile: String, refFasta: String, outFile: String, samp
         }
 
         // fill in the last ref block if it wasn't explicitly recorded
-        if(missingAsRef && previousChrom != "null") {
+        if(previousChrom != "null") {
             if (previousRecordEnd < fasta[previousChrom]!!.size()) {
-                val seq0 = fastaSeq.substring(previousRecordEnd, fasta[previousChrom]!!.size())
-                writer.write(lineWrapper.wrapLine(seq0))
+                if (missingRecordsAs == MissingType.asN) {
+                    val seq0 = "N".repeat(fasta[previousChrom]!!.size()-previousRecordEnd)
+                    writer.write(lineWrapper.wrapLine(seq0))
+                } else if (missingRecordsAs == MissingType.asRef) {
+                    val seq0 = fastaSeq.substring(previousRecordEnd, fasta[previousChrom]!!.size())
+                    writer.write(lineWrapper.wrapLine(seq0))
+                }
             }
         }
 
