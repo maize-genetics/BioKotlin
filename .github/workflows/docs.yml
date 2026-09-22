@@ -1,0 +1,123 @@
+name: Build and Deploy the BioKotlin Website
+
+# Pushes to master publish https://www.biokotlin.org/; pull requests only build,
+# so a broken notebook or a dead link shows up in review rather than in
+# production.
+#
+# GitHub Pages must be enabled for this repository with Source = GitHub Actions.
+# See website/README.md.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+      - 'notebooks/**'
+      - 'documentation_resources/**'
+      - 'overrides/**'
+      - 'website/**'
+      - 'src/main/kotlin/**'
+      - 'zensical.toml'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+      - 'notebooks/**'
+      - 'documentation_resources/**'
+      - 'overrides/**'
+      - 'website/**'
+      - 'src/main/kotlin/**'
+      - 'zensical.toml'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+# One deployment at a time, and let a newer commit finish rather than cancelling
+# it partway through a publish.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          # getVersionName() in build.gradle.kts derives the version from tags.
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: website/requirements.txt
+
+      - name: Install site tooling
+        # This also puts `jupyter nbconvert` on PATH, which the Dokka
+        # tutorialInjector task shells out to.
+        run: pip install -r website/requirements.txt
+
+      - name: Cache Maven artifacts resolved by the Kotlin kernel
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('website/requirements.txt', 'build.gradle.kts') }}
+          restore-keys: ${{ runner.os }}-m2-
+
+      - name: Execute the notebooks into docs/tutorials
+        run: python website/convert_notebooks.py
+
+      - name: Generate the API reference
+        run: ./gradlew dokkaHtml
+
+      - name: Build the site
+        run: zensical build --clean
+
+      - name: Add the API reference to the site
+        run: |
+          mkdir -p build/site/api
+          cp -r build/dokka/html/. build/site/api/
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Pull requests stop after the build.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

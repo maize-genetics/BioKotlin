@@ -16,7 +16,15 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
 ### BioKotlin Links ###
 
 * Main website for [BioKotlin](https://www.biokotlin.org)
-* [Documentation (API)](https://javadoc.io/doc/org.biokotlin/biokotlin/latest/index.html)
+* [Getting started](https://www.biokotlin.org/getting-started/)
+* [Tutorials](https://www.biokotlin.org/tutorials/)
+* [API reference](https://www.biokotlin.org/api/) (also on [javadoc.io](https://javadoc.io/doc/org.biokotlin/biokotlin/latest/index.html))
+* [Coming from BioPython?](https://www.biokotlin.org/biopython/)
+* [Benchmarks](https://www.biokotlin.org/benchmarks/)
+
+The website is built from [`docs/`](docs) in this repository and deployed to
+GitHub Pages on every push to `master`. See [`website/README.md`](website/README.md)
+to build and preview it locally.
 
 ### How to Use ###
  
@@ -39,4 +47,5 @@ we expect fast and efficient interoperability with BioPython through GraalVM.
 
 * [Discussion Page](https://github.com/maize-genetics/BioKotlin/discussions)
 * [Issues Page](https://github.com/maize-genetics/BioKotlin/issues)
+* [How to contribute](https://www.biokotlin.org/contributing/)
 

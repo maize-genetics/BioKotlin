@@ -1,0 +1,144 @@
+/* BioKotlin brand colors.
+ *
+ * #536eb7 is the blue carried over from the previous biokotlin.org. The
+ * palette in zensical.toml sets primary and accent to "custom", which is what
+ * hands control of these variables over to this file. */
+
+:root > * {
+  --md-primary-fg-color: #536eb7;
+  --md-primary-fg-color--light: #98a8d4;
+  --md-primary-fg-color--dark: #3e5389;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+
+  --md-accent-fg-color: #3e5389;
+  --md-accent-fg-color--transparent: rgba(83, 110, 183, 0.1);
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+/* Dark mode needs a lighter tint of the brand blue to stay legible against
+ * the slate background. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #8fa1d0;
+  --md-primary-fg-color--light: #b2bede;
+  --md-primary-fg-color--dark: #536eb7;
+  --md-primary-bg-color: #0d1017;
+  --md-primary-bg-color--light: rgba(13, 16, 23, 0.7);
+
+  --md-accent-fg-color: #b2bede;
+  --md-accent-fg-color--transparent: rgba(143, 161, 208, 0.1);
+}
+
+/* Cell output on the generated tutorial pages. nbconvert emits outputs as
+ * unlabelled code blocks, which Zensical renders as `language-text`, so an
+ * accent rule is enough to tell them apart from the Kotlin that produced
+ * them. Hand-written pages on this site always name a language. */
+.md-typeset .language-text.highlight {
+  border-left: 0.15rem solid var(--md-primary-fg-color--light);
+}
+
+.md-typeset .language-text.highlight code {
+  color: var(--md-default-fg-color--light);
+}
+
+/* Kotlin Playground injects its own editor markup in place of the code block.
+ * These rules keep it aligned with the surrounding typeset content. */
+.md-typeset .runnable {
+  margin: 1em 0;
+}
+
+.md-typeset .executable-fragment-wrapper {
+  border-radius: 0.2rem;
+  margin: 0;
+}
+
+/* Playground's footer is positioned absolutely below the editor, so it adds no
+ * layout height and lands on top of whatever follows. With the crosslink to
+ * play.kotlinlang.org disabled it only says "Target: JVM" and a version the
+ * self-hosted server does not report, so drop it rather than make room. */
+.md-typeset .compiler-info {
+  display: none;
+}
+
+.md-typeset .runnable .code-output,
+.md-typeset .runnable .js-code-output-executor {
+  font-size: 0.75em;
+}
+
+/* Playground ships its own copy button, so hide the theme's to avoid two
+ * overlapping buttons in the corner of a runnable snippet. */
+.md-typeset .runnable.executable-fragment-wrapper > .md-clipboard {
+  display: none;
+}
+
+/* Throughput chart on docs/benchmarks.md */
+.benchmarks-chart {
+  position: relative;
+  height: 22rem;
+  max-width: 42rem;
+  margin: 1.5em auto 2em;
+}
+
+.benchmarks-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.benchmarks-chart__fallback {
+  margin: 1.5em 0;
+}
+
+/* Logo morph: minimal mark at top, full wordmark after scroll (logo-morph.js). */
+:root {
+  --biokotlin-logo-morph: 0;
+}
+
+.md-logo__morph {
+  position: relative;
+  display: inline-block;
+  height: 1.2rem;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.md-header__button.md-logo .md-logo__morph,
+.md-nav__button.md-logo .md-logo__morph {
+  margin: 0;
+  padding: 0;
+}
+
+.md-logo__image {
+  display: block;
+  height: 1.2rem;
+  width: auto;
+}
+
+.md-logo__image--minimal {
+  opacity: calc(1 - var(--biokotlin-logo-morph));
+  transform: scale(calc(1 - 0.05 * var(--biokotlin-logo-morph)));
+  transform-origin: left center;
+}
+
+.md-logo__image--full {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: var(--biokotlin-logo-morph);
+  transform: scale(calc(0.95 + 0.05 * var(--biokotlin-logo-morph)));
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .md-logo__morph {
+    transition: width 0.35s ease;
+  }
+
+  .md-logo__image {
+    transition:
+      opacity 0.35s ease,
+      transform 0.35s ease;
+  }
+}
+
