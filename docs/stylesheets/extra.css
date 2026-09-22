@@ -142,3 +142,57 @@
   }
 }
 
+/* Footer links: copyright (zensical.toml) and “Made with Zensical”. */
+.md-copyright a {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--md-primary-fg-color);
+}
+
+.md-copyright a:hover {
+  color: var(--md-primary-fg-color--dark);
+  text-decoration: none;
+}
+
+[data-md-color-scheme="slate"] .md-copyright a:hover {
+  color: var(--md-primary-fg-color--light);
+}
+
+/* Footer social icons (GitHub, Maven): circular chips like maizegenetics.net */
+.md-footer .md-social {
+  gap: 0.625rem;
+  padding: 0.6rem 0;
+}
+
+.md-footer .md-social__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 50%;
+  color: var(--md-default-fg-color--light);
+  opacity: 1;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+[data-md-color-scheme="slate"] .md-footer .md-social__link {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.md-footer .md-social__link:hover {
+  color: var(--md-primary-fg-color);
+  border-color: var(--md-primary-fg-color);
+  opacity: 1;
+}
+
+.md-footer .md-social__link svg {
+  width: 0.8125rem;
+  height: 0.8125rem;
+  max-height: none;
+  vertical-align: unset;
+}
+
