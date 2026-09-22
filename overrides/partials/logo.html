@@ -1,0 +1,28 @@
+{#-
+  BioKotlin logo: minimal mark at the top of the page, full wordmark after scroll.
+  Light-on-dark assets swap in under the slate palette (logo-morph.js).
+-#}
+{% if config.theme.logo %}
+  <span class="md-logo__morph">
+    <img
+      class="md-logo__image md-logo__image--minimal"
+      src="{{ 'assets/biokotlin_minimal.svg' | url }}"
+      data-logo-default="{{ 'assets/biokotlin_minimal.svg' | url }}"
+      data-logo-dark="{{ 'assets/biokotlin_minimal_light.svg' | url }}"
+      alt="{{ config.site_name }}"
+      decoding="async"
+    >
+    <img
+      class="md-logo__image md-logo__image--full"
+      src="{{ 'assets/biokotlin.svg' | url }}"
+      data-logo-default="{{ 'assets/biokotlin.svg' | url }}"
+      data-logo-dark="{{ 'assets/biokotlin_light.svg' | url }}"
+      alt=""
+      aria-hidden="true"
+      decoding="async"
+    >
+  </span>
+{% else %}
+  {% set icon = config.theme.icon.logo or "material/library" %}
+  {% include ".icons/" ~ icon ~ ".svg" %}
+{% endif %}

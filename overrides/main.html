@@ -1,0 +1,16 @@
+{#-
+  Template overrides for the BioKotlin website.
+
+  Zensical renders templates with MiniJinja, so anything here has to stick to
+  plain Jinja constructs -- no Python calls.
+-#}
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {#- Hand the Kotlin Playground bootstrap (docs/javascripts/playground.js) the
+      compiler server from zensical.toml. Empty means "no server configured",
+      in which case runnable snippets stay static. -#}
+  <script>
+    window.BIOKOTLIN_PLAYGROUND_SERVER = "{{ config.extra.playground_server }}";
+  </script>
+{% endblock %}
