@@ -149,6 +149,10 @@
   color: var(--md-primary-fg-color);
 }
 
+.md-copyright__year {
+  font-weight: 400;
+}
+
 .md-copyright a:hover {
   color: var(--md-primary-fg-color--dark);
   text-decoration: none;

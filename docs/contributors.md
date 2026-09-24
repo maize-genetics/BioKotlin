@@ -11,7 +11,7 @@ BioKotlin is developed at Cornell University and the USDA-ARS.
 | Mathavan Alagu Ganesan | Cornell University |
 | Vaishnavi Gupta | Cornell University |
 | Lynn Johnson | Cornell University |
-| Zack Miller | Cornell University |
+| Zack Miller | USDA-ARS |
 | Brandon Monier | Cornell University |
 | Jeffrey Morse | Cornell University |
 | Matt Wiese | Cornell University |
@@ -19,5 +19,5 @@ BioKotlin is developed at Cornell University and the USDA-ARS.
 Our user interface has been inspired by the [BioPython](https://biopython.org)
 team.
 
-Want to contribute? See [Contributing](contributing.md), or email Terry
-Casstevens at [tmc46@cornell.edu](mailto:tmc46@cornell.edu).
+Want to contribute? See [Contributing](contributing.md), or email Brandon
+Monier at `bm646 [at] cornell [dot] edu`.

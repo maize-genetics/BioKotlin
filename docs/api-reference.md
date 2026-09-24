@@ -4,8 +4,6 @@ The API reference is generated from the KDoc comments in the source with
 [Dokka](https://kotlinlang.org/docs/dokka-introduction.html), and is rebuilt
 alongside this site from the current `master` branch.
 
-[Open the API reference](api/index.html){ .md-button .md-button--primary }
-
 ## Released versions
 
 Documentation for each published release is hosted on javadoc.io:
