@@ -98,3 +98,9 @@ documentation_resources/raw_tutorials/.ipynb_checkpoints
 src/test/kotlin/biokotlin/kmer/KmerDemo.kt
 b73.gff
 src/test/resources/biokotlin/featureTree/dotOutput
+
+## Website (see website/README.md)
+# Tutorial pages are generated from the notebooks by website/convert_notebooks.py.
+docs/tutorials/*
+!docs/tutorials/index.md
+.venv/

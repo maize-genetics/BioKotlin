@@ -1,0 +1,24 @@
+<!--
+  Logging config for the Kotlin Jupyter kernel while it executes the tutorial
+  notebooks.
+
+  The kernel ships with the root logger at DEBUG, which dumps every Jupyter
+  protocol message to stderr: thousands of lines per notebook, enough to bury
+  anything useful in a CI log. Notebook failures reach us through the protocol
+  as cell errors, not through these logs, so WARN loses nothing.
+
+  website/convert_notebooks.py points the kernel at this file with
+  -Dlogback.configurationFile.
+-->
+<configuration>
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>%-5level %logger{35} - %msg %n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="WARN">
+        <appender-ref ref="STDERR" />
+    </root>
+</configuration>

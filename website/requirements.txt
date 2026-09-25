@@ -1,0 +1,17 @@
+# Tooling for building the BioKotlin website (https://www.biokotlin.org/).
+# See website/README.md for usage.
+
+# Static site generator. Zensical is pre-1.0, so pin it exactly and bump
+# deliberately: minor releases still change behavior.
+zensical==0.0.64
+
+# Notebook execution and Markdown conversion for docs/tutorials/.
+# convert_notebooks.py imports all four, so pin them rather than relying on
+# whatever nbconvert happens to pull in.
+nbconvert==7.16.6
+nbclient==0.11.0
+nbformat==5.10.4
+jupyter-client==8.6.3
+
+# Kotlin kernel used to execute the tutorial notebooks.
+kotlin-jupyter-kernel==0.19.0.944
