@@ -5,7 +5,7 @@ BioKotlin is developed at Cornell University and the USDA-ARS.
 | Name | Affiliation |
 | --- | --- |
 | Edward Buckler | USDA-ARS / Cornell University |
-| Ana Berthel | Cornell University |
+| Ana Berthel | Boyce Thompson Institute |
 | Peter Bradbury | Cornell University |
 | Terry Casstevens | Cornell University |
 | Mathavan Alagu Ganesan | Cornell University |
