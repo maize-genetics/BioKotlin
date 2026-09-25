@@ -54,7 +54,7 @@ extra_css = ["stylesheets/extra.css"]
 
 # Kotlin Playground turns snippets marked `{.runnable}` into editors with a Run
 # button. It needs a compiler server that has BioKotlin on its classpath -- see
-# extra.playground_server below and website/playground-server/README.md.
+# extra.playground_server below and website/README.md.
 extra_javascript = [
   "https://unpkg.com/kotlin-playground@1.34.0/dist/playground.min.js",
   "javascripts/playground.js",
@@ -146,8 +146,7 @@ pymdownx.tilde = {}
 [project.extra]
 # Base URL of a Kotlin compiler server that has BioKotlin on its classpath.
 # While this is empty, `{.runnable}` snippets render as ordinary highlighted
-# code. Set it to enable the in-page Run button; see
-# website/playground-server/README.md for how to deploy one.
+# code. Set it to enable the in-page Run button; see website/README.md.
 playground_server = ""
 
 [[project.extra.social]]
