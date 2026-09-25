@@ -39,7 +39,7 @@ nav = [
   { "Reference" = [
     "reference/index.md",
     { "API reference" = "api-reference.md" },
-    { "Coming from BioPython" = "biopython.md" },
+    { "BioPython to BioKotlin" = "biopython.md" },
     { "Benchmarks" = "benchmarks.md" },
   ] },
   { "About" = [
