@@ -76,7 +76,7 @@ from:
 
 ```kotlin
 val rna = NucSeq("AGCG", NUC.RNA)
-rna.complement()   // UCGC, not TCGT
+rna.complement()   // UCGC, not TCGC
 ```
 
 ## Method mapping
